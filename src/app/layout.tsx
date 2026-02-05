@@ -1,3 +1,4 @@
+import Navbar from "@/components/Navbar";
 import type { Metadata } from "next";
 import "./globals.css";
 
@@ -16,6 +17,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
+        <Navbar />
         <main className="container mt-4">
           {children}
         </main>

@@ -1,14 +1,14 @@
 import Link from 'next/link';
 import styles from './Navbar.module.css';
-import { auth, signOut } from "@/auth";
+// import { auth, signOut } from "@/auth";
 
 export default async function Navbar() {
   let session: any = null;
-  try {
+  /* try {
     session = await auth();
   } catch (e) {
     console.error("Critical error in Navbar auth():", e);
-  }
+  } */
   const isLoggedIn = !!(session && session.user);
 
   return (
