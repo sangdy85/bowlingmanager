@@ -165,7 +165,15 @@ export async function addBulkScores(
         }
 
         // Prepare records
-        const recordsToCreate = [];
+        const recordsToCreate: {
+            score: number;
+            userId: string | null;
+            guestName: string | null;
+            gameDate: Date;
+            teamId: string;
+            gameType: string;
+            memo: string | null;
+        }[] = [];
 
         for (const row of rows) {
             const cleanName = row.memberName.trim();
