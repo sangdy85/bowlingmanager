@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@prisma/client": "^5.22.0",
     "@types/nodemailer": "^6.4.17",
     "@types/uuid": "^10.0.0",
     "bcryptjs": "^3.0.3",
@@ -19,10 +20,10 @@
     "nodemailer": "^6.10.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "sharp": "^0.34.5",
     "tesseract.js": "^7.0.0",
     "uuid": "^13.0.0",
-    "xlsx": "^0.18.5",
-    "@prisma/client": "^5.22.0"
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -30,7 +31,7 @@
     "@types/node": "22.13.1",
     "@types/react": "19.2.13",
     "@types/react-dom": "19.2.3",
-    "eslint": "^9",
+    "eslint": "8.57.0",
     "eslint-config-next": "16.1.6",
     "prisma": "^5.22.0",
     "typescript": "^5"
