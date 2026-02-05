@@ -4,12 +4,11 @@ import { auth, signOut } from "@/auth";
 
 export default async function Navbar() {
   let session = null;
-  try {
+  /* try {
     session = await auth();
   } catch (e) {
     console.error("Failed to fetch session:", e);
-    // Continue as logged out
-  }
+  } */
   const isLoggedIn = !!session?.user;
 
   return (
