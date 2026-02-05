@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: "Bowling Score Manager",
   description: "Manage your bowling team scores",
