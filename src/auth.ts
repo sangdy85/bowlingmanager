@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
 
+console.log("Initializing NextAuth...");
+if (!process.env.AUTH_SECRET) {
+    console.warn("WARNING: AUTH_SECRET is not defined in environment variables!");
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
     ...authConfig,
     providers: [

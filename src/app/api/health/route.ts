@@ -1,13 +1,18 @@
-import { NextResponse } from 'next/server';
-
 export async function GET() {
-    return NextResponse.json({
-        status: 'ok',
-        time: new Date().toISOString(),
-        env_check: {
-            has_db_url: !!process.env.DATABASE_URL,
-            has_auth_secret: !!process.env.AUTH_SECRET,
-            node_env: process.env.NODE_ENV
-        }
-    });
+    try {
+        return new Response(JSON.stringify({
+            status: 'ok',
+            message: 'Minimal health check successful',
+            env: {
+                has_db: !!process.env.DATABASE_URL,
+                has_auth: !!process.env.AUTH_SECRET,
+                ver: process.version
+            }
+        }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (e) {
+        return new Response(JSON.stringify({ error: String(e) }), { status: 500 });
+    }
 }
