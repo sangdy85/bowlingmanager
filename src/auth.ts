@@ -10,6 +10,10 @@ function getAuth() {
     if (authResult) return authResult;
 
     try {
+        if (!process.env.AUTH_SECRET) {
+            console.error("CRITICAL: AUTH_SECRET is not set in environment variables!");
+            // Return a dummy object or null to prevent crash
+        }
         authResult = NextAuth({
             ...authConfig,
             providers: [
