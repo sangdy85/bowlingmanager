@@ -1,0 +1,34 @@
+import type { NextAuthConfig } from "next-auth";
+
+export const authConfig = {
+    pages: {
+        signIn: "/login",
+    },
+    callbacks: {
+        async session({ session, token }) {
+            if (token.sub && session.user) {
+                session.user.id = token.sub;
+            }
+            return session;
+        },
+        async jwt({ token, user }) {
+            if (user) {
+                token.id = user.id;
+            }
+            return token;
+        },
+    },
+    providers: [], // Empty array, we'll add providers in auth.ts
+    secret: process.env.AUTH_SECRET,
+    cookies: {
+        sessionToken: {
+            name: `next-auth.session-token.repaired`,
+            options: {
+                httpOnly: true,
+                sameSite: "lax",
+                path: "/",
+                secure: process.env.NODE_ENV === "production",
+            },
+        },
+    },
+} satisfies NextAuthConfig;
