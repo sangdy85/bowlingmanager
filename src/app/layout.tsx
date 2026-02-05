@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-// import Navbar from "@/components/Navbar";
+import Navbar from "@/components/Navbar";
 
 // export const dynamic = 'force-dynamic';
 
@@ -17,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
-        {/* <Navbar /> */}
+        <Navbar />
         <main className="container mt-4">
           {children}
         </main>
