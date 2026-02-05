@@ -1,0 +1,109 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  teamMemberships TeamMember[]
+  managedTeams  Team[]    @relation("TeamManagers")
+  scores        Score[]
+  posts         Post[]
+  emailVerified DateTime?
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Team {
+  id            String    @id @default(cuid())
+  name          String
+  code          String    @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  ownerId       String?
+
+  members       TeamMember[]
+  managers      User[]    @relation("TeamManagers")
+  scores        Score[]
+  posts         Post[]
+}
+
+model Score {
+  id        String   @id @default(cuid())
+  score     Int
+  gameDate  DateTime
+  gameType  String? // 게임 유형 (정기전, 번개, 교류전 등)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId    String?
+  team      Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  memo      String? // 간단한 메모 (예: "3프레임 실수")
+  guestName String? // 비회원 이름 (userId가 null일 경우 사용)
+  createdAt DateTime @default(now())
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id])
+  
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  images    PostImage[]
+}
+
+model PostImage {
+  id        String   @id @default(cuid())
+  url       String
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  size      Int      @default(0) // File size in bytes
+  createdAt DateTime @default(now())
+}
+
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  joinedAt  DateTime @default(now())
+  alias     String?
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+}
+
+model ApiUsage {
+  date         String   @id // "YYYY-MM-DD" (KST)
+  count        Int      @default(0)
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  cost         Float    @default(0.0) // KRW Total Cost
+  updatedAt    DateTime @updatedAt
+}

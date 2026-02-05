@@ -1,0 +1,26 @@
+[
+  {
+    "userId": "cml69por1000t28tbuao052wl",
+    "teamId": "cml6epbwo000011ssp1adm5c5",
+    "isManager": false,
+    "joinedAt": "2026-02-03T09:38:52.680Z"
+  },
+  {
+    "userId": "cml69y2t9001r28tbz39uyh4s",
+    "teamId": "cml6epbwo000011ssp1adm5c5",
+    "isManager": true,
+    "joinedAt": "2026-02-03T09:38:52.680Z"
+  },
+  {
+    "userId": "cml7h16gc000swzu9d6x3m7pv",
+    "teamId": "cml6epbwo000011ssp1adm5c5",
+    "isManager": false,
+    "joinedAt": "2026-02-03T09:38:52.680Z"
+  },
+  {
+    "userId": "cml69por1000t28tbuao052wl",
+    "teamId": "cml6ercso000111ssaeizc44x",
+    "isManager": false,
+    "joinedAt": "2026-02-03T09:40:27.145Z"
+  }
+]
