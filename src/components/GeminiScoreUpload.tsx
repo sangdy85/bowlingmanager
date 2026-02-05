@@ -151,7 +151,7 @@ export default function GeminiScoreUpload({ knownMembers, rows, setRows }: Gemin
             {rows.length > 0 && !isAnalyzing && (
                 <div className="flex flex-col gap-2 pt-2">
                     <div className="text-[10px] text-muted-foreground text-center italic">
-                        ※ 실제 저장하려면 아래 하단의 '저장' 버튼을 눌러주세요.
+                        ※ 실제 저장하려면 아래 하단의 &apos;저장&apos; 버튼을 눌러주세요.
                     </div>
                 </div>
             )}

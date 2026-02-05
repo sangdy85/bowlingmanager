@@ -157,7 +157,7 @@ export default function ExcelUpload() {
                         <p className="text-sm mb-2 text-secondary-foreground">
                             선택된 날짜: <strong>{date}</strong><br />
                             총 {previewData.length}건의 데이터를 발견했습니다.<br />
-                            <span className="text-xs text-muted-foreground">* 등록되지 않은 이름은 '비회원'으로 저장됩니다.</span>
+                            <span className="text-xs text-muted-foreground">* 등록되지 않은 이름은 &apos;비회원&apos;으로 저장됩니다.</span>
                         </p>
                         <button
                             onClick={handleUpload}
