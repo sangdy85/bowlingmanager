@@ -34,15 +34,4 @@ export const authConfig = {
     },
     providers: [], // Empty array, we'll add providers in auth.ts
     secret: process.env.AUTH_SECRET,
-    cookies: {
-        sessionToken: {
-            name: `next-auth.session-token.repaired`,
-            options: {
-                httpOnly: true,
-                sameSite: "lax",
-                path: "/",
-                secure: process.env.NODE_ENV === "production",
-            },
-        },
-    },
 } satisfies NextAuthConfig;
