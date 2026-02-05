@@ -16,6 +16,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
+        <Navbar />
         <main className="container mt-4">
           {children}
         </main>
