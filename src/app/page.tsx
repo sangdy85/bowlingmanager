@@ -1,20 +1,6 @@
 import Link from "next/link";
-import { auth } from "@/auth";
 
-// export const dynamic = 'force-dynamic';
-
-export default async function Home() {
-  let session = null;
-  try {
-    session = await auth();
-  } catch (error) {
-    console.error("Failed to fetch session on Home page:", error);
-    if (error instanceof Error) {
-      console.error("Error Message:", error.message);
-      console.error("Error Stack:", error.stack);
-    }
-  }
-
+export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center py-10">
       <h1 className="text-center page-title" style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>
@@ -25,21 +11,19 @@ export default async function Home() {
         쉽고 간편한 볼링 점수 관리 서비스입니다.
       </p>
 
-
-
       <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-4xl" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
-        <Link href={session?.user ? "/personal" : "/login"} className="card text-center hover:bg-secondary/20 transition-colors cursor-pointer block no-underline text-inherit">
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🎳</div>
+        <Link href="/login" className="card text-center hover:bg-secondary/20 transition-colors cursor-pointer block no-underline text-inherit">
+          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}> bowling </div>
           <h3 className="mb-2">점수 기록</h3>
           <p style={{ color: 'var(--secondary-foreground)' }}>매 게임 점수를 간편하게 기록하고 저장하세요.</p>
         </Link>
-        <Link href={session?.user ? "/team" : "/login"} className="card text-center hover:bg-secondary/20 transition-colors cursor-pointer block no-underline text-inherit">
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🏆</div>
+        <Link href="/login" className="card text-center hover:bg-secondary/20 transition-colors cursor-pointer block no-underline text-inherit">
+          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}> trophy </div>
           <h3 className="mb-2">팀 관리</h3>
           <p style={{ color: 'var(--secondary-foreground)' }}>동호회 팀을 만들고 팀원들과 함께하세요.</p>
         </Link>
-        <Link href={session?.user ? "/stats" : "/login"} className="card text-center hover:bg-secondary/20 transition-colors cursor-pointer block no-underline text-inherit">
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📊</div>
+        <Link href="/login" className="card text-center hover:bg-secondary/20 transition-colors cursor-pointer block no-underline text-inherit">
+          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}> chart </div>
           <h3 className="mb-2">통계/순위</h3>
           <p style={{ color: 'var(--secondary-foreground)' }}>팀 내 순위와 개인 기록 추이를 확인하세요.</p>
         </Link>
