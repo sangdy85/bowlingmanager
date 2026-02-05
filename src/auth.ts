@@ -9,7 +9,7 @@ if (!process.env.AUTH_SECRET) {
     console.warn("WARNING: AUTH_SECRET is not defined in environment variables!");
 }
 
-let authResult: any = { handlers: {}, signIn: {}, signOut: {}, auth: {} };
+let authResult: any = null;
 
 try {
     authResult = NextAuth({
@@ -61,5 +61,9 @@ try {
     console.error("CRITICAL ERROR during NextAuth initialization:", e);
 }
 
-export const { handlers, signIn, signOut, auth } = authResult;
+// Ensure exported values are at least functions to avoid "is not a function" errors
+export const auth = authResult?.auth || (async () => null);
+export const handlers = authResult?.handlers || { GET: async () => new Response(null, { status: 500 }), POST: async () => new Response(null, { status: 500 }) };
+export const signIn = authResult?.signIn || (async () => { });
+export const signOut = authResult?.signOut || (async () => { });
 
