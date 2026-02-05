@@ -6,6 +6,8 @@ import React from "react";
 import YearSelector from "@/components/YearSelector";
 import StatsDisplayRow from "@/components/StatsDisplayRow";
 
+export const dynamic = 'force-dynamic';
+
 export default async function PersonalPage(props: { searchParams: Promise<{ year?: string }> }) {
     const searchParams = await props.searchParams;
     const session = await auth();

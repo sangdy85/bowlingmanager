@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import YearSelector from "@/components/YearSelector";
 import DailyScoreTable from "@/components/DailyScoreTable";
 
+export const dynamic = 'force-dynamic';
+
 interface HistoryPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }

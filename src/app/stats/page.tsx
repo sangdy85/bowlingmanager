@@ -4,6 +4,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import YearSelector from "@/components/YearSelector";
 
+export const dynamic = 'force-dynamic';
+
 interface StatsPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }

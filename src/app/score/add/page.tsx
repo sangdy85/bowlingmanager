@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import AddScoreForm from "@/components/AddScoreForm";
 import { redirect } from "next/navigation";
 
+export const dynamic = 'force-dynamic';
+
 export default async function AddScorePage() {
     const session = await auth();
     if (!session?.user?.id) {
