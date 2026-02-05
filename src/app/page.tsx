@@ -4,7 +4,12 @@ import { auth } from "@/auth";
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const session = await auth();
+  let session = null;
+  try {
+    session = await auth();
+  } catch (error) {
+    console.error("Failed to fetch session:", error);
+  }
 
   return (
     <div className="flex flex-col items-center justify-center py-10">
