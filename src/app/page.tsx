@@ -2,12 +2,12 @@ import Link from "next/link";
 import { auth } from "@/auth";
 
 export default async function Home() {
-  let session = null;
-  try {
+  let session: any = null;
+  /* try {
     session = await auth();
   } catch (error) {
     console.error("Failed to fetch session on Home page:", error);
-  }
+  } */
 
   return (
     <div className="flex flex-col items-center justify-center py-10">
