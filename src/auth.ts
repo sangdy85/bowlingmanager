@@ -1,6 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
 
@@ -11,59 +11,63 @@ if (!process.env.AUTH_SECRET) {
 
 let authResult: any = null;
 
-try {
-    authResult = NextAuth({
-        ...authConfig,
-        providers: [
-            Credentials({
-                name: "Email",
-                credentials: {
-                    email: { label: "Email", type: "email" },
-                    password: { label: "Password", type: "password" },
-                },
-                authorize: async (credentials) => {
-                    const email = credentials.email as string | undefined;
-                    const password = credentials.password as string | undefined;
+function getAuth() {
+    if (authResult) return authResult;
 
-                    if (!email || !password) {
-                        return null;
-                    }
+    console.log("Initializing NextAuth context...");
+    try {
+        if (!process.env.AUTH_SECRET) {
+            console.error("CRITICAL: AUTH_SECRET IS NOT SET IN ENVIRONMENT!");
+        }
 
-                    const user = await prisma.user.findUnique({
-                        where: { email },
-                    });
+        authResult = NextAuth({
+            ...authConfig,
+            providers: [
+                Credentials({
+                    name: "Email",
+                    credentials: {
+                        email: { label: "Email", type: "email" },
+                        password: { label: "Password", type: "password" },
+                    },
+                    authorize: async (credentials) => {
+                        const email = credentials.email as string | undefined;
+                        const password = credentials.password as string | undefined;
 
-                    if (!user) {
-                        throw new Error("User not found");
-                    }
+                        if (!email || !password) return null;
 
-                    if (!user.emailVerified) {
-                        throw new Error("Email not verified");
-                    }
+                        const db = getPrisma();
+                        const user = await db.user.findUnique({
+                            where: { email },
+                        });
 
-                    const isPasswordValid = await bcrypt.compare(password, user.password);
+                        if (!user) throw new Error("User not found");
+                        if (!user.emailVerified) throw new Error("Email not verified");
 
-                    if (!isPasswordValid) {
-                        throw new Error("Invalid password");
-                    }
+                        const isPasswordValid = await bcrypt.compare(password, user.password);
+                        if (!isPasswordValid) throw new Error("Invalid password");
 
-                    return {
-                        id: user.id,
-                        email: user.email,
-                        name: user.name,
-                    };
-                },
-            }),
-        ],
-    });
-    console.log("NextAuth initialized successfully.");
-} catch (e) {
-    console.error("CRITICAL ERROR during NextAuth initialization:", e);
+                        return { id: user.id, email: user.email, name: user.name };
+                    },
+                }),
+            ],
+        });
+        return authResult;
+    } catch (e) {
+        console.error("FAILED to initialize NextAuth:", e);
+        return null;
+    }
 }
 
-// Ensure exported values are at least functions to avoid "is not a function" errors
-export const auth = authResult?.auth || (async () => null);
-export const handlers = authResult?.handlers || { GET: async () => new Response(null, { status: 500 }), POST: async () => new Response(null, { status: 500 }) };
-export const signIn = authResult?.signIn || (async () => { });
-export const signOut = authResult?.signOut || (async () => { });
+const initializedAuth = getAuth();
+
+export const auth = initializedAuth?.auth || (async () => {
+    console.warn("Auth called but not initialized");
+    return null;
+});
+export const handlers = initializedAuth?.handlers || {
+    GET: () => new Response("Auth Handler Not Initialized", { status: 500 }),
+    POST: () => new Response("Auth Handler Not Initialized", { status: 500 })
+};
+export const signIn = initializedAuth?.signIn || (async () => { });
+export const signOut = initializedAuth?.signOut || (async () => { });
 
