@@ -3,13 +3,13 @@ import styles from './Navbar.module.css';
 import { auth, signOut } from "@/auth";
 
 export default async function Navbar() {
-  let session = null;
+  let session: any = null;
   /* try {
     session = await auth();
   } catch (e) {
     console.error("Failed to fetch session:", e);
   } */
-  const isLoggedIn = !!session?.user;
+  const isLoggedIn = !!(session && session.user);
 
   return (
     <nav className={styles.navbar}>
