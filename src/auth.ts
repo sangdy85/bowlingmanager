@@ -9,48 +9,57 @@ if (!process.env.AUTH_SECRET) {
     console.warn("WARNING: AUTH_SECRET is not defined in environment variables!");
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
-    ...authConfig,
-    providers: [
-        Credentials({
-            name: "Email",
-            credentials: {
-                email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" },
-            },
-            authorize: async (credentials) => {
-                const email = credentials.email as string | undefined;
-                const password = credentials.password as string | undefined;
+let authResult: any = { handlers: {}, signIn: {}, signOut: {}, auth: {} };
 
-                if (!email || !password) {
-                    return null;
-                }
+try {
+    authResult = NextAuth({
+        ...authConfig,
+        providers: [
+            Credentials({
+                name: "Email",
+                credentials: {
+                    email: { label: "Email", type: "email" },
+                    password: { label: "Password", type: "password" },
+                },
+                authorize: async (credentials) => {
+                    const email = credentials.email as string | undefined;
+                    const password = credentials.password as string | undefined;
 
-                const user = await prisma.user.findUnique({
-                    where: { email },
-                });
+                    if (!email || !password) {
+                        return null;
+                    }
 
-                if (!user) {
-                    throw new Error("User not found");
-                }
+                    const user = await prisma.user.findUnique({
+                        where: { email },
+                    });
 
-                if (!user.emailVerified) {
-                    throw new Error("Email not verified");
-                }
+                    if (!user) {
+                        throw new Error("User not found");
+                    }
 
-                const isPasswordValid = await bcrypt.compare(password, user.password);
+                    if (!user.emailVerified) {
+                        throw new Error("Email not verified");
+                    }
 
-                if (!isPasswordValid) {
-                    throw new Error("Invalid password");
-                }
+                    const isPasswordValid = await bcrypt.compare(password, user.password);
 
-                return {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                };
-            },
-        }),
-    ],
-});
+                    if (!isPasswordValid) {
+                        throw new Error("Invalid password");
+                    }
+
+                    return {
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                    };
+                },
+            }),
+        ],
+    });
+    console.log("NextAuth initialized successfully.");
+} catch (e) {
+    console.error("CRITICAL ERROR during NextAuth initialization:", e);
+}
+
+export const { handlers, signIn, signOut, auth } = authResult;
 
