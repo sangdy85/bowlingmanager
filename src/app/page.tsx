@@ -8,7 +8,11 @@ export default async function Home() {
   try {
     session = await auth();
   } catch (error) {
-    console.error("Failed to fetch session:", error);
+    console.error("Failed to fetch session on Home page:", error);
+    if (error instanceof Error) {
+      console.error("Error Message:", error.message);
+      console.error("Error Stack:", error.stack);
+    }
   }
 
   return (
