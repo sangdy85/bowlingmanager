@@ -4,22 +4,12 @@ import { getPrisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
 
-console.log("Initializing NextAuth...");
-if (!process.env.AUTH_SECRET) {
-    console.warn("WARNING: AUTH_SECRET is not defined in environment variables!");
-}
-
 let authResult: any = null;
 
 function getAuth() {
     if (authResult) return authResult;
 
-    console.log("Initializing NextAuth context...");
     try {
-        if (!process.env.AUTH_SECRET) {
-            console.error("CRITICAL: AUTH_SECRET IS NOT SET IN ENVIRONMENT!");
-        }
-
         authResult = NextAuth({
             ...authConfig,
             providers: [
@@ -53,21 +43,33 @@ function getAuth() {
         });
         return authResult;
     } catch (e) {
-        console.error("FAILED to initialize NextAuth:", e);
+        console.error("FAILED to initialize NextAuth lazy context:", e);
         return null;
     }
 }
 
-const initializedAuth = getAuth();
+// Export lazy wrappers to prevent boot-time initialization
+export const auth = (async (...args: any[]) => {
+    const initialized = getAuth();
+    return initialized ? (initialized.auth as any)(...args) : null;
+}) as any;
 
-export const auth = initializedAuth?.auth || (async () => {
-    console.warn("Auth called but not initialized");
-    return null;
+export const handlers = new Proxy({} as any, {
+    get: (target, prop) => {
+        const initialized = getAuth();
+        if (!initialized) {
+            return async () => new Response("Auth not ready", { status: 500 });
+        }
+        return initialized.handlers[prop];
+    }
 });
-export const handlers = initializedAuth?.handlers || {
-    GET: () => new Response("Auth Handler Not Initialized", { status: 500 }),
-    POST: () => new Response("Auth Handler Not Initialized", { status: 500 })
-};
-export const signIn = initializedAuth?.signIn || (async () => { });
-export const signOut = initializedAuth?.signOut || (async () => { });
 
+export const signIn = (async (...args: any[]) => {
+    const initialized = getAuth();
+    return initialized ? (initialized.signIn as any)(...args) : null;
+}) as any;
+
+export const signOut = (async (...args: any[]) => {
+    const initialized = getAuth();
+    return initialized ? (initialized.signOut as any)(...args) : null;
+}) as any;

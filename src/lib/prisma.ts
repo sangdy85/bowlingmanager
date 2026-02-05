@@ -2,10 +2,9 @@ import { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = global as unknown as { prisma?: PrismaClient };
 
-export const getPrisma = () => {
+const getPrisma = () => {
     if (globalForPrisma.prisma) return globalForPrisma.prisma;
 
-    console.log("Creating new PrismaClient instance...");
     const client = new PrismaClient({
         log: ['error', 'warn'],
     });
@@ -16,5 +15,13 @@ export const getPrisma = () => {
     return client;
 };
 
-// For backward compatibility while we refactor
-export const prisma = globalForPrisma.prisma || getPrisma();
+// Use a proxy to export the prisma object lazily
+// This prevents module-load time crashes if environment/client is not ready
+export const prisma = new Proxy({} as PrismaClient, {
+    get: (target, prop) => {
+        const client = getPrisma();
+        return (client as any)[prop];
+    }
+});
+
+export { getPrisma };
