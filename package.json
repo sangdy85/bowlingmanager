@@ -8,9 +8,6 @@
     "start": "next start",
     "lint": "eslint"
   },
-  "engines": {
-    "node": ">=20.0.0"
-  },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@types/nodemailer": "^6.4.17",
