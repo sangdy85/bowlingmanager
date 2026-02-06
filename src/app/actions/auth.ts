@@ -10,7 +10,7 @@ import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/mail"; */
 
 import { redirect } from "next/navigation";
 
-export async function register(prevState: string | undefined, formData: FormData) {
+export async function register(prevState: string | undefined, formData: FormData): Promise<string | undefined> {
     return "회원가입 기능이 진단 모드로 인해 비활성화되었습니다.";
 }
 
@@ -20,8 +20,9 @@ export async function sendCode(email: string) {
     return { success: true, message: "진단 모드입니다: 인증 코드가 발송된 것으로 간주합니다 (123456)." };
 }
 
-export async function login(prevState: string | undefined, formData: FormData) {
+export async function login(prevState: string | undefined, formData: FormData): Promise<string | undefined> {
     redirect("/login?message=diag_mode");
+    return undefined;
 }
 
 export async function findEmail(name: string) {
