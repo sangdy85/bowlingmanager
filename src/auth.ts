@@ -1,37 +1,10 @@
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { getPrisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
-import { authConfig } from "./auth.config";
+// import NextAuth from "next-auth";
+// import Credentials from "next-auth/providers/credentials";
+// import { getPrisma } from "@/lib/prisma";
+// import bcrypt from "bcryptjs";
+// import { authConfig } from "./auth.config";
 
-export const { auth, handlers, signIn, signOut } = NextAuth({
-    ...authConfig,
-    providers: [
-        Credentials({
-            name: "Email",
-            credentials: {
-                email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" },
-            },
-            authorize: async (credentials) => {
-                const email = credentials.email as string | undefined;
-                const password = credentials.password as string | undefined;
-
-                if (!email || !password) return null;
-
-                const db = getPrisma();
-                const user = await db.user.findUnique({
-                    where: { email },
-                });
-
-                if (!user) throw new Error("User not found");
-                if (!user.emailVerified) throw new Error("Email not verified");
-
-                const isPasswordValid = await bcrypt.compare(password, user.password);
-                if (!isPasswordValid) throw new Error("Invalid password");
-
-                return { id: user.id, email: user.email, name: user.name };
-            },
-        }),
-    ],
-});
+export const auth: any = () => null;
+export const handlers: any = {};
+export const signIn: any = () => null;
+export const signOut: any = () => null;
