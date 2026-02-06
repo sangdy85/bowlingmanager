@@ -2,7 +2,7 @@ import Link from 'next/link';
 import styles from './Navbar.module.css';
 
 export default async function Navbar() {
-  const isLoggedIn = false;
+  const isLoggedIn = false; // Keeping it neutralized for baseline restoration
 
   return (
     <nav className={styles.navbar}>
@@ -12,8 +12,12 @@ export default async function Navbar() {
         </Link>
 
         <div className={styles.links}>
-          <Link href="/login" className={styles.link}>로그인</Link>
-          <Link href="/register" className="btn btn-primary">회원가입</Link>
+          <Link href="/login" className={styles.link}>
+            로그인
+          </Link>
+          <Link href="/register" className="btn btn-primary">
+            회원가입
+          </Link>
         </div>
       </div>
     </nav>
