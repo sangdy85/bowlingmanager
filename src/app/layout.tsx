@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: "볼링 점수 관리",
   description: "개인 및 팀 볼링 점수 관리 서비스",
