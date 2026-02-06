@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
-import React from "react";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "볼링 점수 관리",
@@ -18,8 +14,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className={inter.className}>
-        <div className="min-h-screen bg-background">
+      <body style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+        <div className="min-h-screen bg-background text-foreground">
           <Navbar />
           <main className="container mx-auto px-4 py-8">
             {children}
