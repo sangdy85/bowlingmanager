@@ -1,38 +1,59 @@
-'use server';
+"use server";
 
-/* import { signIn } from "@/auth";
-import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
-import { redirect } from "next/navigation";
-import { generateVerificationToken } from "@/lib/tokens";
-import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/mail"; */
-
+import { getPrisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 
-export async function register(prevState: string | undefined, formData: FormData): Promise<string | undefined> {
-    return "회원가입 기능이 진단 모드로 인해 비활성화되었습니다.";
+export async function login(prevState: string | undefined, formData: FormData) {
+    try {
+        await signIn("credentials", formData);
+    } catch (error) {
+        if (error instanceof AuthError) {
+            switch (error.type) {
+                case "CredentialsSignin":
+                    return "이메일 또는 비밀번호가 잘못되었습니다.";
+                default:
+                    return "로그인 중 오류가 발생했습니다.";
+            }
+        }
+        throw error;
+    }
 }
 
-export async function sendCode(email: string) {
-    if (!email) return { success: false, message: "이메일을 입력해주세요." };
-    console.log("DIAGNOSTIC: sendCode mock for", email);
-    return { success: true, message: "진단 모드입니다: 인증 코드가 발송된 것으로 간주합니다 (123456)." };
-}
+export async function register(prevState: string | undefined, formData: FormData) {
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+    const name = formData.get("name") as string;
 
-export async function login(prevState: string | undefined, formData: FormData): Promise<string | undefined> {
-    redirect("/login?message=diag_mode");
-    return undefined;
-}
+    if (!email || !password || !name) {
+        return "모든 필드를 입력해주세요.";
+    }
 
-export async function findEmail(name: string) {
-    return { success: false, message: "진단 모드입니다." };
-}
+    try {
+        const prisma = getPrisma();
+        const existingUser = await prisma.user.findUnique({
+            where: { email },
+        });
 
-export async function requestPasswordReset(email: string) {
-    return { success: true, message: "진단 모드: 재설정 코드 발송 간주." };
-}
+        if (existingUser) {
+            return "이미 가입된 이메일입니다.";
+        }
 
-export async function resetPassword(email: string, code: string, newPassword: string) {
-    return { success: true, message: "진단 모드: 비밀번호 변경 간주." };
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        await prisma.user.create({
+            data: {
+                email,
+                name,
+                password: hashedPassword,
+            },
+        });
+
+        return redirect("/login");
+    } catch (error) {
+        console.error("Registration error:", error);
+        return "회원가입 중 오류가 발생했습니다.";
+    }
 }
