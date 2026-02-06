@@ -6,6 +6,7 @@ import { authConfig } from "./auth.config";
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
     ...authConfig,
+    secret: process.env.AUTH_SECRET || "fallback-secret-for-diag-12345", // Fallback to prevent crash if missing
     providers: [
         Credentials({
             async authorize(credentials) {
@@ -33,9 +34,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             }
         })
     ],
-    callbacks: {
-        ...authConfig.callbacks,
-    },
-    // Adding trustHost for Vercel
+    // trustHost is critical for Vercel
     trustHost: true
 });
