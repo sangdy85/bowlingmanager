@@ -6,12 +6,12 @@ export default function Home() {
       <h1 className="page-title mb-4">
         볼링 점수 관리
       </h1>
-      <p className="mb-12" style={{ fontSize: '1.2rem', color: '#94a3b8', maxWidth: '600px', lineHeight: '1.8' }}>
+      <p className="mb-10" style={{ fontSize: '1.125rem', color: '#94a3b8', maxWidth: '600px', lineHeight: '1.6' }}>
         팀을 만들고, 점수를 기록하고, 친구들과 경쟁하세요.<br />
         쉽고 간편한 볼링 점수 관리 서비스입니다.
       </p>
 
-      <div className="grid grid-cols-3 w-full max-w-5xl">
+      <div className="grid grid-cols-3 w-full max-w-4xl">
         <Link href="/login" className="card">
           <span className="icon">🎳</span>
           <h3>점수 기록</h3>

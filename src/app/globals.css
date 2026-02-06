@@ -13,7 +13,7 @@
   --destructive-foreground: #ffffff;
   --input: #334155;
   --border: #334155;
-  --radius: 1rem;
+  --radius: 0.75rem;
 }
 
 * {
@@ -34,7 +34,7 @@ body {
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 1.5rem;
 }
 
 .page-title {
@@ -43,16 +43,19 @@ body {
   -webkit-text-fill-color: transparent;
   font-weight: 800;
   letter-spacing: -0.025em;
-  font-size: 3.5rem;
+  font-size: 3rem;
+  /* Slightly reduced as per 2nd image */
 }
 
-/* Card Improvements - High Precision */
+/* Card Improvements - High Precision Matching 2nd Image */
 .card {
   background-color: #1e293b;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 1.25rem;
-  padding: 3rem 2rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0.85rem;
+  /* More compact radius */
+  padding: 2.25rem 1.75rem;
+  /* Reduced padding */
+  transition: all 0.25s ease;
   text-decoration: none !important;
   display: flex;
   flex-direction: column;
@@ -61,28 +64,30 @@ body {
 }
 
 .card:hover {
-  transform: translateY(-8px);
-  border-color: rgba(59, 130, 246, 0.5);
+  transform: translateY(-4px);
+  border-color: rgba(59, 130, 246, 0.4);
   background-color: #243147;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
 .card h3 {
   color: #ffffff;
-  font-size: 1.25rem;
+  font-size: 1.15rem;
+  /* Reduced Title */
   font-weight: 700;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .card p {
   color: #94a3b8;
-  font-size: 0.95rem;
-  line-height: 1.6;
+  font-size: 0.875rem;
+  /* Reduced Description */
+  line-height: 1.5;
 }
 
 .card .icon {
-  font-size: 2.5rem;
-  margin-bottom: 1.5rem;
+  font-size: 1.75rem;
+  /* Reduced Icon size */
+  margin-bottom: 1.25rem;
   display: block;
 }
 
@@ -91,13 +96,13 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.6rem 1.2rem;
+  padding: 0.5rem 1rem;
   font-weight: 600;
-  border-radius: 0.6rem;
+  border-radius: 0.5rem;
   transition: all 0.2s;
   cursor: pointer;
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
 }
 
 .btn-primary {
@@ -105,16 +110,13 @@ body {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   border: none;
-}
-
-.btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .grid {
   display: grid;
-  gap: 1.5rem;
+  gap: 1.25rem;
+  /* Tighter gap */
 }
 
 @media (min-width: 768px) {
@@ -128,7 +130,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 80px);
-  /* Adjust for navbar */
+  padding: 4rem 0;
+  /* Vertical breathing room like 2nd image */
   text-align: center;
 }
