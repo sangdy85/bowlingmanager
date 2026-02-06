@@ -1,22 +1,24 @@
+import Navbar from "@/components/Navbar";
 import type { Metadata } from "next";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
+
+// export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: "볼링 점수 관리",
-  description: "개인 및 팀 볼링 점수 관리 서비스",
+  title: "Bowling Score Manager",
+  description: "Manage your bowling team scores",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="ko">
-      <body className="antialiased">
+      <body>
         <Navbar />
-        <main className="container">
+        <main className="container mt-4">
           {children}
         </main>
       </body>
