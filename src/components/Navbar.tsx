@@ -33,14 +33,14 @@ export default async function Navbar() {
               <Link href="/stats" className={styles.link}>
                 통계/순위
               </Link>
-              <form action={async () => {
+              {/* <form action={async () => {
                 'use server';
                 await signOut({ redirectTo: "/" });
               }}>
                 <button type="submit" className={styles.logoutBtn}>
                   로그아웃
                 </button>
-              </form>
+              </form> */}
             </>
           ) : (
             <>
