@@ -1,10 +1,15 @@
-// Extreme Mock for Diagnosis
-export const prisma: any = new Proxy({}, {
-    get: () => () => ({
-        findUnique: async () => null,
-        findMany: async () => [],
-        create: async () => ({}),
-    })
-});
+import { PrismaClient } from '@prisma/client';
+
+const prismaClientSingleton = () => {
+    return new PrismaClient();
+};
+
+declare global {
+    var prisma: undefined | ReturnType<typeof prismaClientSingleton>;
+}
+
+export const prisma = globalThis.prisma ?? prismaClientSingleton();
+
+if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma;
 
 export const getPrisma = () => prisma;
