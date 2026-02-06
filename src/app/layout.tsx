@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Navbar from "@/components/Navbar";
 
 export const metadata: Metadata = {
   title: "볼링 점수 관리",
@@ -14,7 +15,10 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className="antialiased">
-        {children}
+        <Navbar />
+        <main className="container">
+          {children}
+        </main>
       </body>
     </html>
   );
