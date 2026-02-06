@@ -1,7 +1,7 @@
 'use server';
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { prisma } from '@/lib/prisma'; // Import prisma
+import prisma from '@/lib/prisma'; // Import prisma
 import { auth } from '@/auth';
 
 // Pricing constants (Approx KRW per token for Flash models)
