@@ -1,26 +1,30 @@
-import Navbar from "@/components/Navbar";
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import Navbar from "@/components/Navbar";
+import React from "react";
 
-// export const dynamic = 'force-dynamic';
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Bowling Score Manager",
-  description: "Manage your bowling team scores",
+  title: "볼링 점수 관리",
+  description: "개인 및 팀 볼링 점수 관리 서비스",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="ko">
-      <body>
-        <Navbar />
-        <main className="container mt-4">
-          {children}
-        </main>
+      <body className={inter.className}>
+        <div className="min-h-screen bg-background">
+          <Navbar />
+          <main className="container mx-auto px-4 py-8">
+            {children}
+          </main>
+        </div>
       </body>
     </html>
   );

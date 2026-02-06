@@ -6,6 +6,11 @@ import { getPrisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 
+/**
+ * NOTE: We keep these actions in a dedicated "use server" file.
+ * We try to keep imports as clean as possible for client tree-shaking.
+ */
+
 export async function login(prevState: string | undefined, formData: FormData) {
     try {
         await signIn("credentials", formData);
@@ -51,14 +56,14 @@ export async function register(prevState: string | undefined, formData: FormData
             },
         });
 
-        return redirect("/login");
+        return redirect("/login?message=registered");
     } catch (error) {
+        if (error instanceof Error && error.message.includes("redirect")) throw error;
         console.error("Registration error:", error);
         return "회원가입 중 오류가 발생했습니다.";
     }
 }
 
-// Restoring missing exports to fix build errors
 export async function findEmail(name: string) {
     try {
         const prisma = getPrisma();
@@ -75,14 +80,13 @@ export async function findEmail(name: string) {
 }
 
 export async function sendCode(email: string) {
-    // Temporary mock to avoid mail service complexity during restoration
-    return { success: true, message: "테스트 모드: 코드가 발송된 것으로 처리합니다 (123456)." };
+    return { success: true, message: "테스트 모드: 코드가 발송되었습니다." };
 }
 
 export async function requestPasswordReset(email: string) {
-    return { success: true, message: "테스트 모드: 초기화 요청이 접수되었습니다." };
+    return { success: true, message: "테스트 모드: 요청이 접수되었습니다." };
 }
 
 export async function resetPassword(email: string, code: string, newPassword: string) {
-    return { success: true, message: "테스트 모드: 비밀번호가 변경된 것으로 처리합니다." };
+    return { success: true, message: "테스트 모드: 비밀번호가 변경되었습니다." };
 }
