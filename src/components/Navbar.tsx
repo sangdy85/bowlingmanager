@@ -1,8 +1,18 @@
 import Link from 'next/link';
 import styles from './Navbar.module.css';
+import { auth } from "@/auth";
 
 export default async function Navbar() {
-  const isLoggedIn = false;
+  let session: any = null;
+
+  try {
+    // Calling the ultralight auth()
+    session = await auth();
+  } catch (e) {
+    console.error("DIAG: Ultralight auth() failed:", e);
+  }
+
+  const isLoggedIn = !!(session && session.user);
 
   return (
     <nav className={styles.navbar}>
@@ -12,7 +22,6 @@ export default async function Navbar() {
         </Link>
 
         <div className={styles.links}>
-          {/* Auth links hidden for diagnosis */}
           <Link href="/login" className={styles.link}>로그인</Link>
           <Link href="/register" className="btn btn-primary">회원가입</Link>
         </div>
