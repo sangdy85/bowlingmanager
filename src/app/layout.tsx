@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-
-export const dynamic = 'force-dynamic';
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "볼링 점수 관리",
@@ -14,7 +13,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body style={{ margin: 0, backgroundColor: '#0f172a', color: 'white' }}>{children}</body>
+      <body className="antialiased">
+        {children}
+      </body>
     </html>
   );
 }
