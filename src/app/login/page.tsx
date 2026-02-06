@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState, Suspense } from 'react';
+import { useActionState, Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { login } from '@/app/actions/auth';
 
@@ -10,10 +10,32 @@ function LoginForm() {
     const searchParams = useSearchParams();
     const message = searchParams.get('message');
 
+    const [email, setEmail] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
+
+    useEffect(() => {
+        const savedEmail = localStorage.getItem('rememberEmail');
+        if (savedEmail) {
+            setEmail(savedEmail);
+            setRememberMe(true);
+        }
+    }, []);
+
+    const handleSubmit = async (formData: FormData) => {
+        const emailValue = formData.get('email') as string;
+        if (rememberMe) {
+            localStorage.setItem('rememberEmail', emailValue);
+        } else {
+            localStorage.removeItem('rememberEmail');
+        }
+        dispatch(formData);
+    };
+
     return (
         <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
             <h1 className="text-center mb-4" style={{ fontSize: '1.5rem' }}>로그인</h1>
 
+            {/* ... omit message blocks for brevity in this thought but keep in code ... */}
             {message === 'verification-sent' && (
                 <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-md text-green-500 text-sm font-medium text-center">
                     인증 메일이 발송되었습니다.<br />
@@ -35,15 +57,36 @@ function LoginForm() {
                 </div>
             )}
 
-            <form action={dispatch} className="flex flex-col gap-4">
+            <form action={handleSubmit} className="flex flex-col gap-4">
                 <div>
                     <label htmlFor="email" className="label">이메일</label>
-                    <input type="email" id="email" name="email" className="input" placeholder="example@email.com" required />
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        className="input"
+                        placeholder="example@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                    />
                 </div>
                 <div>
                     <label htmlFor="password" className="label">비밀번호</label>
                     <input type="password" id="password" name="password" className="input" required />
                 </div>
+
+                <div className="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        id="rememberMe"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        style={{ cursor: 'pointer' }}
+                    />
+                    <label htmlFor="rememberMe" style={{ fontSize: '0.875rem', cursor: 'pointer', userSelect: 'none' }}>이메일 저장</label>
+                </div>
+
                 {errorMessage && (
                     <div className="text-destructive text-center" style={{ fontSize: '0.875rem' }}>{errorMessage}</div>
                 )}

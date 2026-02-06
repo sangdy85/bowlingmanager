@@ -12,8 +12,19 @@ import { redirect } from "next/navigation";
  */
 
 export async function login(prevState: string | undefined, formData: FormData) {
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    if (!email || !password) {
+        return "이메일과 비밀번호를 모두 입력해주세요.";
+    }
+
     try {
-        await signIn("credentials", formData);
+        await signIn("credentials", {
+            email,
+            password,
+            redirectTo: "/",
+        });
     } catch (error) {
         if (error instanceof AuthError) {
             switch (error.type) {

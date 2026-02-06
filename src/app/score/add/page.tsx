@@ -11,9 +11,17 @@ export default async function AddScorePage() {
         redirect("/login");
     }
 
-    // Fetch teams the user belongs to via TeamMember
+    // Fetch teams where user is owner or manager
     const myMemberships = await prisma.teamMember.findMany({
-        where: { userId: session.user.id },
+        where: {
+            userId: session.user.id,
+            team: {
+                OR: [
+                    { ownerId: session.user.id },
+                    { managers: { some: { id: session.user.id } } }
+                ]
+            }
+        },
         include: {
             team: {
                 include: {

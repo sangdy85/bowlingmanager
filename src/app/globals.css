@@ -56,6 +56,12 @@ a:hover {
   padding: 1rem;
 }
 
+@media (max-width: 768px) {
+  .container {
+    padding: 0.75rem;
+  }
+}
+
 .flex {
   display: flex;
 }
@@ -102,6 +108,18 @@ a:hover {
 
 .hidden {
   display: none !important;
+}
+
+.hide-mobile {
+  @media (max-width: 768px) {
+    display: none !important;
+  }
+}
+
+.hide-desktop {
+  @media (min-width: 769px) {
+    display: none !important;
+  }
 }
 
 /* Components */
@@ -153,6 +171,12 @@ a:hover {
   border: 1px solid var(--border);
 }
 
+@media (max-width: 768px) {
+  .card {
+    padding: 1rem;
+  }
+}
+
 .input,
 .select {
   width: 100%;
@@ -187,4 +211,26 @@ a:hover {
   background: linear-gradient(to right, #60a5fa, #a78bfa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* Scroll Utilities */
+.overflow-x-auto {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

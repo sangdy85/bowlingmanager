@@ -275,24 +275,31 @@ export default function TeamYearlyStats({ scores, currentYear, teamName, selecte
                             <tr key={idx} className="border-b border-border hover:bg-muted/30 transition-colors">
                                 <td className="p-1 font-medium sticky left-0 bg-background z-10 border-r w-[80px] min-w-[80px] max-w-[80px]">
                                     <div className="flex items-center justify-center gap-0.5 w-full h-full">
-                                        {row.userId === ownerId && (
-                                            <img
-                                                src="/images/leader-badge.png"
-                                                alt="리더"
-                                                className="flex-shrink-0"
-                                                style={{ height: '16px', width: 'auto', objectFit: 'contain' }}
-                                                title="리더"
-                                            />
+                                        {/* Show Leader, Manager, and Rankings only for the current year (2026) */}
+                                        {currentYear === 2026 && (
+                                            <>
+                                                {row.userId === ownerId && (
+                                                    <img
+                                                        src="/images/leader-badge.png"
+                                                        alt="리더"
+                                                        className="flex-shrink-0"
+                                                        style={{ height: '16px', width: 'auto', objectFit: 'contain' }}
+                                                        title="리더"
+                                                    />
+                                                )}
+                                                {managerIds?.includes(row.userId) && row.userId !== ownerId && (
+                                                    <img
+                                                        src="/images/manager-badge.png"
+                                                        alt="매니저"
+                                                        className="flex-shrink-0"
+                                                        style={{ height: '16px', width: 'auto', objectFit: 'contain' }}
+                                                        title="매니저"
+                                                    />
+                                                )}
+                                            </>
                                         )}
-                                        {managerIds?.includes(row.userId) && row.userId !== ownerId && (
-                                            <img
-                                                src="/images/manager-badge.png"
-                                                alt="매니저"
-                                                className="flex-shrink-0"
-                                                style={{ height: '16px', width: 'auto', objectFit: 'contain' }}
-                                                title="매니저"
-                                            />
-                                        )}
+
+                                        {/* Ace badge is always shown if earned in that year */}
                                         {row.userId === aceUserId && (
                                             <img
                                                 src="/images/ace-badge.png"
@@ -302,32 +309,37 @@ export default function TeamYearlyStats({ scores, currentYear, teamName, selecte
                                                 title="에이스"
                                             />
                                         )}
-                                        {recentRankings?.[1] === row.userId && (
-                                            <img
-                                                src="/images/1.png"
-                                                alt="1위"
-                                                className="flex-shrink-0"
-                                                style={{ height: '16px', width: 'auto', objectFit: 'contain' }}
-                                                title="최근 정기전/교류전 1위"
-                                            />
-                                        )}
-                                        {recentRankings?.[2] === row.userId && (
-                                            <img
-                                                src="/images/2.png"
-                                                alt="2위"
-                                                className="flex-shrink-0"
-                                                style={{ height: '16px', width: 'auto', objectFit: 'contain' }}
-                                                title="최근 정기전/교류전 2위"
-                                            />
-                                        )}
-                                        {recentRankings?.[3] === row.userId && (
-                                            <img
-                                                src="/images/3.png"
-                                                alt="3위"
-                                                className="flex-shrink-0"
-                                                style={{ height: '16px', width: 'auto', objectFit: 'contain' }}
-                                                title="최근 정기전/교류전 3위"
-                                            />
+
+                                        {currentYear === 2026 && (
+                                            <>
+                                                {recentRankings?.[1] === row.userId && (
+                                                    <img
+                                                        src="/images/1.png"
+                                                        alt="1위"
+                                                        className="flex-shrink-0"
+                                                        style={{ height: '16px', width: 'auto', objectFit: 'contain' }}
+                                                        title="최근 정기전/교류전 1위"
+                                                    />
+                                                )}
+                                                {recentRankings?.[2] === row.userId && (
+                                                    <img
+                                                        src="/images/2.png"
+                                                        alt="2위"
+                                                        className="flex-shrink-0"
+                                                        style={{ height: '16px', width: 'auto', objectFit: 'contain' }}
+                                                        title="최근 정기전/교류전 2위"
+                                                    />
+                                                )}
+                                                {recentRankings?.[3] === row.userId && (
+                                                    <img
+                                                        src="/images/3.png"
+                                                        alt="3위"
+                                                        className="flex-shrink-0"
+                                                        style={{ height: '16px', width: 'auto', objectFit: 'contain' }}
+                                                        title="최근 정기전/교류전 3위"
+                                                    />
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 </td>

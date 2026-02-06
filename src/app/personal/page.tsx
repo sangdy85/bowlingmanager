@@ -18,7 +18,13 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     const user = await prisma.user.findUnique({
         where: { id: session.user.id },
         include: {
-            teamMemberships: { include: { team: true } },
+            teamMemberships: {
+                include: {
+                    team: {
+                        include: { managers: true }
+                    }
+                }
+            },
         },
     });
 
@@ -104,8 +110,11 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     const globalResidentScores = myYearlyScores.filter(s => s.gameType === '상주');
     const globalOtherScores = myYearlyScores.filter(s => !['정기전', '벙개', '교류전', '상주'].includes(s.gameType || ''));
 
-    // Check if owner of ANY team
-    const isOwner = user.teamMemberships.some(tm => tm.team.ownerId === user.id);
+    // Check if owner or manager of ANY team
+    const hasAuthority = user.teamMemberships.some(tm =>
+        tm.team.ownerId === user.id ||
+        tm.team.managers.some(m => m.id === user.id)
+    );
 
     return (
         <div className="container py-8 max-w-4xl mx-auto">
@@ -118,7 +127,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                     <Link href="/dashboard" className="btn btn-secondary">
                         &larr; 메인
                     </Link>
-                    {isOwner && (
+                    {hasAuthority && (
                         <Link href="/score/add" className="btn btn-primary">
                             + 점수 기록하기
                         </Link>

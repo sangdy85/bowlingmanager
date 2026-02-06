@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import TeamCodeSection from "@/components/TeamCodeSection";
 
 export const dynamic = 'force-dynamic';
 
@@ -13,11 +14,28 @@ export default async function TeamListPage() {
 
     const user = await prisma.user.findUnique({
         where: { id: session.user.id },
-        include: { teamMemberships: { include: { team: true } } }
+        include: {
+            teamMemberships: {
+                include: {
+                    team: {
+                        include: {
+                            _count: {
+                                select: { members: true }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     });
 
     if (!user) {
         redirect("/login");
+    }
+
+    // Auto-redirect if user has exactly one team
+    if (user.teamMemberships.length === 1) {
+        redirect(`/team/${user.teamMemberships[0].team.id}`);
     }
 
     // If user has no teams, suggest creating or joining one (or redirect to join page?)
@@ -53,14 +71,12 @@ export default async function TeamListPage() {
                         <div className="card hover:bg-muted/30 transition-colors p-6 flex justify-between items-center cursor-pointer">
                             <div>
                                 <h2 className="text-xl font-bold mb-1">{team.name}</h2>
-                                <p className="text-sm text-secondary-foreground">멤버 수: {
-                                    // We need to fetch member count separately or include it. 
-                                    // For now, let's keep it simple or use count if available.
-                                    // Prisma include count:
-                                    // user.teams is just the Team object.
-                                    // Let's just show code.
-                                    `코드: ${team.code}`
-                                }</p>
+                                <div className="flex flex-col gap-1">
+                                    <p className="text-sm text-secondary-foreground">
+                                        멤버 수: {team._count.members}명
+                                    </p>
+                                    <TeamCodeSection code={team.code} />
+                                </div>
                             </div>
                             <div className="text-accent font-semibold">
                                 입장하기 &rarr;

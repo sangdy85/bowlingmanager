@@ -115,7 +115,7 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
                     <Link href="/team" className="btn btn-secondary h-10 px-4 min-w-[100px] text-sm flex items-center justify-center">
                         &larr; 팀 목록
                     </Link>
-                    {isOwner && (
+                    {(isOwner || isManager) && (
                         <Link
                             href={isManageMode ? `/team/${teamId}` : `/team/${teamId}?view=manage`}
                             className="btn h-10 px-4 min-w-[100px] text-sm flex items-center justify-center shadow-sm"
@@ -175,6 +175,7 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
                                 email: m.user.email,
                                 alias: m.alias
                             }))}
+                            managers={team.managers}
                         />
                     )}
                 </div>

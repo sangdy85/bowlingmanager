@@ -9,15 +9,19 @@ interface TeamGuestManagerProps {
     ownerId: string | null;
     currentUserId: string;
     members: { id: string; name: string; realName: string; email: string; alias: string | null }[];
+    managers: { id: string }[];
 }
 
-export default function TeamGuestManager({ teamId, guests, ownerId, currentUserId, members }: TeamGuestManagerProps) {
+export default function TeamGuestManager({ teamId, guests, ownerId, currentUserId, members, managers }: TeamGuestManagerProps) {
     const [isPending, setIsPending] = useState(false);
     const [mergeTarget, setMergeTarget] = useState<string | null>(null); // Guest name being merged
     const [selectedMemberId, setSelectedMemberId] = useState<string>("");
 
-    // Only allow access if current user is owner
-    if (currentUserId !== ownerId) return <div className="p-4 text-center text-red-500">권한이 없습니다.</div>;
+    const isOwner = currentUserId === ownerId;
+    const isManager = managers.some(m => m.id === currentUserId);
+
+    // Only allow access if current user is owner or manager
+    if (!isOwner && !isManager) return <div className="p-4 text-center text-red-500">권한이 없습니다.</div>;
 
     const handleDelete = async (guestName: string) => {
         if (!confirm(`'${guestName}'의 모든 기록을 영구적으로 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
@@ -77,9 +81,9 @@ export default function TeamGuestManager({ teamId, guests, ownerId, currentUserI
                 {guests.length === 0 ? (
                     <p className="text-center text-muted-foreground py-4">비회원 기록이 없습니다.</p>
                 ) : (
-                    <ul className="space-y-3">
+                    <ul className="divide-y border rounded-lg overflow-hidden">
                         {guests.map((guestName, idx) => (
-                            <li key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg bg-card hover:bg-muted/10 transition-colors gap-3">
+                            <li key={idx} className="flex flex-col p-4 bg-card hover:bg-muted/10 transition-colors gap-3">
                                 <div className="flex flex-col">
                                     <span className="font-bold">{guestName} <span className="text-xs font-normal text-muted-foreground">(비회원)</span></span>
                                 </div>
@@ -87,7 +91,7 @@ export default function TeamGuestManager({ teamId, guests, ownerId, currentUserI
                                 {mergeTarget === guestName ? (
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <select
-                                            className="border rounded px-2 py-1 text-sm min-w-[150px]"
+                                            className="border rounded px-2 py-1 text-sm min-w-[200px]"
                                             value={selectedMemberId}
                                             onChange={(e) => setSelectedMemberId(e.target.value)}
                                             disabled={isPending}
@@ -103,34 +107,36 @@ export default function TeamGuestManager({ teamId, guests, ownerId, currentUserI
                                                 <option value="" disabled>이름이 일치하는 회원이 없습니다</option>
                                             )}
                                         </select>
-                                        <button
-                                            onClick={handleMergeConfirm}
-                                            disabled={isPending || !selectedMemberId}
-                                            className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-                                        >
-                                            확인
-                                        </button>
-                                        <button
-                                            onClick={handleMergeCancel}
-                                            disabled={isPending}
-                                            className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
-                                        >
-                                            취소
-                                        </button>
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={handleMergeConfirm}
+                                                disabled={isPending || !selectedMemberId}
+                                                className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                                            >
+                                                확인
+                                            </button>
+                                            <button
+                                                onClick={handleMergeCancel}
+                                                disabled={isPending}
+                                                className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
+                                            >
+                                                취소
+                                            </button>
+                                        </div>
                                     </div>
                                 ) : (
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex gap-2">
                                         <button
                                             onClick={() => handleMergeClick(guestName)}
                                             disabled={isPending || !!mergeTarget}
-                                            className="px-4 py-2 text-sm bg-blue-50 text-blue-600 border border-blue-200 rounded hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300 transition-colors disabled:opacity-50"
+                                            className="px-3 py-1.5 text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300 transition-colors disabled:opacity-50"
                                         >
                                             기록 통합
                                         </button>
                                         <button
                                             onClick={() => handleDelete(guestName)}
                                             disabled={isPending || !!mergeTarget}
-                                            className="px-4 py-2 text-sm bg-red-50 text-red-600 border border-red-200 rounded hover:bg-red-100 hover:text-red-700 hover:border-red-300 transition-colors disabled:opacity-50"
+                                            className="px-3 py-1.5 text-xs bg-red-50 text-red-600 border border-red-200 rounded hover:bg-red-100 hover:text-red-700 hover:border-red-300 transition-colors disabled:opacity-50"
                                         >
                                             기록 삭제
                                         </button>

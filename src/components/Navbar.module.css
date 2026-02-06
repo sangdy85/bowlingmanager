@@ -25,6 +25,27 @@
     align-items: center;
 }
 
+@media (max-width: 768px) {
+    .links {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        background-color: var(--secondary);
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border);
+        z-index: 50;
+        gap: 1.25rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+    }
+
+    .linksOpen {
+        display: flex;
+    }
+}
+
 .link {
     color: var(--secondary-foreground);
     font-size: 0.95rem;
@@ -49,4 +70,19 @@
 
 .logoutBtn:hover {
     text-decoration: underline;
+}
+
+.menuToggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--foreground);
+    cursor: pointer;
+    padding: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .menuToggle {
+        display: block;
+    }
 }

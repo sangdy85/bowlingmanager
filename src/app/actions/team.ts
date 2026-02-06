@@ -217,18 +217,26 @@ export async function kickMember(teamId: string, memberId: string) {
     try {
         const team = await prisma.team.findUnique({
             where: { id: teamId },
-            select: { ownerId: true }
+            include: { managers: true }
         });
+        if (!team) return { success: false, message: "존재하지 않는 팀입니다." };
 
-        if (!team) {
-            return { success: false, message: "존재하지 않는 팀입니다." };
+        const isOwner = team.ownerId === session.user.id;
+        const isManager = team.managers.some(m => m.id === session.user.id);
+
+        if (!isOwner && !isManager) {
+            return { success: false, message: "권한이 없습니다." };
         }
 
-        if (team.ownerId !== session.user.id) {
-            return { success: false, message: "팀장만 회원을 강퇴할 수 있습니다." };
+        // Managers cannot kick the owner or other managers
+        const targetIsOwner = team.ownerId === memberId;
+        const targetIsManager = team.managers.some(m => m.id === memberId);
+
+        if (!isOwner && (targetIsOwner || targetIsManager)) {
+            return { success: false, message: "매니저는 팀장이나 다른 매니저를 강퇴할 수 없습니다." };
         }
 
-        if (memberId === team.ownerId) {
+        if (memberId === session.user.id) {
             return { success: false, message: "자기 자신은 강퇴할 수 없습니다." };
         }
 
@@ -288,14 +296,14 @@ export async function deleteGuestRecords(teamId: string, guestName: string) {
     try {
         const team = await prisma.team.findUnique({
             where: { id: teamId },
-            select: { ownerId: true }
+            include: { managers: true }
         });
+        if (!team) return { success: false, message: "존재하지 않는 팀입니다." };
 
-        if (!team) {
-            return { success: false, message: "존재하지 않는 팀입니다." };
-        }
+        const isOwner = team.ownerId === session.user.id;
+        const isManager = team.managers.some(m => m.id === session.user.id);
 
-        if (team.ownerId !== session.user.id) {
+        if (!isOwner && !isManager) {
             return { success: false, message: "권한이 없습니다." };
         }
 
@@ -326,14 +334,14 @@ export async function mergeGuestStats(teamId: string, guestName: string, targetM
     try {
         const team = await prisma.team.findUnique({
             where: { id: teamId },
-            select: { ownerId: true }
+            include: { managers: true }
         });
+        if (!team) return { success: false, message: "존재하지 않는 팀입니다." };
 
-        if (!team) {
-            return { success: false, message: "존재하지 않는 팀입니다." };
-        }
+        const isOwner = team.ownerId === session.user.id;
+        const isManager = team.managers.some(m => m.id === session.user.id);
 
-        if (team.ownerId !== session.user.id) {
+        if (!isOwner && !isManager) {
             return { success: false, message: "권한이 없습니다." };
         }
 

@@ -70,7 +70,7 @@ export default function OCRUpload({ knownMembers }: OCRUploadProps) {
             </div>
 
             <div className="flex flex-col gap-4">
-                <div className="flex gap-4">
+                <div className="flex flex-col md:flex-row gap-4">
                     <div className="flex-1 flex flex-col gap-2">
                         <label htmlFor="ocrDate" className="label font-bold">날짜</label>
                         <input
@@ -113,62 +113,59 @@ export default function OCRUpload({ knownMembers }: OCRUploadProps) {
 
             {previewData.length > 0 && (
                 <div className="border rounded-lg overflow-hidden">
-                    <div className="bg-muted p-2 text-sm font-bold grid grid-cols-3 gap-2 text-center">
-                        <div>이름</div>
-                        <div>점수</div>
-                        <div>수정</div>
-                    </div>
-                    <div className="max-h-60 overflow-y-auto divide-y">
-                        {previewData.map((row, idx) => (
-                            <div key={idx} className="p-2 text-sm grid grid-cols-3 gap-2 text-center items-center">
-                                <select
-                                    className="p-1 border rounded w-full text-center"
-                                    value={row.memberName || ""}
-                                    onChange={(e) => {
-                                        const newData = [...previewData];
-                                        newData[idx].memberName = e.target.value;
-                                        setPreviewData(newData);
-                                    }}
-                                >
-                                    <option value="">팀원 선택</option>
-                                    {knownMembers.map(member => (
-                                        <option key={member} value={member}>{member}</option>
-                                    ))}
-                                </select>
-                                <input
-                                    className="p-1 border rounded w-full text-center"
-                                    value={row.scores.join(', ')}
-                                    onChange={(e) => {
-                                        // Allow simple editing of comma separated string
-                                        const val = e.target.value;
-                                        // We just store logic to parse it back when validating? or just assume user formats it
-                                        // Let's try to update the score array if valid
-                                        try {
-                                            const parts = val.split(',').map(s => s.trim()).filter(s => s);
-                                            const nums = parts.map(Number).filter(n => !isNaN(n));
-                                            const newData = [...previewData];
-                                            newData[idx].scores = nums;
-                                            setPreviewData(newData);
-                                        } catch (e) { }
-                                        // Note: Managing array editing via text input is tricky for state/render.
-                                        // Just letting them edit name is safest for now.
-                                        // For scores, maybe just display?
-                                        // Or better: Let them delete row if wrong.
-                                    }}
-                                    placeholder="150, 180..."
-                                />
-                                <button
-                                    onClick={() => {
-                                        const newData = [...previewData];
-                                        newData.splice(idx, 1);
-                                        setPreviewData(newData);
-                                    }}
-                                    className="text-red-500 text-xs hover:underline"
-                                >
-                                    삭제
-                                </button>
+                    <div className="overflow-x-auto">
+                        <div style={{ minWidth: '400px' }}>
+                            <div className="bg-muted p-2 text-sm font-bold grid grid-cols-3 gap-2 text-center">
+                                <div>이름</div>
+                                <div>점수</div>
+                                <div>수정</div>
                             </div>
-                        ))}
+                            <div className="max-h-60 overflow-y-auto divide-y">
+                                {previewData.map((row, idx) => (
+                                    <div key={idx} className="p-2 text-sm grid grid-cols-3 gap-2 text-center items-center">
+                                        <select
+                                            className="p-1 border rounded w-full text-center"
+                                            value={row.memberName || ""}
+                                            onChange={(e) => {
+                                                const newData = [...previewData];
+                                                newData[idx].memberName = e.target.value;
+                                                setPreviewData(newData);
+                                            }}
+                                        >
+                                            <option value="">팀원 선택</option>
+                                            {knownMembers.map(member => (
+                                                <option key={member} value={member}>{member}</option>
+                                            ))}
+                                        </select>
+                                        <input
+                                            className="p-1 border rounded w-full text-center"
+                                            value={row.scores.join(', ')}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                try {
+                                                    const parts = val.split(',').map(s => s.trim()).filter(s => s);
+                                                    const nums = parts.map(Number).filter(n => !isNaN(n));
+                                                    const newData = [...previewData];
+                                                    newData[idx].scores = nums;
+                                                    setPreviewData(newData);
+                                                } catch (e) { }
+                                            }}
+                                            placeholder="150, 180..."
+                                        />
+                                        <button
+                                            onClick={() => {
+                                                const newData = [...previewData];
+                                                newData.splice(idx, 1);
+                                                setPreviewData(newData);
+                                            }}
+                                            className="text-red-500 text-xs hover:underline"
+                                        >
+                                            삭제
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                     <div className="p-4 bg-muted/30 text-center">
                         <button
