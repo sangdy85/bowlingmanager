@@ -1,190 +1,29 @@
 :root {
-    --background: #0f172a;
-    --foreground: #f8fafc;
-    --primary: #3b82f6;
-    --primary-foreground: #ffffff;
-    --secondary: #1e293b;
-    --secondary-foreground: #e2e8f0;
-    --accent: #8b5cf6;
-    --accent-foreground: #ffffff;
-    --card: #1e293b;
-    --card-foreground: #f1f5f9;
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
-    --input: #334155;
-    --border: #334155;
-    --radius: 0.75rem;
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #e2e8f0;
+  --accent: #8b5cf6;
+  --accent-foreground: #ffffff;
+  --card: #1e293b;
+  --card-foreground: #f1f5f9;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --input: #334155;
+  --border: #334155;
+  --radius: 0.75rem;
 }
 
 * {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 body {
-    background-color: var(--background);
-    color: var(--foreground);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    margin: 0;
-    line-height: 1.6;
-}
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    margin-top: 0;
-    font-weight: 700;
-    letter-spacing: -0.025em;
-}
-
-a {
-    color: var(--primary);
-    text-decoration: none;
-}
-
-a:hover {
-    text-decoration: underline;
-}
-
-/* Utilities */
-.container {
-    width: 100%;
-    max-width: 1024px;
-    margin: 0 auto;
-    padding: 1rem;
-}
-
-.flex {
-    display: flex;
-}
-
-.flex-col {
-    flex-direction: column;
-}
-
-.items-center {
-    align-items: center;
-}
-
-.justify-between {
-    justify-content: space-between;
-}
-
-.justify-center {
-    justify-content: center;
-}
-
-.gap-2 {
-    gap: 0.5rem;
-}
-
-.gap-4 {
-    gap: 1rem;
-}
-
-.w-full {
-    width: 100%;
-}
-
-.mt-4 {
-    margin-top: 1rem;
-}
-
-.mb-4 {
-    margin-bottom: 1rem;
-}
-
-.text-center {
-    text-align: center;
-}
-
-.hidden {
-    display: none !important;
-}
-
-/* Components */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius);
-    padding: 0.75rem 1.5rem;
-    font-weight: 600;
-    transition: all 0.2s ease-in-out;
-    cursor: pointer;
-    border: none;
-    font-size: 1rem;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-
-.btn:active {
-    transform: scale(0.98);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    color: var(--primary-foreground);
-    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
-}
-
-.btn-primary:hover {
-    background-color: #2563eb;
-    box-shadow: 0 6px 8px -1px rgba(59, 130, 246, 0.3);
-}
-
-.btn-secondary {
-    background-color: var(--secondary);
-    color: var(--secondary-foreground);
-    border: 1px solid var(--border);
-}
-
-.btn-secondary:hover {
-    background-color: #334155;
-}
-
-.card {
-    background-color: var(--card);
-    color: var(--card-foreground);
-    border-radius: var(--radius);
-    padding: 2rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    border: 1px solid var(--border);
-}
-
-.input,
-.select {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border-radius: var(--radius);
-    background-color: var(--input);
-    border: 1px solid var(--border);
-    color: var(--foreground);
-    font-size: 1rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    margin-bottom: 1rem;
-}
-
-.input:focus,
-.select:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
-
-.label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-    color: var(--secondary-foreground);
-}
-
-.page-title {
-    font-size: 2rem;
-    margin-bottom: 2rem;
-    background: linear-gradient(to right, #60a5fb, #a78bfa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: sans-serif;
+  margin: 0;
+  line-height: 1.6;
 }
