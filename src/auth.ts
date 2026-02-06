@@ -1,22 +1,10 @@
 import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { getPrisma } from "@/lib/prisma";
 import { authConfig } from "./auth.config";
 
-// Step-up: Adding the Provider but WITHOUT bcrypt yet to isolate the crash
+// Reverting auth.ts to the ultra-barebones version that we know didn't crash on its own
 export const { auth, handlers, signIn, signOut } = NextAuth({
     ...authConfig,
     secret: process.env.AUTH_SECRET || "diag-secret-12345",
-    providers: [
-        Credentials({
-            async authorize(credentials) {
-                // Dummy logic for now
-                if (credentials?.email === "test@test.com") {
-                    return { id: "1", name: "Test User", email: "test@test.com" };
-                }
-                return null;
-            }
-        })
-    ],
+    providers: [],
     trustHost: true
 });
