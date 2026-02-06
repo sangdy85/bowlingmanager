@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useActionState, useState } from 'react';
-import { register, sendCode } from '@/app/actions/auth';
+import { register } from '@/app/actions/auth';
+import { ping } from '@/app/actions/ping';
 
 export default function RegisterPage() {
     const [errorMessage, dispatch, isPending] = useActionState(register, undefined);
@@ -16,11 +17,12 @@ export default function RegisterPage() {
         setSendLoading(true);
         setSendMsg("");
         try {
-            const res = await sendCode(email);
+            const res = await ping(email);
             setSendMsg(res.message);
             if (res.success) setCodeSent(true);
-        } catch {
-            setSendMsg("오류가 발생했습니다.");
+        } catch (err: any) {
+            console.error("PING Error:", err);
+            setSendMsg("연결 오류: " + (err.message || "서버 응답 없음"));
         } finally {
             setSendLoading(false);
         }
