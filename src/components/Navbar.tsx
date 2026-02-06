@@ -1,18 +1,8 @@
 import Link from 'next/link';
 import styles from './Navbar.module.css';
-import { auth } from "@/auth";
 
 export default async function Navbar() {
-  let session: any = null;
-
-  try {
-    // Calling the ultralight auth()
-    session = await auth();
-  } catch (e) {
-    console.error("DIAG: Ultralight auth() failed:", e);
-  }
-
-  const isLoggedIn = !!(session && session.user);
+  const isLoggedIn = false;
 
   return (
     <nav className={styles.navbar}>
