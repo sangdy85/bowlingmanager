@@ -35,14 +35,15 @@ export async function POST(request: NextRequest) {
             // Already exists or other error handled by recursive: true
         }
 
-        // Generate unique filename
+        // Generate unique filename (Sanitize to alphanumeric only for safety)
         const timestamp = Date.now();
-        const originalName = file.name.replace(/\s+/g, '_');
-        const fileName = `${timestamp}_${originalName}`;
+        const extension = file.name.split('.').pop() || 'png';
+        const fileName = `${timestamp}.${extension}`;
         const path = join(uploadDir, fileName);
 
         // Save file
         await writeFile(path, buffer);
+        console.log(`File saved to: ${path}`);
 
         const fileUrl = `/uploads/${fileName}`;
 
