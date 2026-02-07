@@ -145,7 +145,7 @@ export async function sendCode(email: string) {
         const verificationToken = await generateVerificationToken(email);
         await sendVerificationEmail(verificationToken.identifier, verificationToken.token);
 
-        return { success: true, message: "인증 코드가 발송되었습니다. (테스트: " + verificationToken.token + ")" };
+        return { success: true, message: "인증 코드가 발송되었습니다." };
     } catch (error) {
         console.error("sendCode error:", error);
         return { success: false, message: "인증 코드 발송 중 오류가 발생했습니다." };
