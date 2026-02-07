@@ -1,7 +1,8 @@
+import { auth } from "@/auth";
 import Link from "next/link";
 
-export default function Home() {
-  const session: any = null;
+export default async function Home() {
+  const session = await auth();
 
   return (
     <div className="flex flex-col items-center justify-center py-10">
