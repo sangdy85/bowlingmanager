@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/NavbarWrapper";
 
 const inter = Inter({ subsets: ["latin"] });
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "볼링 점수 관리",
