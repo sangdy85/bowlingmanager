@@ -109,8 +109,8 @@ export async function register(prevState: string | undefined, formData: FormData
         });
 
         return redirect("/login?message=registered");
-    } catch (error) {
-        if (error instanceof Error && error.message.includes("redirect")) throw error;
+    } catch (error: any) {
+        if (error.digest?.startsWith("NEXT_REDIRECT")) throw error;
         console.error("Registration error:", error);
         return "회원가입 중 오류가 발생했습니다.";
     }
