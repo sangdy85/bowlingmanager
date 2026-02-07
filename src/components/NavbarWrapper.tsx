@@ -2,12 +2,7 @@ import { auth, signOut } from "@/auth";
 import NavbarClient from "./Navbar";
 
 export default async function Navbar() {
-    let session = null;
-    try {
-        session = await auth();
-    } catch (e) {
-        console.error("Failed to fetch session:", e);
-    }
+    const session = await auth();
     const isLoggedIn = !!session?.user;
 
     const signOutAction = async () => {
