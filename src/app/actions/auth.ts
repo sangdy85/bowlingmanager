@@ -5,6 +5,8 @@ import { AuthError } from "next-auth";
 import { getPrisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
+import { generateVerificationToken } from "@/lib/tokens";
+import { sendVerificationEmail } from "@/lib/mail";
 
 /**
  * NOTE: We keep these actions in a dedicated "use server" file.
@@ -42,13 +44,23 @@ export async function register(prevState: string | undefined, formData: FormData
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const name = formData.get("name") as string;
+    const code = formData.get("code") as string;
 
-    if (!email || !password || !name) {
+    if (!email || !password || !name || !code) {
         return "모든 필드를 입력해주세요.";
     }
 
     try {
         const prisma = getPrisma();
+
+        // 1. Verify Code
+        const verificationToken = await prisma.verificationToken.findFirst({
+            where: { identifier: email, token: code }
+        });
+
+        if (!verificationToken || new Date(verificationToken.expires) < new Date()) {
+            return "인증 코드가 틀리거나 만료되었습니다.";
+        }
         const existingUser = await prisma.user.findUnique({
             where: { email },
         });
@@ -64,7 +76,18 @@ export async function register(prevState: string | undefined, formData: FormData
                 email,
                 name,
                 password: hashedPassword,
+                emailVerified: new Date(), // Mark as verified since code was correct
             },
+        });
+
+        // Delete used token
+        await prisma.verificationToken.delete({
+            where: {
+                identifier_token: {
+                    identifier: email,
+                    token: code,
+                }
+            }
         });
 
         return redirect("/login?message=registered");
@@ -91,7 +114,24 @@ export async function findEmail(name: string) {
 }
 
 export async function sendCode(email: string) {
-    return { success: true, message: "테스트 모드: 코드가 발송되었습니다." };
+    try {
+        const prisma = getPrisma();
+        const existingUser = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (existingUser) {
+            return { success: false, message: "이미 가입된 이메일입니다." };
+        }
+
+        const verificationToken = await generateVerificationToken(email);
+        await sendVerificationEmail(verificationToken.identifier, verificationToken.token);
+
+        return { success: true, message: "인증 코드가 발송되었습니다. (테스트: " + verificationToken.token + ")" };
+    } catch (error) {
+        console.error("sendCode error:", error);
+        return { success: false, message: "인증 코드 발송 중 오류가 발생했습니다." };
+    }
 }
 
 export async function requestPasswordReset(email: string) {

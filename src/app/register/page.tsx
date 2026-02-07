@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { useActionState, useState } from 'react';
-import { register } from '@/app/actions/auth';
-import { ping } from '@/app/actions/ping';
+import { register, sendCode } from '@/app/actions/auth';
 
 export default function RegisterPage() {
     const [errorMessage, dispatch, isPending] = useActionState(register, undefined);
@@ -17,7 +16,7 @@ export default function RegisterPage() {
         setSendLoading(true);
         setSendMsg("");
         try {
-            const res = await ping(email);
+            const res = await sendCode(email);
             setSendMsg(res.message);
             if (res.success) setCodeSent(true);
         } catch (err: any) {
