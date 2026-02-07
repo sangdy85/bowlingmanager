@@ -22,6 +22,24 @@ export async function login(prevState: string | undefined, formData: FormData) {
     }
 
     try {
+        const prisma = getPrisma();
+        const user = await prisma.user.findUnique({
+            where: { email }
+        });
+
+        if (!user) {
+            return "존재하지 않는 계정입니다.";
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return "비밀번호가 일치하지 않습니다.";
+        }
+
+        if (!user.emailVerified) {
+            return "이메일 인증이 완료되지 않은 계정입니다.";
+        }
+
         await signIn("credentials", {
             email,
             password,
