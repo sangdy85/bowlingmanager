@@ -2,6 +2,9 @@
     background-color: var(--secondary);
     border-bottom: 1px solid var(--border);
     padding: 1rem 0;
+    position: relative;
+    /* Essential for mobile menu positioning */
+    z-index: 100;
 }
 
 .navContent {
@@ -17,6 +20,7 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     text-decoration: none;
+    z-index: 101;
 }
 
 .links {
@@ -33,16 +37,33 @@
         left: 0;
         right: 0;
         flex-direction: column;
-        background-color: var(--secondary);
-        padding: 1.5rem;
+        background-color: rgba(15, 23, 42, 0.95);
+        /* Darker semi-transparent background */
+        backdrop-filter: blur(10px);
+        /* Glassmorphism effect */
+        padding: 2rem;
         border-bottom: 1px solid var(--border);
-        z-index: 50;
-        gap: 1.25rem;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+        z-index: 99;
+        gap: 2rem;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+        text-align: center;
     }
 
     .linksOpen {
         display: flex;
+        animation: slideDown 0.3s ease-out;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
