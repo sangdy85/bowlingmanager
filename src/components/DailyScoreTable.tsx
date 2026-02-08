@@ -246,7 +246,7 @@ export default function DailyScoreTable({ scores, date, dailyAvg, memo, gameType
                                 title="클릭하여 점수 수정"
                             >
                                 <td className="p-3" style={{ border: '1px solid rgba(255,255,255,0.2)' }}>{index + 1}</td>
-                                <td className="p-3 font-medium" style={{ border: '1px solid rgba(255,255,255,0.2)' }}>{row.name}</td>
+                                <td className="p-3 font-medium" style={{ border: '1px solid rgba(255,255,255,0.2)', whiteSpace: 'nowrap' }}>{row.name}</td>
                                 {[...Array(displayGameCount)].map((_, i) => (
                                     <td key={i} className="p-3 text-muted-foreground" style={{ border: '1px solid rgba(255,255,255,0.2)' }}>
                                         {row.scores[i] !== undefined ? (

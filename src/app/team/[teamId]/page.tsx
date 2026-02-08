@@ -91,7 +91,17 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
             guestName: true
         }
     });
-    const guestNames = guestScores.map(s => s.guestName!).filter(Boolean);
+    const guestNames = guestScores
+        .map(s => s.guestName!)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, 'ko'));
+
+    // Sort members alphabetically for management/stats
+    const sortedMembers = [...team.members].sort((a, b) => {
+        const nameA = a.alias || a.user.name;
+        const nameB = b.alias || b.user.name;
+        return nameA.localeCompare(nameB, 'ko');
+    });
 
     // Fetch recent posts for the board
     const recentPosts = await getRecentPosts(teamId);
@@ -152,7 +162,7 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
                     {manageTab === 'members' ? (
                         <TeamMemberManager
                             teamId={teamId}
-                            members={team.members.map(m => ({
+                            members={sortedMembers.map(m => ({
                                 id: m.userId,
                                 name: m.alias || m.user.name,
                                 email: m.user.email,
@@ -168,7 +178,7 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
                             guests={guestNames}
                             ownerId={team.ownerId}
                             currentUserId={session.user.id}
-                            members={team.members.map(m => ({
+                            members={sortedMembers.map(m => ({
                                 id: m.userId,
                                 name: m.alias || m.user.name, // Display name
                                 realName: m.user.name, // Original name for matching
@@ -195,7 +205,7 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
                         isOwner={isOwner}
                         isManager={isManager}
                         teamId={teamId}
-                        members={team.members.map(m => ({ id: m.userId, name: m.alias || m.user.name }))}
+                        members={sortedMembers.map(m => ({ id: m.userId, name: m.alias || m.user.name }))}
                     />
                 </>
             )}
