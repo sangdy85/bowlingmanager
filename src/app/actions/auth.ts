@@ -61,7 +61,8 @@ export async function login(prevState: string | undefined, formData: FormData) {
 export async function register(prevState: string | undefined, formData: FormData) {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
-    const name = formData.get("name") as string;
+    const rawName = formData.get("name") as string;
+    const name = rawName?.replace(/\s/g, '');
     const code = formData.get("code") as string;
 
     if (!email || !password || !name || !code) {

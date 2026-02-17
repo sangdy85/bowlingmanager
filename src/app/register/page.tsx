@@ -34,7 +34,17 @@ export default function RegisterPage() {
                 <form action={dispatch} className="flex flex-col gap-4">
                     <div>
                         <label htmlFor="name" className="label">이름</label>
-                        <input type="text" id="name" name="name" className="input" placeholder="홍길동" required />
+                        <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            className="input"
+                            placeholder="홍길동 (공백 없이 입력)"
+                            pattern="[^\s]+"
+                            title="이름에 공백(띄어쓰기)을 포함할 수 없습니다."
+                            required
+                        />
+                        <p className="text-[10px] text-gray-500 mt-1">※ 이름에 공백(띄어쓰기)을 넣을 수 없습니다.</p>
                     </div>
 
                     <div>
