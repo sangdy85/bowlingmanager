@@ -1,0 +1,208 @@
+'use client';
+
+import { useState } from 'react';
+
+interface User {
+    id: string;
+    name: string;
+}
+
+interface TeamMember {
+    user: User;
+}
+
+interface Team {
+    id: string;
+    name: string;
+    members: TeamMember[];
+}
+
+interface IndividualScore {
+    id?: string;
+    userId?: string | null;
+    playerName?: string | null;
+    teamId: string;
+    handicap: number;
+    score1: number;
+    score2: number;
+    score3: number;
+}
+
+interface Matchup {
+    id: string;
+    teamA: Team | null;
+    teamB: Team | null;
+    teamAId: string | null;
+    teamBId: string | null;
+    lanes: string | null;
+    individualScores: IndividualScore[];
+    pointsA: number | null;
+    pointsB: number | null;
+    status: string;
+}
+
+interface RoundResultSummaryProps {
+    tournamentName?: string;
+    teamHandicapLimit?: number | null;
+    round: {
+        id: string;
+        roundNumber: number;
+        date: Date | null;
+        matchups: Matchup[];
+    };
+}
+
+export default function RoundResultSummary({ round, tournamentName, teamHandicapLimit }: RoundResultSummaryProps) {
+    const getRecord = (pts: number | null) => {
+        if (pts === null) return '-';
+        const wins = Math.floor(pts);
+        const draws = (pts % 1) === 0.5 ? 1 : 0;
+        const losses = 4 - (wins + draws);
+        return `${wins}승${draws > 0 ? `${draws}무` : ''}${losses}패`;
+    };
+
+    // Sort matchups by lane number numerically
+    const sortedMatchups = [...round.matchups].sort((a, b) => {
+        const laneA = parseInt(a.lanes?.split('-')[0] || '0', 10);
+        const laneB = parseInt(b.lanes?.split('-')[0] || '0', 10);
+        return laneA - laneB;
+    });
+
+    return (
+        <div style={{ backgroundColor: '#ffffff', color: '#000000', padding: '1rem', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+            {/* Report Title */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem', paddingTop: '1rem' }}>
+                <div style={{ border: '2px solid #000000', padding: '0.5rem 3rem', fontWeight: 900, fontSize: '1.5rem', letterSpacing: '0.2em', backgroundColor: '#ffffff', textTransform: 'uppercase' }}>
+                    {tournamentName || '상주리그'} {round.roundNumber}주차 (팀 기록표)
+                </div>
+            </div>
+
+            {/* Matchups Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '2rem' }}>
+                {sortedMatchups.map((m) => {
+                    const laneA = m.lanes?.split('-')[0] || '??';
+                    const laneB = m.lanes?.split('-')[1] || '??';
+
+                    const renderTeamTable = (team: Team | null, teamId: string | null, laneNum: string, points: number | null, isRight: boolean) => {
+                        const teamScores = m.individualScores.filter(s => s.teamId === teamId);
+                        const rawHSum = teamScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
+                        const hSum = (teamHandicapLimit !== undefined && teamHandicapLimit !== null && rawHSum > teamHandicapLimit) ? teamHandicapLimit : rawHSum;
+
+                        const g1 = teamScores.reduce((sum, s) => sum + (s.score1 || 0), 0);
+                        const g2 = teamScores.reduce((sum, s) => sum + (s.score2 || 0), 0);
+                        const g3 = teamScores.reduce((sum, s) => sum + (s.score3 || 0), 0);
+
+                        const opponentId = isRight ? m.teamAId : m.teamBId;
+                        const opponentScores = m.individualScores.filter(s => s.teamId === opponentId);
+                        const rawOHSum = opponentScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
+                        const ohSum = (teamHandicapLimit !== undefined && teamHandicapLimit !== null && rawOHSum > teamHandicapLimit) ? teamHandicapLimit : rawOHSum;
+
+                        const og1 = opponentScores.reduce((sum, s) => sum + (s.score1 || 0), 0);
+                        const og2 = opponentScores.reduce((sum, s) => sum + (s.score2 || 0), 0);
+                        const og3 = opponentScores.reduce((sum, s) => sum + (s.score3 || 0), 0);
+
+
+                        const draws = points !== null && (points % 1) === 0.5 ? 1 : 0;
+                        const isWinner = points !== null && points >= 3;
+
+                        const getMarker = (a: number, b: number) => {
+                            if (a > b) return 'O';
+                            if (a < b) return 'X';
+                            return draws > 0 && a === b ? '△' : '-';
+                        };
+
+                        const marks = [
+                            getMarker(g1 + hSum, og1 + ohSum),
+                            getMarker(g2 + hSum, og2 + ohSum),
+                            getMarker(g3 + hSum, og3 + ohSum)
+                        ];
+
+                        const baseCell: React.CSSProperties = {
+                            border: '1px solid #000000',
+                            padding: '6px 4px',
+                            textAlign: 'center',
+                            verticalAlign: 'middle',
+                        };
+
+                        const winStyle: React.CSSProperties = {
+                            color: '#e11d48',
+                            fontWeight: 900
+                        };
+
+                        return (
+                            <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #000000', fontSize: '13px', fontWeight: 700, backgroundColor: '#ffffff', color: '#000000', tableLayout: 'fixed' }}>
+                                <colgroup>
+                                    <col style={{ width: '20%' }} />
+                                    <col style={{ width: '12%' }} />
+                                    <col style={{ width: '14%' }} />
+                                    <col style={{ width: '14%' }} />
+                                    <col style={{ width: '14%' }} />
+                                    <col style={{ width: '26%' }} />
+                                </colgroup>
+                                <thead>
+                                    {/* Lane & Team & Record Header Row */}
+                                    <tr style={{ backgroundColor: '#e2e8f0', borderBottom: '2px solid #000000' }}>
+                                        <th style={baseCell}>{laneNum.padStart(2, '0')}레인</th>
+                                        <th style={{ ...baseCell, fontSize: '14px' }} colSpan={4}>{team?.name || '부전승'}</th>
+                                        <th style={{ ...baseCell, color: isWinner ? '#e11d48' : '#000000' }}>
+                                            {getRecord(points)}
+                                        </th>
+                                    </tr>
+                                    {/* Column Labels */}
+                                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #000000', fontSize: '11px' }}>
+                                        <th style={baseCell}>이름</th>
+                                        <th style={baseCell}>핸디</th>
+                                        <th style={baseCell}>1G</th>
+                                        <th style={baseCell}>2G</th>
+                                        <th style={baseCell}>3G</th>
+                                        <th style={{ ...baseCell, fontStyle: 'italic' }}>합계</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {Array.from({ length: 3 }).map((_, idx) => {
+                                        const s = teamScores[idx];
+                                        return (
+                                            <tr key={idx} style={{ borderBottom: '1px solid #000000', height: '32px' }}>
+                                                <td style={{ ...baseCell }}>{s?.playerName || ''}</td>
+                                                <td style={{ ...baseCell, fontWeight: 400, color: '#64748b' }}>{s?.handicap || ''}</td>
+                                                <td style={baseCell}>{s ? s.score1 + s.handicap : ''}</td>
+                                                <td style={baseCell}>{s ? s.score2 + s.handicap : ''}</td>
+                                                <td style={baseCell}>{s ? s.score3 + s.handicap : ''}</td>
+                                                <td style={{ ...baseCell, backgroundColor: '#f8fafc', fontWeight: 400 }}>{s ? s.score1 + s.score2 + s.score3 + (s.handicap * 3) : ''}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {/* Team Total Row */}
+                                    <tr style={{ backgroundColor: '#d9ead3', borderBottom: '2px solid #000000', height: '32px' }}>
+                                        <td style={baseCell}>종합</td>
+                                        <td style={{ ...baseCell, fontWeight: 400 }}>{hSum || '0'}</td>
+                                        <td style={{ ...baseCell, ...(marks[0] === 'O' ? winStyle : {}) }}>{g1 + hSum}</td>
+                                        <td style={{ ...baseCell, ...(marks[1] === 'O' ? winStyle : {}) }}>{g2 + hSum}</td>
+                                        <td style={{ ...baseCell, ...(marks[2] === 'O' ? winStyle : {}) }}>{g3 + hSum}</td>
+                                        <td style={{ ...baseCell, backgroundColor: 'rgba(226, 232, 240, 0.5)', ...(isWinner ? winStyle : { fontWeight: 900 }) }}>{(g1 + hSum) + (g2 + hSum) + (g3 + hSum)}</td>
+                                    </tr>
+                                    {/* Win/Loss Record */}
+                                    <tr style={{ height: '36px' }}>
+                                        <td style={baseCell}>승패</td>
+                                        <td style={baseCell}></td>
+                                        <td style={{ ...baseCell, fontSize: '18px', ...(marks[0] === 'O' ? winStyle : {}) }}>{marks[0]}</td>
+                                        <td style={{ ...baseCell, fontSize: '18px', ...(marks[1] === 'O' ? winStyle : {}) }}>{marks[1]}</td>
+                                        <td style={{ ...baseCell, fontSize: '18px', ...(marks[2] === 'O' ? winStyle : {}) }}>{marks[2]}</td>
+                                        <td style={{ ...baseCell, fontSize: '18px', fontStyle: 'italic', backgroundColor: '#f1f5f9', ...(isWinner ? winStyle : {}) }}>{getMarker(points || 0, 2)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        );
+                    };
+
+                    return (
+                        <div key={m.id} style={{ display: 'flex', gap: '1rem', padding: '0.5rem', marginBottom: '1rem', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+                            {renderTeamTable(m.teamA, m.teamAId, laneA, m.pointsA, false)}
+                            {renderTeamTable(m.teamB, m.teamBId, laneB, m.pointsB, true)}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}

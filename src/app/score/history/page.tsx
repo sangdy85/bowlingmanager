@@ -19,7 +19,12 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 
     const user = await prisma.user.findUnique({
         where: { id: session.user.id },
-        include: { teamMemberships: { include: { team: true } } }
+        include: {
+            teamMemberships: {
+                where: { team: { isActive: true } },
+                include: { team: true }
+            }
+        }
     });
 
     if (!user || user.teamMemberships.length === 0) {
@@ -49,7 +54,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
             gameDate: 'desc'
         },
         include: {
-            user: true
+            User: true
         }
     });
 

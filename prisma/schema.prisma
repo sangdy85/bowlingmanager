@@ -1,9 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
-  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -12,18 +8,25 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String
-  name          String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  teamMemberships TeamMember[]
-  managedTeams  Team[]    @relation("TeamManagers")
-  scores        Score[]
-  posts         Post[]
-  apiUsages     UserApiUsage[]
-  emailVerified DateTime?
+  id                           String                         @id @default(cuid())
+  email                        String                         @unique
+  password                     String
+  name                         String
+  role                         String                         @default("USER")
+  handicap                     Int?
+  createdAt                    DateTime                       @default(now())
+  updatedAt                    DateTime
+  emailVerified                DateTime?
+  ownedCenters                 BowlingCenter[]                @relation("CenterOwner")
+  CenterMember                 CenterMember[]
+  LeagueMatchupIndividualScore LeagueMatchupIndividualScore[]
+  posts                        Post[]
+  Score                        Score[]
+  teamMemberships              TeamMember[]
+  tournamentRegistrations      TournamentRegistration[]
+  UserApiUsage                 UserApiUsage[]
+  managedCenters               BowlingCenter[]                @relation("CenterManagers")
+  Team                         Team[]                         @relation("TeamManagers")
 }
 
 model VerificationToken {
@@ -34,90 +37,288 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model BowlingCenter {
+  id                  String         @id @default(cuid())
+  name                String
+  code                String         @unique
+  address             String
+  phone               String?
+  description         String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  ownerId             String
+  owner               User           @relation("CenterOwner", fields: [ownerId], references: [id])
+  CenterMember        CenterMember[]
+  teams               Team[]
+  tournaments         Tournament[]
+  managers            User[]         @relation("CenterManagers")
+}
+
 model Team {
-  id            String    @id @default(cuid())
-  name          String
-  code          String    @unique
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  ownerId       String?
-
-  members       TeamMember[]
-  managers      User[]    @relation("TeamManagers")
-  scores        Score[]
-  posts         Post[]
+  id                           String                         @id @default(cuid())
+  name                         String
+  code                         String                         @unique
+  isActive                     Boolean                        @default(true)
+  createdAt                    DateTime                       @default(now())
+  updatedAt                    DateTime                       @updatedAt
+  ownerId                      String?
+  centerId                     String?
+  matchupTeamB                 LeagueMatchup[]                @relation("TeamB")
+  matchupTeamA                 LeagueMatchup[]                @relation("TeamA")
+  LeagueMatchupIndividualScore LeagueMatchupIndividualScore[]
+  posts                        Post[]
+  Score                        Score[]
+  center                       BowlingCenter?                 @relation(fields: [centerId], references: [id])
+  members                      TeamMember[]
+  registrations                TournamentRegistration[]
+  User                         User[]                         @relation("TeamManagers")
 }
-
-model Score {
-  id        String   @id @default(cuid())
-  score     Int
-  gameDate  DateTime
-  gameType  String? // 게임 유형 (정기전, 번개, 교류전 등)
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  teamId    String?
-  team      Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  memo      String? // 간단한 메모 (예: "3프레임 실수")
-  guestName String? // 비회원 이름 (userId가 null일 경우 사용)
-  createdAt DateTime @default(now())
-}
-
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  teamId    String
-  team      Team     @relation(fields: [teamId], references: [id])
-  
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
-  images    PostImage[]
-}
-
-model PostImage {
-  id        String   @id @default(cuid())
-  url       String
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  size      Int      @default(0) // File size in bytes
-  createdAt DateTime @default(now())
-}
-
 
 model TeamMember {
-  id        String   @id @default(cuid())
-  joinedAt  DateTime @default(now())
-  alias     String?
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  teamId    String
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  id       String   @id @default(cuid())
+  joinedAt DateTime @default(now())
+  alias    String?
+  userId   String
+  teamId   String
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, teamId])
 }
 
+model Post {
+  id        String      @id @default(cuid())
+  title     String
+  content   String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  teamId    String
+  authorId  String
+  author    User        @relation(fields: [authorId], references: [id])
+  team      Team        @relation(fields: [teamId], references: [id])
+  PostImage PostImage[]
+}
+
+model Tournament {
+  id                     String                   @id @default(cuid())
+  name                   String
+  description            String?
+  startDate              DateTime
+  endDate                DateTime
+  entryFee               Int                      @default(0)
+  maxParticipants        Int                      @default(0)
+  iteration              Int?
+  type                   String                   @default("EVENT")
+  status                 String                   @default("PLANNING")
+  leagueDay              Int?
+  leagueTime             String?
+  teamHandicapLimit      Int?
+  awardMinGames          Int                      @default(12)
+  avgTopRankCount        Int                      @default(30)
+  avgMinParticipationPct Int                      @default(0)
+  manualTeamHandicaps    String?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  centerId               String
+  reportNotice           String?
+  settings               String?                  // JSON: { "startDateText": "...", "gameMethod": "...", ... }
+  leagueRounds           LeagueRound[]
+  center                 BowlingCenter            @relation(fields: [centerId], references: [id])
+  attachments            TournamentAttachment[]
+  registrations          TournamentRegistration[]
+}
+
+model TournamentAttachment {
+  id           String     @id @default(cuid())
+  name         String
+  url          String
+  type         String
+  size         Int?
+  tournamentId String
+  createdAt    DateTime   @default(now())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+}
+
+model LeagueRound {
+  id                String             @id @default(cuid())
+  tournamentId      String
+  roundNumber       Int
+  date              DateTime?
+  registrationEnd   DateTime?
+  registrationStart DateTime?
+  startLane         Int?
+  endLane           Int?
+  laneConfig        String?            // JSON: { "1": [1,2,3], "2": [1,2,3] }
+  moveLaneType      String?            // "RIGHT", "LEFT", "CROSS"
+  moveLaneCount     Int?               // Number of tables to move
+  hasFemaleChamp    Boolean            @default(false)
+  luckyDrawResult   String?            // JSON: { "winners": [...], "winnerCount": 5, "excludeRankers": true, "isFinalized": true }
+  matchups          LeagueMatchup[]
+  tournament        Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  participants      RoundParticipant[]
+  individualScores  TournamentScore[]
+  rawScores         RawLaneScore[]
+}
+
+model RawLaneScore {
+  id        String      @id @default(cuid())
+  roundId   String
+  lane      Int
+  slot      Int
+  game1     Int?
+  game2     Int?
+  game3     Int?
+  createdAt DateTime    @default(now())
+  round     LeagueRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, lane, slot])
+  @@index([roundId])
+}
+
+model RoundParticipant {
+  id             String                 @id @default(cuid())
+  roundId        String
+  registrationId String
+  lane           Int?
+  isManual       Boolean                @default(false)
+  isFemaleChamp  Boolean                @default(false)
+  sideBasic      Boolean                @default(false)
+  sideBall       Boolean                @default(false)
+  sideExtra      Boolean                @default(false)
+  createdAt      DateTime               @default(now())
+  registration   TournamentRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  round          LeagueRound            @relation(fields: [roundId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, registrationId])
+}
+
+model LeagueMatchup {
+  id                           String                         @id @default(cuid())
+  roundId                      String
+  teamAId                      String?
+  teamASquad                   String?
+  teamBId                      String?
+  teamBSquad                   String?
+  lanes                        String?
+  status                       String                         @default("PENDING")
+  pointsA                      Float?
+  pointsB                      Float?
+  scoreA1                      Int?
+  scoreA2                      Int?
+  scoreA3                      Int?
+  scoreB1                      Int?
+  scoreB2                      Int?
+  scoreB3                      Int?
+  teamB                        Team?                          @relation("TeamB", fields: [teamBId], references: [id])
+  teamA                        Team?                          @relation("TeamA", fields: [teamAId], references: [id])
+  round                        LeagueRound                    @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  individualScores            LeagueMatchupIndividualScore[]
+}
+
+model TournamentRegistration {
+  id                  String             @id @default(cuid())
+  tournamentId        String
+  userId              String?
+  guestName           String?
+  guestTeamName       String?
+  teamId              String?
+  squad               String?
+  handicap            Int?
+  laneAssignment      Int?
+  paymentStatus       String             @default("PENDING")
+  entryGroupId        String?            // To group ad-hoc teams in Event tournaments
+  createdAt           DateTime           @default(now())
+  roundParticipations RoundParticipant[]
+  team                Team?              @relation(fields: [teamId], references: [id])
+  user                User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tournament          Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  scores              TournamentScore[]
+
+  @@unique([tournamentId, userId])
+}
+
+model TournamentScore {
+  id             String                 @id @default(cuid())
+  registrationId String
+  gameNumber     Int
+  score          Int
+  roundId        String?
+  createdAt      DateTime               @default(now())
+  round          LeagueRound?           @relation(fields: [roundId], references: [id])
+  registration   TournamentRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+}
+
 model ApiUsage {
-  date         String   @id // "YYYY-MM-DD" (KST)
+  date         String   @id
   count        Int      @default(0)
   inputTokens  Int      @default(0)
   outputTokens Int      @default(0)
-  cost         Float    @default(0.0) // KRW Total Cost
-  updatedAt    DateTime @updatedAt
+  cost         Float    @default(0.0)
+  updatedAt    DateTime
+}
+
+model CenterMember {
+  id            String        @id
+  joinedAt      DateTime      @default(now())
+  alias         String?
+  userId        String
+  centerId      String
+  BowlingCenter BowlingCenter @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  User          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, centerId])
+}
+
+model LeagueMatchupIndividualScore {
+  id            String        @id @default(cuid())
+  matchupId     String
+  teamId        String
+  teamSquad     String?
+  userId        String?
+  playerName    String?
+  handicap      Int           @default(0)
+  score1        Int           @default(0)
+  score2        Int           @default(0)
+  score3        Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  User          User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Team          Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  LeagueMatchup LeagueMatchup @relation(fields: [matchupId], references: [id], onDelete: Cascade)
+
+  @@index([matchupId])
+}
+
+model PostImage {
+  id        String   @id
+  url       String
+  postId    String
+  size      Int      @default(0)
+  createdAt DateTime @default(now())
+  Post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Score {
+  id        String   @id
+  score     Int
+  gameDate  DateTime
+  gameType  String?
+  userId    String?
+  teamId    String?
+  memo      String?
+  guestName String?
+  createdAt DateTime @default(now())
+  Team      Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  User      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model UserApiUsage {
-  id        String   @id @default(cuid())
+  id        String   @id
   userId    String
-  date      String   // "YYYY-MM-DD"
+  date      String
   count     Int      @default(0)
-  updatedAt DateTime @updatedAt
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
 }

@@ -1,0 +1,398 @@
+'use server';
+
+import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import { verifyCenterAdmin } from "@/lib/auth-utils";
+import { LEAGUE_TEMPLATES } from "@/lib/league-templates";
+
+/**
+ * Fisher-Yates Shuffle Algorithm to randomize team assignments
+ */
+function shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
+export async function generateLeagueSchedule(
+    tournamentId: string,
+    teamIds: string[],
+    startLanes: number,
+    endLanes: number,
+    skippedDates: string[] = [], // YYYY-MM-DD
+    startDateStr?: string,
+    leagueDayParam?: number,
+    splitTeamIds: string[] = []
+) {
+    const tournament = (await (prisma as any).tournament.findUnique({
+        where: { id: tournamentId },
+        select: { centerId: true, type: true, startDate: true, leagueDay: true, leagueTime: true }
+    })) as any;
+
+    if (!tournament || tournament.type !== 'LEAGUE') throw new Error("Invalid tournament type");
+    await verifyCenterAdmin(tournament.centerId);
+
+    // --- Split Teams Expansion (Squad-based) ---
+    const finalTeamEntries: { id: string, squad: string | null }[] = [];
+    const splitSet = new Set(splitTeamIds);
+
+    for (const tid of teamIds) {
+        if (splitSet.has(tid)) {
+            finalTeamEntries.push({ id: tid, squad: 'A' });
+            finalTeamEntries.push({ id: tid, squad: 'B' });
+        } else {
+            finalTeamEntries.push({ id: tid, squad: null });
+        }
+    }
+
+    // Use finalTeamEntries instead of teamIds from here on
+    const currentTeamEntries = finalTeamEntries;
+
+    // Safety Check: Prevent regeneration if matches have started
+    const existingRounds = await (prisma as any).leagueRound.findMany({
+        where: { tournamentId },
+        include: {
+            matchups: {
+                select: { status: true, scoreA1: true }
+            }
+        }
+    });
+
+    const hasStarted = existingRounds.some((r: any) =>
+        r.matchups.some((m: any) => m.status !== 'PENDING' || m.scoreA1 !== null)
+    );
+
+    if (hasStarted) {
+        throw new Error("이미 진행된 경기가 있어 대진표를 새로 생성할 수 없습니다. '일정 날짜 업데이트' 기능을 사용해 주세요.");
+    }
+
+    // Condition 1: Strict Even Team Enforcement (using expanded list)
+    if (currentTeamEntries.length % 2 !== 0) {
+        throw new Error("팀 수는 반드시 짝수여야 합니다. (부전승 없음)");
+    }
+
+    const numTeams = currentTeamEntries.length;
+
+    // Condition 5: Template-Based Scheduling (USBC Standards)
+    const template = LEAGUE_TEMPLATES[numTeams];
+    if (!template) {
+        throw new Error(`${numTeams}팀용 USBC 표준 양식이 아직 준비되지 않았습니다. (4, 6, 8, 10, 12, 14, 16팀 지원 지원 중)`);
+    }
+
+    const matchesPerRound = numTeams / 2;
+    const lanePairsAvailable = Math.floor((endLanes - startLanes + 1) / 2);
+
+    if (lanePairsAvailable < matchesPerRound) {
+        throw new Error(`레인이 부족합니다. ${numTeams}팀 경기를 위해 최소 ${matchesPerRound}개의 레인 쌍(총 ${matchesPerRound * 2}개 레인)이 필요합니다.`);
+    }
+
+    // Randomized Mapping: Team Entries mapped to Template Numbers (1 to N)
+    const shuffledTeamEntries = shuffleArray(currentTeamEntries);
+    const teamMap: Record<number, { id: string, squad: string | null }> = {};
+    shuffledTeamEntries.forEach((entry, index) => {
+        teamMap[index + 1] = entry;
+    });
+
+    // Clear existing schedule
+    await (prisma as any).leagueRound.deleteMany({
+        where: { tournamentId }
+    });
+
+    const roundsCount = template.rounds.length;
+
+    // Calculate dates based on provided parameters
+    const getRoundDates = () => {
+        const dates: Date[] = [];
+        const effStartDate = startDateStr ? new Date(startDateStr) : new Date(tournament.startDate);
+        const effLeagueDay = (leagueDayParam !== undefined) ? leagueDayParam : (tournament.leagueDay ?? 1);
+        const [hours, minutes] = (tournament.leagueTime || "19:30").split(':').map(Number);
+        const skippedDateStrings = new Set(skippedDates);
+
+        let currentDate = new Date(effStartDate);
+        // Determine first valid date (matching day of week)
+        // Note: If startDate matches leagueDay, use it. Else find next.
+        let daysUntilFirst = (effLeagueDay - currentDate.getDay() + 7) % 7;
+        currentDate.setDate(currentDate.getDate() + daysUntilFirst);
+        currentDate.setHours(hours, minutes, 0, 0);
+
+        while (dates.length < roundsCount) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            if (!skippedDateStrings.has(dateStr)) {
+                dates.push(new Date(currentDate));
+            }
+            currentDate.setDate(currentDate.getDate() + 7);
+        }
+
+        return dates;
+    };
+
+    const roundDates = getRoundDates();
+
+    // Iterate through template rounds and matchups
+    for (let i = 0; i < roundsCount; i++) {
+        const roundTemplate = template.rounds[i];
+
+        const round = (await (prisma as any).leagueRound.create({
+            data: {
+                tournamentId,
+                roundNumber: i + 1,
+                date: roundDates[i] || null
+            }
+        })) as any;
+
+        const matchups = roundTemplate.map(m => {
+            const laneStart = startLanes + (m.lanePairIndex * 2);
+            const teamAEntry = teamMap[m.teamA];
+            const teamBEntry = teamMap[m.teamB];
+
+            return {
+                roundId: round.id,
+                teamAId: teamAEntry.id,
+                teamASquad: teamAEntry.squad,
+                teamBId: teamBEntry.id,
+                teamBSquad: teamBEntry.squad,
+                lanes: `${laneStart}-${laneStart + 1}`,
+                status: 'PENDING'
+            };
+        });
+
+        await (prisma as any).leagueMatchup.createMany({
+            data: matchups
+        });
+    }
+
+    revalidatePath(`/centers/${tournament.centerId}/tournaments/${tournamentId}`);
+}
+
+export async function updateLeagueScheduleDates(
+    tournamentId: string,
+    skippedDates: string[] = [], // YYYY-MM-DD
+    startDateStr?: string,
+    leagueDayParam?: number
+) {
+    const tournament = (await (prisma.tournament as any).findUnique({
+        where: { id: tournamentId },
+        select: { centerId: true, type: true, startDate: true, leagueDay: true, leagueTime: true },
+    })) as any;
+
+    if (!tournament) throw new Error("Competition not found");
+    await verifyCenterAdmin(tournament.centerId);
+
+    const rounds = (await (prisma as any).leagueRound.findMany({
+        where: { tournamentId },
+        orderBy: { roundNumber: 'asc' }
+    })) as any[];
+
+    if (rounds.length === 0) throw new Error("No rounds found to update.");
+
+    // Recalculate dates logic (Reused from generate)
+    const roundsCount = rounds.length;
+    const dates: Date[] = [];
+    const effStartDate = startDateStr ? new Date(startDateStr) : new Date(tournament.startDate);
+    const effLeagueDay = (leagueDayParam !== undefined) ? leagueDayParam : (tournament.leagueDay ?? 1);
+    const [hours, minutes] = (tournament.leagueTime || "19:30").split(':').map(Number);
+    const skippedDateStrings = new Set(skippedDates);
+
+    let currentDate = new Date(effStartDate);
+    let daysUntilFirst = (effLeagueDay - currentDate.getDay() + 7) % 7;
+    currentDate.setDate(currentDate.getDate() + daysUntilFirst);
+    currentDate.setHours(hours, minutes, 0, 0);
+
+    // Generate enough dates for all rounds
+    while (dates.length < roundsCount) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        if (!skippedDateStrings.has(dateStr)) {
+            dates.push(new Date(currentDate));
+        }
+        currentDate.setDate(currentDate.getDate() + 7);
+    }
+
+    // Batch update via transaction
+    const updates = rounds.map((round, index) =>
+        (prisma as any).leagueRound.update({
+            where: { id: round.id },
+            data: { date: dates[index] || null }
+        })
+    );
+
+    await (prisma as any).$transaction(updates);
+
+    revalidatePath(`/centers/${tournament.centerId}/tournaments/${tournamentId}`);
+}
+
+export async function updateLeagueRoundDate(roundId: string, newDateStr: string) {
+    const round = (await (prisma as any).leagueRound.findUnique({
+        where: { id: roundId },
+        include: { tournament: true }
+    })) as any;
+
+    if (!round) throw new Error("Round not found");
+    await verifyCenterAdmin(round.tournament.centerId);
+
+    const newDate = newDateStr ? new Date(newDateStr) : null;
+
+    if (newDate && round.tournament.leagueTime) {
+        const [hours, minutes] = round.tournament.leagueTime.split(':').map(Number);
+        newDate.setHours(hours, minutes, 0, 0);
+    }
+
+    await (prisma as any).leagueRound.update({
+        where: { id: roundId },
+        data: { date: newDate }
+    });
+
+    revalidatePath(`/centers/${round.tournament.centerId}/tournaments/${round.tournamentId}`);
+}
+
+export async function updateLeagueMatchupResult(matchupId: string, data: {
+    individualScores: {
+        userId?: string;
+        playerName?: string;
+        teamId: string;
+        handicap: number;
+        score1: number;
+        score2: number;
+        score3: number;
+    }[];
+}) {
+    const matchup = (await (prisma as any).leagueMatchup.findUnique({
+        where: { id: matchupId },
+        include: {
+            round: { include: { tournament: true } },
+            teamA: true,
+            teamB: true
+        }
+    })) as any;
+
+    if (!matchup) throw new Error("Matchup not found");
+    await verifyCenterAdmin(matchup.round.tournament.centerId);
+
+    const teamAScores = data.individualScores.filter(s => s.teamId === matchup.teamAId);
+    const teamBScores = data.individualScores.filter(s => s.teamId === matchup.teamBId);
+
+    const aG1Raw = teamAScores.reduce((sum, s) => sum + (s.score1 || 0), 0);
+    const aG2Raw = teamAScores.reduce((sum, s) => sum + (s.score2 || 0), 0);
+    const aG3Raw = teamAScores.reduce((sum, s) => sum + (s.score3 || 0), 0);
+    const aH = teamAScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
+
+    const bG1Raw = teamBScores.reduce((sum, s) => sum + (s.score1 || 0), 0);
+    const bG2Raw = teamBScores.reduce((sum, s) => sum + (s.score2 || 0), 0);
+    const bG3Raw = teamBScores.reduce((sum, s) => sum + (s.score3 || 0), 0);
+    const bH = teamBScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
+
+    const aG1 = aG1Raw + aH;
+    const aG2 = aG2Raw + aH;
+    const aG3 = aG3Raw + aH;
+    const aTotal = aG1 + aG2 + aG3;
+
+    const bG1 = bG1Raw + bH;
+    const bG2 = bG2Raw + bH;
+    const bG3 = bG3Raw + bH;
+    const bTotal = bG1 + bG2 + bG3;
+
+    const getHiLow = (scores: any[], gameNum: number) => {
+        const gameScores = scores.map(s => s[`score${gameNum}`] || 0);
+        if (gameScores.length === 0) return 0;
+        return Math.max(...gameScores) - Math.min(...gameScores);
+    };
+
+    const calculatePoints = (valA: number, valB: number, hA: number, hB: number, hiLowA: number, hiLowB: number) => {
+        if (valA > valB) return [1, 0];
+        if (valA < valB) return [0, 1];
+        if (hA < hB) return [1, 0];
+        if (hB < hA) return [0, 1];
+        if (hiLowA < hiLowB) return [1, 0];
+        if (hiLowB < hiLowA) return [0, 1];
+        return [0.5, 0.5];
+    };
+
+    const pG1 = calculatePoints(aG1, bG1, aH, bH, getHiLow(teamAScores, 1), getHiLow(teamBScores, 1));
+    const pG2 = calculatePoints(aG2, bG2, aH, bH, getHiLow(teamAScores, 2), getHiLow(teamBScores, 2));
+    const pG3 = calculatePoints(aG3, bG3, aH, bH, getHiLow(teamAScores, 3), getHiLow(teamBScores, 3));
+
+    const getSeriesHiLow = (g1: number, g2: number, g3: number) => {
+        return Math.max(g1, g2, g3) - Math.min(g1, g2, g3);
+    };
+
+    const pTotal = calculatePoints(
+        aTotal, bTotal, aH, bH,
+        getSeriesHiLow(aG1Raw, aG2Raw, aG3Raw),
+        getSeriesHiLow(bG1Raw, bG2Raw, bG3Raw)
+    );
+
+    const pointsA = pG1[0] + pG2[0] + pG3[0] + pTotal[0];
+    const pointsB = pG1[1] + pG2[1] + pG3[1] + pTotal[1];
+
+    await (prisma as any).leagueMatchup.update({
+        where: { id: matchupId },
+        data: {
+            scoreA1: aG1,
+            scoreA2: aG2,
+            scoreA3: aG3,
+            scoreB1: bG1,
+            scoreB2: bG2,
+            scoreB3: bG3,
+            pointsA,
+            pointsB,
+            status: 'FINISHED',
+            individualScores: {
+                deleteMany: {},
+                createMany: {
+                    data: data.individualScores.map(s => {
+                        const squad = (s.teamId === matchup.teamAId && (matchup as any).teamASquad === matchup.teamASquad) // just logic check
+                            ? (s.teamId === matchup.teamAId ? matchup.teamASquad : matchup.teamBSquad)
+                            : null; // Fallback or more precise check needed? 
+
+                        // Refined logic:
+                        let assignedSquad = null;
+                        if (s.teamId === matchup.teamAId) assignedSquad = matchup.teamASquad;
+                        else if (s.teamId === matchup.teamBId) assignedSquad = matchup.teamBSquad;
+
+                        return {
+                            teamId: s.teamId,
+                            teamSquad: assignedSquad,
+                            userId: s.userId || null,
+                            playerName: s.playerName || null,
+                            handicap: s.handicap,
+                            score1: s.score1,
+                            score2: s.score2,
+                            score3: s.score3
+                        };
+                    })
+                }
+            }
+        }
+    });
+
+    revalidatePath(`/centers/${matchup.round.tournament.centerId}/tournaments/${matchup.round.tournamentId}`);
+}
+
+export async function updateLeagueRoundResults(roundId: string, results: {
+    matchupId: string;
+    individualScores: {
+        userId?: string;
+        playerName?: string;
+        teamId: string;
+        handicap: number;
+        score1: number;
+        score2: number;
+        score3: number;
+    }[];
+}[]) {
+    const round = (await (prisma as any).leagueRound.findUnique({
+        where: { id: roundId },
+        include: { tournament: true }
+    })) as any;
+
+    if (!round) throw new Error("Round not found");
+    await verifyCenterAdmin(round.tournament.centerId);
+
+    for (const res of results) {
+        await updateLeagueMatchupResult(res.matchupId, { individualScores: res.individualScores });
+    }
+
+    revalidatePath(`/centers/${round.tournament.centerId}/tournaments/${round.tournamentId}`);
+}

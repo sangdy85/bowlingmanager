@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { v4 as uuidv4 } from "uuid";
 
 export async function addScore(prevState: any, formData: FormData) {
     const session = await auth();
@@ -32,11 +33,11 @@ export async function addScore(prevState: any, formData: FormData) {
     // Verify ownership or manager status
     const teamWithManagers = await prisma.team.findUnique({
         where: { id: currentTeam.id },
-        include: { managers: true }
+        include: { User: true }
     });
 
     const isOwner = teamWithManagers?.ownerId === user.id;
-    const isManager = teamWithManagers?.managers.some(m => m.id === user.id);
+    const isManager = (teamWithManagers as any)?.User.some((m: any) => m.id === user.id);
 
     if (!isOwner && !isManager) {
         return { success: false, message: "점수 등록 권한이 없습니다. 팀장 또는 매니저만 등록할 수 있습니다." };
@@ -97,6 +98,7 @@ export async function addScore(prevState: any, formData: FormData) {
 
                 const created = await tx.score.create({
                     data: {
+                        id: uuidv4(),
                         score,
                         userId: isGuest ? null : targetUserId,
                         guestName: isGuest ? guestName : null,
@@ -145,7 +147,7 @@ export async function addBulkScores(
             where: { id: commonData.teamId },
             include: {
                 members: { include: { user: true } },
-                managers: true
+                User: true
             }
         });
 
@@ -153,7 +155,7 @@ export async function addBulkScores(
 
         // Check Permissions
         const isOwner = team.ownerId === session.user.id;
-        const isManager = team.managers.some(m => m.id === session.user.id);
+        const isManager = (team as any).User.some((m: any) => m.id === session.user.id);
         const isMember = team.members.some(m => m.userId === session.user.id);
 
         if (!isOwner && !isManager && !isMember) {
@@ -166,6 +168,7 @@ export async function addBulkScores(
 
         // Prepare records
         const recordsToCreate: {
+            id: string;
             score: number;
             userId: string | null;
             guestName: string | null;
@@ -185,6 +188,7 @@ export async function addBulkScores(
 
             for (const scoreVal of row.scores) {
                 recordsToCreate.push({
+                    id: uuidv4(),
                     score: scoreVal,
                     userId: targetUserId,
                     guestName: guestName,

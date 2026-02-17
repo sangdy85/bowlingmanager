@@ -34,13 +34,17 @@ export default async function Home() {
           <p style={{ color: 'var(--secondary-foreground)' }}>동호회 팀을 만들고 팀원들과 함께하세요.</p>
         </Link>
         <Link
-          href={session?.user ? "/stats" : "/login"}
+          href={session?.user ? "/tournaments" : "/login"}
           prefetch={false}
           className="card text-center hover:bg-secondary/20 transition-colors cursor-pointer block no-underline text-inherit"
         >
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📊</div>
-          <h3 className="mb-2">통계/순위</h3>
-          <p style={{ color: 'var(--secondary-foreground)' }}>팀 내 순위와 개인 기록 추이를 확인하세요.</p>
+          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🏟️</div>
+          <h3 className="mb-2">볼링장/대회</h3>
+          <p style={{ color: 'var(--secondary-foreground)' }}>
+            {session?.user?.role === 'CENTER_ADMIN'
+              ? '보유하신 볼링장을 관리하고 대회를 개최하세요.'
+              : '전국의 볼링장 정보와 진행 중인 대회를 확인하세요.'}
+          </p>
         </Link>
       </div>
     </div>

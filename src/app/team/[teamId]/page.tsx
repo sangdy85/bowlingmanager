@@ -27,7 +27,8 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
     const { teamId } = await params;
 
     // Verify user membership in this specific team
-    const team = await prisma.team.findFirst({
+    // Verify user membership in this specific team
+    const teamRaw = await prisma.team.findFirst({
         where: {
             id: teamId,
             members: { some: { userId: session.user.id } }
@@ -37,13 +38,19 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
                 include: { user: true },
                 orderBy: { joinedAt: 'asc' }
             },
-            managers: true
+            User: true // Relation name is User
         }
     });
 
-    if (!team) {
+    if (!teamRaw) {
         redirect("/team"); // Redirect to team selection if not a member or team doesn't exist
     }
+
+    // Map User relation to managers property for compatibility
+    const team = {
+        ...teamRaw,
+        managers: teamRaw.User
+    };
 
     const resolvedSearchParams = await searchParams;
     const currentYear = resolvedSearchParams.year
@@ -61,7 +68,7 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
     const startOfYear = new Date(`${currentYear}-01-01T00:00:00.000Z`);
     const endOfYear = new Date(`${currentYear}-12-31T23:59:59.999Z`);
 
-    const scores = await prisma.score.findMany({
+    const scoresRaw = await prisma.score.findMany({
         where: {
             teamId: teamId,
             gameDate: {
@@ -73,9 +80,15 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
             gameDate: 'desc'
         },
         include: {
-            user: true
+            User: true
         }
     });
+
+    // Map User to user for component compatibility
+    const scores = scoresRaw.map(s => ({
+        ...s,
+        user: s.User
+    }));
 
     // Fetch guest names for management (distinct guestNames where userId is null)
     const guestScores = await prisma.score.findMany({

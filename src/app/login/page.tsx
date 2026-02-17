@@ -61,11 +61,11 @@ function LoginForm() {
                 <div>
                     <label htmlFor="email" className="label">이메일</label>
                     <input
-                        type="email"
+                        type="text"
                         id="email"
                         name="email"
                         className="input"
-                        placeholder="example@email.com"
+                        placeholder="example@email.com 또는 아이디"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required

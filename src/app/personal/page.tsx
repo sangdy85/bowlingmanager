@@ -19,9 +19,10 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         where: { id: session.user.id },
         include: {
             teamMemberships: {
+                where: { team: { isActive: true } },
                 include: {
                     team: {
-                        include: { managers: true }
+                        include: { User: true }
                     }
                 }
             },
@@ -42,9 +43,9 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         select: { gameDate: true }
     });
 
-    const activeYears = Array.from(new Set(allUserScores.map(s =>
+    const activeYears = Array.from(new Set(allUserScores.map((s: any) =>
         new Date(s.gameDate.getTime() + kstOffset).getFullYear()
-    )));
+    ))) as number[];
 
     // 기록이 없으면 올해만 표시
     if (activeYears.length === 0) {
@@ -80,7 +81,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             }
         },
         include: {
-            team: {
+            Team: {
                 select: { id: true, name: true }
             }
         },
@@ -89,31 +90,127 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         }
     });
 
-    // 팀별 그룹화
-    const scoresByTeam = new Map<string, { id: string, name: string, scores: typeof myYearlyScores }>();
-    myYearlyScores.forEach(score => {
-        const teamId = score.teamId || 'unknown';
-        const teamName = score.team?.name || '소속 없음 (개인)';
+    // --- 추가: 공식 기록 조회 (상주리그 & 대회) ---
+    const userTeamIds = user.teamMemberships.map((tm: any) => tm.teamId);
 
-        if (!scoresByTeam.has(teamId)) {
-            scoresByTeam.set(teamId, { id: teamId, name: teamName, scores: [] });
+    // 1. 상주리그 기록
+    const leagueScores = await prisma.leagueMatchupIndividualScore.findMany({
+        where: {
+            OR: [
+                { userId: user.id },
+                {
+                    AND: [
+                        { playerName: user.name },
+                        { teamId: { in: userTeamIds } }
+                    ]
+                }
+            ],
+            createdAt: {
+                gte: startOfYear,
+                lte: endOfYear
+            }
+        },
+        include: {
+            Team: { select: { name: true } },
+            LeagueMatchup: {
+                include: {
+                    round: {
+                        include: { tournament: { select: { name: true } } }
+                    }
+                }
+            }
         }
-        scoresByTeam.get(teamId)!.scores.push(score);
     });
+
+    // 2. 대회 기록 (챔프전/이벤트전)
+    const tournamentScores = await prisma.tournamentScore.findMany({
+        where: {
+            OR: [
+                { registration: { userId: user.id } },
+                {
+                    AND: [
+                        { registration: { guestName: user.name } },
+                        { registration: { teamId: { in: userTeamIds } } }
+                    ]
+                }
+            ],
+            createdAt: {
+                gte: startOfYear,
+                lte: endOfYear
+            }
+        },
+        include: {
+            registration: {
+                include: {
+                    tournament: { select: { name: true } },
+                    team: { select: { name: true } }
+                }
+            },
+            round: true
+        }
+    });
+
+    // 데이터 규격화 (Normalization for display)
+    const officialRecords = [
+        ...leagueScores.flatMap((ls: any) => [
+            { id: `${ls.id}-1`, score: ls.score1, date: ls.createdAt, type: '리그', tournamentName: ls.LeagueMatchup.round.tournament.name, teamName: ls.Team.name },
+            { id: `${ls.id}-2`, score: ls.score2, date: ls.createdAt, type: '리그', tournamentName: ls.LeagueMatchup.round.tournament.name, teamName: ls.Team.name },
+            { id: `${ls.id}-3`, score: ls.score3, date: ls.createdAt, type: '리그', tournamentName: ls.LeagueMatchup.round.tournament.name, teamName: ls.Team.name }
+        ].filter(s => s.score > 0)),
+        ...tournamentScores.map((ts: any) => ({
+            id: ts.id,
+            score: ts.score,
+            date: ts.createdAt,
+            type: ts.round ? '이벤트' : '대회',
+            tournamentName: ts.registration.tournament.name,
+            teamName: ts.registration.team?.name || ts.registration.guestTeamName || '개인'
+        }))
+    ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+
+    // 팀별 그룹화 (상주리그 팀 통합 로직 적용)
+    const scoresByTeamName = new Map<string, { id: string, name: string, scores: typeof myYearlyScores }>();
+
+    myYearlyScores.forEach((score: any) => {
+        let teamName = score.Team?.name || '소속 없음 (개인)';
+
+        // 상주리그 팀명 정규화 (예: '배볼러 A' -> '배볼러')
+        // 끝이 ' A', ' B'로 끝나는 경우 제거
+        if (teamName.match(/\s[AB]$/)) {
+            teamName = teamName.slice(0, -2);
+        }
+
+        const teamKey = teamName; // Use Name as Key to merge
+        // Find existing or create new. 
+        // Note: score.teamId might be different for A and B teams, but we use one representative ID or just store it.
+        // We'll use the ID from the first encountered record.
+
+        if (!scoresByTeamName.has(teamKey)) {
+            scoresByTeamName.set(teamKey, {
+                id: score.teamId || 'unknown',
+                name: teamName,
+                scores: []
+            });
+        }
+        scoresByTeamName.get(teamKey)!.scores.push(score);
+    });
+
+    // Convert to array
+    const teamGroups = Array.from(scoresByTeamName.values());
 
 
 
     // 전체 게임에 대한 분류별 필터링 (Global)
-    const globalRegularScores = myYearlyScores.filter(s => s.gameType === '정기전');
-    const globalImpromptuScores = myYearlyScores.filter(s => s.gameType === '벙개');
-    const globalMatchScores = myYearlyScores.filter(s => s.gameType === '교류전');
-    const globalResidentScores = myYearlyScores.filter(s => s.gameType === '상주');
-    const globalOtherScores = myYearlyScores.filter(s => !['정기전', '벙개', '교류전', '상주'].includes(s.gameType || ''));
+    const globalRegularScores = myYearlyScores.filter((s: any) => s.gameType === '정기전');
+    const globalImpromptuScores = myYearlyScores.filter((s: any) => s.gameType === '벙개');
+    const globalMatchScores = myYearlyScores.filter((s: any) => s.gameType === '교류전');
+    const globalResidentScores = myYearlyScores.filter((s: any) => s.gameType === '상주');
+    const globalOtherScores = myYearlyScores.filter((s: any) => !['정기전', '벙개', '교류전', '상주'].includes(s.gameType || ''));
 
     // Check if owner or manager of ANY team
-    const hasAuthority = user.teamMemberships.some(tm =>
+    const hasAuthority = user.teamMemberships.some((tm: any) =>
         tm.team.ownerId === user.id ||
-        tm.team.managers.some(m => m.id === user.id)
+        (tm.team as any).User.some((m: any) => m.id === user.id)
     );
 
     return (
@@ -150,7 +247,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                 <span className="text-lg font-bold">👑 전체 종합</span>
                                 <span className="text-sm text-muted-foreground">(모든 팀 합산)</span>
                             </div>
-                            <StatsDisplayRow title="Total" scores={myYearlyScores} />
+                            <StatsDisplayRow title="Total" scores={myYearlyScores as any} />
 
                             {/* Global Breakdown */}
                             <div className="mt-4 pt-4 border-t border-dashed border-muted grid grid-cols-1 px-1" style={{ gap: '16px' }}>
@@ -163,13 +260,13 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         </div>
 
                         {/* 2. 팀별 통계 Loop */}
-                        {Array.from(scoresByTeam.values()).map((teamGroup) => {
+                        {Array.from(scoresByTeamName.values()).map((teamGroup: any) => {
                             const teamScores = teamGroup.scores;
-                            const regular = teamScores.filter(s => s.gameType === '정기전');
-                            const impromptu = teamScores.filter(s => s.gameType === '벙개');
-                            const match = teamScores.filter(s => s.gameType === '교류전');
-                            const resident = teamScores.filter(s => s.gameType === '상주');
-                            const other = teamScores.filter(s => !['정기전', '벙개', '교류전', '상주'].includes(s.gameType || ''));
+                            const regular = teamScores.filter((s: any) => s.gameType === '정기전');
+                            const impromptu = teamScores.filter((s: any) => s.gameType === '벙개');
+                            const match = teamScores.filter((s: any) => s.gameType === '교류전');
+                            const resident = teamScores.filter((s: any) => s.gameType === '상주');
+                            const other = teamScores.filter((s: any) => !['정기전', '벙개', '교류전', '상주'].includes(s.gameType || ''));
 
                             return (
                                 <div key={teamGroup.id} className="border-t-2 border-dashed border-muted/50" style={{ marginTop: '28px', paddingTop: '14px' }}>
@@ -205,8 +302,54 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                 </div>
 
                 <div className="card">
+                    <h2 className="mb-4 text-xl font-bold border-b pb-2 flex items-center gap-2">
+                        🎳 {currentYear}년 볼링장 공식 기록
+                        <span className="text-xs font-normal text-muted-foreground bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 text-blue-600">조회 전용</span>
+                    </h2>
+                    {officialRecords.length === 0 ? (
+                        <p className="text-center py-8 text-secondary-foreground text-sm">
+                            아직 등록된 공식 경기(리그/대회) 기록이 없습니다.
+                        </p>
+                    ) : (
+                        <div className="flex flex-col border rounded-xl overflow-hidden divide-y divide-border bg-slate-50/30">
+                            {officialRecords.map((record: any) => (
+                                <div key={record.id} className="flex items-center justify-between p-4 hover:bg-white transition-colors">
+                                    <div className="flex flex-col gap-1 min-w-[120px]">
+                                        <span className="text-sm font-bold text-slate-800">
+                                            {record.date.toLocaleDateString()}
+                                        </span>
+                                        <div className="flex gap-1">
+                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border ${record.type === '리그' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                                    record.type === '이벤트' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                        'bg-amber-50 text-amber-600 border-amber-100'
+                                                }`}>
+                                                {record.type}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 px-4">
+                                        <div className="text-xs font-black text-slate-400 mb-0.5">{record.teamName}</div>
+                                        <div className="text-sm font-bold text-slate-600 truncate max-w-[200px]">
+                                            {record.tournamentName}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-baseline gap-1">
+                                        <span className={`text-2xl font-black ${record.score >= 200 ? 'text-blue-600 italic' : 'text-slate-700'}`}>
+                                            {record.score}
+                                        </span>
+                                        <span className="text-xs font-bold text-slate-400">점</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <div className="card">
                     <h2 className="mb-4 text-xl font-bold border-b pb-2">
-                        {currentYear}년 일별 기록
+                        {currentYear}년 일별 기록 (직접 입력)
                     </h2>
                     {myYearlyScores.length === 0 ? (
                         <p className="text-center py-8 text-secondary-foreground">
@@ -214,8 +357,8 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         </p>
                     ) : (
                         <div className="flex flex-col border rounded-lg overflow-hidden divide-y divide-border">
-                            {Array.from(
-                                myYearlyScores.reduce((map, score) => {
+                            {(Array.from(
+                                myYearlyScores.reduce((map: any, score: any) => {
                                     const kstOffset = 9 * 60 * 60 * 1000;
                                     const dateStr = new Date(score.gameDate.getTime() + kstOffset).toISOString().split('T')[0];
                                     if (!map.has(dateStr)) {
@@ -223,9 +366,9 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                     }
                                     map.get(dateStr)!.push(score);
                                     return map;
-                                }, new Map<string, typeof myYearlyScores>())
-                            ).map(([date, scores]) => {
-                                const totalScore = scores.reduce((sum, s) => sum + s.score, 0);
+                                }, new Map<string, any[]>())
+                            ) as [string, any[]][]).map(([date, scores]) => {
+                                const totalScore = scores.reduce((sum: number, s: any) => sum + s.score, 0);
                                 const avg = (totalScore / scores.length).toFixed(1);
 
                                 return (
@@ -236,7 +379,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                         </div>
 
                                         <div className="flex-1 flex items-center overflow-x-auto mx-4 no-scrollbar">
-                                            {scores.map((s, idx) => (
+                                            {scores.map((s: any, idx: number) => (
                                                 <React.Fragment key={s.id}>
                                                     <span className={`text-sm ${s.score >= 200 ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
                                                         {s.score}

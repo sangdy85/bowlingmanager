@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { v4 as uuidv4 } from "uuid";
 
 export async function saveDailyScores(
     teamId: string,
@@ -21,7 +22,7 @@ export async function saveDailyScores(
     // 1. Permission Verification (Owner or Manager)
     const team = await prisma.team.findUnique({
         where: { id: teamId },
-        include: { managers: true }
+        include: { User: true }
     });
 
     if (!team) {
@@ -29,7 +30,7 @@ export async function saveDailyScores(
     }
 
     const isOwner = team.ownerId === session.user.id;
-    const isManager = team.managers.some(m => m.id === session.user.id);
+    const isManager = (team as any).User.some((m: any) => m.id === session.user.id);
 
     if (!isOwner && !isManager) {
         return { success: false, message: "점수 수정 권한이 없습니다. 팀장 또는 매니저만 수정할 수 있습니다." };
@@ -95,6 +96,7 @@ export async function saveDailyScores(
                 } else if (item.score > 0) { // Only create if score is valid
                     await tx.score.create({
                         data: {
+                            id: uuidv4(),
                             score: item.score,
                             teamId: teamId,
                             gameDate: targetDate,
@@ -129,7 +131,7 @@ export async function updateDailyGroupInfo(
     // Permission Verification (Owner or Manager)
     const team = await prisma.team.findUnique({
         where: { id: teamId },
-        include: { managers: true }
+        include: { User: true }
     });
 
     if (!team) {
@@ -137,7 +139,7 @@ export async function updateDailyGroupInfo(
     }
 
     const isOwner = team.ownerId === session.user.id;
-    const isManager = team.managers.some(m => m.id === session.user.id);
+    const isManager = (team as any).User.some((m: any) => m.id === session.user.id);
 
     if (!isOwner && !isManager) {
         return { success: false, message: "수정 권한이 없습니다." };

@@ -59,7 +59,10 @@ export async function deleteAccount() {
     try {
         // Check if user is an owner of any team
         const ownedTeams = await prisma.team.findMany({
-            where: { ownerId: session.user.id },
+            where: {
+                ownerId: session.user.id,
+                isActive: true
+            },
         });
 
         if (ownedTeams.length > 0) {

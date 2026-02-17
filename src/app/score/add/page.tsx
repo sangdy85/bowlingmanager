@@ -18,7 +18,7 @@ export default async function AddScorePage() {
             team: {
                 OR: [
                     { ownerId: session.user.id },
-                    { managers: { some: { id: session.user.id } } }
+                    { User: { some: { id: session.user.id } } }
                 ]
             }
         },

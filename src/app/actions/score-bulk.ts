@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { v4 as uuidv4 } from "uuid";
 
 export interface BulkScoreData {
     memberName: string;
@@ -33,14 +34,14 @@ export async function bulkAddScores(data: BulkScoreData[], defaultGameDateStr?: 
     const teamRecord = await prisma.team.findUnique({
         where: { id: currentTeam.id },
         include: {
-            managers: {
+            User: {
                 where: { id: session.user.id }
             }
         }
     });
 
     const isOwner = teamRecord?.ownerId === session.user.id;
-    const isManager = (teamRecord?.managers?.length ?? 0) > 0;
+    const isManager = ((teamRecord as any)?.User?.length ?? 0) > 0;
 
     if (!isOwner && !isManager) {
         return { success: false, message: "권한이 없습니다. 팀장 또는 매니저만 일괄 등록할 수 있습니다." };
@@ -78,6 +79,7 @@ export async function bulkAddScores(data: BulkScoreData[], defaultGameDateStr?: 
 
                     const created = await tx.score.create({
                         data: {
+                            id: uuidv4(),
                             userId: userId,
                             guestName: guestName,
                             score,

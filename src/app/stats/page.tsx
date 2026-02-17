@@ -18,7 +18,12 @@ export default async function StatsPage({ searchParams }: StatsPageProps) {
 
     const user = await prisma.user.findUnique({
         where: { id: session.user.id },
-        include: { teamMemberships: { include: { team: true } } }
+        include: {
+            teamMemberships: {
+                where: { team: { isActive: true } },
+                include: { team: true }
+            }
+        }
     });
 
     if (!user || user.teamMemberships.length === 0) {
@@ -44,7 +49,7 @@ export default async function StatsPage({ searchParams }: StatsPageProps) {
                 lte: endOfYear
             }
         },
-        include: { user: true }
+        include: { User: true }
     });
 
     // Calculate Member Stats
@@ -55,7 +60,7 @@ export default async function StatsPage({ searchParams }: StatsPageProps) {
 
         if (!memberStats[score.userId]) {
             memberStats[score.userId] = {
-                name: score.user?.name || '알 수 없음',
+                name: score.User?.name || '알 수 없음',
                 total: 0,
                 count: 0,
                 high: 0

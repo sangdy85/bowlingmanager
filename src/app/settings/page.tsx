@@ -2,9 +2,11 @@
 
 import { useActionState, useState } from 'react';
 import { changePassword, deleteAccount } from '@/app/actions/profile';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
+import CenterRegistrationForm from '@/components/CenterRegistrationForm';
 
 export default function SettingsPage() {
+    const { data: session } = useSession();
     const [passwordState, passwordAction, isPasswordPending] = useActionState(changePassword, null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -87,6 +89,12 @@ export default function SettingsPage() {
                         </button>
                     </div>
                 </form>
+            </section>
+
+            {/* Bowling Center Registration Section */}
+            <section className="card mb-8">
+                <h2 className="text-xl font-semibold mb-4 border-b border-border pb-2">볼링장 관리자 등록</h2>
+                <CenterRegistrationForm currentUserRole={session?.user?.role} />
             </section>
 
             {/* Account Deletion Section */}

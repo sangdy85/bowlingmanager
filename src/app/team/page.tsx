@@ -16,6 +16,9 @@ export default async function TeamListPage() {
         where: { id: session.user.id },
         include: {
             teamMemberships: {
+                where: {
+                    team: { isActive: true }
+                },
                 include: {
                     team: {
                         include: {

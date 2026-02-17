@@ -132,6 +132,7 @@ export async function findEmail(name: string) {
 }
 
 export async function sendCode(email: string) {
+    console.log("sendCode called for:", email);
     try {
         const prisma = getPrisma();
         const existingUser = await prisma.user.findUnique({
@@ -139,16 +140,21 @@ export async function sendCode(email: string) {
         });
 
         if (existingUser) {
+            console.log("User already exists:", email);
             return { success: false, message: "이미 가입된 이메일입니다." };
         }
 
+        console.log("Generating verification token...");
         const verificationToken = await generateVerificationToken(email);
+        console.log("Token generated, sending email...");
+
         await sendVerificationEmail(verificationToken.identifier, verificationToken.token);
+        console.log("Email sent successfully!");
 
         return { success: true, message: "인증 코드가 발송되었습니다." };
     } catch (error) {
-        console.error("sendCode error:", error);
-        return { success: false, message: "인증 코드 발송 중 오류가 발생했습니다." };
+        console.error("sendCode error detail:", error);
+        return { success: false, message: "인증 코드 발송 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." };
     }
 }
 
