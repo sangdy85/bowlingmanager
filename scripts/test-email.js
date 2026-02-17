@@ -1,4 +1,4 @@
-require('dotenv').config();
+// require('dotenv').config(); // Removed to avoid dependency issues
 const nodemailer = require('nodemailer');
 
 async function testEmail() {
