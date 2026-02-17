@@ -13,6 +13,7 @@ async function main() {
             password: superAdminPassword,
             role: 'SUPER_ADMIN',
             emailVerified: new Date(),
+            updatedAt: new Date(),
         },
         create: {
             id: 'super-admin-id',
@@ -21,6 +22,7 @@ async function main() {
             password: superAdminPassword,
             role: 'SUPER_ADMIN',
             emailVerified: new Date(),
+            updatedAt: new Date(),
         },
     });
 
