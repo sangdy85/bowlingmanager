@@ -1,8 +1,23 @@
-// require('dotenv').config(); // Removed to avoid dependency issues
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 
 async function testEmail() {
-    console.log('--- Email Test Script ---');
+    console.log('--- Email Test Script (Robust) ---');
+
+    // Manually parse .env if it exists
+    const envPath = path.join(process.cwd(), '.env');
+    if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        envContent.split('\n').forEach(line => {
+            const [key, ...valueParts] = line.split('=');
+            if (key && valueParts.length > 0) {
+                const value = valueParts.join('=').trim().replace(/^["']|["']$/g, '');
+                process.env[key.trim()] = value;
+            }
+        });
+    }
+
     console.log('GMAIL_USER:', process.env.GMAIL_USER);
     console.log('GMAIL_APP_PASSWORD set:', !!process.env.GMAIL_APP_PASSWORD);
 
