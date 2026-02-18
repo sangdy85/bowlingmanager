@@ -20,12 +20,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <Script
-        async
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6753135221253393"
-        crossOrigin="anonymous"
-        strategy="afterInteractive"
-      />
+      <head>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6753135221253393"
+          crossOrigin="anonymous"
+        ></script>
+      </head>
       <body className={inter.className}>
         <AuthContext>
           <div className="min-h-screen bg-background text-foreground">
