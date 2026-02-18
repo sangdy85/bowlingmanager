@@ -8,8 +8,8 @@ import { v4 as uuidv4 } from 'uuid';
 // Pricing constants (Approx KRW per token for Flash models)
 const COST_PER_INPUT_TOKEN = 0.00015;
 const COST_PER_OUTPUT_TOKEN = 0.0006;
-const DAILY_BUDGET_KRW = 1000000; // 개발용 임시 해제 (기존 5000)
-const USER_DAILY_LIMIT = 9999;    // 개발용 임시 해제 (기존 10)
+const DAILY_BUDGET_KRW = 5000; // Restore daily budget
+const USER_DAILY_LIMIT = 10;   // Set user daily limit to 10
 
 export type GeminiParsedRow = {
     memberName: string;

@@ -36,11 +36,6 @@ export default async function TeamListPage() {
         redirect("/login");
     }
 
-    // Auto-redirect if user has exactly one team
-    if (user.teamMemberships.length === 1) {
-        redirect(`/team/${user.teamMemberships[0].team.id}`);
-    }
-
     // If user has no teams, suggest creating or joining one (or redirect to join page?)
     if (user.teamMemberships.length === 0) {
         // Maybe redirect to dashboard or show a "Join a Team" message

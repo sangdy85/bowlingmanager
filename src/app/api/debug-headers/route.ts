@@ -1,21 +1,34 @@
-import { headers } from "next/headers";
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET() {
-    const headersList = await headers();
-    const allHeaders: Record<string, string> = {};
-    headersList.forEach((value, key) => {
-        allHeaders[key] = value;
+export async function GET(request: NextRequest) {
+    const headers: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+        headers[key] = value;
     });
 
-    return new Response(JSON.stringify({
-        message: "Header Inspection",
-        protocol: headersList.get("x-forwarded-proto") || "unknown",
-        host: headersList.get("host"),
-        origin: headersList.get("origin"),
-        allowed_origins: ["https://bowlingmanager.co.kr", "https://www.bowlingmanager.co.kr"],
-        all_headers: allHeaders
-    }, null, 2), {
-        status: 200,
-        headers: { "Content-Type": "application/json" }
+    console.log('--- [DEBUG API] Request Headers ---');
+    console.log(JSON.stringify(headers, null, 2));
+
+    return NextResponse.json({
+        message: "Debug headers received",
+        method: request.method,
+        url: request.url,
+        headers: headers
+    });
+}
+
+export async function POST(request: NextRequest) {
+    const headers: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+        headers[key] = value;
+    });
+
+    console.log('--- [DEBUG API] POST Headers ---');
+    console.log(JSON.stringify(headers, null, 2));
+
+    return NextResponse.json({
+        message: "Debug POST headers received",
+        method: request.method,
+        headers: headers
     });
 }

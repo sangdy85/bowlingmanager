@@ -15,7 +15,7 @@ model User {
   role                         String                         @default("USER")
   handicap                     Int?
   createdAt                    DateTime                       @default(now())
-  updatedAt                    DateTime
+  updatedAt                    DateTime                       @updatedAt
   emailVerified                DateTime?
   ownedCenters                 BowlingCenter[]                @relation("CenterOwner")
   CenterMember                 CenterMember[]
@@ -96,7 +96,7 @@ model Post {
   authorId  String
   author    User        @relation(fields: [authorId], references: [id])
   team      Team        @relation(fields: [teamId], references: [id])
-  PostImage PostImage[]
+  images    PostImage[]
 }
 
 model Tournament {
@@ -254,7 +254,7 @@ model ApiUsage {
   inputTokens  Int      @default(0)
   outputTokens Int      @default(0)
   cost         Float    @default(0.0)
-  updatedAt    DateTime
+  updatedAt    DateTime @updatedAt
 }
 
 model CenterMember {
@@ -290,12 +290,12 @@ model LeagueMatchupIndividualScore {
 }
 
 model PostImage {
-  id        String   @id
+  id        String   @id @default(cuid())
   url       String
   postId    String
   size      Int      @default(0)
   createdAt DateTime @default(now())
-  Post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
 model Score {
@@ -317,7 +317,7 @@ model UserApiUsage {
   userId    String
   date      String
   count     Int      @default(0)
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
   User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])

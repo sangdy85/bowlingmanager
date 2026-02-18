@@ -96,6 +96,7 @@ export async function register(prevState: string | undefined, formData: FormData
                 name,
                 password: hashedPassword,
                 emailVerified: new Date(), // Mark as verified since code was correct
+                updatedAt: new Date(),
             },
         });
 
@@ -134,9 +135,14 @@ export async function findEmail(name: string) {
 
 export async function sendCode(email: string) {
     console.log("[SERVER ACTION] sendCode started for:", email);
+    console.log("[SERVER ACTION] DATABASE_URL check:", process.env.DATABASE_URL?.substring(0, 20) + "...");
     try {
-        console.log("[SERVER ACTION] Getting prisma instance...");
         const prisma = getPrisma();
+        console.log("[SERVER ACTION] Prisma initialized. Testing query...");
+
+        // Simple query to verify DB connection within the action
+        await prisma.$queryRaw`SELECT 1`;
+        console.log("[SERVER ACTION] DB Test Query success");
 
         console.log("[SERVER ACTION] Checking existing user...");
         const existingUser = await prisma.user.findUnique({

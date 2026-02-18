@@ -9,26 +9,30 @@ async function main() {
     console.log('DATABASE_URL from env:', process.env.DATABASE_URL);
 
     try {
-        // Try to find the first user and check its role
+        // Check User table
         const userCount = await prisma.user.count();
         console.log('Total users in DB:', userCount);
 
-        const firstUser = await prisma.user.findFirst();
-        if (firstUser) {
-            console.log('Example User Email:', firstUser.email);
-            console.log('Example User Role:', firstUser.role);
-        } else {
-            console.log('No users found in DB.');
+        // Check VerificationToken table
+        const tokenCount = await prisma.verificationToken.count();
+        console.log('Total verification tokens in DB:', tokenCount);
+
+        const firstToken = await prisma.verificationToken.findFirst();
+        if (firstToken) {
+            console.log('✅ VerificationToken table is queryable.');
         }
 
         // Check schema info if possible (SQLite specific)
-        const tableInfo = await prisma.$queryRaw`PRAGMA table_info(User)`;
-        console.log('User table columns:', tableInfo.map(c => c.name).join(', '));
+        const userTableInfo = await prisma.$queryRaw`PRAGMA table_info(User)`;
+        console.log('User table columns:', userTableInfo.map(c => c.name).join(', '));
 
-        if (tableInfo.some(c => c.name === 'role')) {
-            console.log('✅ "role" column EXISTS in this database.');
+        const tokenTableInfo = await prisma.$queryRaw`PRAGMA table_info(VerificationToken)`;
+        console.log('VerificationToken columns:', tokenTableInfo.map(c => c.name).join(', '));
+
+        if (userTableInfo.some(c => c.name === 'role')) {
+            console.log('✅ "role" column EXISTS in User table.');
         } else {
-            console.log('❌ "role" column MISSING in this database.');
+            console.log('❌ "role" column MISSING in User table.');
         }
 
     } catch (error) {
