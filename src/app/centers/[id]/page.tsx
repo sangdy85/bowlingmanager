@@ -105,14 +105,25 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
 
         if (t.type === 'CHAMP') {
             // Check individual rounds for CHAMP
-            const recruitingRounds = t.leagueRounds.filter((r: any) => {
-                const effectiveDate = getEffectiveRoundDate(r.date, t.settings ? JSON.parse(t.settings).leagueTime : null);
-                const status = calculateTournamentStatus(effectiveDate, r.registrationStart, t.endDate, t.status);
-                return status === 'OPEN' || status === 'CLOSED' || status === 'ONGOING';
-            });
+            const recruitingRounds = t.leagueRounds
+                .map((r: any) => {
+                    const effectiveDate = getEffectiveRoundDate(r.date, t.settings ? JSON.parse(t.settings).leagueTime : null);
+                    const status = calculateTournamentStatus(effectiveDate, r.registrationStart, null, t.status); // Pass null for endDate to use individual round date
+                    return { ...r, calculatedStatus: status };
+                })
+                .filter((r: any) => r.calculatedStatus === 'OPEN' || r.calculatedStatus === 'CLOSED' || r.calculatedStatus === 'ONGOING')
+                .sort((a: any, b: any) => {
+                    // Priority: OPEN > ONGOING > CLOSED
+                    const statusPriority: Record<string, number> = { OPEN: 0, ONGOING: 1, CLOSED: 2 };
+                    if (statusPriority[a.calculatedStatus] !== statusPriority[b.calculatedStatus]) {
+                        return statusPriority[a.calculatedStatus] - statusPriority[b.calculatedStatus];
+                    }
+                    // Then by round number
+                    return a.roundNumber - b.roundNumber;
+                });
 
             if (recruitingRounds.length > 0) {
-                // Show the earliest recruiting round
+                // Show the highest priority recruiting/ongoing round
                 const nextRound = recruitingRounds[0];
                 return [{
                     ...t,
