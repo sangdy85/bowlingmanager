@@ -183,7 +183,7 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
     }
 
     // Merge processed rounds back into tournament for passing to client components
-    const safeTournament = {
+    const safeTournamentRaw = {
         ...tournament,
         leagueRounds: processedRounds,
         startDate: tournament.startDate?.toISOString(),
@@ -191,9 +191,10 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
         registrationStart: tournament.registrationStart?.toISOString(),
         center: {
             ...tournament.center,
-            // Keep managers but convert if needed
         }
     };
+
+    const safeTournament = JSON.parse(JSON.stringify(safeTournamentRaw));
 
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-10">

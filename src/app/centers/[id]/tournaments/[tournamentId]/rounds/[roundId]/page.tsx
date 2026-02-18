@@ -122,14 +122,16 @@ export default async function RoundDetailPage({ params }: { params: { id: string
     const isManager = center?.ownerId === session?.user?.id ||
         center?.managers.some((m: any) => m.id === session?.user?.id);
 
-    // 4. Assemble final object
-    const finalRound = {
+    // 4. Assemble final object and DEEP SERIALIZE to avoid Date objects in client props
+    const finalRoundRaw = {
         ...safeRoundData,
         tournament: {
             ...safeRoundData.tournament,
             rounds: allRounds
         }
     };
+
+    const finalRound = JSON.parse(JSON.stringify(finalRoundRaw));
 
     return <RoundDetailPageContent round={finalRound} userId={session?.user?.id} isManager={isManager} centerId={centerId} />;
 }
