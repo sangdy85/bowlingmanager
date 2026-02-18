@@ -125,14 +125,13 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
             if (recruitingRounds.length > 0) {
                 // Show the highest priority recruiting/ongoing round
                 const nextRound = recruitingRounds[0];
-                const effectiveDate = getEffectiveRoundDate(nextRound.date, t.settings ? JSON.parse(t.settings).leagueTime : null);
-
                 return [{
                     ...t,
                     name: `${t.name} (${nextRound.roundNumber}회차)`,
-                    startDate: effectiveDate, // Use the date with time!
+                    startDate: nextRound.effectiveDate || nextRound.date || t.startDate,
                     roundId: nextRound.id,
-                    participantCount: (nextRound as any)._count.participants
+                    participantCount: (nextRound as any)._count.participants,
+                    calculatedStatus: nextRound.calculatedStatus
                 }];
             }
             return [];
@@ -144,6 +143,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
             return [{
                 ...t,
                 participantCount: (t as any)._count.registrations,
+                calculatedStatus: status
             }];
         }
 
@@ -152,7 +152,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
 
     // 3.5 Deduplicate raw tournaments by name (prioritize those with data)
     const dedupedRaw = Array.from(
-        tournamentsWithRegDate.reduce((map: Map<string, any>, t: any) => {
+        tournamentsWithRegDate.reduce((map: Map<string, typeof tournamentsWithRegDate[number]>, t: typeof tournamentsWithRegDate[number]) => {
             const existing = map.get(t.name);
             if (!existing) {
                 map.set(t.name, t);
@@ -199,20 +199,29 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
     });
 
     // 4. Prepare activeTournaments for RecruitingTournaments component
-    const activeTournaments = activeTournamentsRaw.map((t: any) => ({
-        ...t,
-        isRegistered: t.registrations.length > 0,
-        rawStartDate: (t.startDate || new Date()) as Date,
-        startDate: (t.startDate || new Date()).toLocaleString('ko-KR', {
-            year: 'numeric',
-            month: 'numeric',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        }),
-        endDate: (t.endDate as Date).toLocaleDateString(),
-    }));
+    // Pre-calculate ALL formatting and status on the SERVER to prevent client exceptions
+    const activeTournaments = activeTournamentsRaw.map((t: any) => {
+        const rawStart = (t.startDate || new Date());
+
+        return {
+            id: t.id,
+            name: t.name,
+            type: t.type,
+            status: (t as any).calculatedStatus, // Use the status we already calculated!
+            maxParticipants: t.maxParticipants,
+            participantCount: t.participantCount,
+            isRegistered: t.registrations.length > 0,
+            roundId: (t as any).roundId,
+            startDateLabel: rawStart.toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            })
+        };
+    });
 
     return (
         <div className="max-w-5xl mx-auto">
@@ -251,11 +260,8 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
                     {/* Active Tournaments Section (Recruiting + Ongoing) */}
                     {(isMember || isManager) && activeTournaments.length > 0 && (
                         <ActiveTournaments
-                            tournaments={activeTournaments.map((t: any) => ({
-                                ...t,
-                                participantCount: t.type === 'CHAMP' ? (t as any).participantCount : (t as any)._count.registrations,
-                                isRegistered: (t as any).isRegistered
-                            }))}
+                            tournaments={activeTournaments}
+                            centerId={id}
                             isManager={isManager}
                         />
                     )}

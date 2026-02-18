@@ -1,30 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { calculateTournamentStatus, STATUS_LABELS } from '@/lib/tournament-utils';
 
 interface Props {
+    centerId: string;
     tournaments: {
         id: string;
         name: string;
-        startDate: string;
-        endDate: string;
+        startDateLabel: string;
         type: string;
-        status: string;
-        registrationStart?: Date | null;
-        rawStartDate?: Date | null;
+        status: string; // Pre-calculated: UPCOMING, OPEN, CLOSED, ONGOING, FINISHED
         maxParticipants: number;
         participantCount: number;
         isRegistered: boolean;
-        leagueRounds?: { id: string }[];
+        roundId?: string;
     }[];
     isManager?: boolean;
 }
 
-export default function ActiveTournaments({ tournaments, isManager = false }: Props) {
-    const pathname = usePathname();
-
+export default function ActiveTournaments({ tournaments, centerId, isManager = false }: Props) {
     if (tournaments.length === 0) return null;
 
     return (
@@ -34,8 +28,6 @@ export default function ActiveTournaments({ tournaments, isManager = false }: Pr
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {tournaments.map(t => {
-                    const status = calculateTournamentStatus(t.rawStartDate || t.startDate, t.registrationStart || null, t.endDate, t.status);
-
                     // Button Label & Color
                     let buttonText = '참가 신청';
                     let buttonColor = '#2563eb'; // blue-600
@@ -48,21 +40,20 @@ export default function ActiveTournaments({ tournaments, isManager = false }: Pr
                         buttonText = '신청 완료';
                         buttonColor = '#16a34a'; // green-600
                         buttonShadowColor = 'rgba(22, 163, 74, 0.2)';
-                    } else if (status === 'ONGOING') {
+                    } else if (t.status === 'ONGOING') {
                         buttonText = '대회 진행중';
                         buttonColor = '#2563eb';
-                    } else if (status === 'CLOSED') {
+                    } else if (t.status === 'CLOSED') {
                         buttonText = '접수 마감';
                         buttonColor = '#64748b'; // slate-500
                         buttonShadowColor = 'rgba(100, 116, 139, 0.2)';
                     }
 
                     // Link URL logic
-                    let href = `${pathname}/tournaments/${t.id}`;
-                    if (t.type === 'CHAMP' && (t as any).roundId) {
-                        href = `${pathname}/tournaments/${t.id}?mode=recruit`; // Link to the specific tab that shows all rounds
-                    } else if (t.type === 'EVENT' && t.leagueRounds?.[0]?.id) {
-                        // Fallback or specific round link
+                    let href = `/centers/${centerId}/tournaments/${t.id}`;
+                    if (t.type === 'CHAMP' && t.roundId) {
+                        // Use correct recruiting mode tab for CHAMP
+                        href = `/centers/${centerId}/tournaments/${t.id}?mode=recruit`;
                     }
 
                     return (
@@ -77,7 +68,7 @@ export default function ActiveTournaments({ tournaments, isManager = false }: Pr
                                     {t.name} <span className="text-gray-400 font-medium text-sm">({t.participantCount}/{t.maxParticipants})</span>
                                 </h3>
                                 <p className="text-sm text-gray-300">
-                                    📅 {t.startDate}
+                                    📅 {t.startDateLabel}
                                 </p>
                             </div>
                             <div className="flex items-center gap-6 shrink-0">
