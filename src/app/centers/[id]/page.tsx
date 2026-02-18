@@ -61,7 +61,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
 
     if (!center) notFound();
 
-    const isManager = center.managers.some(m => m.id === session?.user?.id);
+    const isManager = center.managers.some((m: any) => m.id === session?.user?.id) || center.ownerId === session?.user?.id;
 
     // Check if user is a member
     let isMember = false;
@@ -79,7 +79,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
 
     // 1. Map to include registrationStart (as Date object)
     const now = new Date();
-    const tournamentsWithRegDate = center.tournaments.map(t => {
+    const tournamentsWithRegDate = center.tournaments.map((t: any) => {
         let registrationStart = null;
         if (t.settings) {
             try {
@@ -100,12 +100,12 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
     // - NOT finished (Next day of startDate hasn't arrived)
     // - For EVENT: Current status is OPEN, CLOSED, or ONGOING
     // - For CHAMP: Current status of any round is OPEN, CLOSED, or ONGOING
-    const activeTournamentsRaw = tournamentsWithRegDate.flatMap(t => {
+    const activeTournamentsRaw = tournamentsWithRegDate.flatMap((t: any) => {
         if (t.type === 'LEAGUE' || t.status === 'FINISHED') return [];
 
         if (t.type === 'CHAMP') {
             // Check individual rounds for CHAMP
-            const recruitingRounds = t.leagueRounds.filter(r => {
+            const recruitingRounds = t.leagueRounds.filter((r: any) => {
                 const effectiveDate = getEffectiveRoundDate(r.date, t.settings ? JSON.parse(t.settings).leagueTime : null);
                 const status = calculateTournamentStatus(effectiveDate, r.registrationStart, t.endDate, t.status);
                 return status === 'OPEN' || status === 'CLOSED' || status === 'ONGOING';
@@ -133,9 +133,33 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
         return [];
     });
 
-    // 4. Format for display in client components
-    const formattedTournamentsRaw = tournamentsWithRegDate.map((t: any) => {
-        let currentStatus = t.status; // Start with DB status
+    // 3.5 Deduplicate raw tournaments by name (prioritize those with data)
+    const dedupedRaw = Array.from(
+        tournamentsWithRegDate.reduce((map: Map<string, any>, t: any) => {
+            const existing = map.get(t.name);
+            if (!existing) {
+                map.set(t.name, t);
+            } else {
+                // Score based on data content: rounds and settings
+                const tScore = (t.leagueRounds?.length || 0) + (t.settings ? 10 : 0);
+                const existingScore = (existing.leagueRounds?.length || 0) + (existing.settings ? 10 : 0);
+
+                if (tScore > existingScore) {
+                    map.set(t.name, t);
+                } else if (tScore === existingScore) {
+                    // If scores are equal, prefer the one with the later start date
+                    if (t.startDate.getTime() > existing.startDate.getTime()) {
+                        map.set(t.name, t);
+                    }
+                }
+            }
+            return map;
+        }, new Map<string, any>()).values()
+    );
+
+    // 4. Format the deduplicated list for display
+    const formattedTournaments = dedupedRaw.map((t: any) => {
+        let currentStatus = t.status;
 
         if (t.type === 'EVENT' || t.type === 'CHAMP') {
             const startDate = t.type === 'CHAMP' && t.leagueRounds?.[0] ? getEffectiveRoundDate(t.leagueRounds[0].date, t.settings ? JSON.parse(t.settings).leagueTime : null) : t.startDate;
@@ -144,7 +168,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
 
         return {
             ...t,
-            status: currentStatus, // Use calculated status
+            status: currentStatus,
             startDate: t.startDate.toLocaleString('ko-KR', {
                 year: 'numeric',
                 month: 'numeric',
@@ -156,18 +180,6 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
             endDate: t.endDate.toLocaleDateString(),
         };
     });
-
-    // 4.5 Deduplicate by name (especially for CHAMP tournaments)
-    const formattedTournaments = Array.from(
-        formattedTournamentsRaw.reduce((map: Map<string, any>, t: any) => {
-            const existing = map.get(t.name);
-            // Keep the one with the latest startDate or simply the first one found if duplicates are mostly identical
-            if (!existing || new Date(t.startDate) > new Date(existing.startDate)) {
-                map.set(t.name, t);
-            }
-            return map;
-        }, new Map<string, any>()).values()
-    ) as any[];
 
     // 4. Prepare activeTournaments for RecruitingTournaments component
     const activeTournaments = activeTournamentsRaw.map((t: any) => ({
@@ -222,7 +234,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
                     {/* Active Tournaments Section (Recruiting + Ongoing) */}
                     {(isMember || isManager) && activeTournaments.length > 0 && (
                         <ActiveTournaments
-                            tournaments={activeTournaments.map(t => ({
+                            tournaments={activeTournaments.map((t: any) => ({
                                 ...t,
                                 participantCount: t.type === 'CHAMP' ? (t as any).participantCount : (t as any)._count.registrations,
                                 isRegistered: (t as any).isRegistered
