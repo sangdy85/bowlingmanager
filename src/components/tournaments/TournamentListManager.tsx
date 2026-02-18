@@ -13,7 +13,6 @@ interface TournamentSummary {
     status: string;
     startDate: string;
     endDate: string;
-    isGrouped?: boolean;
     leagueRounds?: { id: string }[];
 }
 
@@ -36,12 +35,12 @@ export default function TournamentListManager({
     };
 
     const filteredTournaments = tournaments.filter(t => {
-        // Sub Tab Filter
-        if (t.type !== subTab) return false;
-
         // Main Tab Filter
         if (mainTab === 'ONGOING' && t.status === 'FINISHED') return false;
         if (mainTab === 'FINISHED' && t.status !== 'FINISHED') return false;
+
+        // Sub Tab Filter
+        if (t.type !== subTab) return false;
 
         return true;
     });
@@ -116,14 +115,14 @@ export default function TournamentListManager({
                                             {/* Badge & Date */}
                                             <div className={styles.badges}>
                                                 <span className={`${styles.typeBadge} ${mapItem.styleClass}`}>
-                                                    {mapItem.label}{t.isGrouped ? ' 시리즈' : ''}
+                                                    {mapItem.label}
                                                 </span>
                                                 <span className={styles.date}>
                                                     📅 {t.startDate} ~ {t.endDate}
                                                 </span>
-                                                {t.type !== 'LEAGUE' && (
+                                                {t.type !== 'LEAGUE' && t.type !== 'CHAMP' && (
                                                     <span className={`${styles.statusBadge} ${t.status === 'FINISHED' ? styles.statusFinished : styles.statusActive}`}>
-                                                        {t.isGrouped && t.status !== 'FINISHED' ? '시리즈 진행 중' : (t.status === 'FINISHED' ? '종료' : (t.status === 'ONGOING' ? '진행 중' : (t.status === 'OPEN' ? '모집 중' : (t.status === 'CLOSED' ? '마감' : '예정'))))}
+                                                        {t.status === 'FINISHED' ? '종료' : (t.status === 'ONGOING' ? '진행 중' : (t.status === 'OPEN' ? '모집 중' : (t.status === 'CLOSED' ? '마감' : '예정')))}
                                                     </span>
                                                 )}
                                             </div>

@@ -302,15 +302,8 @@ export async function manualRegister(roundId: string, input: {
                 registrationId = existing[0].id;
             } else {
                 registrationId = randomUUID();
-                // Priority: Use teamId from CenterMember if available
-                const centerMembers: any[] = await prisma.$queryRaw`SELECT "teamId" FROM "CenterMember" WHERE "userId" = ${input.userId} AND "centerId" = ${info.centerId} LIMIT 1`;
-                let teamId = centerMembers.length > 0 ? centerMembers[0].teamId : null;
-
-                // Fallback: Use any team the user belongs to
-                if (!teamId) {
-                    const teams: any[] = await prisma.$queryRaw`SELECT "teamId" FROM "TeamMember" WHERE "userId" = ${input.userId} LIMIT 1`;
-                    teamId = teams.length > 0 ? teams[0].teamId : null;
-                }
+                const teams: any[] = await prisma.$queryRaw`SELECT "teamId" FROM "TeamMember" WHERE "userId" = ${input.userId} LIMIT 1`;
+                const teamId = teams.length > 0 ? teams[0].teamId : null;
                 const handicapVal = input.handicap !== undefined ? input.handicap : null;
 
                 // Fixed: Removed createdAt, updatedAt. Used joinedAt.
@@ -392,15 +385,8 @@ export async function joinRound(roundId: string, userId: string) {
             registrationId = existing[0].id;
         } else {
             registrationId = randomUUID();
-            // Priority: Use teamId from CenterMember if available
-            const centerMembers: any[] = await prisma.$queryRaw`SELECT "teamId" FROM "CenterMember" WHERE "userId" = ${userId} AND "centerId" = ${info.centerId} LIMIT 1`;
-            let teamId = centerMembers.length > 0 ? centerMembers[0].teamId : null;
-
-            // Fallback: Use any team the user belongs to
-            if (!teamId) {
-                const teams: any[] = await prisma.$queryRaw`SELECT "teamId" FROM "TeamMember" WHERE "userId" = ${userId} LIMIT 1`;
-                teamId = teams.length > 0 ? teams[0].teamId : null;
-            }
+            const teams: any[] = await prisma.$queryRaw`SELECT "teamId" FROM "TeamMember" WHERE "userId" = ${userId} LIMIT 1`;
+            const teamId = teams.length > 0 ? teams[0].teamId : null;
 
             // Fixed: Removed createdAt, updatedAt. Used joinedAt.
             await prisma.$executeRaw`
@@ -505,8 +491,8 @@ export async function autoAssignRemaining(roundId: string) {
         }
 
         // Filter out taken spots
-        const assignedParticipants = round.participants.filter((p: any) => p.lane);
-        const takenSlots = new Set(assignedParticipants.map((p: any) => p.lane));
+        const assignedParticipants = round.participants.filter(p => p.lane);
+        const takenSlots = new Set(assignedParticipants.map(p => p.lane));
 
         // Available slots pool (encoded as lane * 10 + slot)
         const availableSlots: number[] = [];
@@ -595,9 +581,9 @@ export async function drawLane(roundId: string, registrationId: string) {
         // 2. Identify participant
         let participant;
         if (registrationId) {
-            participant = round.participants.find((p: any) => p.registrationId === registrationId);
+            participant = round.participants.find(p => p.registrationId === registrationId);
         } else if (userId) {
-            participant = round.participants.find((p: any) => p.registration.userId === userId);
+            participant = round.participants.find(p => p.registration.userId === userId);
         }
 
         if (!participant) throw new Error("참가자가 아니거나 권한이 없습니다.");
@@ -682,7 +668,7 @@ export async function drawLane(roundId: string, registrationId: string) {
             const info = await getTournamentInfo(roundId);
             if (info) revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
 
-            const myIdxInGroup = groupMembers.findIndex((m: any) => m.id === participant.id);
+            const myIdxInGroup = groupMembers.findIndex(m => m.id === participant.id);
             return { success: true, lane: pickedBlock[myIdxInGroup] };
         }
 
@@ -814,12 +800,11 @@ export async function searchPlayers(query: string, centerId: string) {
     if (!query || query.length < 1) return [];
     try {
         const users: any[] = await prisma.$queryRaw`
-            SELECT u.id, u.name, COALESCE(tcm.name, ttm.name) as "teamName", u.handicap
+            SELECT u.id, u.name, t.name as "teamName", u.handicap
             FROM "User" u
             JOIN "CenterMember" cm ON u.id = cm."userId"
-            LEFT JOIN "Team" tcm ON cm."teamId" = tcm.id
             LEFT JOIN "TeamMember" tm ON u.id = tm."userId"
-            LEFT JOIN "Team" ttm ON tm."teamId" = ttm.id
+            LEFT JOIN "Team" t ON tm."teamId" = t.id
             WHERE u.name LIKE ${`%${query}%`}
             AND cm."centerId" = ${centerId}
             ORDER BY u.name ASC
