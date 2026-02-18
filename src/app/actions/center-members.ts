@@ -81,7 +81,7 @@ export async function joinCenter(centerId: string, teamId: string | null, alias:
     const userId = session.user.id;
 
     try {
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
             // 1. Check if already a center member
             const existingMember = await tx.centerMember.findUnique({
                 where: {
@@ -102,6 +102,7 @@ export async function joinCenter(centerId: string, teamId: string | null, alias:
                     id: uuidv4(),
                     centerId,
                     userId,
+                    teamId: teamId || null, // Save the selected team
                     alias: alias // User name as alias
                 }
             });

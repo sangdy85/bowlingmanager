@@ -14,7 +14,7 @@ export default async function CenterMembersPage({ params }: { params: { id: stri
         include: {
             managers: true,
             CenterMember: {
-                include: { User: true },
+                include: { User: true, Team: true },
                 orderBy: { joinedAt: 'desc' }
             }
         }
@@ -51,7 +51,14 @@ export default async function CenterMembersPage({ params }: { params: { id: stri
                                                 {member.User.name.charAt(0)}
                                             </div>
                                             <div>
-                                                <div className="font-bold">{member.User.name} {member.alias && <span className="text-sm font-normal text-secondary-foreground">({member.alias})</span>}</div>
+                                                <div className="font-bold">
+                                                    {member.User.name} {member.alias && <span className="text-sm font-normal text-secondary-foreground">({member.alias})</span>}
+                                                    {member.Team && (
+                                                        <span className="ml-2 px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded border border-primary/20">
+                                                            {member.Team.name}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="text-xs text-secondary-foreground">{member.User.email}</div>
                                             </div>
                                         </div>
