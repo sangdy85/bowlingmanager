@@ -133,8 +133,8 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
         return [];
     });
 
-    // 3. Format for display in client components
-    const formattedTournaments = tournamentsWithRegDate.map(t => {
+    // 4. Format for display in client components
+    const formattedTournamentsRaw = tournamentsWithRegDate.map(t => {
         let currentStatus = t.status; // Start with DB status
 
         if (t.type === 'EVENT' || t.type === 'CHAMP') {
@@ -156,6 +156,18 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
             endDate: t.endDate.toLocaleDateString(),
         };
     });
+
+    // 4.5 Deduplicate by name (especially for CHAMP tournaments)
+    const formattedTournaments = Array.from(
+        formattedTournamentsRaw.reduce((map, t) => {
+            const existing = map.get(t.name);
+            // Keep the one with the latest startDate or simply the first one found if duplicates are mostly identical
+            if (!existing || new Date(t.startDate) > new Date(existing.startDate)) {
+                map.set(t.name, t);
+            }
+            return map;
+        }, new Map<string, typeof formattedTournamentsRaw[0]>()).values()
+    );
 
     // 4. Prepare activeTournaments for RecruitingTournaments component
     const activeTournaments = activeTournamentsRaw.map((t: any) => ({

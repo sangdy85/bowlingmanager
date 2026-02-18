@@ -100,11 +100,13 @@ export default function TournamentListManager({
                             return (
                                 <Link
                                     key={t.id}
-                                    href={isManager && t.type === 'EVENT' && t.leagueRounds?.[0]?.id
-                                        ? `/centers/${centerId}/tournaments/${t.id}/rounds/${t.leagueRounds[0].id}`
-                                        : (t.type === 'CHAMP'
-                                            ? `/centers/${centerId}/tournaments/${t.id}?mode=results`
-                                            : `/centers/${centerId}/tournaments/${t.id}`)}
+                                    href={isManager
+                                        ? `/centers/${centerId}/tournaments/${t.id}`
+                                        : (t.type === 'EVENT' && t.leagueRounds?.[0]?.id
+                                            ? `/centers/${centerId}/tournaments/${t.id}/rounds/${t.leagueRounds[0].id}`
+                                            : (t.type === 'CHAMP'
+                                                ? `/centers/${centerId}/tournaments/${t.id}?mode=results`
+                                                : `/centers/${centerId}/tournaments/${t.id}`))}
                                     className={styles.card}
                                 >
                                     {/* Left Accent Bar */}
