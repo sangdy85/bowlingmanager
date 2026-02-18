@@ -1734,6 +1734,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
     const initialTab = searchParams.get('tab') || 'overview';
     const [activeTab, setActiveTab] = useState(initialTab);
     const [showEditModal, setShowEditModal] = useState(false);
+    const [lotteryStatus, setLotteryStatus] = useState<'PENDING' | 'OPEN' | 'CLOSED'>('CLOSED');
 
     const statusMap: Record<string, { label: string, color: string }> = {
         UPCOMING: { label: STATUS_LABELS.UPCOMING, color: "bg-slate-500" },
@@ -1748,29 +1749,15 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
         if (tab && tab !== activeTab) {
             setActiveTab(tab);
         }
-    }, [searchParams]); // removed activeTab to prevent flicker
-
-    const handleTabChange = (tabId: string) => {
-        setActiveTab(tabId);
-        // Optional: Update URL without full refresh to keep history clean
-        router.replace(`${window.location.pathname}?tab=${tabId}`, { scroll: false });
-    };
-
-    if (!round) return <div>Data not found</div>;
-
-    // Check if user is participant
-    const participation = round.participants.find((p: any) => p.registration.userId === userId);
-
-    // Check time window for lottery
-    const [lotteryStatus, setLotteryStatus] = useState<'PENDING' | 'OPEN' | 'CLOSED'>('CLOSED');
+    }, [searchParams]);
 
     useEffect(() => {
-        const effectiveDate = getEffectiveRoundDate(round.date, round.tournament.leagueTime);
-        if (!effectiveDate) return;
+        const effectiveDateStr = round.effectiveDateStr;
+        if (!effectiveDateStr) return;
 
         const checkTime = () => {
             const now = new Date();
-            const start = effectiveDate;
+            const start = new Date(effectiveDateStr);
             const twoHoursBefore = new Date(start.getTime() - 2 * 60 * 60 * 1000);
             const oneHourBefore = new Date(start.getTime() - 1 * 60 * 60 * 1000);
 
@@ -1783,9 +1770,13 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
             }
         };
         checkTime();
-        const interval = setInterval(checkTime, 60000); // Check every minute
+        const interval = setInterval(checkTime, 60000);
         return () => clearInterval(interval);
-    }, [round.date, round.tournament.leagueTime]);
+    }, [round.effectiveDateStr]);
+
+    if (!round) return <div>Data not found</div>;
+
+    const participation = round.participants.find((p: any) => p.registration.userId === userId);
 
     const tabs = [
         { id: 'overview', label: '대시보드' },
@@ -1799,16 +1790,18 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
     ];
 
     const refresh = () => {
-        router.refresh(); // Persist state, only refresh data
+        router.refresh();
     };
 
-    // Check if there are any recorded scores in this round
     const hasResults = round.individualScores && round.individualScores.some((s: any) => s.score > 0);
-
-    // Simplified Result View for CHAMP Members in Closed or Scored Rounds
     const shouldShowSimplifiedResults = !isManager &&
         round.tournament.type === 'CHAMP' &&
         (hasResults || (round.date && new Date() > new Date(round.date)));
+
+    const handleTabChange = (tabId: string) => {
+        setActiveTab(tabId);
+        router.replace(`${window.location.pathname}?tab=${tabId}`, { scroll: false });
+    };
 
     return (
         <div className="space-y-6">
@@ -1849,9 +1842,9 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                                     {isManager ? `${round.roundNumber}회차 상세 관리` : (shouldShowSimplifiedResults ? '대회 결과 및 정보' : `${round.roundNumber}회차 상세 정보`)}
                                 </span>
                                 {(() => {
-                                    const effectiveDate = getEffectiveRoundDate(round.date, round.tournament.leagueTime);
-                                    const status = calculateTournamentStatus(effectiveDate, round.registrationStart, round.date, round.tournament.status);
-                                    const config = statusMap[status];
+                                    const effectiveDate = round.effectiveDateStr ? new Date(round.effectiveDateStr) : (round.date ? new Date(round.date) : null);
+                                    const status = round.calculatedStatus || 'UPCOMING';
+                                    const config = statusMap[status as any] || statusMap['UPCOMING'];
                                     return (
                                         <span className={`${config.color} text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm w-fit`}>
                                             {config.label}
@@ -1862,7 +1855,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                         </h1>
                         <p className="text-gray-400 text-sm mt-1 flex items-center gap-2">
                             <span>📅 {(() => {
-                                const effective = getEffectiveRoundDate(round.date, round.tournament.leagueTime);
+                                const effective = round.effectiveDateStr ? new Date(round.effectiveDateStr) : (round.date ? new Date(round.date) : null);
                                 return effective ? effective.toLocaleString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '일정 미정';
                             })()}</span>
                             <span className="w-1 h-1 bg-gray-600 rounded-full"></span>

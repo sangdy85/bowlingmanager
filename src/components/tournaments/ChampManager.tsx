@@ -81,19 +81,8 @@ export default function ChampManager({ tournament, centerId, isManager, currentU
                         return round.status === 'CLOSED' || hasResults || hasIndividualScores || hasParticipantsWithScores;
                     })
                     .map((round: any) => {
-                        const now = new Date();
-                        const effectiveDate = (() => {
-                            if (!round.date) return null;
-                            const d = new Date(round.date);
-                            if (!tournament.leagueTime) return d;
-                            const [h, m] = tournament.leagueTime.split(':').map(Number);
-                            const res = new Date(d);
-                            res.setHours(h, m, 0, 0);
-                            return res;
-                        })();
-
-                        const start = round.registrationStart ? new Date(round.registrationStart) : null;
-                        const status = calculateTournamentStatus(effectiveDate, start, round.date, tournament.status);
+                        const effectiveDate = round.effectiveDateStr ? new Date(round.effectiveDateStr) : (round.date ? new Date(round.date) : null);
+                        const status = round.calculatedStatus || 'UPCOMING';
 
                         const isJoined = round.participants?.some((p: any) => p.registration?.userId === currentUserId);
                         const hasScores = (round.individualScores && round.individualScores.length > 0) ||
@@ -108,7 +97,7 @@ export default function ChampManager({ tournament, centerId, isManager, currentU
                             hour: '2-digit',
                             minute: '2-digit'
                         }) : '일정 미정';
-                        const statusText = STATUS_LABELS[status];
+                        const statusText = STATUS_LABELS[status as any];
 
                         return (
                             <div key={round.id} className="card" style={{

@@ -71,6 +71,16 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
         }));
     }
 
+    const now = new Date();
+
+    // Safe settings parsing
+    let tournamentSettings: any = {};
+    try {
+        if (tournament.settings) tournamentSettings = JSON.parse(tournament.settings);
+    } catch (e) {
+        console.error("Failed to parse tournament settings", e);
+    }
+
     const isManager = tournament.center.managers.some((m: any) => m.id === session?.user?.id) || tournament.center.ownerId === session?.user?.id;
     const isRegistered = tournament.registrations.some((r: any) => r.userId === session?.user?.id);
 
@@ -120,16 +130,29 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
         }
     }
 
+    // Pre-calculate round statuses and effective dates on the server
+    const processedRounds = tournament.leagueRounds.map((r: any) => {
+        const effectiveDate = getEffectiveRoundDate(r.date, tournamentSettings.leagueTime);
+        const status = calculateTournamentStatus(effectiveDate, r.registrationStart, null, tournament.status, now);
+        return {
+            ...r,
+            effectiveDate,
+            calculatedStatus: status,
+            // Serialize for client components
+            date: r.date?.toISOString(),
+            registrationStart: r.registrationStart?.toISOString(),
+            effectiveDateStr: effectiveDate?.toISOString()
+        };
+    });
+
     // Calculate display name and initial round for CHAMP tournaments
     let displayName = tournament.name;
     let initialRound = null;
 
     if (tournament.type === 'CHAMP') {
-        const recruitingRounds = tournament.leagueRounds.filter((r: any) => {
-            const effectiveDate = getEffectiveRoundDate(r.date, tournament.settings ? JSON.parse(tournament.settings).leagueTime : null);
-            const status = calculateTournamentStatus(effectiveDate, r.registrationStart, r.date, tournament.status);
-            return status === 'OPEN' || status === 'CLOSED' || status === 'ONGOING';
-        });
+        const recruitingRounds = processedRounds.filter((r: any) =>
+            r.calculatedStatus === 'OPEN' || r.calculatedStatus === 'CLOSED' || r.calculatedStatus === 'ONGOING'
+        );
 
         if (recruitingRounds.length > 0) {
             initialRound = recruitingRounds[0];
@@ -139,30 +162,38 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
 
     // Default round calculation logic (fallback or for non-CHAMP)
     if (!initialRound) {
-        const rounds = tournament.leagueRounds || [];
-        const now = new Date();
-
         // 1. Current recruiting/ongoing round
-        initialRound = rounds.find((r: any) => {
-            const start = r.registrationStart ? new Date(r.registrationStart) : null;
-            const end = r.date ? new Date(r.date) : null;
-            return start && end && now >= start && now <= end;
-        });
+        initialRound = processedRounds.find((r: any) =>
+            r.calculatedStatus === 'OPEN' || r.calculatedStatus === 'CLOSED' || r.calculatedStatus === 'ONGOING'
+        );
 
         // 2. Next upcoming round
         if (!initialRound) {
-            initialRound = [...rounds].sort((a, b) => {
-                const dateA = a.date ? new Date(a.date).getTime() : Infinity;
-                const dateB = b.date ? new Date(b.date).getTime() : Infinity;
-                return dateA - dateB;
-            }).find((r: any) => r.date && new Date(r.date) > now);
+            initialRound = [...processedRounds].sort((a, b) => {
+                const timeA = a.effectiveDate ? a.effectiveDate.getTime() : Infinity;
+                const timeB = b.effectiveDate ? b.effectiveDate.getTime() : Infinity;
+                return timeA - timeB;
+            }).find((r: any) => r.effectiveDate && r.effectiveDate > now);
         }
 
         // 3. Fallback to latest round
-        if (!initialRound && rounds.length > 0) {
-            initialRound = rounds[rounds.length - 1];
+        if (!initialRound && processedRounds.length > 0) {
+            initialRound = processedRounds[processedRounds.length - 1];
         }
     }
+
+    // Merge processed rounds back into tournament for passing to client components
+    const safeTournament = {
+        ...tournament,
+        leagueRounds: processedRounds,
+        startDate: tournament.startDate?.toISOString(),
+        endDate: tournament.endDate?.toISOString(),
+        registrationStart: tournament.registrationStart?.toISOString(),
+        center: {
+            ...tournament.center,
+            // Keep managers but convert if needed
+        }
+    };
 
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-10">
@@ -181,58 +212,56 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b-2 border-primary/20">
                 <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                        <span className={`px-3 py-1 text-white text-xs font-bold rounded-full uppercase tracking-wider ${typeMap[tournament.type]?.color || 'bg-gray-500'}`}>
-                            {typeMap[tournament.type]?.label || tournament.type}
+                        <span className={`px-3 py-1 text-white text-xs font-bold rounded-full uppercase tracking-wider ${typeMap[safeTournament.type]?.color || 'bg-gray-500'}`}>
+                            {typeMap[safeTournament.type]?.label || safeTournament.type}
                         </span>
                         <span className="text-secondary-foreground font-medium flex items-center gap-1.5">
-                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${tournament.status === 'FINISHED' ? 'bg-gray-400' :
-                                (tournament.status === 'ONGOING' || hasStarted) ? 'bg-blue-500' : 'bg-green-500'
+                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${safeTournament.status === 'FINISHED' ? 'bg-gray-400' :
+                                (safeTournament.status === 'ONGOING' || hasStarted) ? 'bg-blue-500' : 'bg-green-500'
                                 }`}></span>
-                            {tournament.status === 'FINISHED' ? '종료' :
-                                (hasStarted ? '진행 중' : (statusMap[tournament.status]?.label || tournament.status))}
+                            {safeTournament.status === 'FINISHED' ? '종료' :
+                                (hasStarted ? '진행 중' : (statusMap[safeTournament.status]?.label || safeTournament.status))}
                         </span>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black tracking-tight">
                         {displayName}
-                        {tournament.type === 'EVENT' && ' (이벤트전)'}
+                        {safeTournament.type === 'EVENT' && ' (이벤트전)'}
                     </h1>
                     <div className="flex flex-wrap items-center gap-6 text-sm text-secondary-foreground font-medium">
                         <div className="flex items-center gap-2">
                             <span className="text-xl">📅</span>
-                            {tournament.startDate.toLocaleDateString('ko-KR')} ~ {tournament.endDate.toLocaleDateString('ko-KR')}
+                            {new Date(safeTournament.startDate).toLocaleDateString('ko-KR')} ~ {new Date(safeTournament.endDate).toLocaleDateString('ko-KR')}
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="text-xl">💰</span>
-                            {tournament.entryFee.toLocaleString()}원
+                            {safeTournament.entryFee.toLocaleString()}원
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="text-xl">🏠</span>
-                            {tournament.center.name}
+                            {safeTournament.center.name}
                         </div>
                     </div>
                 </div>
 
                 {isManager && (
                     <div className="flex items-center gap-3">
-                        <DeleteTournamentButton tournamentId={tournament.id} />
+                        <DeleteTournamentButton tournamentId={safeTournament.id} />
                         <TournamentStatusDropdown
-                            tournamentId={tournament.id}
-                            currentStatus={tournament.status}
+                            tournamentId={safeTournament.id}
+                            currentStatus={safeTournament.status}
                             statusMap={statusMap}
                         />
                     </div>
                 )}
             </div>
 
-
-
             {/* Content Logic: Manager vs Member */}
             {!isManager ? (
                 <TournamentMemberView
-                    tournament={tournament}
+                    tournament={safeTournament}
                     centerId={centerId}
-                    centerName={tournament.center.name}
-                    centerAddress={tournament.center.address}
+                    centerName={safeTournament.center.name}
+                    centerAddress={safeTournament.center.address}
                     leaderboardData={leaderboardData}
                     individualData={individualData}
                     currentUserId={session?.user?.id}
@@ -252,22 +281,22 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                             </div>
                             <div className="p-8 space-y-8">
                                 <TournamentDescriptionEditor
-                                    tournamentId={tournament.id}
-                                    initialDescription={tournament.description}
+                                    tournamentId={safeTournament.id}
+                                    initialDescription={safeTournament.description}
                                     isManager={isManager}
                                 />
 
-                                {(tournament.type === 'CHAMP' || tournament.type === 'EVENT') && tournament.settings && (
+                                {(safeTournament.type === 'CHAMP' || safeTournament.type === 'EVENT') && safeTournament.settings && (
                                     <div className="mt-8 pt-8 border-t-2 border-dashed border-gray-100">
                                         <h3 className="text-xl font-black mb-6 flex items-center gap-2">
                                             <span className="text-2xl">📋</span> 상세 요강 안내
                                         </h3>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
                                             {(() => {
-                                                const s = JSON.parse(tournament.settings);
+                                                const s = tournamentSettings; // use the safe parsed settings
                                                 const items = [
-                                                    { label: '일시', value: tournament.type === 'EVENT' ? new Date(tournament.startDate).toLocaleString('ko-KR', { dateStyle: 'long', timeStyle: 'short' }) : s.startDateText, icon: '📅' },
-                                                    { label: '대회 시간', value: tournament.type === 'EVENT' ? null : tournament.leagueTime, icon: '⏰' },
+                                                    { label: '일시', value: safeTournament.type === 'EVENT' ? new Date(safeTournament.startDate).toLocaleString('ko-KR', { dateStyle: 'long', timeStyle: 'short' }) : s.startDateText, icon: '📅' },
+                                                    { label: '대회 시간', value: safeTournament.type === 'EVENT' ? null : safeTournament.leagueTime, icon: '⏰' },
                                                     { label: '접수 시작', value: s.registrationStart ? new Date(s.registrationStart).toLocaleString('ko-KR', { dateStyle: 'long', timeStyle: 'short' }) : null, icon: '📝' },
                                                     {
                                                         label: '진행 모드',
@@ -303,109 +332,101 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                                 )}
 
                                 <TournamentAttachmentManager
-                                    tournamentId={tournament.id}
-                                    attachments={tournament.attachments}
+                                    tournamentId={safeTournament.id}
+                                    attachments={safeTournament.attachments}
                                     isManager={isManager}
                                 />
                             </div>
                         </section>
 
-                        {tournament.type === 'LEAGUE' && isManager && (
+                        {safeTournament.type === 'LEAGUE' && isManager && (
                             <div className="space-y-4">
                                 <TournamentManager
-                                    tournament={tournament}
+                                    tournament={safeTournament}
                                     centerId={centerId}
                                     availableTeams={centerTeams}
-                                    hasExistingSchedule={tournament.leagueRounds.length > 0}
+                                    hasExistingSchedule={safeTournament.leagueRounds.length > 0}
                                     hasStarted={hasStarted}
                                 />
                             </div>
                         )}
 
-                        {tournament.type === 'CHAMP' && isManager && (
+                        {safeTournament.type === 'CHAMP' && isManager && (
                             <div className="space-y-4">
                                 <ChampManager
-                                    tournament={tournament}
+                                    tournament={safeTournament}
                                     centerId={centerId}
                                     isManager={isManager}
                                 />
                             </div>
                         )}
 
-                        {tournament.type === 'EVENT' && isManager && (
+                        {safeTournament.type === 'EVENT' && isManager && (
                             <div className="space-y-4">
                                 <EventManager
-                                    tournament={tournament}
+                                    tournament={safeTournament}
                                     centerId={centerId}
                                     isManager={isManager}
                                 />
                             </div>
                         )}
 
-                        {tournament.type === 'LEAGUE' && tournament.leagueRounds.length > 0 && (
+                        {safeTournament.type === 'LEAGUE' && safeTournament.leagueRounds.length > 0 && (
                             <LeagueScheduleView
-                                tournamentName={tournament.name}
-                                leagueRounds={tournament.leagueRounds}
+                                tournamentName={safeTournament.name}
+                                leagueRounds={safeTournament.leagueRounds}
                                 isManager={isManager}
                             />
                         )}
 
-                        {tournament.type === 'LEAGUE' && tournament.leagueRounds.length > 0 && (
+                        {safeTournament.type === 'LEAGUE' && safeTournament.leagueRounds.length > 0 && (
                             <WeeklyResultDownloader
-                                tournamentId={tournament.id}
-                                tournamentName={tournament.name}
-                                rounds={tournament.leagueRounds}
-                                teamHandicapLimit={tournament.teamHandicapLimit}
-                                awardMinGames={tournament.awardMinGames}
-                                reportNotice={tournament.reportNotice}
+                                tournamentId={safeTournament.id}
+                                tournamentName={safeTournament.name}
+                                rounds={safeTournament.leagueRounds}
+                                teamHandicapLimit={safeTournament.teamHandicapLimit}
+                                awardMinGames={safeTournament.awardMinGames}
+                                reportNotice={safeTournament.reportNotice}
                             />
                         )}
 
-                        {tournament.type === 'LEAGUE' && tournament.leagueRounds.length > 0 && (
+                        {safeTournament.type === 'LEAGUE' && safeTournament.leagueRounds.length > 0 && (
                             <LeagueResultManager
                                 centerId={centerId}
                                 tournamentId={tournamentId}
-                                rounds={tournament.leagueRounds}
+                                rounds={safeTournament.leagueRounds}
                                 isManager={isManager}
                             />
                         )}
 
-                        {tournament.type !== 'LEAGUE' && (
+                        {safeTournament.type !== 'LEAGUE' && (
                             <section className="card p-8 border-2 border-black">
                                 <div className="flex flex-col items-start gap-4 mb-8 border-b-2 border-slate-100 pb-6">
                                     <h2 className="text-2xl font-bold italic flex items-center gap-2">
-                                        <span className="text-3xl">👥</span> 참가자 명단 ({tournament.registrations.length}/{tournament.maxParticipants})
+                                        <span className="text-3xl">👥</span> 참가자 명단 ({safeTournament.registrations.length}/{safeTournament.maxParticipants})
                                     </h2>
                                     {!isManager && (
                                         <div className="w-full">
                                             <TournamentRegButton
-                                                tournament={tournament}
+                                                tournament={safeTournament}
                                                 isRegistered={isRegistered}
-                                                canJoin={tournament.status !== 'FINISHED' && (
-                                                    tournament.type === 'EVENT' ||
-                                                    tournament.type === 'CHAMP' ||
-                                                    tournament.status === 'JOINING' ||
-                                                    tournament.status === 'ONGOING' ||
-                                                    (tournament.status === 'PLANNING' && tournament.settings && (() => {
-                                                        try { return new Date() >= new Date(JSON.parse(tournament.settings).registrationStart); } catch { return false; }
-                                                    })())
-                                                )}
+                                                canJoin={safeTournament.status !== 'FINISHED'}
                                             />
                                         </div>
                                     )}
                                 </div>
 
                                 {(() => {
-                                    const rounds = tournament.leagueRounds || [];
+                                    const rounds = safeTournament.leagueRounds || [];
                                     return (
                                         <RoundParticipantManager
                                             rounds={rounds}
                                             initialRoundId={initialRound?.id}
-                                            allRegistrations={tournament.registrations}
+                                            allRegistrations={safeTournament.registrations}
                                             isManager={isManager}
-                                            maxParticipants={tournament.maxParticipants}
-                                            isEvent={tournament.type === 'EVENT'}
-                                            hideRoundTabs={tournament.type === 'EVENT' || !isManager}
+                                            maxParticipants={safeTournament.maxParticipants}
+                                            isEvent={safeTournament.type === 'EVENT'}
+                                            hideRoundTabs={safeTournament.type === 'EVENT' || !isManager}
                                             currentUserId={session?.user?.id}
                                             centerId={centerId}
                                         />
@@ -421,25 +442,7 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                             <p className="text-sm text-secondary-foreground mb-6 font-medium">대회가 진행됨에 따라 실시간 순위 데이터가 집계됩니다.</p>
                             <div className="flex flex-col">
                                 {(() => {
-                                    const s = tournament.settings ? JSON.parse(tournament.settings) : {};
-
-                                    // Determine the current or latest round for result linking
-                                    const rounds = tournament.leagueRounds || [];
-                                    const now = new Date();
-                                    let targetRound = rounds.find((r: any) => {
-                                        const start = r.registrationStart ? new Date(r.registrationStart) : null;
-                                        const end = r.date ? new Date(r.date) : null;
-                                        return start && end && now >= start && now <= end;
-                                    });
-
-                                    // Fallback to the most recent round if none is active
-                                    if (!targetRound && rounds.length > 0) {
-                                        targetRound = [...rounds].sort((a, b) => {
-                                            const dateA = a.date ? new Date(a.date).getTime() : 0;
-                                            const dateB = b.date ? new Date(b.date).getTime() : 0;
-                                            return dateB - dateA;
-                                        })[0];
-                                    }
+                                    const s = tournamentSettings;
 
                                     return (
                                         <>
@@ -461,7 +464,7 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                                     );
                                 })()}
 
-                                {tournament.type === 'LEAGUE' && (
+                                {safeTournament.type === 'LEAGUE' && (
                                     <>
                                         <Link
                                             href={`/centers/${centerId}/tournaments/${tournamentId}/leaderboard`}
@@ -489,8 +492,8 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                         <div className="card p-6 border-2 border-black shadow-lg">
                             <h3 className="font-black text-lg mb-4">📍 참여 볼링장</h3>
                             <div className="space-y-2 mb-6">
-                                <p className="font-black text-xl">{tournament.center.name}</p>
-                                <p className="text-xs text-secondary-foreground font-medium">{tournament.center.address}</p>
+                                <p className="font-black text-xl">{safeTournament.center.name}</p>
+                                <p className="text-xs text-secondary-foreground font-medium">{safeTournament.center.address}</p>
                             </div>
                             <Link
                                 href={`/centers/${centerId}`}

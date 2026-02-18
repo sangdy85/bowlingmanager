@@ -27,9 +27,10 @@ export function calculateTournamentStatus(
     startDate: Date | string | null,
     registrationStart: Date | string | null,
     endDate?: Date | string | null,
-    dbStatus?: string
+    dbStatus?: string,
+    nowInput?: Date
 ): TStatus {
-    const now = new Date();
+    const now = nowInput || new Date();
 
     // 0. Manual Finish: If DB status is FINISHED, respect it.
     if (dbStatus === 'FINISHED') return 'FINISHED';

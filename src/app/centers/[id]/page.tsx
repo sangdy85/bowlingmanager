@@ -100,30 +100,26 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
     // - NOT finished (Next day of startDate hasn't arrived)
     // - For EVENT: Current status is OPEN, CLOSED, or ONGOING
     // - For CHAMP: Current status of any round is OPEN, CLOSED, or ONGOING
-    const activeTournamentsRaw = tournamentsWithRegDate.flatMap((t: any) => {
+    const activeTournamentsRawUnfiltered = center.tournaments.flatMap((t: any) => {
         if (t.type === 'LEAGUE' || t.status === 'FINISHED') return [];
 
         if (t.type === 'CHAMP') {
-            // Check individual rounds for CHAMP
             const recruitingRounds = t.leagueRounds
                 .map((r: any) => {
                     const effectiveDate = getEffectiveRoundDate(r.date, t.settings ? JSON.parse(t.settings).leagueTime : null);
-                    const status = calculateTournamentStatus(effectiveDate, r.registrationStart, null, t.status); // Pass null for endDate to use individual round date
-                    return { ...r, calculatedStatus: status };
+                    const status = calculateTournamentStatus(effectiveDate, r.registrationStart, null, t.status, now);
+                    return { ...r, effectiveDate, calculatedStatus: status };
                 })
                 .filter((r: any) => r.calculatedStatus === 'OPEN' || r.calculatedStatus === 'CLOSED' || r.calculatedStatus === 'ONGOING')
                 .sort((a: any, b: any) => {
-                    // Priority: OPEN > ONGOING > CLOSED
                     const statusPriority: Record<string, number> = { OPEN: 0, ONGOING: 1, CLOSED: 2 };
                     if (statusPriority[a.calculatedStatus] !== statusPriority[b.calculatedStatus]) {
                         return statusPriority[a.calculatedStatus] - statusPriority[b.calculatedStatus];
                     }
-                    // Then by round number
                     return a.roundNumber - b.roundNumber;
                 });
 
             if (recruitingRounds.length > 0) {
-                // Show the highest priority recruiting/ongoing round
                 const nextRound = recruitingRounds[0];
                 return [{
                     ...t,
@@ -137,8 +133,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
             return [];
         }
 
-        // Default: EVENT / CUSTOM
-        const status = calculateTournamentStatus(t.startDate, t.registrationStart, t.endDate, t.status);
+        const status = calculateTournamentStatus(t.startDate, t.registrationStart, t.endDate, t.status, now);
         if (status === 'OPEN' || status === 'CLOSED' || status === 'ONGOING') {
             return [{
                 ...t,
@@ -149,6 +144,17 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
 
         return [];
     });
+
+    // Deduplicate active tournaments by name to avoid duplicate cards
+    const activeTournamentsRaw = Array.from(
+        activeTournamentsRawUnfiltered.reduce((map: Map<string, any>, t: any) => {
+            const existing = map.get(t.name);
+            if (!existing || (t.leagueRounds?.length || 0) > (existing.leagueRounds?.length || 0)) {
+                map.set(t.name, t);
+            }
+            return map;
+        }, new Map<string, any>()).values()
+    );
 
     // 3.5 Deduplicate raw tournaments by name (prioritize those with data)
     const dedupedRaw = Array.from(

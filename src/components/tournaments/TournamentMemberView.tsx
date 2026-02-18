@@ -51,6 +51,14 @@ export default function TournamentMemberView({
     const isCHAMPRecruit = tournament.type === 'CHAMP' && mode === 'recruit';
     const isCHAMPResults = tournament.type === 'CHAMP' && (mode === 'results' || !mode);
 
+    // Safe settings parsing
+    let settings: any = {};
+    try {
+        if (tournament.settings) settings = JSON.parse(tournament.settings);
+    } catch (e) {
+        console.error("Failed to parse tournament settings in TournamentMemberView", e);
+    }
+
     const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SCHEDULE' | 'RANKING' | 'RESULTS'>(
         (tournament.type === 'CHAMP' && (tournament.status === 'ONGOING' || tournament.status === 'FINISHED'))
             ? 'RESULTS'
@@ -119,7 +127,7 @@ export default function TournamentMemberView({
                                         </h3>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
                                             {(() => {
-                                                const s = JSON.parse(tournament.settings);
+                                                const s = settings;
                                                 const items = [
                                                     { label: '일시', value: s.startDateText, icon: '📅' },
                                                     { label: '대회 시간', value: tournament.leagueTime, icon: '⏰' },
@@ -154,7 +162,7 @@ export default function TournamentMemberView({
 
                         {/* 2. Unified Action Buttons - Only in Results Mode */}
                         {isCHAMPResults && (() => {
-                            const s = tournament.settings ? JSON.parse(tournament.settings) : {};
+                            const s = settings;
 
                             return (
                                 <section className="py-2">
@@ -210,7 +218,7 @@ export default function TournamentMemberView({
                                         {isCHAMPRecruit && (
                                             <div className="w-full">
                                                 <TournamentRegButton
-                                                    tournamentId={tournament.id}
+                                                    tournament={tournament}
                                                     isRegistered={isRegistered || false}
                                                     canJoin={tournament.status !== 'FINISHED'}
                                                 />
@@ -270,12 +278,10 @@ export default function TournamentMemberView({
                                                 let targetRound = initialRoundId ? rounds.find((r: any) => r.id === initialRoundId) : null;
 
                                                 if (!targetRound) {
-                                                    const now = new Date();
-                                                    targetRound = rounds.find((r: any) => {
-                                                        const start = r.registrationStart ? new Date(r.registrationStart) : null;
-                                                        const end = r.date ? new Date(r.date) : null;
-                                                        return start && end && now >= start && now <= end;
-                                                    });
+                                                    // Use calculated status from server
+                                                    targetRound = rounds.find((r: any) =>
+                                                        r.calculatedStatus === 'OPEN' || r.calculatedStatus === 'CLOSED' || r.calculatedStatus === 'ONGOING'
+                                                    );
                                                 }
                                                 if (!targetRound && rounds.length > 0) targetRound = rounds[rounds.length - 1];
 
@@ -346,7 +352,7 @@ export default function TournamentMemberView({
                                             </h3>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
                                                 {(() => {
-                                                    const s = JSON.parse(tournament.settings);
+                                                    const s = settings;
                                                     const items = [
                                                         { label: '일시', value: s.startDateText, icon: '📅' },
                                                         { label: '대회 시간', value: tournament.leagueTime, icon: '⏰' },
@@ -439,17 +445,9 @@ export default function TournamentMemberView({
                                             </h2>
                                             <div className="w-full">
                                                 <TournamentRegButton
-                                                    tournamentId={tournament.id}
+                                                    tournament={tournament}
                                                     isRegistered={isRegistered || false}
-                                                    canJoin={tournament.status !== 'FINISHED' && (
-                                                        tournament.type === 'EVENT' ||
-                                                        tournament.type === 'CHAMP' ||
-                                                        tournament.status === 'JOINING' ||
-                                                        tournament.status === 'ONGOING' ||
-                                                        (tournament.status === 'PLANNING' && tournament.settings && (() => {
-                                                            try { return new Date() >= new Date(JSON.parse(tournament.settings).registrationStart); } catch { return false; }
-                                                        })())
-                                                    )}
+                                                    canJoin={tournament.status !== 'FINISHED'}
                                                 />
                                             </div>
                                         </div>
@@ -485,18 +483,15 @@ export default function TournamentMemberView({
                                                 let targetRound = initialRoundId ? rounds.find((r: any) => r.id === initialRoundId) : null;
 
                                                 if (!targetRound) {
-                                                    const now = new Date();
-                                                    targetRound = rounds.find((r: any) => {
-                                                        const start = r.registrationStart ? new Date(r.registrationStart) : null;
-                                                        const end = r.date ? new Date(r.date) : null;
-                                                        return start && end && now >= start && now <= end;
-                                                    });
+                                                    targetRound = rounds.find((r: any) =>
+                                                        r.calculatedStatus === 'OPEN' || r.calculatedStatus === 'CLOSED' || r.calculatedStatus === 'ONGOING'
+                                                    );
                                                 }
 
                                                 if (!targetRound && rounds.length > 0) {
                                                     targetRound = [...rounds].sort((a, b) => {
-                                                        const dateA = a.date ? new Date(a.date).getTime() : 0;
-                                                        const dateB = b.date ? new Date(b.date).getTime() : 0;
+                                                        const dateA = a.effectiveDate ? new Date(a.effectiveDate).getTime() : 0;
+                                                        const dateB = b.effectiveDate ? new Date(b.effectiveDate).getTime() : 0;
                                                         return dateB - dateA;
                                                     })[0];
                                                 }
