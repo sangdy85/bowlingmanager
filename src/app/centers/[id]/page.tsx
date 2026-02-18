@@ -106,7 +106,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
         if (t.type === 'CHAMP') {
             const recruitingRounds = t.leagueRounds
                 .map((r: any) => {
-                    const effectiveDate = getEffectiveRoundDate(r.date, t.settings ? JSON.parse(t.settings).leagueTime : null);
+                    const effectiveDate = getEffectiveRoundDate(r.date, t.leagueTime);
                     const status = calculateTournamentStatus(effectiveDate, r.registrationStart, null, t.status, now);
                     return { ...r, effectiveDate, calculatedStatus: status };
                 })
@@ -185,7 +185,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
         let currentStatus = t.status;
 
         if (t.type === 'EVENT' || t.type === 'CHAMP') {
-            const startDate = t.type === 'CHAMP' && t.leagueRounds?.[0] ? getEffectiveRoundDate(t.leagueRounds[0].date, t.settings ? JSON.parse(t.settings).leagueTime : null) : t.startDate;
+            const startDate = t.type === 'CHAMP' && t.leagueRounds?.[0] ? getEffectiveRoundDate(t.leagueRounds[0].date, t.leagueTime) : t.startDate;
             currentStatus = calculateTournamentStatus(startDate, t.registrationStart, t.endDate, t.status);
         }
 

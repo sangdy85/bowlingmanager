@@ -132,7 +132,7 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
 
     // Pre-calculate round statuses and effective dates on the server
     const processedRounds = tournament.leagueRounds.map((r: any) => {
-        const effectiveDate = getEffectiveRoundDate(r.date, tournamentSettings.leagueTime);
+        const effectiveDate = getEffectiveRoundDate(r.date, tournament.leagueTime);
         const status = calculateTournamentStatus(effectiveDate, r.registrationStart, null, tournament.status, now);
         return {
             ...r,

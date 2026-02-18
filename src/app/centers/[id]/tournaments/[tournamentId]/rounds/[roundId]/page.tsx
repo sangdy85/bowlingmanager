@@ -66,7 +66,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
     }));
 
     // Calculate current round status
-    const effectiveDate = getEffectiveRoundDate(roundData.date, tournamentSettings.leagueTime);
+    const effectiveDate = getEffectiveRoundDate(roundData.date, roundData.tournament.leagueTime);
     const calculatedStatus = calculateTournamentStatus(effectiveDate, roundData.registrationStart, roundData.date, roundData.tournament.status, now);
 
     const safeRoundData = {
@@ -100,7 +100,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
         const participants: any[] = await prisma.$queryRaw`
             SELECT "registrationId", "lane" FROM "RoundParticipant" WHERE "roundId" = ${r.id}
         `;
-        const rEffectiveDate = getEffectiveRoundDate(r.date, tournamentSettings.leagueTime);
+        const rEffectiveDate = getEffectiveRoundDate(r.date, roundData.tournament.leagueTime);
         const rStatus = calculateTournamentStatus(rEffectiveDate, r.registrationStart, r.date, roundData.tournament.status, now);
 
         return {
