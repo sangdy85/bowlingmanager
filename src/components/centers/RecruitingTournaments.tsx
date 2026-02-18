@@ -35,7 +35,6 @@ export default function ActiveTournaments({ tournaments, isManager = false }: Pr
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {tournaments.map(t => {
                     const status = calculateTournamentStatus(t.rawStartDate || t.startDate, t.registrationStart || null, t.endDate, t.status);
-                    const statusText = STATUS_LABELS[status];
 
                     // Button Label & Color
                     let buttonText = '참가 신청';
@@ -45,6 +44,10 @@ export default function ActiveTournaments({ tournaments, isManager = false }: Pr
                     if (isManager) {
                         buttonText = '대회 관리';
                         buttonColor = '#2563eb';
+                    } else if (t.isRegistered) {
+                        buttonText = '신청 완료';
+                        buttonColor = '#16a34a'; // green-600
+                        buttonShadowColor = 'rgba(22, 163, 74, 0.2)';
                     } else if (status === 'ONGOING') {
                         buttonText = '대회 진행중';
                         buttonColor = '#2563eb';
@@ -52,10 +55,14 @@ export default function ActiveTournaments({ tournaments, isManager = false }: Pr
                         buttonText = '접수 마감';
                         buttonColor = '#64748b'; // slate-500
                         buttonShadowColor = 'rgba(100, 116, 139, 0.2)';
-                    } else if (t.isRegistered) {
-                        buttonText = '신청 완료';
-                        buttonColor = '#16a34a'; // green-600
-                        buttonShadowColor = 'rgba(22, 163, 74, 0.2)';
+                    }
+
+                    // Link URL logic
+                    let href = `${pathname}/tournaments/${t.id}`;
+                    if (t.type === 'CHAMP' && (t as any).roundId) {
+                        href = `${pathname}/tournaments/${t.id}?mode=recruit`; // Link to the specific tab that shows all rounds
+                    } else if (t.type === 'EVENT' && t.leagueRounds?.[0]?.id) {
+                        // Fallback or specific round link
                     }
 
                     return (
@@ -81,11 +88,7 @@ export default function ActiveTournaments({ tournaments, isManager = false }: Pr
                                     </p>
                                 </div>
                                 <Link
-                                    href={isManager && t.type === 'EVENT' && t.leagueRounds?.[0]?.id
-                                        ? `${pathname}/tournaments/${t.id}/rounds/${t.leagueRounds[0].id}`
-                                        : (t.type === 'CHAMP'
-                                            ? `${pathname}/tournaments/${t.id}?mode=recruit`
-                                            : `${pathname}/tournaments/${t.id}`)}
+                                    href={href}
                                     className="btn text-sm font-black border-none h-12 px-6 flex items-center shadow-lg transition-all hover:opacity-90"
                                     style={{
                                         backgroundColor: buttonColor,

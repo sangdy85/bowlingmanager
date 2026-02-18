@@ -38,24 +38,18 @@ export function calculateTournamentStatus(
 
     const start = new Date(startDate);
     const regStart = registrationStart ? new Date(registrationStart) : null;
-    const end = endDate ? new Date(endDate) : null;
 
-    // 1. FINISHED: 
-    // If endDate exists, finish only after the END of that day.
-    // Else, finish after the day of the tournament (legacy/fallback).
-    if (end) {
-        const nextDayOfEnd = new Date(end);
-        nextDayOfEnd.setHours(0, 0, 0, 0);
-        nextDayOfEnd.setDate(nextDayOfEnd.getDate() + 1);
-        if (now >= nextDayOfEnd) return 'FINISHED';
-    } else {
-        const nextDayOfStart = new Date(start);
-        nextDayOfStart.setHours(0, 0, 0, 0);
-        nextDayOfStart.setDate(nextDayOfStart.getDate() + 1);
-        if (now >= nextDayOfStart) return 'FINISHED';
-    }
+    // For individual rounds, we use the next day of the START date as FINISHED criteria.
+    // However, if an explicit endDate exists (usually for EVENT/CUSTOM span), use that.
+    const finishDate = endDate ? new Date(endDate) : new Date(start);
+    const nextDayOfFinish = new Date(finishDate);
+    nextDayOfFinish.setHours(0, 0, 0, 0);
+    nextDayOfFinish.setDate(nextDayOfFinish.getDate() + 1);
 
-    // 2. ONGOING: From startDate until FINISHED criteria
+    // 1. FINISHED: After 00:00 of the day after the tournament (or endDate)
+    if (now >= nextDayOfFinish) return 'FINISHED';
+
+    // 2. ONGOING: From startDate until FINISHED (midnight)
     if (now >= start) return 'ONGOING';
 
     // 3. CLOSED: 30 minutes before startDate
@@ -64,9 +58,9 @@ export function calculateTournamentStatus(
 
     // 4. OPEN: From registrationStart until CLOSED
     if (regStart && now >= regStart) return 'OPEN';
-    if (!regStart) return 'OPEN'; // Fallback if no regStart
+    if (!regStart) return 'OPEN'; // Fallback
 
-    // 5. UPCOMING: Default
+    // 5. UPCOMING: Before registrationStart
     return 'UPCOMING';
 }
 

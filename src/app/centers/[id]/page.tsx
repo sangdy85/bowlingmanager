@@ -125,10 +125,13 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
             if (recruitingRounds.length > 0) {
                 // Show the highest priority recruiting/ongoing round
                 const nextRound = recruitingRounds[0];
+                const effectiveDate = getEffectiveRoundDate(nextRound.date, t.settings ? JSON.parse(t.settings).leagueTime : null);
+
                 return [{
                     ...t,
                     name: `${t.name} (${nextRound.roundNumber}회차)`,
-                    startDate: nextRound.date || t.startDate, // Use round date if available, fallback to tournament start date
+                    startDate: effectiveDate, // Use the date with time!
+                    roundId: nextRound.id,
                     participantCount: (nextRound as any)._count.participants
                 }];
             }
@@ -138,7 +141,10 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
         // Default: EVENT / CUSTOM
         const status = calculateTournamentStatus(t.startDate, t.registrationStart, t.endDate, t.status);
         if (status === 'OPEN' || status === 'CLOSED' || status === 'ONGOING') {
-            return [t];
+            return [{
+                ...t,
+                participantCount: (t as any)._count.registrations,
+            }];
         }
 
         return [];
