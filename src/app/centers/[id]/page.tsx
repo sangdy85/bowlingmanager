@@ -61,7 +61,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
 
     if (!center) notFound();
 
-    const isManager = center.managers.some(m => m.id === session?.user?.id);
+    const isManager = center.managers.some((m: any) => m.id === session?.user?.id);
 
     // Check if user is a member
     let isMember = false;
@@ -79,7 +79,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
 
     // 1. Map to include registrationStart (as Date object)
     const now = new Date();
-    const tournamentsWithRegDate = center.tournaments.map(t => {
+    const tournamentsWithRegDate = center.tournaments.map((t: any) => {
         let registrationStart = null;
         if (t.settings) {
             try {
@@ -87,7 +87,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
                 if (parsed.registrationStart) {
                     registrationStart = new Date(parsed.registrationStart);
                 }
-            } catch (e) {
+            } catch (e: any) {
                 // ignore json error
             }
         }
@@ -99,52 +99,95 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
     // - NOT a league
     // - NOT finished (Next day of startDate hasn't arrived)
     // - For EVENT: Current status is OPEN, CLOSED, or ONGOING
-    // - For CHAMP: Current status of any round is OPEN, CLOSED, or ONGOING
-    const activeTournamentsRaw = tournamentsWithRegDate.flatMap(t => {
-        if (t.type === 'LEAGUE' || t.status === 'FINISHED') return [];
+    // - For CHAMP: Only ONE round per series name where "Now" is between regStart and roundDate
+    const recruitingTournaments: any[] = [];
+    const eventTournaments = tournamentsWithRegDate.filter((t: any) => t.type === 'EVENT' && t.status !== 'FINISHED');
 
-        if (t.type === 'CHAMP') {
-            // Check individual rounds for CHAMP
-            const recruitingRounds = t.leagueRounds.filter(r => {
-                const effectiveDate = getEffectiveRoundDate(r.date, t.settings ? JSON.parse(t.settings).leagueTime : null);
-                const status = calculateTournamentStatus(effectiveDate, r.registrationStart, t.endDate, t.status);
-                return status === 'OPEN' || status === 'CLOSED' || status === 'ONGOING';
+    // Handle EVENT tournaments
+    eventTournaments.forEach((t: any) => {
+        const status = calculateTournamentStatus(t.startDate, t.registrationStart, t.endDate, t.status);
+        if (status === 'OPEN' || status === 'CLOSED' || status === 'ONGOING') {
+            recruitingTournaments.push(t);
+        }
+    });
+
+    // Handle CHAMP series (Group by name)
+    const champSeriesNames = Array.from(new Set(tournamentsWithRegDate.filter((t: any) => t.type === 'CHAMP').map((t: any) => t.name)));
+
+    champSeriesNames.forEach(seriesName => {
+        const seriesTournaments = tournamentsWithRegDate.filter((t: any) => t.type === 'CHAMP' && t.name === seriesName);
+
+        // For each tournament in the series, look for a recruiting round
+        for (const t of seriesTournaments) {
+            const leagueTime = t.settings ? JSON.parse(t.settings).leagueTime : null;
+
+            const recruitingRounds = t.leagueRounds.filter((r: any) => {
+                if (!r.registrationStart || !r.date) return false;
+                const effectiveDate = getEffectiveRoundDate(r.date, leagueTime);
+                const regStart = new Date(r.registrationStart);
+
+                // User Rule: Only rounds where Now is between regStart and roundDate
+                return now >= regStart && now <= effectiveDate!;
             });
 
             if (recruitingRounds.length > 0) {
-                // Show the earliest recruiting round
+                // Show only the first matching round found for this series name
                 const nextRound = recruitingRounds[0];
-                return [{
+                recruitingTournaments.push({
                     ...t,
                     name: `${t.name} (${nextRound.roundNumber}회차)`,
-                    startDate: nextRound.date || t.startDate, // Use round date if available, fallback to tournament start date
-                    participantCount: (nextRound as any)._count.participants
-                }];
+                    startDate: nextRound.date || t.startDate,
+                    participantCount: (nextRound as any)._count?.participants || 0
+                });
+                break; // Stop after finding one recruiting round for this series name
             }
-            return [];
         }
-
-        // Default: EVENT / CUSTOM
-        const status = calculateTournamentStatus(t.startDate, t.registrationStart, t.endDate, t.status);
-        if (status === 'OPEN' || status === 'CLOSED' || status === 'ONGOING') {
-            return [t];
-        }
-
-        return [];
     });
 
-    // 3. Format for display in client components
-    const formattedTournaments = tournamentsWithRegDate.map(t => {
-        let currentStatus = t.status; // Start with DB status
+    // 3. Format for display in bottom list (Group CHAMP by name)
+    const groupedTournamentsMap = new Map<string, any>();
 
-        if (t.type === 'EVENT' || t.type === 'CHAMP') {
+    tournamentsWithRegDate.forEach((t: any) => {
+        const key = `${t.type}_${t.name}`;
+        if (t.type === 'CHAMP') {
+            if (!groupedTournamentsMap.has(key)) {
+                // Initial series object
+                groupedTournamentsMap.set(key, {
+                    ...t,
+                    isGrouped: true,
+                    startDate: t.startDate, // Will update to range
+                    endDate: t.endDate,
+                    allRounds: [...t.leagueRounds]
+                });
+            } else {
+                // Update series dates and rounds
+                const existing = groupedTournamentsMap.get(key);
+                if (t.startDate < existing.startDate) existing.startDate = t.startDate;
+                if (t.endDate > existing.endDate) existing.endDate = t.endDate;
+                existing.allRounds.push(...t.leagueRounds);
+            }
+        } else {
+            // Non-CHAMP tournaments are kept individually (or we could group leagues too if needed, but CHAMP is the priority)
+            groupedTournamentsMap.set(t.id, { ...t, isGrouped: false });
+        }
+    });
+
+    const formattedTournaments = Array.from(groupedTournamentsMap.values()).map((t: any) => {
+        let currentStatus = t.status;
+
+        if (t.type === 'EVENT' || (t.type === 'CHAMP' && !t.isGrouped)) {
             const startDate = t.type === 'CHAMP' && t.leagueRounds?.[0] ? getEffectiveRoundDate(t.leagueRounds[0].date, t.settings ? JSON.parse(t.settings).leagueTime : null) : t.startDate;
             currentStatus = calculateTournamentStatus(startDate, t.registrationStart, t.endDate, t.status);
+        } else if (t.type === 'CHAMP' && t.isGrouped) {
+            // Status for a CHAMP series: 
+            // If any tournament is not finished, series is ONGOING
+            const allFinished = tournamentsWithRegDate.filter((orig: any) => orig.name === t.name && orig.type === 'CHAMP').every((orig: any) => orig.status === 'FINISHED');
+            currentStatus = allFinished ? 'FINISHED' : 'ONGOING';
         }
 
         return {
             ...t,
-            status: currentStatus, // Use calculated status
+            status: currentStatus,
             startDate: t.startDate.toLocaleString('ko-KR', {
                 year: 'numeric',
                 month: 'numeric',
@@ -158,9 +201,9 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
     });
 
     // 4. Prepare activeTournaments for RecruitingTournaments component
-    const activeTournaments = activeTournamentsRaw.map((t: any) => ({
+    const activeTournaments = recruitingTournaments.map((t: any) => ({
         ...t,
-        isRegistered: t.registrations.length > 0,
+        isRegistered: t.registrations?.length > 0 || false,
         rawStartDate: (t.startDate || new Date()) as Date,
         startDate: (t.startDate || new Date()).toLocaleString('ko-KR', {
             year: 'numeric',
