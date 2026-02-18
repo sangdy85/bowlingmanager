@@ -50,16 +50,20 @@ export default function ChampManager({ tournament, centerId, isManager, currentU
                         <h3 style={{ fontSize: '20px', fontWeight: 900, color: 'white', margin: 0 }}>챔프전 회차 목록</h3>
                     </div>
                     {isManager && tournament.settings && (() => {
-                        const s = JSON.parse(tournament.settings);
-                        if (s.hasGrandFinale && s.hasGrandFinale !== 'NONE') {
-                            return (
-                                <Link
-                                    href={`/centers/${centerId}/tournaments/${tournament.id}/grand-finale`}
-                                    className="btn btn-primary flex items-center gap-2 h-10 px-4 text-sm font-bold shadow-lg border-2 border-black"
-                                >
-                                    <span>🎖️</span> 왕중왕전 관리
-                                </Link>
-                            );
+                        try {
+                            const s = JSON.parse(tournament.settings);
+                            if (s.hasGrandFinale && s.hasGrandFinale !== 'NONE') {
+                                return (
+                                    <Link
+                                        href={`/centers/${centerId}/tournaments/${tournament.id}/grand-finale`}
+                                        className="btn btn-primary flex items-center gap-2 h-10 px-4 text-sm font-bold shadow-lg border-2 border-black"
+                                    >
+                                        <span>🎖️</span> 왕중왕전 관리
+                                    </Link>
+                                );
+                            }
+                        } catch (e) {
+                            console.error("Failed to parse tournament settings in ChampManager", e);
                         }
                         return null;
                     })()}
@@ -95,7 +99,8 @@ export default function ChampManager({ tournament, centerId, isManager, currentU
                             day: 'numeric',
                             weekday: 'short',
                             hour: '2-digit',
-                            minute: '2-digit'
+                            minute: '2-digit',
+                            hourCycle: 'h23'
                         }) : '일정 미정';
                         const statusText = STATUS_LABELS[status as any];
 

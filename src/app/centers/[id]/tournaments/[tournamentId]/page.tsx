@@ -34,7 +34,7 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                 orderBy: { createdAt: 'desc' }
             },
             registrations: {
-                include: { user: true }
+                include: { user: true, team: true }
             },
             leagueRounds: {
                 include: {
@@ -296,9 +296,9 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                                             {(() => {
                                                 const s = tournamentSettings; // use the safe parsed settings
                                                 const items = [
-                                                    { label: '일시', value: safeTournament.type === 'EVENT' ? new Date(safeTournament.startDate).toLocaleString('ko-KR', { dateStyle: 'long', timeStyle: 'short' }) : s.startDateText, icon: '📅' },
+                                                    { label: '일시', value: safeTournament.type === 'EVENT' ? new Date(safeTournament.startDate).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : s.startDateText, icon: '📅' },
                                                     { label: '대회 시간', value: safeTournament.type === 'EVENT' ? null : safeTournament.leagueTime, icon: '⏰' },
-                                                    { label: '접수 시작', value: s.registrationStart ? new Date(s.registrationStart).toLocaleString('ko-KR', { dateStyle: 'long', timeStyle: 'short' }) : null, icon: '📝' },
+                                                    { label: '접수 시작', value: s.registrationStart ? new Date(s.registrationStart).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : null, icon: '📝' },
                                                     {
                                                         label: '진행 모드',
                                                         value: s.gameMode === 'INDIVIDUAL' ? '개인전' :

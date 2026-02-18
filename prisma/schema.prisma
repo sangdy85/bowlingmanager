@@ -72,6 +72,7 @@ model Team {
   members                      TeamMember[]
   registrations                TournamentRegistration[]
   User                         User[]                         @relation("TeamManagers")
+  centerMembers                CenterMember[]
 }
 
 model TeamMember {
@@ -263,8 +264,10 @@ model CenterMember {
   alias         String?
   userId        String
   centerId      String
+  teamId        String?
   BowlingCenter BowlingCenter @relation(fields: [centerId], references: [id], onDelete: Cascade)
   User          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Team          Team?         @relation(fields: [teamId], references: [id])
 
   @@unique([userId, centerId])
 }

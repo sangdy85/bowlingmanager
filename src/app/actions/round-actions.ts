@@ -302,8 +302,11 @@ export async function manualRegister(roundId: string, input: {
                 registrationId = existing[0].id;
             } else {
                 registrationId = randomUUID();
-                const teams: any[] = await prisma.$queryRaw`SELECT "teamId" FROM "TeamMember" WHERE "userId" = ${input.userId} LIMIT 1`;
-                const teamId = teams.length > 0 ? teams[0].teamId : null;
+                const centerMembers: any[] = await prisma.$queryRaw`
+                    SELECT "teamId" FROM "CenterMember" 
+                    WHERE "userId" = ${input.userId} AND "centerId" = ${info.centerId}
+                `;
+                const teamId = centerMembers.length > 0 ? centerMembers[0].teamId : null;
                 const handicapVal = input.handicap !== undefined ? input.handicap : null;
 
                 // Fixed: Removed createdAt, updatedAt. Used joinedAt.
@@ -385,8 +388,12 @@ export async function joinRound(roundId: string, userId: string) {
             registrationId = existing[0].id;
         } else {
             registrationId = randomUUID();
-            const teams: any[] = await prisma.$queryRaw`SELECT "teamId" FROM "TeamMember" WHERE "userId" = ${userId} LIMIT 1`;
-            const teamId = teams.length > 0 ? teams[0].teamId : null;
+            // Look up user's team preference for this center
+            const centerMembers: any[] = await prisma.$queryRaw`
+                SELECT "teamId" FROM "CenterMember" 
+                WHERE "userId" = ${userId} AND "centerId" = ${info.centerId}
+            `;
+            const teamId = centerMembers.length > 0 ? centerMembers[0].teamId : null;
 
             // Fixed: Removed createdAt, updatedAt. Used joinedAt.
             await prisma.$executeRaw`

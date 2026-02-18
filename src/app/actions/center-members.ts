@@ -93,15 +93,21 @@ export async function joinCenter(centerId: string, teamId: string | null, alias:
             });
 
             if (existingMember) {
-                throw new Error("이미 이 센터의 회원입니다.");
+                // Allow updating team preference if already a member
+                await tx.centerMember.update({
+                    where: { id: existingMember.id },
+                    data: { teamId: teamId || undefined }
+                });
+                return;
             }
 
-            // 2. Create CenterMember
+            // 2. Create CenterMember with team preference
             await tx.centerMember.create({
                 data: {
                     id: uuidv4(),
                     centerId,
                     userId,
+                    teamId: teamId, // Save the selected team ID for future use
                     alias: alias // User name as alias
                 }
             });

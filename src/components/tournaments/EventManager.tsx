@@ -20,7 +20,12 @@ export default function EventManager({ tournament, centerId, isManager }: EventM
 
     // Single Round for Event Match
     const round = tournament.leagueRounds[0];
-    const settings = tournament.settings ? JSON.parse(tournament.settings) : {};
+    let settings: any = {};
+    try {
+        if (tournament.settings) settings = JSON.parse(tournament.settings);
+    } catch (e) {
+        console.error("Failed to parse settings in EventManager", e);
+    }
 
     const menuItems = [
         {

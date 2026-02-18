@@ -40,7 +40,7 @@ function RoundOverviewTab({ round }: { round: any }) {
                         {round.date ? new Date(round.date).toLocaleDateString() : '미정'}
                     </p>
                     <p className="text-sm text-gray-500 mt-2 font-medium">
-                        접수: {round.registrationStart ? new Date(round.registrationStart).toLocaleString() : '미정'}
+                        접수: {round.registrationStart ? new Date(round.registrationStart).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '미정'}
                     </p>
                 </div>
                 <div className="bg-green-50 p-6 rounded-xl border border-green-100 shadow-sm">

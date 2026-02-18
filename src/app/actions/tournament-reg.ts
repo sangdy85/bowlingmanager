@@ -83,12 +83,28 @@ export async function registerForTournament(tournamentId: string, participants: 
         const regResults = [];
 
         for (const p of participants) {
+            let registrationTeamId = p.isMe ? null : p.teamId; // Default for guests
+
+            if (p.isMe) {
+                // Look up user's team preference for this center
+                const centerMember = await tx.centerMember.findUnique({
+                    where: {
+                        userId_centerId: {
+                            userId: session.user.id,
+                            centerId: tournament.centerId
+                        }
+                    }
+                });
+                registrationTeamId = centerMember?.teamId || null;
+            }
+
             const registration = await tx.tournamentRegistration.create({
                 data: {
                     tournamentId,
                     userId: p.isMe ? session.user.id : null,
                     guestName: p.isMe ? null : p.name,
                     guestTeamName: p.isMe ? null : p.teamName,
+                    teamId: registrationTeamId,
                     handicap: p.handicap || 0,
                     entryGroupId: entryGroupId,
                     paymentStatus: 'PENDING',

@@ -15,6 +15,11 @@ interface JoinCenterSectionProps {
     teams: Team[];
     userId: string;
     userName: string;
+    currentMember?: {
+        id: string;
+        teamId?: string | null;
+        Team?: { name: string } | null;
+    } | null;
 }
 
 export default function JoinCenterSection({
@@ -22,11 +27,12 @@ export default function JoinCenterSection({
     centerName,
     teams,
     userId,
-    userName
+    userName,
+    currentMember
 }: JoinCenterSectionProps) {
     const router = useRouter();
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+    const [selectedTeamId, setSelectedTeamId] = useState<string>(currentMember?.teamId || "");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -37,14 +43,14 @@ export default function JoinCenterSection({
         try {
             const result = await joinCenter(centerId, selectedTeamId || null, userName); // Use userName as alias by default
             if (result.success) {
-                alert("가입이 완료되었습니다.");
+                alert(currentMember ? "정보가 수정되었습니다." : "가입이 완료되었습니다.");
                 setIsModalOpen(false);
                 router.refresh();
             } else {
                 setError(result.message);
             }
         } catch (e) {
-            setError("가입 중 오류가 발생했습니다.");
+            setError("처리 중 오류가 발생했습니다.");
             console.error(e);
         } finally {
             setIsSubmitting(false);
@@ -53,15 +59,26 @@ export default function JoinCenterSection({
 
     return (
         <div className="card p-6 bg-primary/5 border-primary/20 mb-6">
-            <h3 className="font-bold mb-2 text-lg">볼링장 가입하기</h3>
-            <p className="text-sm text-secondary-foreground mb-4">
-                {centerName}의 회원이 되어 활동해보세요! 소속된 팀(클럽)이 있다면 함께 등록할 수 있습니다.
-            </p>
+            <h3 className="font-bold mb-2 text-lg">
+                {currentMember ? "소속 정보 관리" : "볼링장 가입하기"}
+            </h3>
+            {currentMember ? (
+                <div className="mb-4">
+                    <p className="text-sm text-secondary-foreground mb-1">현재 대표 소속:</p>
+                    <p className="font-bold text-primary">
+                        {currentMember.Team?.name || "개인 (소속 없음)"}
+                    </p>
+                </div>
+            ) : (
+                <p className="text-sm text-secondary-foreground mb-4">
+                    {centerName}의 회원이 되어 활동해보세요! 소속된 팀(클럽)이 있다면 함께 등록할 수 있습니다.
+                </p>
+            )}
             <button
                 onClick={() => setIsModalOpen(true)}
                 className="btn btn-primary w-full py-3 text-base"
             >
-                센터 가입하기
+                {currentMember ? "소속 팀 변경하기" : "센터 가입하기"}
             </button>
 
             {isModalOpen && (

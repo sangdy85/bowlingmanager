@@ -64,18 +64,19 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
     const isManager = center.managers.some((m: any) => m.id === session?.user?.id) || center.ownerId === session?.user?.id;
 
     // Check if user is a member
-    let isMember = false;
+    let member = null;
     if (session?.user?.id) {
-        const member = await prisma.centerMember.findUnique({
+        member = await prisma.centerMember.findUnique({
             where: {
                 userId_centerId: {
                     userId: session.user.id,
                     centerId: id
                 }
-            }
+            },
+            include: { Team: { select: { name: true } } }
         });
-        isMember = !!member;
     }
+    const isMember = !!member;
 
     // 1. Map to include registrationStart (as Date object)
     const now = new Date();
@@ -181,7 +182,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
     );
 
     // 4. Format the deduplicated list for display
-    const formattedTournaments = dedupedRaw.map((t: any) => {
+    const formattedTournamentsRaw = dedupedRaw.map((t: any) => {
         let currentStatus = t.status;
 
         if (t.type === 'EVENT' || t.type === 'CHAMP') {
@@ -198,11 +199,14 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit',
-                hour12: false
+                hour12: false,
+                hourCycle: 'h23'
             }),
             endDate: t.endDate.toLocaleDateString(),
         };
     });
+
+    const formattedTournaments = JSON.parse(JSON.stringify(formattedTournamentsRaw));
 
     // 4. Prepare activeTournaments for RecruitingTournaments component
     // Pre-calculate ALL formatting and status on the SERVER to prevent client exceptions
@@ -224,7 +228,8 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit',
-                hour12: false
+                hour12: false,
+                hourCycle: 'h23'
             })
         };
     });
@@ -289,13 +294,14 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
                 </div>
 
                 <div className="space-y-6">
-                    {session?.user?.id && !isMember && !isManager && (
+                    {session?.user?.id && !isManager && (
                         <JoinCenterSection
                             centerId={id}
                             centerName={center.name}
                             teams={center.teams}
                             userId={session.user.id}
                             userName={session.user.name || "회원"}
+                            currentMember={member}
                         />
                     )}
 
