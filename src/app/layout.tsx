@@ -11,6 +11,9 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "볼링 점수 관리",
   description: "개인 및 팀 볼링 점수 관리 서비스",
+  other: {
+    "google-adsense-account": "ca-pub-6753153221253393",
+  },
 };
 
 export default function RootLayout({
@@ -20,14 +23,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <head>
-        <meta name="google-adsense-account" content="ca-pub-6753153221253393" />
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6753153221253393"
-          crossOrigin="anonymous"
-        ></script>
-      </head>
+      <Script
+        async
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6753153221253393"
+        crossOrigin="anonymous"
+        strategy="afterInteractive"
+      />
       <body className={inter.className}>
         <AuthContext>
           <div className="min-h-screen bg-background text-foreground">
