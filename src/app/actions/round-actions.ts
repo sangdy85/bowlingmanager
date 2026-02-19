@@ -4,7 +4,8 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { auth } from "@/auth";
-import { formatLane } from "@/lib/tournament-utils";
+import { formatLane, parseKSTDate } from "@/lib/tournament-utils";
+import { updateTournamentBasicInfo } from "./tournament-center";
 
 // Helper to get tournament info for revalidation
 async function getTournamentInfo(roundId: string) {
@@ -23,16 +24,29 @@ async function getTournamentInfo(roundId: string) {
 // 1. Update Round Settings (Date, Time, Lane Movement)
 export async function updateRoundSettings(
     roundId: string,
-    data: { date: string; regStart: string; regEnd: string; moveLaneType?: string; moveLaneCount?: number; hasFemaleChamp?: boolean }
+    data: {
+        date: string;
+        regStart: string;
+        regEnd: string;
+        moveLaneType?: string;
+        moveLaneCount?: number;
+        hasFemaleChamp?: boolean;
+        // Minus handicap settings (Tournament level but managed here)
+        minusHandicapRank1?: number;
+        minusHandicapRank2?: number;
+        minusHandicapRank3?: number;
+        minusHandicapFemale?: number;
+    }
 ) {
     try {
-        const date = data.date ? new Date(data.date) : null;
-        const regStart = data.regStart ? new Date(data.regStart) : null;
-        const regEnd = data.regEnd ? new Date(data.regEnd) : null;
+        const date = parseKSTDate(data.date);
+        const regStart = parseKSTDate(data.regStart);
+        const regEnd = parseKSTDate(data.regEnd);
         const type = data.moveLaneType || null;
         const count = data.moveLaneCount || null;
         const femaleChamp = data.hasFemaleChamp || false;
 
+        // 1. Update Round Dates
         await prisma.$executeRaw`
         UPDATE "LeagueRound" 
         SET "date" = ${date}, 
@@ -43,6 +57,34 @@ export async function updateRoundSettings(
             "hasFemaleChamp" = ${femaleChamp}
         WHERE "id" = ${roundId}
     `;
+
+        // 2. Update Tournament-wide settings if minus handicaps are provided (CHAMP only)
+        if (data.minusHandicapRank1 !== undefined) {
+            const round = await prisma.leagueRound.findUnique({
+                where: { id: roundId },
+                select: { tournamentId: true }
+            });
+
+            if (round) {
+                const tournament = await prisma.tournament.findUnique({
+                    where: { id: round.tournamentId },
+                    select: { settings: true }
+                });
+
+                if (tournament) {
+                    const settings = tournament.settings ? JSON.parse(tournament.settings) : {};
+                    settings.minusHandicapRank1 = data.minusHandicapRank1;
+                    settings.minusHandicapRank2 = data.minusHandicapRank2;
+                    settings.minusHandicapRank3 = data.minusHandicapRank3;
+                    settings.minusHandicapFemale = data.minusHandicapFemale;
+
+                    await prisma.tournament.update({
+                        where: { id: round.tournamentId },
+                        data: { settings: JSON.stringify(settings) }
+                    });
+                }
+            }
+        }
 
         const info = await getTournamentInfo(roundId);
         if (info) revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
@@ -120,7 +162,7 @@ export async function updateRoundLanes(roundId: string, laneData: { participantI
         // Helper to find all available slots
         const getAvailableSlots = (participants: any[]) => {
             const laneConfig = round.laneConfig ? JSON.parse(round.laneConfig) : {};
-            const takenSlots = new Set(participants.filter(p => p.lane).map(p => p.lane));
+            const takenSlots = new Set(participants.filter((p: any) => p.lane).map((p: any) => p.lane));
             const available: number[] = [];
 
             if (Object.keys(laneConfig).length > 0) {
@@ -498,8 +540,8 @@ export async function autoAssignRemaining(roundId: string) {
         }
 
         // Filter out taken spots
-        const assignedParticipants = round.participants.filter(p => p.lane);
-        const takenSlots = new Set(assignedParticipants.map(p => p.lane));
+        const assignedParticipants = round.participants.filter((p: any) => p.lane);
+        const takenSlots = new Set(assignedParticipants.map((p: any) => p.lane));
 
         // Available slots pool (encoded as lane * 10 + slot)
         const availableSlots: number[] = [];
@@ -663,7 +705,7 @@ export async function drawLane(roundId: string, registrationId: string) {
 
             // Assign ALL members in the group
             await prisma.$transaction(
-                groupMembers.map((member, idx) =>
+                groupMembers.map((member: any, idx: number) =>
                     prisma.$executeRaw`
                         UPDATE "RoundParticipant"
                         SET "lane" = ${pickedBlock[idx]}, "isManual" = ${false}
@@ -675,7 +717,7 @@ export async function drawLane(roundId: string, registrationId: string) {
             const info = await getTournamentInfo(roundId);
             if (info) revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
 
-            const myIdxInGroup = groupMembers.findIndex(m => m.id === participant.id);
+            const myIdxInGroup = groupMembers.findIndex((m: any) => m.id === participant.id);
             return { success: true, lane: pickedBlock[myIdxInGroup] };
         }
 

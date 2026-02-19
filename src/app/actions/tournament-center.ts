@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { parseKSTDate } from "@/lib/tournament-utils";
 import { redirect } from "next/navigation";
 import { verifyCenterAdmin } from "@/lib/auth-utils";
 
@@ -236,7 +237,7 @@ export async function updateTournamentBasicInfo(tournamentId: string, formData: 
     await verifyCenterAdmin(tournament.centerId);
 
     const name = formData.get("name") as string;
-    const startDate = new Date(formData.get("startDate") as string);
+    const startDate = formData.get("startDate") ? parseKSTDate(formData.get("startDate") as string) : tournament.startDate;
     const maxParticipants = parseInt(formData.get("maxParticipants") as string);
 
     const data: any = {
@@ -260,7 +261,7 @@ export async function updateTournamentBasicInfo(tournamentId: string, formData: 
             newSettings.bankAccount = formData.get("bankAccount");
             newSettings.handicapInfo = formData.get("handicapInfo");
             newSettings.pattern = formData.get("pattern");
-            newSettings.registrationStart = formData.get("registrationStart");
+            newSettings.registrationStart = formData.get("registrationStart") ? parseKSTDate(formData.get("registrationStart") as string) : currentSettings.registrationStart;
         } else if (tournament.type === 'CHAMP') {
             newSettings.gameMode = formData.get("gameMode");
             newSettings.startDateText = formData.get("startDateText") || currentSettings.startDateText;
@@ -271,6 +272,7 @@ export async function updateTournamentBasicInfo(tournamentId: string, formData: 
             newSettings.bankAccount = formData.get("bankAccount");
             newSettings.handicapInfo = formData.get("handicapInfo");
             newSettings.pattern = formData.get("pattern");
+            newSettings.registrationStart = formData.get("registrationStart") ? parseKSTDate(formData.get("registrationStart") as string) : currentSettings.registrationStart;
 
             // New minus handicap settings
             newSettings.minusHandicapRank1 = formData.get("minusHandicapRank1") ? parseInt(formData.get("minusHandicapRank1") as string) : 0;

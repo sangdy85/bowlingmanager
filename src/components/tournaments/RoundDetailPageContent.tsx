@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { calculateTournamentStatus, STATUS_LABELS } from '@/lib/tournament-utils';
+import { calculateTournamentStatus, STATUS_LABELS, formatDateForInput } from '@/lib/tournament-utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { updateRoundSettings, updateRoundParticipants, updateRoundLanes, updateRoundScores, manualRegister, updateLaneSettings, autoAssignRemaining, updatePaymentStatus, deleteRegistration, updateRegistration, updateLaneConfig, updateFemaleChampParticipants, updateLuckyDrawResult } from '@/app/actions/round-actions';
 import { updateTournamentBasicInfo } from '@/app/actions/tournament-center';
@@ -92,7 +92,23 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
             const moveLaneCount = parseInt(formData.get('moveLaneCount') as string) || 0;
             const hasFemaleChamp = formData.get('hasFemaleChamp') === 'true';
 
-            await updateRoundSettings(round.id, { date, regStart, regEnd, moveLaneType, moveLaneCount, hasFemaleChamp });
+            const minusHandicapRank1 = formData.get('minusHandicapRank1') ? parseInt(formData.get('minusHandicapRank1') as string) : undefined;
+            const minusHandicapRank2 = formData.get('minusHandicapRank2') ? parseInt(formData.get('minusHandicapRank2') as string) : undefined;
+            const minusHandicapRank3 = formData.get('minusHandicapRank3') ? parseInt(formData.get('minusHandicapRank3') as string) : undefined;
+            const minusHandicapFemale = formData.get('minusHandicapFemale') ? parseInt(formData.get('minusHandicapFemale') as string) : undefined;
+
+            await updateRoundSettings(round.id, {
+                date,
+                regStart,
+                regEnd,
+                moveLaneType,
+                moveLaneCount,
+                hasFemaleChamp,
+                minusHandicapRank1,
+                minusHandicapRank2,
+                minusHandicapRank3,
+                minusHandicapFemale
+            });
             alert('설정이 저장되었습니다.');
             onUpdate();
         } catch (e: any) {
@@ -120,7 +136,7 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
                         <input
                             type="datetime-local"
                             name="regStart"
-                            defaultValue={round.registrationStart ? new Date(round.registrationStart).toISOString().slice(0, 16) : ''}
+                            defaultValue={formatDateForInput(round.registrationStart)}
                             className="input w-full border-2 focus:border-blue-500 transition-colors"
                         />
                         <p className="text-xs text-gray-500 mt-2 font-medium bg-gray-100 p-2 rounded">
@@ -183,6 +199,32 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
                         </select>
                     </div>
                     <p className="mt-2 text-xs text-gray-500">• 사용(Y) 시 점수 입력 창에서 특정 인원을 '여성 챔프'로 지정할 수 있습니다.</p>
+                </div>
+            )}
+
+            {round.tournament.type === 'CHAMP' && (
+                <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 space-y-4">
+                    <h4 className="font-black text-slate-800 flex items-center gap-2">
+                        <span className="text-xl">📉</span> 직전 회차 입상자 마이너스 핸디 설정
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">1위 차감 점수</label>
+                            <input name="minusHandicapRank1" type="number" defaultValue={JSON.parse(round.tournament.settings || '{}').minusHandicapRank1 || 0} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-20" />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">2위 차감 점수</label>
+                            <input name="minusHandicapRank2" type="number" defaultValue={JSON.parse(round.tournament.settings || '{}').minusHandicapRank2 || 0} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-15" />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">3위 차감 점수</label>
+                            <input name="minusHandicapRank3" type="number" defaultValue={JSON.parse(round.tournament.settings || '{}').minusHandicapRank3 || 0} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-10" />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">여자챔프 차감</label>
+                            <input name="minusHandicapFemale" type="number" defaultValue={JSON.parse(round.tournament.settings || '{}').minusHandicapFemale || 0} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-10" />
+                        </div>
+                    </div>
                 </div>
             )}
             <button type="submit" disabled={loading} className="btn btn-primary w-full py-3 font-bold text-lg shadow-md hover:shadow-lg transition-all">
@@ -1350,10 +1392,8 @@ function TournamentEditModal({ tournament, onClose, onUpdate }: { tournament: an
         }
     };
 
-    const formatDateForInput = (dateString: string) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const formatDateForInputLocal = (dateString: string) => {
+        return formatDateForInput(dateString);
     };
 
     return (
@@ -1390,11 +1430,11 @@ function TournamentEditModal({ tournament, onClose, onUpdate }: { tournament: an
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <label className="text-xs font-black text-slate-500 uppercase tracking-widest block ml-1">대회 시작 일시</label>
-                                <input name="startDate" type="datetime-local" defaultValue={formatDateForInput(tournament.startDate)} className="input input-bordered w-full h-14 bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm font-bold" required />
+                                <input name="startDate" type="datetime-local" defaultValue={formatDateForInputLocal(tournament.startDate)} className="input input-bordered w-full h-14 bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm font-bold" required />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-black text-slate-500 uppercase tracking-widest block ml-1">접수 시작 일시</label>
-                                <input name="registrationStart" type="datetime-local" defaultValue={formatDateForInput(settings.registrationStart)} className="input input-bordered w-full h-14 bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm font-bold" required />
+                                <input name="registrationStart" type="datetime-local" defaultValue={formatDateForInputLocal(settings.registrationStart)} className="input input-bordered w-full h-14 bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm font-bold" required />
                             </div>
                         </div>
 

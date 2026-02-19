@@ -86,3 +86,28 @@ export function formatLane(laneValue: number | null, isManual: boolean = false) 
     const prefix = isManual ? '(수동)' : '';
     return `${prefix}${lane}-${slot}`;
 }
+
+/**
+ * Converts a Date or ISO string to a KST-indexed 'YYYY-MM-DDTHH:mm' string 
+ * for use in <input type="datetime-local">.
+ */
+export function formatDateForInput(dateInput: Date | string | null): string {
+    if (!dateInput) return '';
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return '';
+
+    // Convert to KST (UTC+9) string for datetime-local input
+    // datetime-local doesn't support timezone offsets, so we manually shift 9 hours
+    const kstDate = new Date(date.getTime() + 9 * 60 * 60000);
+    return kstDate.toISOString().slice(0, 16);
+}
+
+/**
+ * Parses a datetime-local input string (YYYY-MM-DDTHH:mm) as a KST Date (+09:00).
+ */
+export function parseKSTDate(dateString: string | null): Date | null {
+    if (!dateString) return null;
+    // Append +09:00 to ensure it's interpreted as KST
+    const date = new Date(`${dateString}:00+09:00`);
+    return isNaN(date.getTime()) ? null : date;
+}
