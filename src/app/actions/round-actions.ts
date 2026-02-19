@@ -810,9 +810,8 @@ export async function searchPlayers(query: string, centerId: string) {
             SELECT u.id, u.name, t.name as "teamName", u.handicap
             FROM "User" u
             JOIN "CenterMember" cm ON u.id = cm."userId"
-            LEFT JOIN "TeamMember" tm ON u.id = tm."userId"
-            LEFT JOIN "Team" t ON tm."teamId" = t.id
-            WHERE u.name LIKE ${`%${query}%`}
+            LEFT JOIN "Team" t ON cm."teamId" = t.id
+            WHERE (u.name LIKE ${`%${query}%`} OR t.name LIKE ${`%${query}%`})
             AND cm."centerId" = ${centerId}
             ORDER BY u.name ASC
             LIMIT 50
