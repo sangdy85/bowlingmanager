@@ -1015,6 +1015,9 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 if (p.registrationId === prevWinners.femaleChamp) minusApplied += mRankFemale;
             }
 
+            const validScores = scores.filter(s => s > 0);
+            const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
+
             const finalHandicapValue = totalHandicap - minusApplied;
             const total = totalRaw + finalHandicapValue;
 
@@ -1026,6 +1029,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 handicapEach: handicap,
                 totalHandicap: finalHandicapValue, // Display adjusted handicap
                 total,
+                hiLow,
                 hasMinusHandicap: minusApplied > 0
             };
         });
@@ -1036,9 +1040,14 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         return { ...r, isFemaleChamp: participant?.isFemaleChamp || false };
     }).sort((a: any, b: any) => {
         if (b.total !== a.total) return b.total - a.total;
-        const maxA = Math.max(...a.scores, 0);
-        const maxB = Math.max(...b.scores, 0);
-        return maxB - maxA;
+        // Tie-breaker 1: Lower Handicap priority
+        const handicapA = a.handicapEach || 0;
+        const handicapB = b.handicapEach || 0;
+        if (handicapA !== handicapB) return handicapA - handicapB;
+        // Tie-breaker 2: Lower Hi-Low priority
+        const hiLowA = a.hiLow || 0;
+        const hiLowB = b.hiLow || 0;
+        return hiLowA - hiLowB;
     });
 
     const handleExcelDownload = async () => {
@@ -1072,7 +1081,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         // 2. Add Headers
         const headerRowValues = ['순위', '팀', '성함'];
         for (let i = 1; i <= gameCount; i++) headerRowValues.push(`${i}G`);
-        headerRowValues.push('핸디', '총점');
+        headerRowValues.push('핸디', 'H-L', '총점');
 
         const headerRow = worksheet.addRow(headerRowValues);
 
@@ -1102,6 +1111,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 rowData.push(s > 0 ? (s + res.handicapEach) : '');
             });
             rowData.push(res.totalHandicap);
+            rowData.push(res.hiLow || 0);
             rowData.push(res.total);
 
             const row = worksheet.addRow(rowData);
@@ -1143,7 +1153,8 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             worksheet.getColumn(4 + i).width = 8;
         }
         worksheet.getColumn(4 + gameCount).width = 10;
-        worksheet.getColumn(5 + gameCount).width = 12;
+        worksheet.getColumn(5 + gameCount).width = 8; // H-L column
+        worksheet.getColumn(6 + gameCount).width = 12; // Total column
 
         // 5. Generate and Save
         const buffer = await workbook.xlsx.writeBuffer();
@@ -1175,6 +1186,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                         <th key={i} style={{ border: '1px solid black', padding: '4px', width: '50px' }}>{i + 1}G</th>
                     ))}
                     <th style={{ border: '1px solid black', padding: '4px', width: '50px' }}>핸디</th>
+                    <th style={{ border: '1px solid black', padding: '4px', width: '40px' }}>H-L</th>
                     <th style={{ border: '1px solid black', padding: '4px', width: '60px' }}>총점</th>
                 </tr>
             </thead>
@@ -1195,6 +1207,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                 {Array.from({ length: gameCount }).map((_, i) => (
                                     <td key={i} style={{ border: '1px solid black' }}>&nbsp;</td>
                                 ))}
+                                <td style={{ border: '1px solid black' }}>&nbsp;</td>
                                 <td style={{ border: '1px solid black' }}>&nbsp;</td>
                                 <td style={{ border: '1px solid black' }}>&nbsp;</td>
                             </tr>
@@ -1226,6 +1239,9 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                 fontWeight: res.hasMinusHandicap ? 'bold' : 'normal'
                             }}>
                                 {res.totalHandicap === 0 ? '0' : res.totalHandicap}
+                            </td>
+                            <td style={{ border: '1px solid black', textAlign: 'center', fontSize: '11px', color: '#64748b' }}>
+                                {res.hiLow}
                             </td>
                             <td style={{ border: '1px solid black', textAlign: 'center', fontWeight: '900', backgroundColor: shouldHighlight ? '#FFFF00' : 'inherit' }}>
                                 {res.total}
