@@ -981,6 +981,12 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             isTeam: true
         }));
     } else {
+        const prevWinners = round.prevRoundWinners || {};
+        const mRank1 = settings.minusHandicapRank1 || 0;
+        const mRank2 = settings.minusHandicapRank2 || 0;
+        const mRank3 = settings.minusHandicapRank3 || 0;
+        const mRankFemale = settings.minusHandicapFemale || 0;
+
         results = round.participants.map((p: any) => {
             const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
 
@@ -996,8 +1002,21 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             }
 
             const handicap = p.registration.handicap || 0;
-            const totalHandicap = handicap * gamesPlayed;
-            const total = totalRaw + totalHandicap;
+            let totalHandicap = handicap * gamesPlayed;
+
+            // Apply minus handicaps if applicable (only if all games are played or it's finalized)
+            // User requested: "마지막게임까지 진행하고 나면 그때 총점에 -20 하면돼"
+            let minusApplied = 0;
+            if (gamesPlayed === gameCount) {
+                if (p.registrationId === prevWinners.rank1) minusApplied += mRank1;
+                else if (p.registrationId === prevWinners.rank2) minusApplied += mRank2;
+                else if (p.registrationId === prevWinners.rank3) minusApplied += mRank3;
+
+                if (p.registrationId === prevWinners.femaleChamp) minusApplied += mRankFemale;
+            }
+
+            const finalHandicapValue = totalHandicap - minusApplied;
+            const total = totalRaw + finalHandicapValue;
 
             return {
                 id: p.registrationId,
@@ -1005,8 +1024,9 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 team: p.registration.guestTeamName || p.registration.team?.name || '개인회원',
                 scores: scores,
                 handicapEach: handicap,
-                totalHandicap,
+                totalHandicap: finalHandicapValue, // Display adjusted handicap
                 total,
+                hasMinusHandicap: minusApplied > 0
             };
         });
     }
@@ -1199,7 +1219,14 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                     {s > 0 ? s + res.handicapEach : ''}
                                 </td>
                             ))}
-                            <td style={{ border: '1px solid black', textAlign: 'center' }}>{res.totalHandicap === 0 ? '0' : res.totalHandicap}</td>
+                            <td style={{
+                                border: '1px solid black',
+                                textAlign: 'center',
+                                color: res.hasMinusHandicap ? '#ef4444' : 'inherit',
+                                fontWeight: res.hasMinusHandicap ? 'bold' : 'normal'
+                            }}>
+                                {res.totalHandicap === 0 ? '0' : res.totalHandicap}
+                            </td>
                             <td style={{ border: '1px solid black', textAlign: 'center', fontWeight: '900', backgroundColor: shouldHighlight ? '#FFFF00' : 'inherit' }}>
                                 {res.total}
                             </td>
@@ -1396,6 +1423,35 @@ function TournamentEditModal({ tournament, onClose, onUpdate }: { tournament: an
                                 <input name="pattern" type="text" defaultValue={settings.pattern} className="input input-bordered w-full h-14 bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm font-bold" />
                             </div>
                         </div>
+
+                        {tournament.type === 'CHAMP' && (
+                            <div className="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100 space-y-6">
+                                <h4 className="font-black text-slate-800 flex items-center gap-2">
+                                    <span className="text-xl">📉</span> 직전 회차 입상자 마이너스 핸디 설정
+                                </h4>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">1위 차감 점수</label>
+                                        <input name="minusHandicapRank1" type="number" defaultValue={settings.minusHandicapRank1 || 0} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-20" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">2위 차감 점수</label>
+                                        <input name="minusHandicapRank2" type="number" defaultValue={settings.minusHandicapRank2 || 0} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-15" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">3위 차감 점수</label>
+                                        <input name="minusHandicapRank3" type="number" defaultValue={settings.minusHandicapRank3 || 0} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-10" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">여자챔프 차감</label>
+                                        <input name="minusHandicapFemale" type="number" defaultValue={settings.minusHandicapFemale || 0} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-10" />
+                                    </div>
+                                </div>
+                                <p className="text-[11px] text-slate-400 font-bold ml-1">
+                                    * 입력한 점수만큼 최종 총점에서 차감됩니다. (예: 20 입력 시 -20점 적용)
+                                </p>
+                            </div>
+                        )}
 
                         <div className="flex gap-4 pt-4">
                             <button

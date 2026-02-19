@@ -78,6 +78,63 @@ export default async function RoundDetailPage({ params }: { params: { id: string
     const effectiveDate = getEffectiveRoundDate(roundData.date, roundData.tournament.leagueTime);
     const calculatedStatus = calculateTournamentStatus(effectiveDate, roundData.registrationStart, roundData.date, roundData.tournament.status, now);
 
+    // CHAMP - Calculate previous round winners for negative handicap
+    let prevRoundWinners: any = {};
+    if (roundData.tournament.type === 'CHAMP' && roundData.roundNumber > 1) {
+        const prevRound = await prisma.leagueRound.findFirst({
+            where: { tournamentId, roundNumber: roundData.roundNumber - 1 },
+            include: {
+                participants: {
+                    include: {
+                        registration: { include: { user: true } }
+                    }
+                },
+                individualScores: true,
+                tournament: true
+            }
+        });
+
+        if (prevRound) {
+            const pSettings = prevRound.tournament.settings ? JSON.parse(prevRound.tournament.settings) : {};
+            const gameCount = pSettings.gameCount || 3;
+
+            const results = prevRound.participants.map((p: any) => {
+                const pScores = prevRound.individualScores.filter((s: any) => s.registrationId === p.registrationId);
+                let totalRaw = 0;
+                let gamesPlayed = 0;
+                const scores = [];
+                for (let g = 1; g <= gameCount; g++) {
+                    const s = pScores.find((sc: any) => sc.gameNumber === g)?.score || 0;
+                    totalRaw += s;
+                    scores.push(s);
+                    if (s > 0) gamesPlayed++;
+                }
+                const handicap = p.registration.handicap || 0;
+                const total = totalRaw + (handicap * gamesPlayed);
+                return {
+                    registrationId: p.registrationId,
+                    total,
+                    scores,
+                    isFemaleChamp: p.isFemaleChamp
+                };
+            });
+
+            const sorted = results.sort((a: any, b: any) => {
+                if (b.total !== a.total) return b.total - a.total;
+                const maxA = Math.max(...a.scores, 0);
+                const maxB = Math.max(...b.scores, 0);
+                return maxB - maxA;
+            });
+
+            if (sorted.length > 0) prevRoundWinners.rank1 = sorted[0].registrationId;
+            if (sorted.length > 1) prevRoundWinners.rank2 = sorted[1].registrationId;
+            if (sorted.length > 2) prevRoundWinners.rank3 = sorted[2].registrationId;
+
+            const femaleWinner = sorted.find((r: any) => r.isFemaleChamp);
+            if (femaleWinner) prevRoundWinners.femaleChamp = femaleWinner.registrationId;
+        }
+    }
+
     const safeRoundData = JSON.parse(JSON.stringify({
         ...roundData,
         date: roundData.date?.toISOString(),
@@ -85,6 +142,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
         effectiveDateStr: effectiveDate?.toISOString(),
         calculatedStatus,
         participants: augmentedParticipants,
+        prevRoundWinners, // Add winners here
         tournament: {
             ...roundData.tournament,
             startDate: roundData.tournament.startDate?.toISOString(),

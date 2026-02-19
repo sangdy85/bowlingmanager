@@ -245,37 +245,57 @@ export async function updateTournamentBasicInfo(tournamentId: string, formData: 
         maxParticipants,
     };
 
-    if (tournament.type === 'EVENT') {
-        data.endDate = startDate;
-
+    if (tournament.type === 'EVENT' || tournament.type === 'CHAMP') {
         const currentSettings = tournament.settings ? JSON.parse(tournament.settings) : {};
         const newSettings = {
             ...currentSettings,
-            gameMode: formData.get("gameMode"),
-            gameCount: formData.get("gameCount") ? parseInt(formData.get("gameCount") as string) : 3,
-            gameMethod: `올핀 ${formData.get("gameCount")}게임 진행`,
-            target: formData.get("target"),
-            entryFeeText: formData.get("entryFeeText"),
-            bankAccount: formData.get("bankAccount"),
-            handicapInfo: formData.get("handicapInfo"),
-            pattern: formData.get("pattern"),
-            registrationStart: formData.get("registrationStart"),
         };
+
+        if (tournament.type === 'EVENT') {
+            newSettings.gameMode = formData.get("gameMode");
+            newSettings.gameCount = formData.get("gameCount") ? parseInt(formData.get("gameCount") as string) : 3;
+            newSettings.gameMethod = `올핀 ${formData.get("gameCount")}게임 진행`;
+            newSettings.target = formData.get("target");
+            newSettings.entryFeeText = formData.get("entryFeeText");
+            newSettings.bankAccount = formData.get("bankAccount");
+            newSettings.handicapInfo = formData.get("handicapInfo");
+            newSettings.pattern = formData.get("pattern");
+            newSettings.registrationStart = formData.get("registrationStart");
+        } else if (tournament.type === 'CHAMP') {
+            newSettings.gameMode = formData.get("gameMode");
+            newSettings.startDateText = formData.get("startDateText") || currentSettings.startDateText;
+            newSettings.gameCount = formData.get("gameCount") ? parseInt(formData.get("gameCount") as string) : 3;
+            newSettings.gameMethod = `올핀 ${newSettings.gameCount}게임 진행`;
+            newSettings.target = formData.get("target");
+            newSettings.entryFeeText = formData.get("entryFeeText");
+            newSettings.bankAccount = formData.get("bankAccount");
+            newSettings.handicapInfo = formData.get("handicapInfo");
+            newSettings.pattern = formData.get("pattern");
+
+            // New minus handicap settings
+            newSettings.minusHandicapRank1 = formData.get("minusHandicapRank1") ? parseInt(formData.get("minusHandicapRank1") as string) : 0;
+            newSettings.minusHandicapRank2 = formData.get("minusHandicapRank2") ? parseInt(formData.get("minusHandicapRank2") as string) : 0;
+            newSettings.minusHandicapRank3 = formData.get("minusHandicapRank3") ? parseInt(formData.get("minusHandicapRank3") as string) : 0;
+            newSettings.minusHandicapFemale = formData.get("minusHandicapFemale") ? parseInt(formData.get("minusHandicapFemale") as string) : 0;
+        }
+
         data.settings = JSON.stringify(newSettings);
 
-        // Also update the associate round date/registrationStart
-        const rounds = await (prisma.leagueRound as any).findMany({
-            where: { tournamentId }
-        });
-
-        if (rounds.length > 0) {
-            await (prisma.leagueRound as any).update({
-                where: { id: rounds[0].id },
-                data: {
-                    date: startDate,
-                    registrationStart: new Date(newSettings.registrationStart),
-                }
+        // Also update the associate round date/registrationStart for EVENT
+        if (tournament.type === 'EVENT') {
+            const rounds = await (prisma.leagueRound as any).findMany({
+                where: { tournamentId }
             });
+
+            if (rounds.length > 0) {
+                await (prisma.leagueRound as any).update({
+                    where: { id: rounds[0].id },
+                    data: {
+                        date: startDate,
+                        registrationStart: new Date(newSettings.registrationStart),
+                    }
+                });
+            }
         }
     }
 
