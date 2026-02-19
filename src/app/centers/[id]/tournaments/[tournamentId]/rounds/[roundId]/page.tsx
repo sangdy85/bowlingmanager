@@ -76,7 +76,13 @@ export default async function RoundDetailPage({ params }: { params: { id: string
 
     // Calculate current round status
     const effectiveDate = getEffectiveRoundDate(roundData.date, roundData.tournament.leagueTime);
-    const calculatedStatus = calculateTournamentStatus(effectiveDate, roundData.registrationStart, roundData.date, roundData.tournament.status, now);
+    const calculatedStatus = calculateTournamentStatus(
+        effectiveDate,
+        roundData.registrationStart || tournamentSettings.registrationStart,
+        roundData.date,
+        roundData.tournament.status,
+        now
+    );
 
     // CHAMP - Calculate previous round winners for negative handicap
     let prevRoundWinners: any = {};

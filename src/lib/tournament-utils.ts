@@ -37,36 +37,35 @@ export function calculateTournamentStatus(
 ): TStatus {
     const now = nowInput || new Date();
 
-    // 0. Manual Finish: If DB status is FINISHED, respect it.
+    // 0. Manual Finish / Planning Priority
     if (dbStatus === 'FINISHED') return 'FINISHED';
 
+    // 1. Missing Start Date -> Always Upcoming (or "일정 미정")
     if (!startDate) return 'UPCOMING';
-
     const start = new Date(startDate);
-    const regStart = registrationStart ? new Date(registrationStart) : null;
+    if (isNaN(start.getTime())) return 'UPCOMING';
 
-    // For individual rounds, we use the next day of the START date as FINISHED criteria.
-    // However, if an explicit endDate exists (usually for EVENT/CUSTOM span), use that.
+    // 2. FINISHED: After the day of the tournament (Next day 00:00)
+    // User requested: "대회일자가 딱 지났을 때" (Next day starts)
     const finishDate = endDate ? new Date(endDate) : new Date(start);
     const nextDayOfFinish = new Date(finishDate);
     nextDayOfFinish.setHours(0, 0, 0, 0);
     nextDayOfFinish.setDate(nextDayOfFinish.getDate() + 1);
-
-    // 1. FINISHED: After 00:00 of the day after the tournament (or endDate)
     if (now >= nextDayOfFinish) return 'FINISHED';
 
-    // 2. ONGOING: From startDate until FINISHED (midnight)
+    // 3. ONGOING: From scheduled time until FINISHED (midnight)
+    // User requested: "대회 예정 시각(now > start)이 지나고 대회일 오후 11시 59분 사이"
     if (now >= start) return 'ONGOING';
 
-    // 3. CLOSED: 30 minutes before startDate
+    // 4. CLOSED: 30 minutes before startDate
     const closedThreshold = new Date(start.getTime() - 30 * 60000);
     if (now >= closedThreshold) return 'CLOSED';
 
-    // 4. OPEN: From registrationStart until CLOSED
-    if (regStart && now >= regStart) return 'OPEN';
-    if (!regStart) return 'OPEN'; // Fallback
+    // 5. OPEN: From registrationStart until CLOSED
+    const regStart = registrationStart ? new Date(registrationStart) : null;
+    if (regStart && !isNaN(regStart.getTime()) && now >= regStart) return 'OPEN';
 
-    // 5. UPCOMING: Before registrationStart
+    // 6. UPCOMING: Before registrationStart or if regStart is missing
     return 'UPCOMING';
 }
 
