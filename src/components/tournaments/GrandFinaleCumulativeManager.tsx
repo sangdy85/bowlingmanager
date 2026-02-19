@@ -149,8 +149,29 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                 };
             });
 
+            // Aggregate by Team and Name
+            const aggregatedMap = new Map<string, any>();
+            list.forEach(item => {
+                const teamName = item.team?.name || item.guestTeamName || '-';
+                const userName = item.user?.name || item.guestName;
+                const key = `${teamName}|${userName}`;
+
+                if (aggregatedMap.has(key)) {
+                    const existing = aggregatedMap.get(key);
+                    existing.totalPoints += item.totalPoints;
+                    existing.participationCount += item.participationCount;
+                    existing.cumulativeScore += item.cumulativeScore;
+                    existing.awardCount += item.awardCount;
+                } else {
+                    // Start with a copy of item
+                    aggregatedMap.set(key, { ...item });
+                }
+            });
+
+            const aggregatedList = Array.from(aggregatedMap.values());
+
             // Sorting: 1. Points, 2. Participation, 3. Cumulative
-            return list.sort((a, b) => {
+            return aggregatedList.sort((a, b) => {
                 if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
                 if (b.participationCount !== a.participationCount) return b.participationCount - a.participationCount;
                 return b.cumulativeScore - a.cumulativeScore;
@@ -266,33 +287,38 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                                 </tr>
                             </thead>
                             <tbody>
-                                {cumulativeList.map((p, idx) => (
-                                    <tr key={p.id}>
-                                        <td className="rank-cell">
-                                            {idx + 1}
-                                        </td>
-                                        <td>
-                                            {p.team?.name || p.guestTeamName || '-'}
-                                        </td>
-                                        <td>
-                                            {p.user?.name || p.guestName}
-                                        </td>
-                                        <td className="points-cell">
-                                            {p.totalPoints}
-                                        </td>
-                                        <td>
-                                            {p.participationCount}
-                                        </td>
-                                        <td>
-                                            {p.cumulativeScore.toLocaleString()}
-                                        </td>
-                                        <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px', scale: '1.25' }}>
-                                                {getAwardStars(p.awardCount)}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {cumulativeList.map((p, idx) => {
+                                    const teamName = p.team?.name || p.guestTeamName || '-';
+                                    const userName = p.user?.name || p.guestName;
+                                    const compositeKey = `${teamName}|${userName}|${idx}`;
+                                    return (
+                                        <tr key={compositeKey}>
+                                            <td className="rank-cell">
+                                                {idx + 1}
+                                            </td>
+                                            <td>
+                                                {p.team?.name || p.guestTeamName || '-'}
+                                            </td>
+                                            <td>
+                                                {p.user?.name || p.guestName}
+                                            </td>
+                                            <td className="points-cell">
+                                                {p.totalPoints}
+                                            </td>
+                                            <td>
+                                                {p.participationCount}
+                                            </td>
+                                            <td>
+                                                {p.cumulativeScore.toLocaleString()}
+                                            </td>
+                                            <td>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px', scale: '1.25' }}>
+                                                    {getAwardStars(p.awardCount)}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
