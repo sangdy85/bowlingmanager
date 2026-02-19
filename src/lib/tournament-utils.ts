@@ -103,11 +103,18 @@ export function formatDateForInput(dateInput: Date | string | null): string {
 }
 
 /**
- * Parses a datetime-local input string (YYYY-MM-DDTHH:mm) as a KST Date (+09:00).
+ * Parses a datetime-local input string (YYYY-MM-DDTHH:mm) or date input string (YYYY-MM-DD) as a KST Date (+09:00).
  */
 export function parseKSTDate(dateString: string | null): Date | null {
     if (!dateString) return null;
+
+    // If it's only YYYY-MM-DD (10 chars), append T00:00
+    let formatted = dateString;
+    if (dateString.length === 10) {
+        formatted = `${dateString}T00:00`;
+    }
+
     // Append +09:00 to ensure it's interpreted as KST
-    const date = new Date(`${dateString}:00+09:00`);
+    const date = new Date(`${formatted}:00+09:00`);
     return isNaN(date.getTime()) ? null : date;
 }

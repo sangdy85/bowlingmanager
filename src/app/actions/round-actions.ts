@@ -62,7 +62,7 @@ export async function updateRoundSettings(
         if (data.minusHandicapRank1 !== undefined) {
             const round = await prisma.leagueRound.findUnique({
                 where: { id: roundId },
-                select: { tournamentId: true }
+                select: { tournamentId: true, roundNumber: true }
             });
 
             if (round) {
@@ -73,6 +73,18 @@ export async function updateRoundSettings(
 
                 if (tournament) {
                     const settings = tournament.settings ? JSON.parse(tournament.settings) : {};
+                    // Store round-specific minus handicaps
+                    if (!settings.roundMinusHandicaps) {
+                        settings.roundMinusHandicaps = {};
+                    }
+                    settings.roundMinusHandicaps[round.roundNumber] = {
+                        rank1: data.minusHandicapRank1,
+                        rank2: data.minusHandicapRank2,
+                        rank3: data.minusHandicapRank3,
+                        female: data.minusHandicapFemale
+                    };
+
+                    // Also keep legacy global fields for backward compatibility or default view
                     settings.minusHandicapRank1 = data.minusHandicapRank1;
                     settings.minusHandicapRank2 = data.minusHandicapRank2;
                     settings.minusHandicapRank3 = data.minusHandicapRank3;

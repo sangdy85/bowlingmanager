@@ -208,22 +208,35 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
                         <span className="text-xl">📉</span> 직전 회차 입상자 마이너스 핸디 설정
                     </h4>
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">1위 차감 점수</label>
-                            <input name="minusHandicapRank1" type="number" defaultValue={JSON.parse(round.tournament.settings || '{}').minusHandicapRank1 || 0} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-20" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">2위 차감 점수</label>
-                            <input name="minusHandicapRank2" type="number" defaultValue={JSON.parse(round.tournament.settings || '{}').minusHandicapRank2 || 0} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-15" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">3위 차감 점수</label>
-                            <input name="minusHandicapRank3" type="number" defaultValue={JSON.parse(round.tournament.settings || '{}').minusHandicapRank3 || 0} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-10" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">여자챔프 차감</label>
-                            <input name="minusHandicapFemale" type="number" defaultValue={JSON.parse(round.tournament.settings || '{}').minusHandicapFemale || 0} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-10" />
-                        </div>
+                        {(() => {
+                            const tSettings = JSON.parse(round.tournament.settings || '{}');
+                            const roundHandicaps = tSettings.roundMinusHandicaps?.[round.roundNumber] || {
+                                rank1: tSettings.minusHandicapRank1 || 0,
+                                rank2: tSettings.minusHandicapRank2 || 0,
+                                rank3: tSettings.minusHandicapRank3 || 0,
+                                female: tSettings.minusHandicapFemale || 0
+                            };
+                            return (
+                                <>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">1위 차감 점수</label>
+                                        <input name="minusHandicapRank1" type="number" defaultValue={roundHandicaps.rank1} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-20" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">2위 차감 점수</label>
+                                        <input name="minusHandicapRank2" type="number" defaultValue={roundHandicaps.rank2} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-15" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">3위 차감 점수</label>
+                                        <input name="minusHandicapRank3" type="number" defaultValue={roundHandicaps.rank3} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-10" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">여자챔프 차감</label>
+                                        <input name="minusHandicapFemale" type="number" defaultValue={roundHandicaps.female} className="input input-bordered w-full h-12 bg-white border-gray-200 focus:bg-white transition-all text-sm font-bold" placeholder="-10" />
+                                    </div>
+                                </>
+                            );
+                        })()}
                     </div>
                 </div>
             )}
@@ -1024,10 +1037,16 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         }));
     } else {
         const prevWinners = round.prevRoundWinners || {};
-        const mRank1 = settings.minusHandicapRank1 || 0;
-        const mRank2 = settings.minusHandicapRank2 || 0;
-        const mRank3 = settings.minusHandicapRank3 || 0;
-        const mRankFemale = settings.minusHandicapFemale || 0;
+        const roundHandicaps = settings.roundMinusHandicaps?.[round.roundNumber] || {
+            rank1: settings.minusHandicapRank1 || 0,
+            rank2: settings.minusHandicapRank2 || 0,
+            rank3: settings.minusHandicapRank3 || 0,
+            female: settings.minusHandicapFemale || 0
+        };
+        const mRank1 = roundHandicaps.rank1;
+        const mRank2 = roundHandicaps.rank2;
+        const mRank3 = roundHandicaps.rank3;
+        const mRankFemale = roundHandicaps.female;
 
         results = round.participants.map((p: any) => {
             const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
@@ -1037,10 +1056,11 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             let gamesPlayed = 0;
 
             for (let g = 1; g <= gameCount; g++) {
-                const score = pScores.find((s: any) => s.gameNumber === g)?.score || 0;
+                const sRecord = pScores.find((s: any) => s.gameNumber === g);
+                const score = sRecord?.score || 0;
                 scores.push(score);
                 totalRaw += score;
-                if (score > 0) gamesPlayed++;
+                if (sRecord) gamesPlayed++;
             }
 
             const handicap = p.registration.handicap || 0;
