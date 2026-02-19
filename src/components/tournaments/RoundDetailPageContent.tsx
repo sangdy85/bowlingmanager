@@ -40,7 +40,7 @@ function RoundOverviewTab({ round }: { round: any }) {
                         {round.date ? new Date(round.date).toLocaleDateString() : '미정'}
                     </p>
                     <p className="text-sm text-gray-500 mt-2 font-medium">
-                        접수: {round.registrationStart ? new Date(round.registrationStart).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '미정'}
+                        접수: {round.registrationStart ? new Date(round.registrationStart).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' }) : '미정'}
                     </p>
                 </div>
                 <div className="bg-green-50 p-6 rounded-xl border border-green-100 shadow-sm">
@@ -212,7 +212,17 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
     // Parse existing config or default to empty
     const [laneConfig, setLaneConfig] = useState<Record<string, number[]>>(() => {
         try {
-            return round.laneConfig ? JSON.parse(round.laneConfig) : {};
+            try {
+                try {
+                    return round.laneConfig ? JSON.parse(round.laneConfig) : {};
+                } catch (e) {
+                    console.error("Failed to parse laneConfig", e);
+                    return {};
+                }
+            } catch (e) {
+                console.error("Failed to parse laneConfig", e);
+                return {};
+            }
         } catch {
             return {};
         }
@@ -248,7 +258,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                 setLaneConfig(JSON.parse(round.laneConfig));
             }
         } catch (e) {
-            console.error("Failed to parse laneConfig", e);
+            console.error("Failed to parse laneConfig in useEffect", e);
         }
     }, [round.laneConfig]);
 
@@ -487,7 +497,14 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
 
 // 4. Scoring Tab
 function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void }) {
-    const settings = round.tournament?.settings ? JSON.parse(round.tournament.settings) : {};
+    const settings = (() => {
+        try {
+            return round.tournament?.settings ? JSON.parse(round.tournament.settings) : {};
+        } catch (e) {
+            console.error("Failed to parse settings", e);
+            return {};
+        }
+    })();
     const gameCount = settings.gameCount || 3;
 
     const [loading, setLoading] = useState(false);
@@ -904,7 +921,10 @@ function RoundSideGameTab({ round }: { round: any }) {
 // 6. Final Result Tab
 function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boolean }) {
     if (round.tournament?.type === 'LEAGUE') {
-        const settings = round.tournament?.settings ? JSON.parse(round.tournament.settings) : {};
+        let settings: any = {};
+        try {
+            if (round.tournament?.settings) settings = JSON.parse(round.tournament.settings);
+        } catch (e) { }
         return (
             <RoundResultSummary
                 round={round}
@@ -1416,7 +1436,13 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
             try {
                 // Defensive parsing to handle malformed JSON gracefully
                 const cleanResult = round.luckyDrawResult.trim();
-                const data = JSON.parse(cleanResult);
+                let data: any = {};
+                try {
+                    data = JSON.parse(cleanResult);
+                } catch (e) {
+                    console.error("Failed to parse GPT response", e);
+                    throw new Error("결과 분석 중 오류가 발생했습니다. (JSON 파싱 실패)");
+                }
 
                 if (data.winners) setWinners(data.winners);
                 if (data.winnerCount) setWinnerCount(data.winnerCount);
@@ -1856,7 +1882,15 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                         <p className="text-gray-400 text-sm mt-1 flex items-center gap-2">
                             <span>📅 {(() => {
                                 const effective = round.effectiveDateStr ? new Date(round.effectiveDateStr) : (round.date ? new Date(round.date) : null);
-                                return effective ? effective.toLocaleString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '일정 미정';
+                                return effective ? effective.toLocaleString('ko-KR', {
+                                    month: 'long',
+                                    day: 'numeric',
+                                    weekday: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: false,
+                                    hourCycle: 'h23'
+                                }) : '일정 미정';
                             })()}</span>
                             <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
                             <span>👥 참가 {round.participants.length}명</span>
@@ -1892,7 +1926,12 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                                         <span className="text-xl">🎲</span>
                                         <span>내 레인 뽑기 (~{(() => {
                                             const effective = getEffectiveRoundDate(round.date, round.tournament.leagueTime);
-                                            return effective ? new Date(effective.getTime() - 1 * 60 * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                                            return effective ? new Date(effective.getTime() - 1 * 60 * 60 * 1000).toLocaleTimeString('ko-KR', {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                                hour12: false,
+                                                hourCycle: 'h23'
+                                            }) : '';
                                         })()})</span>
                                     </Link>
                                 ) : lotteryStatus === 'PENDING' ? (
@@ -1900,7 +1939,12 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                                         <span className="text-xl">⏳</span>
                                         <span>레인 추첨 대기중 ({(() => {
                                             const effective = getEffectiveRoundDate(round.date, round.tournament.leagueTime);
-                                            return effective ? new Date(effective.getTime() - 2 * 60 * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                                            return effective ? new Date(effective.getTime() - 2 * 60 * 60 * 1000).toLocaleTimeString('ko-KR', {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                                hour12: false,
+                                                hourCycle: 'h23'
+                                            }) : '';
                                         })()} 오픈)</span>
                                     </button>
                                 ) : null}
@@ -1910,22 +1954,24 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                 </div>
             </div>
 
-            {isManager && (
-                <div className="flex border-b overflow-x-auto pb-1 scrollbar-hide">
-                    {tabs.map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => handleTabChange(tab.id)}
-                            className={`px-5 py-3 font-bold border-b-2 transition-all whitespace-nowrap text-sm md:text-base ${activeTab === tab.id
-                                ? 'border-blue-600 text-blue-600'
-                                : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-200'
-                                }`}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
-                </div>
-            )}
+            {
+                isManager && (
+                    <div className="flex border-b overflow-x-auto pb-1 scrollbar-hide">
+                        {tabs.map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => handleTabChange(tab.id)}
+                                className={`px-5 py-3 font-bold border-b-2 transition-all whitespace-nowrap text-sm md:text-base ${activeTab === tab.id
+                                    ? 'border-blue-600 text-blue-600'
+                                    : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-200'
+                                    }`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                )
+            }
 
             <div className="bg-white min-h-[400px]">
                 {/* Simplified Result View for CHAMP Members in Closed Rounds */}
@@ -1943,7 +1989,10 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                         {/* 2. Lucky Draw Winners - Only show if exist */}
                         {round.luckyDrawResult && (() => {
                             try {
-                                const result = JSON.parse(round.luckyDrawResult);
+                                let result: any = {};
+                                try {
+                                    result = JSON.parse(round.luckyDrawResult);
+                                } catch (e) { return null; }
                                 if (result.winners && result.winners.length > 0) {
                                     return (
                                         <div className="p-4 md:p-8 pt-0">
@@ -1994,7 +2043,10 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                         {activeTab === 'sideGame' && (
                             <div className="p-8 bg-slate-100/50">
                                 {(() => {
-                                    const settings = round.tournament?.settings ? JSON.parse(round.tournament.settings) : {};
+                                    let settings: any = {};
+                                    try {
+                                        if (round.tournament?.settings) settings = JSON.parse(round.tournament.settings);
+                                    } catch (e) { }
                                     const gCount = settings.gameCount || 3;
                                     return (
                                         <SideGameManager
@@ -2016,6 +2068,6 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                     </>
                 )}
             </div>
-        </div>
+        </div >
     );
 }

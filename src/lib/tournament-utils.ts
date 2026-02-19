@@ -1,16 +1,21 @@
 // Helper to combine a date string/object with a tournament's leagueTime (HH:mm).
 // Ensures that the round's effective start time is consistently calculated.
-export function getEffectiveRoundDate(roundDate: Date | string | null, leagueTime?: string) {
+export function getEffectiveRoundDate(roundDate: Date | null | string, leagueTime: string | null): Date | null {
     if (!roundDate) return null;
-    const d = new Date(roundDate);
-    if (!leagueTime) return d;
+    const date = new Date(roundDate);
+    if (!leagueTime) return date;
 
-    const [h, m] = leagueTime.split(':').map(Number);
-    if (isNaN(h) || isNaN(m)) return d;
+    const [hours, minutes] = leagueTime.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return date;
 
-    const res = new Date(d);
-    res.setHours(h, m, 0, 0);
-    return res;
+    // Use explicit KST offset to avoid server/client timezone shifts
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    const hh = String(hours).padStart(2, '0');
+    const min = String(minutes).padStart(2, '0');
+
+    return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:00+09:00`);
 }
 
 // Standard Status Types

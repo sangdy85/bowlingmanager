@@ -16,7 +16,16 @@ export default async function RoundDetailPage({ params }: { params: { id: string
     const roundData = await prisma.leagueRound.findUnique({
         where: { id: roundId },
         include: {
-            tournament: true,
+            tournament: {
+                include: {
+                    registrations: {
+                        include: {
+                            user: true,
+                            team: true
+                        }
+                    }
+                }
+            },
             participants: {
                 include: {
                     registration: {
@@ -54,7 +63,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
     `;
 
     // Merge manual status into participants
-    const augmentedParticipants = roundData.participants.map(p => ({
+    const augmentedParticipants = roundData.participants.map((p: any) => ({
         ...p,
         isManual: manualStatus.find(m => m.id === p.id)?.isManual === 1 || manualStatus.find(m => m.id === p.id)?.isManual === true,
         // Serialize Dates inside participants
@@ -69,7 +78,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
     const effectiveDate = getEffectiveRoundDate(roundData.date, roundData.tournament.leagueTime);
     const calculatedStatus = calculateTournamentStatus(effectiveDate, roundData.registrationStart, roundData.date, roundData.tournament.status, now);
 
-    const safeRoundData = {
+    const safeRoundData = JSON.parse(JSON.stringify({
         ...roundData,
         date: roundData.date?.toISOString(),
         registrationStart: roundData.registrationStart?.toISOString(),
@@ -82,7 +91,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
             endDate: roundData.tournament.endDate?.toISOString(),
             registrationStart: roundData.tournament.registrationStart?.toISOString()
         }
-    };
+    }));
 
     // 2. Fetch All Rounds for navigation
     const allRoundsRaw = await prisma.leagueRound.findMany({

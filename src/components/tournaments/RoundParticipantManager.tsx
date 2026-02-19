@@ -81,13 +81,14 @@ export default function RoundParticipantManager({
 
     // Filter registrations to ONLY show those participating in the selected round
     const roundParticipants = useMemo(() => {
+        const registrations = allRegistrations || [];
         if (isEvent) {
-            return allRegistrations.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            return [...registrations].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         }
         if (!selectedRound) return [];
         const participantRegIds = new Set(selectedRound.participants?.map((p: any) => p.registrationId) || []);
 
-        return allRegistrations
+        return registrations
             .filter(reg => participantRegIds.has(reg.id))
             .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     }, [allRegistrations, selectedRound, isEvent]);
@@ -640,7 +641,7 @@ export default function RoundParticipantManager({
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {allRegistrations
+                        {(allRegistrations || [])
                             .filter((reg: any) => !roundParticipants.some((p: any) => p.id === reg.id))
                             .map((reg: any) => (
                                 <div key={reg.id} className="bg-white p-3 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
@@ -671,7 +672,7 @@ export default function RoundParticipantManager({
                                     </button>
                                 </div>
                             ))}
-                        {allRegistrations.filter((reg: any) => !roundParticipants.some((p: any) => p.id === reg.id)).length === 0 && (
+                        {(allRegistrations || []).filter((reg: any) => !roundParticipants.some((p: any) => p.id === reg.id)).length === 0 && (
                             <div className="col-span-full py-6 text-center text-xs font-bold text-slate-400 italic">
                                 모든 신청자가 이 회차에 참여 중입니다.
                             </div>
@@ -679,6 +680,6 @@ export default function RoundParticipantManager({
                     </div>
                 </div>
             )}
-        </div >
+        </div>
     );
 }
