@@ -93,22 +93,23 @@ export default async function RoundDetailPage({ params }: { params: { id: string
         }
     }));
 
-    // 2. Fetch All Rounds for navigation
+    // 2. Fetch All Rounds for navigation and tabs
     const allRoundsRaw = await prisma.leagueRound.findMany({
         where: { tournamentId },
         orderBy: { roundNumber: 'asc' },
-        select: {
-            id: true,
-            roundNumber: true,
-            date: true,
-            registrationStart: true
+        include: {
+            participants: {
+                select: {
+                    id: true,
+                    registrationId: true,
+                    lane: true,
+                    isManual: true
+                }
+            }
         }
     });
 
-    const allRounds = await Promise.all(allRoundsRaw.map(async (r: any) => {
-        const participants: any[] = await prisma.$queryRaw`
-            SELECT "registrationId", "lane" FROM "RoundParticipant" WHERE "roundId" = ${r.id}
-        `;
+    const allRounds = allRoundsRaw.map((r: any) => {
         const rEffectiveDate = getEffectiveRoundDate(r.date, roundData.tournament.leagueTime);
         const rStatus = calculateTournamentStatus(rEffectiveDate, r.registrationStart, r.date, roundData.tournament.status, now);
 
@@ -118,9 +119,12 @@ export default async function RoundDetailPage({ params }: { params: { id: string
             registrationStart: r.registrationStart?.toISOString(),
             effectiveDateStr: rEffectiveDate?.toISOString(),
             calculatedStatus: rStatus,
-            participants
+            participants: r.participants.map((p: any) => ({
+                ...p,
+                isManual: p.isManual === 1 || p.isManual === true
+            }))
         };
-    }));
+    });
 
     // 3. Check Manager
     const center = await prisma.bowlingCenter.findUnique({
