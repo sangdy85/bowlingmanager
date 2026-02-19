@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { calculateTournamentStatus, STATUS_LABELS, formatDateForInput, formatKSTDate } from '@/lib/tournament-utils';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { updateRoundSettings, updateRoundParticipants, updateRoundLanes, updateRoundScores, manualRegister, updateLaneSettings, autoAssignRemaining, updatePaymentStatus, deleteRegistration, updateRegistration, updateLaneConfig, updateFemaleChampParticipants, updateLuckyDrawResult } from '@/app/actions/round-actions';
+import { updateRoundSettings, updateRoundParticipants, updateRoundLanes, updateRoundScores, manualRegister, updateLaneSettings, autoAssignRemaining, updatePaymentStatus, deleteRegistration, updateRegistration, updateLaneConfig, updateFemaleChampParticipants, updateLuckyDrawResult, saveRoundWinners } from '@/app/actions/round-actions';
 import { updateTournamentBasicInfo } from '@/app/actions/tournament-center';
 import Link from "next/link";
 import TournamentStatusDropdown from './TournamentStatusDropdown';
@@ -975,6 +975,7 @@ function RoundSideGameTab({ round }: { round: any }) {
 
 // 6. Final Result Tab
 function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boolean }) {
+    const router = useRouter();
     if (round.tournament?.type === 'LEAGUE') {
         let settings: any = {};
         try {
@@ -1068,13 +1069,20 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
             // Apply minus handicaps if applicable (only if all games are played or it's finalized)
             // User requested: "마지막게임까지 진행하고 나면 그때 총점에 -20 하면돼"
+            const pName = p.registration.user?.name || p.registration.guestName || 'Unknown';
+            const pTeam = p.registration.guestTeamName || p.registration.team?.name || '개인회원';
+
+            // Apply minus handicaps if applicable (only if all games are played or it's finalized)
+            // User requested: "마지막게임까지 진행하고 나면 그때 총점에 -20 하면돼"
             let minusApplied = 0;
             if (gamesPlayed === gameCount) {
-                if (p.registrationId === prevWinners.rank1) minusApplied += mRank1;
-                else if (p.registrationId === prevWinners.rank2) minusApplied += mRank2;
-                else if (p.registrationId === prevWinners.rank3) minusApplied += mRank3;
+                const matchWinner = (winner: any) => winner && winner.name === pName && winner.team === pTeam;
 
-                if (p.registrationId === prevWinners.femaleChamp) minusApplied += mRankFemale;
+                if (matchWinner(prevWinners.rank1)) minusApplied += Math.abs(mRank1);
+                else if (matchWinner(prevWinners.rank2)) minusApplied += Math.abs(mRank2);
+                else if (matchWinner(prevWinners.rank3)) minusApplied += Math.abs(mRank3);
+
+                if (matchWinner(prevWinners.femaleChamp)) minusApplied += Math.abs(mRankFemale);
             }
 
             const validScores = scores.filter(s => s > 0);
@@ -1085,8 +1093,8 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
             return {
                 id: p.registrationId,
-                name: p.registration.user?.name || p.registration.guestName || 'Unknown',
-                team: p.registration.guestTeamName || p.registration.team?.name || '개인회원',
+                name: pName,
+                team: pTeam,
                 scores: scores,
                 handicapEach: handicap,
                 totalHandicap: finalHandicapValue, // Display adjusted handicap
@@ -1111,6 +1119,32 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         const hiLowB = b.hiLow || 0;
         return hiLowA - hiLowB;
     });
+
+    const handleSaveWinners = async () => {
+        if (!confirm(`${round.roundNumber}회차 우승자 명단을 확정하시겠습니까?\n이 명단은 다음 회차의 마이너스 핸디캡 적용 기준이 됩니다.`)) return;
+
+        try {
+            const winners = {
+                rank1: { name: sortedResults[0]?.name || '', team: sortedResults[0]?.team || '' },
+                rank2: { name: sortedResults[1]?.name || '', team: sortedResults[1]?.team || '' },
+                rank3: { name: sortedResults[2]?.name || '', team: sortedResults[2]?.team || '' },
+                female: { name: '', team: '' }
+            };
+
+            const femaleWinner = sortedResults.find((r: any) => r.isFemaleChamp);
+            if (femaleWinner) {
+                winners.female = { name: femaleWinner.name, team: femaleWinner.team };
+            }
+
+            const res = await saveRoundWinners(round.id, winners);
+            if (res.success) {
+                alert('우승자 명단이 확정되었습니다.');
+                router.refresh();
+            }
+        } catch (e: any) {
+            alert(e.message);
+        }
+    };
 
     const handleExcelDownload = async () => {
         const workbook = new ExcelJS.Workbook();
@@ -1331,6 +1365,27 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     }} className="no-print">
                         {isManager && (
                             <>
+                                {round.tournament.type === 'CHAMP' && (
+                                    <button
+                                        onClick={handleSaveWinners}
+                                        style={{
+                                            backgroundColor: '#facc15', // Yellow-400
+                                            color: 'black',
+                                            border: '1px solid black',
+                                            borderRadius: '4px',
+                                            padding: '6px 12px',
+                                            fontSize: '12px',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
+                                        }}
+                                        title="이 라운드의 우승자 명단을 확정하여 다음 회차 마이너스 핸디캡 기준으로 저장합니다."
+                                    >
+                                        🚩 우승자 명단 확정
+                                    </button>
+                                )}
                                 <button
                                     onClick={handleExcelDownload}
                                     style={{

@@ -102,6 +102,51 @@ export async function updateRoundSettings(
     }
 }
 
+// 2-1. Save Winners (Explicitly record name/team for next round handicaps)
+export async function saveRoundWinners(
+    roundId: string,
+    winners: {
+        rank1: { name: string, team: string },
+        rank2: { name: string, team: string },
+        rank3: { name: string, team: string },
+        female: { name: string, team: string }
+    }
+) {
+    try {
+        const round = await prisma.leagueRound.findUnique({
+            where: { id: roundId },
+            select: { tournamentId: true, roundNumber: true }
+        });
+
+        if (!round) throw new Error("Round not found");
+
+        const tournament = await prisma.tournament.findUnique({
+            where: { id: round.tournamentId },
+            select: { settings: true }
+        });
+
+        if (!tournament) throw new Error("Tournament not found");
+
+        const settings = tournament.settings ? JSON.parse(tournament.settings) : {};
+        if (!settings.roundWinners) settings.roundWinners = {};
+
+        settings.roundWinners[round.roundNumber] = winners;
+
+        await prisma.tournament.update({
+            where: { id: round.tournamentId },
+            data: { settings: JSON.stringify(settings) }
+        });
+
+        const info = await getTournamentInfo(roundId);
+        if (info) revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
+
+        return { success: true };
+    } catch (error) {
+        console.error("Save winners failed:", error);
+        throw new Error("우승자 정보 저장 실패");
+    }
+}
+
 // 2. Update Round Participants (Bulk Selection from existing)
 export async function updateRoundParticipants(roundId: string, registrationIds: string[], manualRegIds: string[]) {
     try {
