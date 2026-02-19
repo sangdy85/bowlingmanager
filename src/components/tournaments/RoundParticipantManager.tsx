@@ -21,6 +21,7 @@ interface RoundParticipantManagerProps {
     isEvent?: boolean;
     currentUserId?: string;
     centerId: string;
+    tournamentType?: string;
 }
 
 import { checkAndCancelUnpaidRegistrations } from '@/app/actions/round-actions';
@@ -36,7 +37,8 @@ export default function RoundParticipantManager({
     maxParticipants = 0,
     isEvent = false,
     currentUserId,
-    centerId
+    centerId,
+    tournamentType
 }: RoundParticipantManagerProps) {
     const router = useRouter();
     const tableRef = useRef<HTMLDivElement>(null);
@@ -628,8 +630,8 @@ export default function RoundParticipantManager({
                 </div>
             </div>
 
-            {/* Manager-only: List of tournament registrants NOT in this round */}
-            {isManager && !isEvent && (
+            {/* Manager-only: List of tournament registrants NOT in this round (Hide for CHAMP) */}
+            {isManager && !isEvent && tournamentType !== 'CHAMP' && (
                 <div className="mt-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 p-6">
                     <div className="flex justify-between items-center mb-4">
                         <h4 className="text-sm font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">

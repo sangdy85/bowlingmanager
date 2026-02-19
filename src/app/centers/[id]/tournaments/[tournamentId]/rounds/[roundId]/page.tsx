@@ -84,68 +84,8 @@ export default async function RoundDetailPage({ params }: { params: { id: string
         now
     );
 
-    // CHAMP - Calculate previous round winners automatically for negative handicap
-    let prevRoundWinners: any = {};
-    if (roundData.tournament.type === 'CHAMP' && roundData.roundNumber > 1) {
-        const prevRound = await prisma.leagueRound.findFirst({
-            where: { tournamentId, roundNumber: roundData.roundNumber - 1 },
-            include: {
-                participants: {
-                    include: {
-                        registration: { include: { user: true, team: true } }
-                    }
-                },
-                individualScores: true,
-                tournament: true
-            }
-        });
-
-        if (prevRound) {
-            const pSettings = prevRound.tournament.settings ? JSON.parse(prevRound.tournament.settings) : {};
-            const gameCount = pSettings.gameCount || 3;
-
-            const results = prevRound.participants.map((p: any) => {
-                const pScores = prevRound.individualScores.filter((s: any) => s.registrationId === p.registrationId);
-                let totalRaw = 0;
-                let gamesPlayed = 0;
-                const scores = [];
-                for (let g = 1; g <= gameCount; g++) {
-                    const s = pScores.find((sc: any) => sc.gameNumber === g)?.score || 0;
-                    totalRaw += s;
-                    scores.push(s);
-                    if (s > 0) gamesPlayed++;
-                }
-
-                const validScores = scores.filter(s => s > 0);
-                const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
-                const handicap = p.registration.handicap || 0;
-                const total = totalRaw + (handicap * gamesPlayed);
-
-                return {
-                    name: p.registration.user?.name || p.registration.guestName || 'Unknown',
-                    team: p.registration.guestTeamName || p.registration.team?.name || '개인회원',
-                    total,
-                    handicap,
-                    hiLow,
-                    isFemaleChamp: p.isFemaleChamp
-                };
-            });
-
-            // Sort with User's requested tie-breakers: Lower Handicap -> Lower Hi-Low
-            const sorted = results.sort((a: any, b: any) => {
-                if (b.total !== a.total) return b.total - a.total;
-                if (a.handicap !== b.handicap) return a.handicap - b.handicap;
-                return a.hiLow - b.hiLow;
-            });
-
-            if (sorted.length > 0) prevRoundWinners.rank1 = { name: sorted[0].name, team: sorted[0].team };
-            if (sorted.length > 1) prevRoundWinners.rank2 = { name: sorted[1].name, team: sorted[1].team };
-            if (sorted.length > 2) prevRoundWinners.rank3 = { name: sorted[2].name, team: sorted[2].team };
-
-            const femaleWinner = sorted.find((r: any) => r.isFemaleChamp);
-            if (femaleWinner) prevRoundWinners.femaleChamp = { name: femaleWinner.name, team: femaleWinner.team };
-        }
-    }
+    // CHAMP - Get explicitly saved previous round winners for negative handicap
+    const prevRoundWinners = tournamentSettings.roundWinners?.[roundData.roundNumber - 1] || {};
 
     const safeRoundData = JSON.parse(JSON.stringify({
         ...roundData,

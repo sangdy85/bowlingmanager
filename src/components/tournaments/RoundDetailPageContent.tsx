@@ -2163,6 +2163,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                                 currentUserId={userId}
                                 centerId={centerId || ''}
                                 isEvent={round.tournament.type === 'EVENT'}
+                                tournamentType={round.tournament.type}
                                 hideRoundTabs={true}
                             />
                         )}
