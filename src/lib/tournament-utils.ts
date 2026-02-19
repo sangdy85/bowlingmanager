@@ -118,3 +118,24 @@ export function parseKSTDate(dateString: string | null): Date | null {
     const date = new Date(`${formatted}:00+09:00`);
     return isNaN(date.getTime()) ? null : date;
 }
+
+/**
+ * Formats a Date or UTC string to a KST display string (YYYY. M. D. HH:mm)
+ * ignoring the system's local timezone.
+ */
+export function formatKSTDate(dateInput: Date | string | null): string {
+    if (!dateInput) return '일정 미정';
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return '일정 미정';
+
+    // Shift to KST (UTC+9)
+    const kst = new Date(date.getTime() + 9 * 60 * 60000);
+
+    const y = kst.getUTCFullYear();
+    const m = kst.getUTCMonth() + 1;
+    const d = kst.getUTCDate();
+    const hh = String(kst.getUTCHours()).padStart(2, '0');
+    const mm = String(kst.getUTCMinutes()).padStart(2, '0');
+
+    return `${y}. ${m}. ${d}. ${hh}:${mm}`;
+}

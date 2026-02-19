@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { calculateTournamentStatus, STATUS_LABELS, formatDateForInput } from '@/lib/tournament-utils';
+import { calculateTournamentStatus, STATUS_LABELS, formatDateForInput, formatKSTDate } from '@/lib/tournament-utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { updateRoundSettings, updateRoundParticipants, updateRoundLanes, updateRoundScores, manualRegister, updateLaneSettings, autoAssignRemaining, updatePaymentStatus, deleteRegistration, updateRegistration, updateLaneConfig, updateFemaleChampParticipants, updateLuckyDrawResult } from '@/app/actions/round-actions';
 import { updateTournamentBasicInfo } from '@/app/actions/tournament-center';
@@ -2012,18 +2012,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                             </div>
                         </h1>
                         <p className="text-gray-400 text-sm mt-1 flex items-center gap-2">
-                            <span>📅 {(() => {
-                                const effective = round.effectiveDateStr ? new Date(round.effectiveDateStr) : (round.date ? new Date(round.date) : null);
-                                return effective ? effective.toLocaleString('ko-KR', {
-                                    month: 'long',
-                                    day: 'numeric',
-                                    weekday: 'short',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    hour12: false,
-                                    hourCycle: 'h23'
-                                }) : '일정 미정';
-                            })()}</span>
+                            <span>📅 {formatKSTDate(round.effectiveDateStr || round.date)}</span>
                             <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
                             <span>👥 참가 {round.participants.length}명</span>
                         </p>

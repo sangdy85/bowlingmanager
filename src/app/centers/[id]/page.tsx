@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getEffectiveRoundDate, calculateTournamentStatus } from "@/lib/tournament-utils";
+import { getEffectiveRoundDate, calculateTournamentStatus, formatKSTDate } from "@/lib/tournament-utils";
 import TournamentListManager from "@/components/tournaments/TournamentListManager";
 import JoinCenterSection from "@/components/centers/JoinCenterSection";
 
@@ -193,15 +193,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
         return {
             ...t,
             status: currentStatus,
-            startDate: t.startDate.toLocaleString('ko-KR', {
-                year: 'numeric',
-                month: 'numeric',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-                hourCycle: 'h23'
-            }),
+            startDate: formatKSTDate(t.startDate),
             endDate: t.endDate.toLocaleDateString(),
         };
     });
@@ -222,15 +214,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
             participantCount: t.participantCount,
             isRegistered: t.registrations.length > 0,
             roundId: (t as any).roundId,
-            startDateLabel: rawStart.toLocaleString('ko-KR', {
-                year: 'numeric',
-                month: 'numeric',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-                hourCycle: 'h23'
-            })
+            startDateLabel: formatKSTDate(rawStart)
         };
     });
 

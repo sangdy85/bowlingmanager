@@ -84,12 +84,6 @@ export async function updateRoundSettings(
                         female: data.minusHandicapFemale
                     };
 
-                    // Also keep legacy global fields for backward compatibility or default view
-                    settings.minusHandicapRank1 = data.minusHandicapRank1;
-                    settings.minusHandicapRank2 = data.minusHandicapRank2;
-                    settings.minusHandicapRank3 = data.minusHandicapRank3;
-                    settings.minusHandicapFemale = data.minusHandicapFemale;
-
                     await prisma.tournament.update({
                         where: { id: round.tournamentId },
                         data: { settings: JSON.stringify(settings) }
@@ -582,7 +576,7 @@ export async function autoAssignRemaining(roundId: string) {
         }
 
         // Unassigned participants
-        const unassigned = round.participants.filter(p => !p.lane);
+        const unassigned = round.participants.filter((p: any) => !p.lane);
 
         if (availableSlots.length < unassigned.length) {
             throw new Error(`자리가 부족합니다. (남은 자리: ${availableSlots.length}, 대기 인원: ${unassigned.length})`);
@@ -642,9 +636,9 @@ export async function drawLane(roundId: string, registrationId: string) {
         // 2. Identify participant
         let participant;
         if (registrationId) {
-            participant = round.participants.find(p => p.registrationId === registrationId);
+            participant = round.participants.find((p: any) => p.registrationId === registrationId);
         } else if (userId) {
-            participant = round.participants.find(p => p.registration.userId === userId);
+            participant = round.participants.find((p: any) => p.registration.userId === userId);
         }
 
         if (!participant) throw new Error("참가자가 아니거나 권한이 없습니다.");
