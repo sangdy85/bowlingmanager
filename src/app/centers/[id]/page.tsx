@@ -33,6 +33,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
                     status: true,
                     startDate: true,
                     endDate: true,
+                    leagueTime: true,
                     settings: true,
                     maxParticipants: true,
                     leagueRounds: {
