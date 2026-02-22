@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { calculateTournamentStatus, STATUS_LABELS, formatDateForInput, formatKSTDate } from '@/lib/tournament-utils';
+import { calculateTournamentStatus, STATUS_LABELS, formatDateForInput, formatKSTDate, formatKSTDayLabel } from '@/lib/tournament-utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { updateRoundSettings, updateRoundParticipants, updateRoundLanes, updateRoundScores, manualRegister, updateLaneSettings, autoAssignRemaining, updatePaymentStatus, deleteRegistration, updateRegistration, updateLaneConfig, updateFemaleChampParticipants, updateLuckyDrawResult } from '@/app/actions/round-actions';
 import { updateTournamentBasicInfo } from '@/app/actions/tournament-center';
@@ -37,10 +37,10 @@ function RoundOverviewTab({ round }: { round: any }) {
                 <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 shadow-sm">
                     <h4 className="text-gray-500 text-sm font-bold mb-2 uppercase tracking-wide">대회 일정</h4>
                     <p className="text-2xl font-black text-gray-800">
-                        {round.date ? new Date(round.date).toLocaleDateString() : '미정'}
+                        {formatKSTDayLabel(round.date)}
                     </p>
                     <p className="text-sm text-gray-500 mt-2 font-medium">
-                        접수: {round.registrationStart ? new Date(round.registrationStart).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' }) : '미정'}
+                        접수: {formatKSTDate(round.registrationStart)}
                     </p>
                 </div>
                 <div className="bg-green-50 p-6 rounded-xl border border-green-100 shadow-sm">

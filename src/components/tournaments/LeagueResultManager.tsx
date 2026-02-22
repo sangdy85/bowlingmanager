@@ -1,4 +1,5 @@
 'use client';
+import { formatKSTDayLabel } from '@/lib/tournament-utils';
 
 interface Matchup {
     id: string;
@@ -93,7 +94,7 @@ export default function LeagueResultManager({
                                         )}
                                     </div>
                                     <div style={{ fontWeight: 800, fontSize: '0.875rem', color: '#64748b' }}>
-                                        {round.date ? new Date(round.date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' }) : '일정 미정'}
+                                        {formatKSTDayLabel(round.date)}
                                     </div>
                                 </div>
 

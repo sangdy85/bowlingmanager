@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { updateLeagueRoundDate } from '@/app/actions/league-actions';
+import { formatKSTMonthDay, getKSTDateString } from '@/lib/tournament-utils';
 
 interface RoundDateEditorProps {
     roundId: string;
@@ -13,7 +14,7 @@ export default function RoundDateEditor({ roundId, initialDate, isManager }: Rou
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    const formattedDate = initialDate ? new Date(initialDate).toISOString().split('T')[0] : '';
+    const formattedDate = getKSTDateString(initialDate);
 
     const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const newDate = e.target.value;
@@ -33,10 +34,7 @@ export default function RoundDateEditor({ roundId, initialDate, isManager }: Rou
     if (!isManager) {
         return (
             <div className="py-1.5 px-0.5 text-[10px] font-bold" style={{ backgroundColor: '#FFCC00' }}>
-                {initialDate ? new Date(initialDate).toLocaleDateString('ko-KR', {
-                    month: '2-digit',
-                    day: '2-digit',
-                }).replace(/\. /g, '월 ').replace(/\./g, '일') : "날짜 미정"}
+                {formatKSTMonthDay(initialDate)}
             </div>
         );
     }
@@ -63,10 +61,7 @@ export default function RoundDateEditor({ roundId, initialDate, isManager }: Rou
             style={{ backgroundColor: '#FFCC00' }}
             title="날짜 수정하려면 클릭"
         >
-            {initialDate ? new Date(initialDate).toLocaleDateString('ko-KR', {
-                month: '2-digit',
-                day: '2-digit',
-            }).replace(/\. /g, '월 ').replace(/\./g, '일') : "날짜 미정"}
+            {formatKSTMonthDay(initialDate)}
             <span className="absolute right-0.5 top-0.5 opacity-0 group-hover:opacity-100 text-[8px]">✏️</span>
         </div>
     );

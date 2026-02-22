@@ -163,3 +163,35 @@ export function formatKSTDate(dateInput: Date | string | null): string {
 
     return `${y}. ${m}. ${d}. ${hh}:${mm}`;
 }
+
+/**
+ * Formats a Date to "M월 D일 (요일)" in KST.
+ */
+export function formatKSTDayLabel(dateInput: Date | string | null): string {
+    if (!dateInput) return '일정 미정';
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return '일정 미정';
+
+    const kst = new Date(date.getTime() + 9 * 60 * 60000);
+    const m = kst.getUTCMonth() + 1;
+    const d = kst.getUTCDate();
+    const dayOfWeek = kst.getUTCDay();
+    const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+
+    return `${m}월 ${d}일 (${weekDays[dayOfWeek]})`;
+}
+
+/**
+ * Formats a Date to "MM월 DD일" in KST.
+ */
+export function formatKSTMonthDay(dateInput: Date | string | null): string {
+    if (!dateInput) return '날짜 미정';
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return '날짜 미정';
+
+    const kst = new Date(date.getTime() + 9 * 60 * 60000);
+    const m = String(kst.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(kst.getUTCDate()).padStart(2, '0');
+
+    return `${m}월 ${d}일`;
+}

@@ -3,6 +3,7 @@
 import React from 'react';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import { formatKSTMonthDay } from '@/lib/tournament-utils';
 
 interface LeagueScheduleExportProps {
     tournamentName: string;
@@ -55,10 +56,7 @@ export default function LeagueScheduleExport({ tournamentName, leagueRounds }: L
 
         // 3. Add Data Rows
         leagueRounds.forEach((round) => {
-            const dateStr = round.date ? new Date(round.date).toLocaleDateString('ko-KR', {
-                month: '2-digit',
-                day: '2-digit'
-            }).replace(/\. /g, '월 ').replace(/\./g, '일') : "날짜 미정";
+            const dateStr = formatKSTMonthDay(round.date);
 
             const rowData = [
                 `${round.roundNumber}주차`,
