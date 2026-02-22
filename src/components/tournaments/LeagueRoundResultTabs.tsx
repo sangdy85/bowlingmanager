@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import RoundResultSummary from './RoundResultSummary';
 import SideGameManager from './SideGameManager';
+import RoundBulkResultEditor from './RoundBulkResultEditor';
 
 interface LeagueRoundResultTabsProps {
     round: any;
@@ -12,7 +13,7 @@ interface LeagueRoundResultTabsProps {
 }
 
 export default function LeagueRoundResultTabs({ round, tournamentName, teamHandicapLimit, isManager = false }: LeagueRoundResultTabsProps) {
-    const [activeTab, setActiveTab] = useState<'results' | 'sideGame'>('results');
+    const [activeTab, setActiveTab] = useState<'results' | 'scoring' | 'sideGame'>(isManager ? 'scoring' : 'results');
 
     return (
         <div className="space-y-6">
@@ -26,6 +27,17 @@ export default function LeagueRoundResultTabs({ round, tournamentName, teamHandi
                 >
                     🎳 경기 결과
                 </button>
+                {isManager && (
+                    <button
+                        onClick={() => setActiveTab('scoring')}
+                        className={`flex-1 py-4 text-center font-black transition-all ${activeTab === 'scoring'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-gray-500 hover:bg-gray-50'
+                            }`}
+                    >
+                        📝 점수 입력
+                    </button>
+                )}
                 <button
                     onClick={() => setActiveTab('sideGame')}
                     className={`flex-1 py-4 text-center font-black transition-all ${activeTab === 'sideGame'
@@ -44,6 +56,15 @@ export default function LeagueRoundResultTabs({ round, tournamentName, teamHandi
                         tournamentName={tournamentName}
                         teamHandicapLimit={teamHandicapLimit}
                     />
+                ) : activeTab === 'scoring' ? (
+                    <div className="p-4 md:p-8">
+                        <RoundBulkResultEditor
+                            centerId="" // Not strictly needed for logic but props require
+                            tournamentId="" // Same
+                            round={round}
+                            teamHandicapLimit={teamHandicapLimit}
+                        />
+                    </div>
                 ) : (
                     <div className="p-4 md:p-8 bg-slate-100/50">
                         <SideGameManager
