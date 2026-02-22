@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { verifyCenterAdmin } from "@/lib/auth-utils";
 import { LEAGUE_TEMPLATES } from "@/lib/league-templates";
+import { getEffectiveRoundDate, getKSTDay, getKSTDateString } from "@/lib/tournament-utils";
 
 /**
  * Fisher-Yates Shuffle Algorithm to randomize team assignments
@@ -146,20 +147,19 @@ export async function generateLeagueSchedule(
         const dates: Date[] = [];
         const effStartDate = startDateStr ? new Date(startDateStr) : new Date(tournament.startDate);
         const effLeagueDay = (leagueDayParam !== undefined) ? leagueDayParam : (tournament.leagueDay ?? 1);
-        const [hours, minutes] = (tournament.leagueTime || "19:30").split(':').map(Number);
         const skippedDateStrings = new Set(skippedDates);
 
         let currentDate = new Date(effStartDate);
-        // Determine first valid date (matching day of week)
-        // Note: If startDate matches leagueDay, use it. Else find next.
-        let daysUntilFirst = (effLeagueDay - currentDate.getDay() + 7) % 7;
+
+        // Find first valid date matching day of week in KST
+        let daysUntilFirst = (effLeagueDay - getKSTDay(currentDate) + 7) % 7;
         currentDate.setDate(currentDate.getDate() + daysUntilFirst);
-        currentDate.setHours(hours, minutes, 0, 0);
 
         while (dates.length < roundsCount) {
-            const dateStr = currentDate.toISOString().split('T')[0];
+            const dateStr = getKSTDateString(currentDate);
             if (!skippedDateStrings.has(dateStr)) {
-                dates.push(new Date(currentDate));
+                const finalDate = getEffectiveRoundDate(currentDate, tournament.leagueTime || "19:30");
+                if (finalDate) dates.push(finalDate);
             }
             currentDate.setDate(currentDate.getDate() + 7);
         }
@@ -235,15 +235,15 @@ export async function updateLeagueScheduleDates(
     const skippedDateStrings = new Set(skippedDates);
 
     let currentDate = new Date(effStartDate);
-    let daysUntilFirst = (effLeagueDay - currentDate.getDay() + 7) % 7;
+    let daysUntilFirst = (effLeagueDay - getKSTDay(currentDate) + 7) % 7;
     currentDate.setDate(currentDate.getDate() + daysUntilFirst);
-    currentDate.setHours(hours, minutes, 0, 0);
 
     // Generate enough dates for all rounds
     while (dates.length < roundsCount) {
-        const dateStr = currentDate.toISOString().split('T')[0];
+        const dateStr = getKSTDateString(currentDate);
         if (!skippedDateStrings.has(dateStr)) {
-            dates.push(new Date(currentDate));
+            const finalDate = getEffectiveRoundDate(currentDate, tournament.leagueTime || "19:30");
+            if (finalDate) dates.push(finalDate);
         }
         currentDate.setDate(currentDate.getDate() + 7);
     }

@@ -3,19 +3,43 @@
 export function getEffectiveRoundDate(roundDate: Date | null | string, leagueTime: string | null): Date | null {
     if (!roundDate) return null;
     const date = new Date(roundDate);
-    if (!leagueTime) return date;
+    if (isNaN(date.getTime())) return null;
+
+    // Shift to KST for extraction
+    const kst = new Date(date.getTime() + 9 * 60 * 60000);
+    const yyyy = kst.getUTCFullYear();
+    const mm = String(kst.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(kst.getUTCDate()).padStart(2, '0');
+
+    if (!leagueTime) return new Date(`${yyyy}-${mm}-${dd}T00:00:00+09:00`);
 
     const [hours, minutes] = leagueTime.split(':').map(Number);
-    if (isNaN(hours) || isNaN(minutes)) return date;
-
-    // Use explicit KST offset to avoid server/client timezone shifts
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    const hh = String(hours).padStart(2, '0');
-    const min = String(minutes).padStart(2, '0');
+    const hh = String(isNaN(hours) ? 0 : hours).padStart(2, '0');
+    const min = String(isNaN(minutes) ? 0 : minutes).padStart(2, '0');
 
     return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:00+09:00`);
+}
+
+/**
+ * Returns the day of the week (0-6) of a date in KST.
+ */
+export function getKSTDay(dateInput: Date | string | null): number {
+    if (!dateInput) return 0;
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return 0;
+    const kst = new Date(date.getTime() + 9 * 60 * 60000);
+    return kst.getUTCDay();
+}
+
+/**
+ * Returns the date string (YYYY-MM-DD) of a date in KST.
+ */
+export function getKSTDateString(dateInput: Date | string | null): string {
+    if (!dateInput) return '';
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return '';
+    const kst = new Date(date.getTime() + 9 * 60 * 60000);
+    return kst.toISOString().split('T')[0];
 }
 
 // Standard Status Types
