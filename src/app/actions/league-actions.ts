@@ -90,10 +90,48 @@ export async function generateLeagueSchedule(
     }
 
     // Randomized Mapping: Team Entries mapped to Template Numbers (1 to N)
-    const shuffledTeamEntries = shuffleArray(currentTeamEntries);
+    // CRITICAL: Ensure split teams (A/B) from the same ID are paired in Round 1.
+    // In USBC templates, (1,2), (3,4), (5,6) etc. always meet in Round 1.
+
     const teamMap: Record<number, { id: string, squad: string | null }> = {};
-    shuffledTeamEntries.forEach((entry, index) => {
-        teamMap[index + 1] = entry;
+    const remainingSlots = Array.from({ length: numTeams }, (_, i) => i + 1);
+
+    // 1. Identify AB pairs
+    const abPairs: { id: string }[] = [];
+    const splitIds = Array.from(splitSet);
+    for (const id of splitIds) {
+        if (teamIds.includes(id)) {
+            abPairs.push({ id });
+        }
+    }
+
+    let currentSlotIndex = 0;
+    const usedSlots = new Set<number>();
+
+    // 2. Assign AB pairs to (1,2), (3,4), etc.
+    for (const pair of abPairs) {
+        const slotA = (currentSlotIndex * 2) + 1;
+        const slotB = (currentSlotIndex * 2) + 2;
+
+        // Randomly decide which is A and which is B slot-wise (to keep some randomness)
+        const coinFlip = Math.random() > 0.5;
+        teamMap[coinFlip ? slotA : slotB] = { id: pair.id, squad: 'A' };
+        teamMap[coinFlip ? slotB : slotA] = { id: pair.id, squad: 'B' };
+
+        usedSlots.add(slotA);
+        usedSlots.add(slotB);
+        currentSlotIndex++;
+    }
+
+    // 3. Assign remaining teams randomly
+    const remainingTeams = currentTeamEntries.filter(entry =>
+        !abPairs.some(p => p.id === entry.id)
+    );
+    const shuffledRemainingTeams = shuffleArray(remainingTeams);
+    const availableSlots = remainingSlots.filter(s => !usedSlots.has(s));
+
+    shuffledRemainingTeams.forEach((entry, index) => {
+        teamMap[availableSlots[index]] = entry;
     });
 
     // Clear existing schedule

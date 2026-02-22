@@ -73,8 +73,15 @@ export default function LeagueScheduleExport({ tournamentName, leagueRounds }: L
 
                 if (match) {
                     const [start, end] = match.lanes.split('-').map(Number);
-                    const team = lane === start ? match.teamA?.name : match.teamB?.name;
-                    rowData.push(team || "-");
+                    const isTeamA = lane === start;
+                    const team = isTeamA ? match.teamA : match.teamB;
+                    const squad = isTeamA ? match.teamASquad : match.teamBSquad;
+
+                    let displayName = team?.name || "-";
+                    if (team?.name && squad) {
+                        displayName = `${team.name} (${squad})`;
+                    }
+                    rowData.push(displayName);
                 } else {
                     rowData.push("-");
                 }
