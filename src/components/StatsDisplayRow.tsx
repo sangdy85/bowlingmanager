@@ -40,23 +40,23 @@ export default function StatsDisplayRow({ title, scores, className = "" }: Stats
     // or maybe show them but empty. Usually showing 0 is better.
 
     return (
-        <tr className={`hover:bg-slate-50 transition-colors border-b border-slate-200 group ${className}`}>
-            <td className="p-3 border-x border-slate-200 bg-[#f8fafc] font-bold text-slate-700 text-sm">
+        <tr className={`hover:bg-slate-50 transition-colors group ${className}`}>
+            <td className="p-2 border border-slate-300 bg-[#f8fafc] font-bold text-slate-800 text-[13px]">
                 {title}
             </td>
-            <td className="p-3 border-x border-slate-200 text-center font-bold text-slate-800">
+            <td className="p-2 border border-slate-300 text-center font-bold text-slate-900 text-[14px]">
                 {totalGames}
             </td>
-            <td className="p-3 border-x border-slate-200 text-center font-bold text-slate-800">
+            <td className="p-2 border border-slate-300 text-center font-bold text-slate-900 text-[14px]">
                 {totalScore.toLocaleString()}
             </td>
-            <td className="p-3 border-x border-slate-200 text-center font-black text-blue-600 italic">
+            <td className="p-2 border border-slate-300 text-center font-black text-blue-700 italic text-[14px]">
                 Avg {maxDailyAvg.toFixed(1)}
             </td>
-            <td className="p-3 border-x border-slate-200 text-center font-black text-blue-600">
+            <td className="p-2 border border-slate-300 text-center font-black text-blue-700 text-[14px]">
                 {highScore}
             </td>
-            <td className="p-3 border-x border-slate-300 text-center font-black text-blue-700 bg-[#f1f5f9] group-hover:bg-[#e2e8f0]">
+            <td className="p-2 border border-slate-300 text-center font-black text-blue-800 bg-[#E7EBF1] group-hover:bg-[#d1d9e6] text-[14px]">
                 {avgScore}
             </td>
         </tr>
