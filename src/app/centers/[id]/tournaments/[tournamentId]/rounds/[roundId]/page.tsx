@@ -119,7 +119,12 @@ export default async function RoundDetailPage({ params }: { params: { id: string
                 const validScores = scores.filter(s => s > 0);
                 const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
                 const handicap = p.registration.handicap || 0;
-                const total = totalRaw + (handicap * gamesPlayed);
+
+                // Treated consistently with RoundDetailPageContent.tsx:
+                // Positive is per game, Negative is a fixed total subtraction.
+                const positiveHandicapTotal = (handicap > 0 ? handicap : 0) * gamesPlayed;
+                const negativeHandicapTotal = handicap < 0 ? Math.abs(handicap) : 0;
+                const total = totalRaw + positiveHandicapTotal - negativeHandicapTotal;
 
                 return {
                     name: p.registration.user?.name || p.registration.guestName || 'Unknown',

@@ -1113,15 +1113,10 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             }
 
             const handicap = p.registration.handicap || 0;
-            let totalHandicap = handicap * gamesPlayed;
-
-            // Apply minus handicaps if applicable (only if all games are played or it's finalized)
-            // User requested: "마지막게임까지 진행하고 나면 그때 총점에 -20 하면돼"
             const pName = p.registration.user?.name || p.registration.guestName || 'Unknown';
             const pTeam = p.registration.guestTeamName || p.registration.team?.name || '개인회원';
 
-            // Apply minus handicaps if applicable (only if all games are played or it's finalized)
-            // User requested: "마지막게임까지 진행하고 나면 그때 총점에 -20 하면돼"
+            // 1. Calculate system penalty from previous round (minusApplied)
             let minusApplied = 0;
             if (gamesPlayed === gameCount) {
                 const matchWinner = (winner: any) => winner && winner.name === pName && winner.team === pTeam;
@@ -1136,18 +1131,20 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             const validScores = scores.filter(s => s > 0);
             const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
 
-            // BUG FIX: If user manually entered a negative handicap (penalty) already, 
-            // don't apply the system penalty again if it matches or exceeds the penalty.
-            // This prevents "cumulative" penalties when user manually adjusts them.
-            let effectiveMinus = minusApplied;
-            if (handicap < 0) {
-                // If user already has -20 handicap and penalty is 20, we don't need to subtract more.
-                // We only subtract the difference if minusApplied is greater than the existing penalty.
-                const existingPenalty = Math.abs(handicap);
-                effectiveMinus = Math.max(0, minusApplied - existingPenalty);
-            }
+            // Penalty Calculation (Non-cumulative)
+            // 1. Manual Penalty: From registration.handicap (if negative)
+            // 2. System Penalty: From previous round result (minusApplied)
+            const manualPenaltyTotal = handicap < 0 ? Math.abs(handicap) : 0;
+            const systemPenaltyTotal = minusApplied;
 
-            const finalHandicapValue = (handicap * gamesPlayed) - effectiveMinus;
+            // Use the LARGER of the two penalties (Don't sum them up)
+            const finalPenaltyTotal = Math.max(manualPenaltyTotal, systemPenaltyTotal);
+
+            // Positive handicap is multiplied by games played, 
+            // while Negative handicap is a fixed total subtraction from the final sum.
+            const positiveHandicapTotal = (handicap > 0 ? handicap : 0) * gamesPlayed;
+            const finalHandicapValue = positiveHandicapTotal - finalPenaltyTotal;
+
             const total = totalRaw + finalHandicapValue;
 
             return {
