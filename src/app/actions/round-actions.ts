@@ -1045,87 +1045,66 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
             errors: [] as string[]
         };
 
-        let index = 0;
-        for (const pData of participants) {
-            try {
-                const trimmedName = pData.name.trim();
-                const trimmedTeamName = pData.teamName?.trim() || '';
-                const nowWithOffset = new Date(Date.now() + (index++ * 1000)); // Add 1s offset to preserve order
+        const processedRoundParticipantIds = new Set<string>();
 
-                // 1. Resolve Team ID only for explicit grouping (still useful if team exists)
-                let teamId = null;
-                if (trimmedTeamName) {
-                    const team = await prisma.team.findFirst({
-                        where: {
-                            centerId: info.centerId,
-                            name: { contains: trimmedTeamName },
-                            isActive: true
-                        },
-                        select: { id: true }
-                    });
-                    teamId = team?.id || null;
-                }
+        await prisma.$transaction(async (tx: any) => {
+            let index = 0;
+            for (const pData of participants) {
+                try {
+                    const trimmedName = pData.name.trim();
+                    const trimmedTeamName = pData.teamName?.trim() || '';
+                    const nowWithOffset = new Date(Date.now() + (index++ * 1000));
+                    const handicapVal = pData.handicap !== undefined ? pData.handicap : null;
+                    const status = (pData.paymentStatus === '입금완료' || pData.paymentStatus === 'PAID') ? 'PAID' : 'PENDING';
 
-                // 2. Find existing TournamentRegistration in this tournament
-                // Strategy: Match by (Name) AND (TeamName) AS IS from the tournament list
-                let existingReg = await prisma.tournamentRegistration.findFirst({
-                    where: {
-                        tournamentId: info.tournamentId,
-                        OR: [
-                            {
-                                // Match Guest Info
-                                guestName: trimmedName,
-                                guestTeamName: trimmedTeamName || null
+                    // 1. Resolve Team ID only for explicit grouping (still useful if team exists)
+                    let teamId = null;
+                    if (trimmedTeamName) {
+                        const team = await tx.team.findFirst({
+                            where: {
+                                centerId: info.centerId,
+                                name: { contains: trimmedTeamName },
+                                isActive: true
                             },
-                            {
-                                // Match Member Info (if they were already registered as members)
-                                user: { name: trimmedName },
-                                team: { name: trimmedTeamName }
-                            },
-                            {
-                                // Match mixed (Member + Guest Team)
-                                user: { name: trimmedName },
-                                guestTeamName: trimmedTeamName || null
-                            }
-                        ]
-                    },
-                    include: {
-                        user: true,
-                        team: true
+                            select: { id: true }
+                        });
+                        teamId = team?.id || null;
                     }
-                });
 
-                let registrationId = '';
-                const handicapVal = pData.handicap !== undefined ? pData.handicap : null;
-                const status = (pData.paymentStatus === '입금완료' || pData.paymentStatus === 'PAID') ? 'PAID' : 'PENDING';
-
-                if (existingReg) {
-                    // Check shared status
-                    const regWithRounds = await prisma.tournamentRegistration.findUnique({
-                        where: { id: existingReg.id },
-                        include: { roundParticipations: true }
-                    });
-                    const sharedRounds = regWithRounds?.roundParticipations.filter((rp: any) => rp.roundId !== roundId) || [];
-                    const isShared = sharedRounds.length > 0;
-
-                    // Check if this participant is already in THIS round
-                    const existingRoundPart = await prisma.roundParticipant.findUnique({
+                    // 2. Find existing TournamentRegistration in this tournament (Strict Name + Team Match)
+                    let existingReg = await tx.tournamentRegistration.findFirst({
                         where: {
-                            roundId_registrationId: {
-                                roundId: roundId,
-                                registrationId: existingReg.id
-                            }
-                        }
+                            tournamentId: info.tournamentId,
+                            OR: [
+                                { guestName: trimmedName, guestTeamName: trimmedTeamName || null },
+                                { user: { name: trimmedName }, team: { name: trimmedTeamName } },
+                                { user: { name: trimmedName }, guestTeamName: trimmedTeamName || null }
+                            ]
+                        },
+                        include: { roundParticipations: true, user: true, team: true }
                     });
 
-                    const infoChanged = (trimmedName !== (existingReg.guestName || existingReg.user?.name || '')) ||
-                        (trimmedTeamName !== (existingReg.guestTeamName || existingReg.team?.name || '')) ||
-                        (handicapVal !== null && handicapVal !== existingReg.handicap);
+                    let registrationId = '';
 
-                    // FORK Condition: Info changed AND it's shared with other rounds
-                    if (infoChanged && isShared) {
-                        registrationId = randomUUID();
-                        await prisma.$transaction(async (tx: any) => {
+                    if (existingReg) {
+                        const sharedRounds = existingReg.roundParticipations.filter((rp: any) => rp.roundId !== roundId);
+                        const isShared = sharedRounds.length > 0;
+
+                        const existingRoundPart = await tx.roundParticipant.findUnique({
+                            where: {
+                                roundId_registrationId: {
+                                    roundId: roundId,
+                                    registrationId: existingReg.id
+                                }
+                            }
+                        });
+
+                        const infoChanged = (trimmedName !== (existingReg.guestName || existingReg.user?.name || '')) ||
+                            (trimmedTeamName !== (existingReg.guestTeamName || existingReg.team?.name || '')) ||
+                            (handicapVal !== null && handicapVal !== existingReg.handicap);
+
+                        if (infoChanged && isShared) {
+                            registrationId = randomUUID();
                             await tx.tournamentRegistration.create({
                                 data: {
                                     id: registrationId,
@@ -1141,100 +1120,111 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                             });
 
                             if (existingRoundPart) {
-                                // RE-LINK: Move existing participation to new registration to preserve lane/sorting
                                 await tx.roundParticipant.update({
                                     where: { id: existingRoundPart.id },
-                                    data: { registrationId }
+                                    data: { registrationId, createdAt: nowWithOffset }
                                 });
-                                // ALSO Migrate scores if any
+                                processedRoundParticipantIds.add(existingRoundPart.id);
+
                                 await tx.tournamentScore.updateMany({
                                     where: { roundId, registrationId: existingReg.id },
                                     data: { registrationId }
                                 });
                             }
+                            results.createdTitle++;
+                        } else {
+                            registrationId = existingReg.id;
+                            await tx.tournamentRegistration.update({
+                                where: { id: registrationId },
+                                data: {
+                                    userId: existingReg.userId,
+                                    teamId: teamId || existingReg.teamId,
+                                    guestName: existingReg.userId ? null : (trimmedName || existingReg.guestName),
+                                    guestTeamName: (existingReg.userId || teamId) ? null : (trimmedTeamName || existingReg.guestTeamName),
+                                    handicap: handicapVal !== null ? handicapVal : existingReg.handicap,
+                                    paymentStatus: status
+                                }
+                            });
+
+                            if (existingRoundPart) {
+                                await tx.roundParticipant.update({
+                                    where: { id: existingRoundPart.id },
+                                    data: { createdAt: nowWithOffset }
+                                });
+                                processedRoundParticipantIds.add(existingRoundPart.id);
+                            }
+                            results.updatedTitle++;
+                        }
+                    } else {
+                        registrationId = randomUUID();
+                        await tx.tournamentRegistration.create({
+                            data: {
+                                id: registrationId,
+                                tournamentId: info.tournamentId,
+                                userId: null, // New registration from Excel-First is always guest
+                                teamId: teamId,
+                                guestName: trimmedName,
+                                guestTeamName: teamId ? null : (trimmedTeamName || null),
+                                handicap: handicapVal,
+                                paymentStatus: status,
+                                createdAt: nowWithOffset
+                            }
                         });
                         results.createdTitle++;
+                    }
+
+                    // 3. Ensure RoundParticipant entry
+                    let participant = await tx.roundParticipant.findUnique({
+                        where: {
+                            roundId_registrationId: {
+                                roundId,
+                                registrationId
+                            }
+                        }
+                    });
+
+                    if (!participant) {
+                        participant = await tx.roundParticipant.create({
+                            data: {
+                                id: randomUUID(),
+                                roundId,
+                                registrationId,
+                                createdAt: nowWithOffset
+                            }
+                        });
                     } else {
-                        // Regular update (either already in round or info is same or not shared)
-                        registrationId = existingReg.id;
-                        await prisma.tournamentRegistration.update({
-                            where: { id: registrationId },
-                            data: {
-                                userId: existingReg.userId,
-                                teamId: teamId || existingReg.teamId,
-                                guestName: existingReg.userId ? null : (trimmedName || existingReg.guestName),
-                                guestTeamName: (existingReg.userId || teamId) ? null : (trimmedTeamName || existingReg.guestTeamName),
-                                handicap: handicapVal !== null ? handicapVal : existingReg.handicap,
-                                paymentStatus: status,
-                                // Only update createdAt if not already in round to avoid jumping in list
-                                ...(existingRoundPart ? {} : { createdAt: nowWithOffset })
-                            }
-                        });
-                        results.updatedTitle++;
-                    }
-                } else {
-                    registrationId = randomUUID();
-                    await prisma.tournamentRegistration.create({
-                        data: {
-                            id: registrationId,
-                            tournamentId: info.tournamentId,
-                            userId: null, // New registration from Excel-First is always guest
-                            teamId: teamId,
-                            guestName: trimmedName,
-                            guestTeamName: teamId ? null : (trimmedTeamName || null),
-                            handicap: handicapVal,
-                            paymentStatus: status,
-                            createdAt: nowWithOffset
-                        }
-                    });
-                    results.createdTitle++;
-                }
-
-                // 3. Ensure RoundParticipant entry
-                let participant = await prisma.roundParticipant.findUnique({
-                    where: {
-                        roundId_registrationId: {
-                            roundId,
-                            registrationId
-                        }
-                    }
-                });
-
-                if (!participant) {
-                    participant = await prisma.roundParticipant.create({
-                        data: {
-                            id: randomUUID(),
-                            roundId,
-                            registrationId,
-                            createdAt: nowWithOffset
-                        }
-                    });
-                } else {
-                    // Update existing participant createdAt too to preserve Excel order
-                    await prisma.roundParticipant.update({
-                        where: { id: participant.id },
-                        data: { createdAt: nowWithOffset }
-                    });
-                }
-
-                // 4. Update Lane if provided
-                if (pData.laneDisplay && pData.laneDisplay.includes('-')) {
-                    const [lane, slot] = pData.laneDisplay.split('-').map(Number);
-                    if (!isNaN(lane) && !isNaN(slot)) {
-                        const encodedLane = lane * 10 + slot;
-                        await prisma.roundParticipant.update({
+                        // Update existing participant createdAt too to preserve Excel order
+                        await tx.roundParticipant.update({
                             where: { id: participant.id },
-                            data: {
-                                lane: encodedLane,
-                                isManual: true
-                            }
+                            data: { createdAt: nowWithOffset }
                         });
                     }
+                    processedRoundParticipantIds.add(participant.id);
+
+                    // 4. Update Lane if provided
+                    if (pData.laneDisplay && pData.laneDisplay.includes('-')) {
+                        const [lane, slot] = pData.laneDisplay.split('-').map(Number);
+                        if (!isNaN(lane) && !isNaN(slot)) {
+                            const encodedLane = lane * 10 + slot;
+                            await tx.roundParticipant.update({
+                                where: { id: participant.id },
+                                data: { lane: encodedLane, isManual: true }
+                            });
+                        }
+                    }
+                } catch (err: any) {
+                    results.errors.push(`${pData.name}: ${err.message}`);
                 }
-            } catch (err: any) {
-                results.errors.push(`${pData.name}: ${err.message}`);
             }
-        }
+
+            // 5. [STRICT SYNC] Remove any participants in this round that were NOT in the Excel file
+            await tx.roundParticipant.deleteMany({
+                where: {
+                    roundId: roundId,
+                    id: { notIn: Array.from(processedRoundParticipantIds) }
+                }
+            });
+        });
 
         revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
         return { success: true, ...results };

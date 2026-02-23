@@ -293,7 +293,7 @@ export default function RoundParticipantManager({
                     return;
                 }
 
-                if (!confirm(`${mappedData.length}명의 데이터를 업로드하시겠습니까? (이름과 팀명이 같으면 기존 참가자 정보와 연결됩니다)`)) return;
+                if (!confirm(`${mappedData.length}명의 데이터를 업로드하시겠습니까? (이름과 팀명이 같으면 기존 참가자 정보와 연결됩니다. 이름이 같고 팀명이 다르면 새로운 참가자로 등록됩니다.)`)) return;
 
                 setLoading(true);
                 const res = await bulkRegisterParticipants(selectedRound.id, mappedData);
@@ -352,7 +352,7 @@ export default function RoundParticipantManager({
                 </div>
             )}
 
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50 p-5 rounded-2xl border-2 border-slate-200 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50 p-5 rounded-2xl border-2 border-slate-200 gap-4 mt-6">
                 <div>
                     {(!hideRoundTabs || isManager) && (
                         <h3 className="text-xl font-black text-slate-800">
@@ -362,11 +362,6 @@ export default function RoundParticipantManager({
                     )}
                     <p className="text-xs font-bold text-slate-500 mt-1">
                         현재 참여 인원: <span className="text-slate-900">{roundParticipants.length}명</span>
-                        {maxParticipants > 0 && (
-                            <span className="text-slate-500 ml-1">
-                                (정원: {maxParticipants}명 / 대기: {Math.max(0, roundParticipants.length - maxParticipants)}명)
-                            </span>
-                        )}
                     </p>
                 </div>
                 {isManager && (
