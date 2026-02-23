@@ -188,6 +188,7 @@ export default function RoundBulkResultEditor({
 
                         const moveType = round.moveLaneType;
                         const moveCount = round.moveLaneCount || 0;
+                        const offset = moveCount * 2;
 
                         currentScores.forEach((playerScore, pIdx) => {
                             const { lane: startLane, slot } = getStartInfo(pIdx);
@@ -231,19 +232,14 @@ export default function RoundBulkResultEditor({
                             // 2. Move Left: (curr - offset) < first ? (calc + total) : calc
                             // 3. Move Cross: Even -> Right, Odd -> Left
                             const calculateNextLane = (currLane: number) => {
-                                const offset = (moveCount || 0) * 2;
-                                const firstLane = round.startLane || 1;
-                                const lastLane = round.endLane || 20;
-                                const totalLanesInRound = (lastLane - firstLane) + 1;
-
                                 if (moveType === 'RIGHT') {
                                     let next = currLane + offset;
-                                    if (next > lastLane) next -= totalLanesInRound;
+                                    while (next > lastLane) next -= totalLanesInRound;
                                     return next;
                                 }
                                 if (moveType === 'LEFT') {
                                     let next = currLane - offset;
-                                    if (next < firstLane) next += totalLanesInRound;
+                                    while (next < firstLane) next += totalLanesInRound;
                                     return next;
                                 }
                                 if (moveType === 'CROSS') {
