@@ -127,8 +127,8 @@ export default async function RoundDetailPage({ params }: { params: { id: string
                 const total = totalRaw + positiveHandicapTotal - negativeHandicapTotal;
 
                 return {
-                    name: (p.registration.user?.name || p.registration.guestName || 'Unknown').trim(),
-                    team: (p.registration.guestTeamName || p.registration.team?.name || '개인회원').trim(),
+                    name: p.registration.user?.name || p.registration.guestName || 'Unknown',
+                    team: p.registration.guestTeamName || p.registration.team?.name || '개인회원',
                     total,
                     handicap,
                     hiLow,

@@ -1120,11 +1120,8 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             let minusApplied = 0;
             let rankCap = 0; // The limit/cap based on the rank setting
 
-            if (gamesPlayed > 0) {
-                const matchWinner = (winner: any) =>
-                    winner &&
-                    winner.name?.trim() === pName?.trim() &&
-                    winner.team?.trim() === pTeam?.trim();
+            if (gamesPlayed === gameCount) {
+                const matchWinner = (winner: any) => winner && winner.name === pName && winner.team === pTeam;
 
                 if (matchWinner(prevWinners.rank1)) {
                     minusApplied += Math.abs(mRank1);
