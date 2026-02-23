@@ -190,6 +190,8 @@ export default function RoundBulkResultEditor({
                         const moveCount = round.moveLaneCount || 0;
                         const offset = moveCount * 2;
 
+                        console.log(`[LaneDebug] DETECTED RANGE: ${firstLane} ~ ${lastLane} (Total: ${totalLanesInRound}), MOVE: ${moveType} (${moveCount} tables, offset: ${offset})`);
+
                         currentScores.forEach((playerScore, pIdx) => {
                             const { lane: startLane, slot } = getStartInfo(pIdx);
                             if (!startLane) return;
@@ -228,30 +230,19 @@ export default function RoundBulkResultEditor({
                                 return finalVal;
                             };
 
-                            // 1. Move Right: (curr + offset) > last ? (calc - total) : calc
-                            // 2. Move Left: (curr - offset) < first ? (calc + total) : calc
-                            // 3. Move Cross: Even -> Right, Odd -> Left
+                            // Precise Modulo-based Lane Movement Logic
                             const calculateNextLane = (currLane: number) => {
                                 if (moveType === 'RIGHT') {
-                                    let next = currLane + offset;
-                                    while (next > lastLane) next -= totalLanesInRound;
-                                    return next;
+                                    return ((currLane - firstLane + offset) % totalLanesInRound) + firstLane;
                                 }
                                 if (moveType === 'LEFT') {
-                                    let next = currLane - offset;
-                                    while (next < firstLane) next += totalLanesInRound;
-                                    return next;
+                                    return (((currLane - firstLane - offset) % totalLanesInRound + totalLanesInRound) % totalLanesInRound) + firstLane;
                                 }
                                 if (moveType === 'CROSS') {
-                                    // Even -> Move Right, Odd -> Move Left
-                                    if (currLane % 2 === 0) {
-                                        let next = currLane + offset;
-                                        while (next > lastLane) next -= totalLanesInRound;
-                                        return next;
-                                    } else {
-                                        let next = currLane - offset;
-                                        while (next < firstLane) next += totalLanesInRound;
-                                        return next;
+                                    if (currLane % 2 === 0) { // Even -> Right
+                                        return ((currLane - firstLane + offset) % totalLanesInRound) + firstLane;
+                                    } else { // Odd -> Left
+                                        return (((currLane - firstLane - offset) % totalLanesInRound + totalLanesInRound) % totalLanesInRound) + firstLane;
                                     }
                                 }
                                 return currLane;

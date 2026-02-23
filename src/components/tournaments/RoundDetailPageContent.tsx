@@ -662,24 +662,21 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
         const lastLane = round.endLane || detectedLastLane;
         const totalLanes = (lastLane - firstLane) + 1;
 
+        console.log(`[LaneDebug] DETECTED RANGE: ${firstLane} ~ ${lastLane} (Total: ${totalLanes}), MOVE: ${moveType} (${moveCount} tables, offset: ${offset})`);
+
         const calculateNextLane = (curr: number) => {
-            let next = curr;
             if (moveType === 'RIGHT') {
-                next = curr + offset;
-                while (next > lastLane) next = next - totalLanes;
+                return ((curr - firstLane + offset) % totalLanes) + firstLane;
             } else if (moveType === 'LEFT') {
-                next = curr - offset;
-                while (next < firstLane) next = next + totalLanes;
+                return (((curr - firstLane - offset) % totalLanes + totalLanes) % totalLanes) + firstLane;
             } else if (moveType === 'CROSS') {
-                if (curr % 2 === 0) { // Even
-                    next = curr + offset;
-                    while (next > lastLane) next = next - totalLanes;
-                } else { // Odd
-                    next = curr - offset;
-                    while (next < firstLane) next = next + totalLanes;
+                if (curr % 2 === 0) { // Even -> Right
+                    return ((curr - firstLane + offset) % totalLanes) + firstLane;
+                } else { // Odd -> Left
+                    return (((curr - firstLane - offset) % totalLanes + totalLanes) % totalLanes) + firstLane;
                 }
             }
-            return next;
+            return curr;
         };
 
         // For each participant, match scores based on Lane & Slot
