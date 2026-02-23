@@ -275,7 +275,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             <div className="grid grid-cols-1 gap-8">
-                <div className="bg-[#E7EBF1] border border-slate-400 p-2 font-black !text-slate-900 text-sm" style={{ border: '1px solid #94a3b8' }}>
+                <div className="bg-[#E7EBF1] border border-slate-400 p-2 font-black text-sm" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>
                     📊 {currentYear}년 개인 통계
                 </div>
 
@@ -343,7 +343,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
 
             <div className="card !bg-white !text-slate-900 border border-slate-400 shadow-none overflow-hidden p-0 rounded-none mb-4" style={{ backgroundColor: 'white', border: '1px solid #94a3b8' }}>
                 <div className="bg-[#E7EBF1] p-2 border-b border-slate-400" style={{ backgroundColor: '#E7EBF1', borderBottom: '1px solid #94a3b8' }}>
-                    <h2 className="text-sm font-black !text-slate-900 flex items-center gap-2">
+                    <h2 className="text-sm font-black flex items-center gap-2" style={{ color: '#0f172a' }}>
                         🎳 {currentYear}년 볼링장 공식 기록
                     </h2>
                 </div>
@@ -419,8 +419,8 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
 
             <div className="card !bg-white !text-slate-900 border border-slate-400 shadow-none overflow-hidden p-0 rounded-none mb-8" style={{ backgroundColor: 'white', border: '1px solid #94a3b8' }}>
                 <div className="bg-[#E7EBF1] p-2 border-b border-slate-400" style={{ backgroundColor: '#E7EBF1', borderBottom: '1px solid #94a3b8' }}>
-                    <h2 className="text-sm font-black !text-slate-900 flex items-center gap-2">
-                        📅 {currentYear}년 일별 기록 (직접 입력)
+                    <h2 className="text-sm font-black flex items-center gap-2" style={{ color: '#0f172a' }}>
+                        📅 {currentYear}년 일별 기록
                     </h2>
                 </div>
                 {myYearlyScores.length === 0 ? (
