@@ -559,9 +559,7 @@ export default function RoundParticipantManager({
                                     const isEven = idx % 2 === 1;
                                     const bgColor = isCurrentUser ? '#e0f2fe' : (isWaitlisted ? '#fffbeb' : (isEven ? '#f8fafc' : '#FFFFFF')); // Sky blue for current user
 
-                                    const displayName = reg.guestName || reg.user?.name || 'Unknown';
-                                    const displayTeam = reg.guestTeamName || reg.team?.name || '개인';
-                                    const displayHandicap = reg.handicap !== null ? reg.handicap : (reg.user?.handicap ?? 0);
+                                    const handicap = reg.user?.handicap ?? reg.handicap ?? '0';
                                     const isPaid = reg.paymentStatus === 'PAID';
 
                                     return (
@@ -574,13 +572,13 @@ export default function RoundParticipantManager({
                                                 {isWaitlisted ? `대기 ${waitNumber}` : idx + 1}
                                             </td>
                                             <td className="border-2 border-slate-900 p-1 truncate px-4">
-                                                {displayTeam}
+                                                {reg.guestTeamName || reg.team?.name || '개인'}
                                             </td>
                                             <td className="border-2 border-slate-900 p-1 truncate px-4 font-black">
-                                                {displayName}
+                                                {reg.user?.name || reg.guestName}
                                             </td>
                                             <td className="border-2 border-slate-900 p-1">
-                                                {displayHandicap}
+                                                {handicap}
                                             </td>
                                             <td className="border-2 border-slate-900 p-1">
                                                 {isManager ? (
