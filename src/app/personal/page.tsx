@@ -275,209 +275,218 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             <div className="grid grid-cols-1 gap-8">
-                <div className="card w-full">
-                    <h2 className="mb-4 text-xl font-bold border-b pb-2">
-                        {currentYear}년 개인 통계
+                <div className="bg-slate-800 p-4 border-b border-slate-700">
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        📊 {currentYear}년 개인 통계
                     </h2>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                        {/* 1. 전체 종합 (모든 팀 합산) */}
-                        <div className="bg-muted/30 p-5 rounded-xl border border-border/50 shadow-sm pb-10">
-                            <div className="mb-3 flex items-center gap-2">
-                                <span className="text-lg font-bold">👑 전체 종합</span>
-                                <span className="text-sm text-muted-foreground">(모든 팀 합산)</span>
-                            </div>
-                            <StatsDisplayRow title="Total" scores={myYearlyScores as any} />
-
-                            {/* Global Breakdown */}
-                            <div className="mt-4 pt-4 border-t border-dashed border-muted grid grid-cols-1 px-1" style={{ gap: '16px' }}>
-                                {globalRegularScores.length > 0 && <StatsDisplayRow title="정기전 (전체)" scores={globalRegularScores} />}
-                                {globalImpromptuScores.length > 0 && <StatsDisplayRow title="벙개 (전체)" scores={globalImpromptuScores} />}
-                                {globalMatchScores.length > 0 && <StatsDisplayRow title="교류전 (전체)" scores={globalMatchScores} />}
-                                {globalResidentScores.length > 0 && <StatsDisplayRow title="상주 (전체)" scores={globalResidentScores} />}
-                                {globalOtherScores.length > 0 && <StatsDisplayRow title="기타 (전체)" scores={globalOtherScores} />}
-                            </div>
-                        </div>
-
-                        {/* 2. 팀별 통계 Loop */}
-                        {Array.from(scoresByTeamName.values()).map((teamGroup: any) => {
-                            const teamScores = teamGroup.scores;
-                            const regular = teamScores.filter((s: any) => s.gameType === '정기전');
-                            const impromptu = teamScores.filter((s: any) => s.gameType === '벙개');
-                            const match = teamScores.filter((s: any) => s.gameType === '교류전');
-                            const resident = teamScores.filter((s: any) => s.gameType === '상주');
-                            const other = teamScores.filter((s: any) => !['정기전', '벙개', '교류전', '상주'].includes(s.gameType || ''));
-
-                            return (
-                                <div key={teamGroup.id} className="border-t-2 border-dashed border-muted/50" style={{ marginTop: '28px', paddingTop: '14px' }}>
-                                    <div className="flex items-center gap-2 mb-4 bg-secondary/10 p-2 rounded-lg border-l-4 border-primary">
-                                        <h3 className="text-lg font-bold text-primary pl-1">
-                                            🛡️ {teamGroup.name}
-                                        </h3>
-                                    </div>
-
-                                    <div className="flex flex-col pl-2" style={{ gap: '20px' }}>
-                                        {/* 팀 전체 */}
-                                        <div className="pr-2">
-                                            <StatsDisplayRow title="팀 전체" scores={teamScores} />
-                                        </div>
-
-                                        {/* 팀 내 세부 항목 */}
-                                        <div className="grid grid-cols-1 px-2 border-l-2 ml-2 pl-4 border-dashed border-muted" style={{ gap: '16px' }}>
-                                            {regular.length > 0 && <StatsDisplayRow title="정기전" scores={regular} />}
-                                            {impromptu.length > 0 && <StatsDisplayRow title="벙개" scores={impromptu} />}
-                                            {match.length > 0 && <StatsDisplayRow title="교류전" scores={match} />}
-                                            {resident.length > 0 && <StatsDisplayRow title="상주" scores={resident} />}
-                                            {other.length > 0 && <StatsDisplayRow title="기타" scores={other} />}
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-
-                        {myYearlyScores.length === 0 && (
-                            <p className="text-center text-muted-foreground py-4">데이터가 없습니다.</p>
-                        )}
-                    </div>
                 </div>
 
-                <div className="card !bg-white !text-slate-900 border-2 border-slate-200 shadow-xl overflow-hidden p-0 rounded-none mb-8">
-                    <div className="bg-slate-800 p-4 border-b border-slate-700">
-                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                            🎳 {currentYear}년 볼링장 공식 기록
-                        </h2>
-                    </div>
+                <div className="overflow-x-auto p-0">
+                    {/* 1. 전체 종합 (모든 팀 합산) */}
+                    <table className="w-full text-sm border-collapse rounded-none">
+                        <thead className="bg-[#f1f5f9] border-b-2 border-slate-300">
+                            <tr>
+                                <th className="p-3 border border-slate-300 text-slate-800 font-black text-left">분류 (전체 종합)</th>
+                                <th className="p-3 border border-slate-300 text-slate-800 font-black w-[80px] text-center">게임수</th>
+                                <th className="p-3 border border-slate-300 text-slate-800 font-black w-[100px] text-center">총점</th>
+                                <th className="p-3 border border-slate-300 text-slate-800 font-black w-[120px] text-center">하이(시리즈)</th>
+                                <th className="p-3 border border-slate-300 text-slate-800 font-black w-[100px] text-center">하이(단게임)</th>
+                                <th className="p-3 border border-slate-300 text-slate-800 font-black w-[70px] text-center bg-[#e2e8f0]">평균</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <StatsDisplayRow title="👑 전체 종합" scores={myYearlyScores as any} />
+                            {globalRegularScores.length > 0 && <StatsDisplayRow title="정기전 (전체)" scores={globalRegularScores} />}
+                            {globalImpromptuScores.length > 0 && <StatsDisplayRow title="벙개 (전체)" scores={globalImpromptuScores} />}
+                            {globalMatchScores.length > 0 && <StatsDisplayRow title="교류전 (전체)" scores={globalMatchScores} />}
+                            {globalResidentScores.length > 0 && <StatsDisplayRow title="상주 (전체)" scores={globalResidentScores} />}
+                            {globalOtherScores.length > 0 && <StatsDisplayRow title="기타 (전체)" scores={globalOtherScores} />}
+                        </tbody>
+                    </table>
 
-                    {officialRecords.length === 0 ? (
-                        <p className="text-center py-12 text-slate-400 text-sm italic">
-                            아직 등록된 공식 경기 기록이 없습니다.
-                        </p>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm border-collapse">
+                    {/* 2. 팀별 통계 Loop */}
+                    {Array.from(scoresByTeamName.values()).map((teamGroup: any) => {
+                        const teamScores = teamGroup.scores;
+                        const regular = teamScores.filter((s: any) => s.gameType === '정기전');
+                        const impromptu = teamScores.filter((s: any) => s.gameType === '벙개');
+                        const match = teamScores.filter((s: any) => s.gameType === '교류전');
+                        const resident = teamScores.filter((s: any) => s.gameType === '상주');
+                        const other = teamScores.filter((s: any) => !['정기전', '벙개', '교류전', '상주'].includes(s.gameType || ''));
+
+                        return (
+                            <table key={teamGroup.id} className="w-full text-sm border-collapse border-t-4 border-slate-400 mt-0">
                                 <thead className="bg-[#f1f5f9] border-b-2 border-slate-300">
                                     <tr>
-                                        <th className="p-3 border border-slate-300 text-slate-800 font-black w-[100px] text-center">날짜</th>
-                                        <th className="p-3 border border-slate-300 text-slate-800 font-black text-left">대회 / 경기명</th>
-                                        <th className="p-3 border border-slate-300 text-slate-800 font-black w-[180px] text-center">게임별 기록</th>
-                                        <th className="p-3 border border-slate-300 text-slate-800 font-black w-[70px] text-center">총점</th>
+                                        <th className="p-3 border border-slate-300 text-primary font-black text-left">🛡️ {teamGroup.name}</th>
+                                        <th className="p-3 border border-slate-300 text-slate-800 font-black w-[80px] text-center">게임수</th>
+                                        <th className="p-3 border border-slate-300 text-slate-800 font-black w-[100px] text-center">총점</th>
+                                        <th className="p-3 border border-slate-300 text-slate-800 font-black w-[120px] text-center">하이(시리즈)</th>
+                                        <th className="p-3 border border-slate-300 text-slate-800 font-black w-[100px] text-center">하이(단게임)</th>
                                         <th className="p-3 border border-slate-300 text-slate-800 font-black w-[70px] text-center bg-[#e2e8f0]">평균</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {officialRecords.map((record: any) => {
-                                        const d = new Date(record.date);
-                                        const dateLabel = `${d.getMonth() + 1}/${d.getDate()}`;
-
-                                        return (
-                                            <tr key={record.id} className="hover:bg-[#f8fafc] transition-colors border-b border-slate-200 last:border-0 group">
-                                                <td className="p-3 border-x border-slate-200 text-center text-slate-600 font-bold bg-[#f8fafc]">
-                                                    {dateLabel}
-                                                </td>
-                                                <td className="p-3 border-x border-slate-200 group-hover:bg-white">
-                                                    <div className="flex flex-col gap-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${record.typeLabel === '상주리그' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
-                                                                record.typeLabel === '이벤트전' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                                                    'bg-amber-50 text-amber-700 border-amber-200'
-                                                                }`}>
-                                                                {record.typeLabel}
-                                                            </span>
-                                                            <span className="text-[10px] font-black text-slate-400">{record.teamName}</span>
-                                                        </div>
-                                                        <span className="text-[14px] font-black text-slate-800 leading-tight">
-                                                            {record.tournamentName} {record.roundNumber ? `${record.roundNumber}회차` : ''}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="p-3 border-x border-slate-200 text-center group-hover:bg-white">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        {record.scores.map((s: number, idx: number) => (
-                                                            <React.Fragment key={idx}>
-                                                                <span className={`text-[15px] font-black ${s >= 200 ? 'text-blue-600 italic' : 'text-slate-700'}`}>
-                                                                    {s}
-                                                                </span>
-                                                                {idx < record.scores.length - 1 && <span className="text-slate-300 text-[10px]">|</span>}
-                                                            </React.Fragment>
-                                                        ))}
-                                                    </div>
-                                                </td>
-                                                <td className="p-3 border-x border-slate-200 text-center text-[15px] font-black text-slate-800 group-hover:bg-white">
-                                                    {record.total}
-                                                </td>
-                                                <td className="p-3 border-x border-slate-300 text-center text-[15px] font-black text-blue-700 bg-[#f1f5f9] group-hover:bg-[#e2e8f0]">
-                                                    {record.avg}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                    <StatsDisplayRow title="팀 전체" scores={teamScores} />
+                                    {regular.length > 0 && <StatsDisplayRow title="정기전" scores={regular} />}
+                                    {impromptu.length > 0 && <StatsDisplayRow title="벙개" scores={impromptu} />}
+                                    {match.length > 0 && <StatsDisplayRow title="교류전" scores={match} />}
+                                    {resident.length > 0 && <StatsDisplayRow title="상주" scores={resident} />}
+                                    {other.length > 0 && <StatsDisplayRow title="기타" scores={other} />}
                                 </tbody>
                             </table>
-                        </div>
+                        );
+                    })}
+
+                    {myYearlyScores.length === 0 && (
+                        <p className="text-center text-slate-400 py-12 italic">데이터가 없습니다.</p>
                     )}
                 </div>
+            </div>
 
-                <div className="card">
-                    <h2 className="mb-4 text-xl font-bold border-b pb-2">
-                        {currentYear}년 일별 기록 (직접 입력)
+            <div className="card !bg-white !text-slate-900 border-2 border-slate-200 shadow-xl overflow-hidden p-0 rounded-none mb-8">
+                <div className="bg-slate-800 p-4 border-b border-slate-700">
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        🎳 {currentYear}년 볼링장 공식 기록
                     </h2>
-                    {myYearlyScores.length === 0 ? (
-                        <p className="text-center py-8 text-secondary-foreground">
-                            아직 등록된 점수가 없습니다.
-                        </p>
-                    ) : (
-                        <div className="flex flex-col border rounded-lg overflow-hidden divide-y divide-border">
-                            {(Array.from(
-                                myYearlyScores.reduce((map: any, score: any) => {
-                                    const kstOffset = 9 * 60 * 60 * 1000;
-                                    const dateStr = new Date(score.gameDate.getTime() + kstOffset).toISOString().split('T')[0];
-                                    if (!map.has(dateStr)) {
-                                        map.set(dateStr, []);
-                                    }
-                                    map.get(dateStr)!.push(score);
-                                    return map;
-                                }, new Map<string, any[]>())
-                            ) as [string, any[]][]).map(([date, scores]) => {
-                                const totalScore = scores.reduce((sum: number, s: any) => sum + s.score, 0);
-                                const avg = (totalScore / scores.length).toFixed(1);
-
-                                return (
-                                    <div key={date} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-                                        <div className="flex items-center gap-2 min-w-[140px]">
-                                            <span className="font-semibold text-sm">{date}</span>
-                                            <span className="text-xs text-muted-foreground px-1.5 py-0.5 bg-secondary rounded-full">{scores.length}게임</span>
-                                        </div>
-
-                                        <div className="flex-1 flex items-center overflow-x-auto mx-4 no-scrollbar">
-                                            {scores.map((s: any, idx: number) => (
-                                                <React.Fragment key={s.id}>
-                                                    <span className={`text-sm ${s.score >= 200 ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
-                                                        {s.score}
-                                                    </span>
-                                                    {idx < scores.length - 1 && (
-                                                        <span className="text-muted-foreground/30 text-xs" style={{ margin: '0 15px' }}>|</span>
-                                                    )}
-                                                </React.Fragment>
-                                            ))}
-                                        </div>
-
-                                        <div className="flex items-center gap-2 min-w-[180px] justify-end text-sm">
-                                            <div className="flex items-center">
-                                                <span className="text-muted-foreground mr-2">총점&nbsp;&nbsp;</span>
-                                                <span className="font-medium text-foreground">{totalScore}</span>
-                                            </div>
-                                            <span className="text-muted-foreground/30 mx-2">|</span>
-                                            <div className="flex items-center">
-                                                <span className="text-muted-foreground mr-2">평균&nbsp;&nbsp;</span>
-                                                <span className="font-bold text-accent">{avg}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
                 </div>
+
+                {officialRecords.length === 0 ? (
+                    <p className="text-center py-12 text-slate-400 text-sm italic">
+                        아직 등록된 공식 경기 기록이 없습니다.
+                    </p>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm border-collapse">
+                            <thead className="bg-[#f1f5f9] border-b-2 border-slate-300">
+                                <tr>
+                                    <th className="p-3 border border-slate-300 text-slate-800 font-black w-[100px] text-center">날짜</th>
+                                    <th className="p-3 border border-slate-300 text-slate-800 font-black text-left">대회 / 경기명</th>
+                                    <th className="p-3 border border-slate-300 text-slate-800 font-black w-[180px] text-center">게임별 기록</th>
+                                    <th className="p-3 border border-slate-300 text-slate-800 font-black w-[70px] text-center">총점</th>
+                                    <th className="p-3 border border-slate-300 text-slate-800 font-black w-[70px] text-center bg-[#e2e8f0]">평균</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {officialRecords.map((record: any) => {
+                                    const d = new Date(record.date);
+                                    const dateLabel = `${d.getMonth() + 1}/${d.getDate()}`;
+
+                                    return (
+                                        <tr key={record.id} className="hover:bg-[#f8fafc] transition-colors border-b border-slate-200 last:border-0 group">
+                                            <td className="p-3 border-x border-slate-200 text-center text-slate-600 font-bold bg-[#f8fafc]">
+                                                {dateLabel}
+                                            </td>
+                                            <td className="p-3 border-x border-slate-200 group-hover:bg-white">
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${record.typeLabel === '상주리그' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                                                            record.typeLabel === '이벤트전' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                                                'bg-amber-50 text-amber-700 border-amber-200'
+                                                            }`}>
+                                                            {record.typeLabel}
+                                                        </span>
+                                                        <span className="text-[10px] font-black text-slate-400">{record.teamName}</span>
+                                                    </div>
+                                                    <span className="text-[14px] font-black text-slate-800 leading-tight">
+                                                        {record.tournamentName} {record.roundNumber ? `${record.roundNumber}회차` : ''}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="p-3 border-x border-slate-200 text-center group-hover:bg-white">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {record.scores.map((s: number, idx: number) => (
+                                                        <React.Fragment key={idx}>
+                                                            <span className={`text-[15px] font-black ${s >= 200 ? 'text-blue-600 italic' : 'text-slate-700'}`}>
+                                                                {s}
+                                                            </span>
+                                                            {idx < record.scores.length - 1 && <span className="text-slate-300 text-[10px]">|</span>}
+                                                        </React.Fragment>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                            <td className="p-3 border-x border-slate-200 text-center text-[15px] font-black text-slate-800 group-hover:bg-white">
+                                                {record.total}
+                                            </td>
+                                            <td className="p-3 border-x border-slate-300 text-center text-[15px] font-black text-blue-700 bg-[#f1f5f9] group-hover:bg-[#e2e8f0]">
+                                                {record.avg}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
+            <div className="card !bg-white !text-slate-900 border-2 border-slate-200 shadow-xl overflow-hidden p-0 rounded-none mb-8">
+                <div className="bg-slate-800 p-4 border-b border-slate-700">
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        📅 {currentYear}년 일별 기록 (직접 입력)
+                    </h2>
+                </div>
+                {myYearlyScores.length === 0 ? (
+                    <p className="text-center py-12 text-slate-400 text-sm italic">
+                        아직 등록된 점수가 없습니다.
+                    </p>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm border-collapse">
+                            <thead className="bg-[#f1f5f9] border-b-2 border-slate-300">
+                                <tr>
+                                    <th className="p-3 border border-slate-300 text-slate-800 font-black w-[100px] text-center">날짜</th>
+                                    <th className="p-3 border border-slate-300 text-slate-800 font-black text-center">게임수</th>
+                                    <th className="p-3 border border-slate-300 text-slate-800 font-black text-left">게임별 점수</th>
+                                    <th className="p-3 border border-slate-300 text-slate-800 font-black w-[80px] text-center">총점</th>
+                                    <th className="p-3 border border-slate-300 text-slate-800 font-black w-[80px] text-center bg-[#e2e8f0]">평균</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(Array.from(
+                                    myYearlyScores.reduce((map: any, score: any) => {
+                                        const kstOffset = 9 * 60 * 60 * 1000;
+                                        const dateStr = new Date(score.gameDate.getTime() + kstOffset).toISOString().split('T')[0];
+                                        if (!map.has(dateStr)) map.set(dateStr, []);
+                                        map.get(dateStr)!.push(score);
+                                        return map;
+                                    }, new Map<string, any[]>())
+                                ) as [string, any[]][]).map(([date, scores]) => {
+                                    const totalScore = scores.reduce((sum: number, s: any) => sum + s.score, 0);
+                                    const avg = (totalScore / scores.length).toFixed(1);
+
+                                    return (
+                                        <tr key={date} className="hover:bg-slate-50 transition-colors border-b border-slate-200 group">
+                                            <td className="p-3 border-x border-slate-200 text-center text-slate-600 font-bold bg-[#f8fafc]">
+                                                {date.split('-').slice(1).join('/')}
+                                            </td>
+                                            <td className="p-3 border-x border-slate-200 text-center font-bold text-slate-700">
+                                                {scores.length}
+                                            </td>
+                                            <td className="p-3 border-x border-slate-200 group-hover:bg-white px-6">
+                                                <div className="flex items-center gap-4 flex-wrap">
+                                                    {scores.map((s: any, idx: number) => (
+                                                        <React.Fragment key={s.id}>
+                                                            <span className={`text-[15px] font-black ${s.score >= 200 ? 'text-blue-600 italic' : 'text-slate-700'}`}>
+                                                                {s.score}
+                                                            </span>
+                                                            {idx < scores.length - 1 && <span className="text-slate-200 text-xs">|</span>}
+                                                        </React.Fragment>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                            <td className="p-3 border-x border-slate-200 text-center font-black text-slate-800 group-hover:bg-white text-[15px]">
+                                                {totalScore}
+                                            </td>
+                                            <td className="p-3 border-x border-slate-300 text-center font-black text-blue-700 bg-[#f1f5f9] group-hover:bg-[#e2e8f0] text-[15px]">
+                                                {avg}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
         </div>
     );

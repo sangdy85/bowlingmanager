@@ -40,32 +40,25 @@ export default function StatsDisplayRow({ title, scores, className = "" }: Stats
     // or maybe show them but empty. Usually showing 0 is better.
 
     return (
-        <div className={`w-full ${className}`}>
-            <h3 className="text-md font-semibold text-muted-foreground ml-1" style={{ marginBottom: '2px' }}>
-                {title} <span className="text-xs font-normal opacity-70">({totalGames} 게임)</span>
-            </h3>
-            <div className="flex w-full justify-between items-center text-center gap-2 overflow-x-auto pb-2">
-                <div className="flex-1 min-w-[100px] p-3 bg-card border rounded-lg shadow-sm">
-                    <div className="text-muted-foreground text-xs mb-1">총 게임</div>
-                    <div className="text-xl font-bold">{totalGames}</div>
-                </div>
-                <div className="flex-1 min-w-[100px] p-3 bg-card border rounded-lg shadow-sm">
-                    <div className="text-muted-foreground text-xs mb-1">총점</div>
-                    <div className="text-xl font-bold">{totalScore.toLocaleString()}</div>
-                </div>
-                <div className="flex-1 min-w-[100px] p-3 bg-card border rounded-lg shadow-sm">
-                    <div className="text-muted-foreground text-xs mb-1">하이 (시리즈)</div>
-                    <div className="text-lg font-bold text-primary">Avg {maxDailyAvg.toFixed(1)}</div>
-                </div>
-                <div className="flex-1 min-w-[100px] p-3 bg-card border rounded-lg shadow-sm">
-                    <div className="text-muted-foreground text-xs mb-1">하이 (단게임)</div>
-                    <div className="text-xl font-bold text-primary">{highScore}</div>
-                </div>
-                <div className="flex-1 min-w-[100px] p-3 bg-card border rounded-lg shadow-sm">
-                    <div className="text-muted-foreground text-xs mb-1">평균 (G.Avg)</div>
-                    <div className="text-xl font-bold text-accent">{avgScore}</div>
-                </div>
-            </div>
-        </div>
+        <tr className={`hover:bg-slate-50 transition-colors border-b border-slate-200 group ${className}`}>
+            <td className="p-3 border-x border-slate-200 bg-[#f8fafc] font-bold text-slate-700 text-sm">
+                {title}
+            </td>
+            <td className="p-3 border-x border-slate-200 text-center font-bold text-slate-800">
+                {totalGames}
+            </td>
+            <td className="p-3 border-x border-slate-200 text-center font-bold text-slate-800">
+                {totalScore.toLocaleString()}
+            </td>
+            <td className="p-3 border-x border-slate-200 text-center font-black text-blue-600 italic">
+                Avg {maxDailyAvg.toFixed(1)}
+            </td>
+            <td className="p-3 border-x border-slate-200 text-center font-black text-blue-600">
+                {highScore}
+            </td>
+            <td className="p-3 border-x border-slate-300 text-center font-black text-blue-700 bg-[#f1f5f9] group-hover:bg-[#e2e8f0]">
+                {avgScore}
+            </td>
+        </tr>
     );
 }
