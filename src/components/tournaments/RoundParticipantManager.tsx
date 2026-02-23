@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { updatePaymentStatus, deleteRegistration, manualRegister, updateRegistration, updateRoundLanes, searchPlayers, bulkRegisterParticipants } from '@/app/actions/round-actions';
+import { updatePaymentStatus, deleteRegistration, removeFromRound, manualRegister, updateRegistration, updateRoundLanes, searchPlayers, bulkRegisterParticipants } from '@/app/actions/round-actions';
 import { formatLane } from '@/lib/tournament-utils';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
@@ -191,9 +191,20 @@ export default function RoundParticipantManager({
     };
 
     const handleDelete = async (regId: string) => {
-        if (!confirm('정말 삭제하시겠습니까? 관련 데이터가 모두 삭제됩니다.')) return;
+        const isChampOrLeague = tournamentType === 'CHAMP' || tournamentType === 'LEAGUE';
+
+        const message = isChampOrLeague
+            ? "이 회차에서만 제외하시겠습니까?\n(다른 회차의 기록과 대회 참가 정보는 유지됩니다.)"
+            : "정말 삭제하시겠습니까? 관련 데이터가 모두 삭제됩니다.";
+
+        if (!confirm(message)) return;
+
         try {
-            await deleteRegistration(regId);
+            if (isChampOrLeague) {
+                await removeFromRound(selectedRound.id, regId);
+            } else {
+                await deleteRegistration(regId);
+            }
             triggerUpdate();
         } catch (e: any) {
             alert(e.message);

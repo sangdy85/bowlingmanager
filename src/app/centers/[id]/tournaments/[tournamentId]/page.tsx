@@ -101,7 +101,7 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
         PLANNING: { label: "준비 중", color: "bg-gray-500" },
         JOINING: { label: "모집 중", color: "bg-green-500" },
         ONGOING: { label: "진행 중", color: "bg-blue-500" },
-        FINISHED: { label: "종료", color: "bg-secondary-foreground" },
+        FINISHED: { label: "종료", color: "bg-red-600" },
     };
 
     const typeMap: Record<string, { label: string, color: string }> = {
@@ -223,7 +223,7 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                             {typeMap[safeTournament.type]?.label || safeTournament.type}
                         </span>
                         <span className="text-secondary-foreground font-medium flex items-center gap-1.5">
-                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${safeTournament.status === 'FINISHED' ? 'bg-gray-400' :
+                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${safeTournament.status === 'FINISHED' ? 'bg-red-500' :
                                 (safeTournament.status === 'ONGOING' || hasStarted) ? 'bg-blue-500' : 'bg-green-500'
                                 }`}></span>
                             {safeTournament.status === 'FINISHED' ? '종료' :

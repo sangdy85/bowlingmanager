@@ -1953,7 +1953,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
         OPEN: { label: STATUS_LABELS.OPEN, color: "bg-green-500" },
         CLOSED: { label: STATUS_LABELS.CLOSED, color: "bg-red-500" },
         ONGOING: { label: STATUS_LABELS.ONGOING, color: "bg-blue-600" },
-        FINISHED: { label: STATUS_LABELS.FINISHED, color: "bg-slate-700" },
+        FINISHED: { label: STATUS_LABELS.FINISHED, color: "bg-red-600" },
     };
 
     useEffect(() => {

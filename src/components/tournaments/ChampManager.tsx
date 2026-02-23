@@ -132,7 +132,7 @@ export default function ChampManager({ tournament, centerId, isManager, currentU
                                     </p>
                                     <p style={{ fontSize: '14px', fontWeight: 500, color: '#e2e8f0', margin: 0 }}>
                                         현재 상태: <span style={{
-                                            color: status === 'OPEN' ? '#60a5fa' : status === 'CLOSED' ? '#94a3b8' : '#facc15',
+                                            color: status === 'OPEN' ? '#60a5fa' : status === 'FINISHED' ? '#ef4444' : status === 'CLOSED' ? '#94a3b8' : '#facc15',
                                             fontWeight: 700
                                         }}>{statusText}</span>
                                     </p>

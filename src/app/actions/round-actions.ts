@@ -795,6 +795,32 @@ export async function deleteRegistration(registrationId: string) {
     }
 }
 
+// 10-1. Remove From Round (Specific round only, preserve registration)
+export async function removeFromRound(roundId: string, registrationId: string) {
+    try {
+        const info = await getTournamentInfo(roundId);
+        if (!info) throw new Error("라운드 정보를 찾을 수 없습니다.");
+
+        // 1. Delete scores for this specific round and registration
+        await prisma.$executeRaw`
+            DELETE FROM "TournamentScore" 
+            WHERE "roundId" = ${roundId} AND "registrationId" = ${registrationId}
+        `;
+
+        // 2. Delete the participant entry for this round
+        await prisma.$executeRaw`
+            DELETE FROM "RoundParticipant" 
+            WHERE "roundId" = ${roundId} AND "registrationId" = ${registrationId}
+        `;
+
+        revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
+        return { success: true };
+    } catch (e: any) {
+        console.error(e);
+        throw new Error("회차 제외 실패: " + e.message);
+    }
+}
+
 // 11. Update Registration (Edit info)
 export async function updateRegistration(
     registrationId: string,
