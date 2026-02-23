@@ -25,7 +25,6 @@ export async function registerForTournament(tournamentId: string, participants: 
     const now = new Date();
     let isRecruiting = tournament.status === 'JOINING' || tournament.status === 'ONGOING';
 
-    // ... (rest of recruiting check logic stays the same)
     if (tournament.type === 'CHAMP') {
         const settings = tournament.settings ? JSON.parse(tournament.settings) : {};
         const leagueTime = settings.leagueTime;
@@ -62,95 +61,119 @@ export async function registerForTournament(tournamentId: string, participants: 
 
         if (recruitingRound) {
             targetRoundId = recruitingRound.id;
-            const alreadyInRound = await prisma.roundParticipant.findFirst({
-                where: {
-                    roundId: targetRoundId,
-                    registration: {
-                        userId: session.user.id,
-                        tournamentId: tournamentId
-                    }
-                }
-            });
-            if (alreadyInRound) throw new Error("이미 해당 회차에 신청하셨습니다.");
         }
     }
 
     // Assign a unique group ID for this registration session
     const entryGroupId = uuidv4();
 
-    // Perform registration in a transaction to ensure atomic team registration
+    // Perform registration in a transaction
     const results = await prisma.$transaction(async (tx) => {
         const regResults = [];
 
         for (const p of participants) {
-            let registrationTeamId = p.isMe ? null : p.teamId; // Default for guests
+            let registrationId: string;
+            let registrationTeamId = p.isMe ? null : p.teamId;
 
             if (p.isMe) {
-                // Look up user's team preference for this center
-                const centerMember = await tx.centerMember.findUnique({
+                // Check if already has a registration for this tournament (to avoid duplicates)
+                const existingReg = await tx.tournamentRegistration.findUnique({
                     where: {
-                        userId_centerId: {
-                            userId: session.user.id,
-                            centerId: tournament.centerId
+                        tournamentId_userId: {
+                            tournamentId,
+                            userId: session.user.id
                         }
                     }
                 });
-                registrationTeamId = centerMember?.teamId || null;
-            }
 
-            const registration = await tx.tournamentRegistration.create({
-                data: {
-                    tournamentId,
-                    userId: p.isMe ? session.user.id : null,
-                    guestName: p.isMe ? null : p.name,
-                    guestTeamName: p.isMe ? null : p.teamName,
-                    teamId: registrationTeamId,
-                    handicap: p.handicap || 0,
-                    entryGroupId: entryGroupId,
-                    paymentStatus: 'PENDING',
+                if (existingReg) {
+                    registrationId = existingReg.id;
+                    // If CHAMP, check if already in the target round
+                    if (tournament.type === 'CHAMP' && targetRoundId) {
+                        const inRound = await tx.roundParticipant.findUnique({
+                            where: {
+                                roundId_registrationId: {
+                                    roundId: targetRoundId,
+                                    registrationId: registrationId
+                                }
+                            }
+                        });
+                        if (inRound) throw new Error("이미 해당 회차에 신청하셨습니다.");
+                    }
+                } else {
+                    const centerMember = await tx.centerMember.findUnique({
+                        where: {
+                            userId_centerId: {
+                                userId: session.user.id,
+                                centerId: tournament.centerId
+                            }
+                        }
+                    });
+                    registrationTeamId = centerMember?.teamId || null;
+
+                    const newReg = await tx.tournamentRegistration.create({
+                        data: {
+                            tournamentId,
+                            userId: session.user.id,
+                            teamId: registrationTeamId,
+                            handicap: p.handicap || 0,
+                            entryGroupId: entryGroupId,
+                            paymentStatus: 'PENDING',
+                        }
+                    });
+                    registrationId = newReg.id;
                 }
-            });
+            } else {
+                // For guests, always create a new registration (they are logically distinct per session)
+                const guestReg = await tx.tournamentRegistration.create({
+                    data: {
+                        tournamentId,
+                        guestName: p.name,
+                        guestTeamName: p.teamName,
+                        handicap: p.handicap || 0,
+                        entryGroupId: entryGroupId,
+                        paymentStatus: 'PENDING',
+                    }
+                });
+                registrationId = guestReg.id;
+            }
 
             // Join rounds
             if (tournament.type === 'CHAMP' && targetRoundId) {
                 await (tx as any).roundParticipant.create({
                     data: {
                         roundId: targetRoundId,
-                        registrationId: registration.id,
+                        registrationId,
                     }
                 });
             } else if (tournament.type === 'EVENT' && tournament.leagueRounds.length > 0) {
-                const roundParticipantsData = tournament.leagueRounds.map((round: any) => ({
-                    roundId: round.id,
-                    registrationId: registration.id,
-                }));
-
-                await (tx as any).roundParticipant.createMany({
-                    data: roundParticipantsData
-                });
+                // For EVENT, usually joins all rounds assigned to it
+                for (const round of tournament.leagueRounds) {
+                    await (tx as any).roundParticipant.upsert({
+                        where: {
+                            roundId_registrationId: {
+                                roundId: round.id,
+                                registrationId,
+                            }
+                        },
+                        create: {
+                            roundId: round.id,
+                            registrationId,
+                        },
+                        update: {}
+                    });
+                }
             }
-            regResults.push(registration);
+            // For results tracking in return
+            regResults.push({ id: registrationId });
         }
         return regResults;
     });
-
-    const rank = await prisma.tournamentRegistration.count({
-        where: {
-            tournamentId: tournamentId,
-            createdAt: { lt: results[0].createdAt }
-        }
-    });
-
-    const isWaitlisted = rank >= tournament.maxParticipants;
-    const waitlistNo = isWaitlisted ? rank - tournament.maxParticipants + 1 : 0;
 
     revalidatePath(`/centers/${tournament.centerId}/tournaments/${tournamentId}`);
 
     return {
         success: true,
-        rank: rank + 1,
-        isWaitlisted,
-        waitlistNo
     };
 }
 
@@ -158,17 +181,59 @@ export async function cancelRegistration(tournamentId: string) {
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
 
-    await prisma.tournamentRegistration.deleteMany({
-        where: {
-            tournamentId,
-            userId: session.user.id
-        }
-    });
-
     const tournament = await prisma.tournament.findUnique({
         where: { id: tournamentId },
-        select: { centerId: true }
+        include: { leagueRounds: true }
     });
 
-    revalidatePath(`/centers/${tournament?.centerId}/tournaments/${tournamentId}`);
+    if (!tournament) throw new Error("Tournament not found");
+
+    if (tournament.type === 'CHAMP') {
+        // For CHAMP, we only cancel the participation in the CURRENT recruiting round
+        const settings = tournament.settings ? JSON.parse(tournament.settings) : {};
+        const leagueTime = settings.leagueTime;
+
+        const recruitingRound = tournament.leagueRounds.find(r => {
+            const effectiveDate = getEffectiveRoundDate(r.date, leagueTime);
+            const status = calculateTournamentStatus(effectiveDate, r.registrationStart, r.date, tournament.status);
+            return status === 'OPEN' || status === 'CLOSED' || status === 'ONGOING';
+        });
+
+        if (recruitingRound) {
+            // Find the registration first
+            const registration = await prisma.tournamentRegistration.findUnique({
+                where: {
+                    tournamentId_userId: {
+                        tournamentId,
+                        userId: session.user.id
+                    }
+                }
+            });
+
+            if (registration) {
+                await prisma.roundParticipant.delete({
+                    where: {
+                        roundId_registrationId: {
+                            roundId: recruitingRound.id,
+                            registrationId: registration.id
+                        }
+                    }
+                });
+
+                // If this was the ONLY round participant for this registration across ALL rounds,
+                // we COULD delete the registration too, but keeping it for history/center settings is safer.
+                // For now, just removing from round is the goal.
+            }
+        }
+    } else {
+        // For EVENT or others, delete the whole registration (cascades)
+        await prisma.tournamentRegistration.deleteMany({
+            where: {
+                tournamentId,
+                userId: session.user.id
+            }
+        });
+    }
+
+    revalidatePath(`/centers/${tournament.centerId}/tournaments/${tournamentId}`);
 }

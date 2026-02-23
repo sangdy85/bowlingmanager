@@ -995,15 +995,44 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
 
         for (const pData of participants) {
             try {
-                // 1. Find or Create Registration
-                // We match by name for guests.
-                const existingReg = await prisma.tournamentRegistration.findFirst({
+                // 1. Try to find a matching member in the center
+                const member = await prisma.user.findFirst({
                     where: {
-                        tournamentId: info.tournamentId,
-                        guestName: pData.name,
-                        userId: null // Only match ad-hoc guest registrations
-                    }
+                        name: pData.name,
+                        CenterMember: {
+                            some: {
+                                centerId: info.centerId
+                            }
+                        }
+                    },
+                    select: { id: true }
                 });
+
+                const userId = member?.id || null;
+
+                // 2. Find or Create Registration
+                let existingReg = null;
+                if (userId) {
+                    existingReg = await prisma.tournamentRegistration.findUnique({
+                        where: {
+                            tournamentId_userId: {
+                                tournamentId: info.tournamentId,
+                                userId: userId
+                            }
+                        }
+                    });
+                }
+
+                // If no registration found for the userId, try looking for a guest registration with the same name
+                if (!existingReg) {
+                    existingReg = await prisma.tournamentRegistration.findFirst({
+                        where: {
+                            tournamentId: info.tournamentId,
+                            guestName: pData.name,
+                            userId: null // Only match guest registrations
+                        }
+                    });
+                }
 
                 let registrationId = '';
                 const handicapVal = pData.handicap !== undefined ? pData.handicap : null;
@@ -1014,7 +1043,9 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                     await prisma.tournamentRegistration.update({
                         where: { id: registrationId },
                         data: {
-                            guestTeamName: pData.teamName || existingReg.guestTeamName,
+                            userId: existingReg.userId || userId, // Link userId if found
+                            guestName: userId ? null : (pData.name || existingReg.guestName), // Clear guestName if member
+                            guestTeamName: userId ? null : (pData.teamName || existingReg.guestTeamName),
                             handicap: handicapVal !== null ? handicapVal : existingReg.handicap,
                             paymentStatus: status
                         }
@@ -1026,8 +1057,9 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                         data: {
                             id: registrationId,
                             tournamentId: info.tournamentId,
-                            guestName: pData.name,
-                            guestTeamName: pData.teamName || null,
+                            userId: userId, // Could be null if no member found
+                            guestName: userId ? null : pData.name,
+                            guestTeamName: userId ? null : (pData.teamName || null),
                             handicap: handicapVal,
                             paymentStatus: status,
                             createdAt: new Date()

@@ -45,6 +45,14 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
                             registrationStart: true,
                             _count: {
                                 select: { participants: true }
+                            },
+                            participants: {
+                                where: {
+                                    registration: {
+                                        userId: session?.user?.id || 'none'
+                                    }
+                                },
+                                select: { id: true }
                             }
                         }
                     },
@@ -129,7 +137,8 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
                     startDate: nextRound.effectiveDate || nextRound.date || t.startDate,
                     roundId: nextRound.id,
                     participantCount: (nextRound as any)._count.participants,
-                    calculatedStatus: nextRound.calculatedStatus
+                    calculatedStatus: nextRound.calculatedStatus,
+                    isRegisteredInRound: nextRound.participants.length > 0
                 }];
             }
             return [];
@@ -213,7 +222,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
             status: (t as any).calculatedStatus, // Use the status we already calculated!
             maxParticipants: t.maxParticipants,
             participantCount: t.participantCount,
-            isRegistered: t.registrations.length > 0,
+            isRegistered: t.type === 'CHAMP' ? (t as any).isRegisteredInRound : (t.registrations.length > 0),
             roundId: (t as any).roundId,
             startDateLabel: formatKSTDate(rawStart)
         };

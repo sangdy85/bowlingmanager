@@ -82,7 +82,7 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
     }
 
     const isManager = tournament.center.managers.some((m: any) => m.id === session?.user?.id) || tournament.center.ownerId === session?.user?.id;
-    const isRegistered = tournament.registrations.some((r: any) => r.userId === session?.user?.id);
+    const isRegAtTournament = tournament.registrations.some((r: any) => r.userId === session?.user?.id);
 
     // If user is manager and it's an EVENT, redirect to the only round's management page
     if (isManager && tournament.type === 'EVENT' && tournament.leagueRounds.length > 0) {
@@ -188,6 +188,12 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
         }
     }
 
+    // Determine if user is registered in the SPECIFIC round (for accurate button state)
+    let isRegisteredInRound = isRegAtTournament;
+    if (initialRound) {
+        isRegisteredInRound = initialRound.participants?.some((p: any) => p.registration?.userId === session?.user?.id);
+    }
+
     // Merge processed rounds back into tournament for passing to client components
     const safeTournamentRaw = {
         ...tournament,
@@ -272,7 +278,7 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                     leaderboardData={leaderboardData}
                     individualData={individualData}
                     currentUserId={session?.user?.id}
-                    isRegistered={isRegistered}
+                    isRegistered={isRegisteredInRound}
                     hasStarted={hasStarted}
                     initialRoundId={initialRound?.id}
                 />
@@ -416,7 +422,7 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                                         <div className="w-full">
                                             <TournamentRegButton
                                                 tournament={safeTournament}
-                                                isRegistered={isRegistered}
+                                                isRegistered={isRegisteredInRound}
                                                 canJoin={safeTournament.status !== 'FINISHED'}
                                             />
                                         </div>
