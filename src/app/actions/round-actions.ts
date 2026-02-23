@@ -993,15 +993,22 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
             errors: [] as string[]
         };
 
+        let index = 0;
         for (const pData of participants) {
             try {
-                // 1. Try to find a matching member in the center
+                const trimmedName = pData.name.trim();
+                const nowWithOffset = new Date(Date.now() + (index++ * 1000)); // Add 1s offset to preserve order
+
+                // 1. Try to find a matching member in the center (By Name or Alias)
                 const member = await prisma.user.findFirst({
                     where: {
-                        name: pData.name,
                         CenterMember: {
                             some: {
-                                centerId: info.centerId
+                                centerId: info.centerId,
+                                OR: [
+                                    { alias: trimmedName },
+                                    { User: { name: trimmedName } }
+                                ]
                             }
                         }
                     },
@@ -1028,7 +1035,7 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                     existingReg = await prisma.tournamentRegistration.findFirst({
                         where: {
                             tournamentId: info.tournamentId,
-                            guestName: pData.name,
+                            guestName: trimmedName,
                             userId: null // Only match guest registrations
                         }
                     });
@@ -1036,7 +1043,7 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
 
                 let registrationId = '';
                 const handicapVal = pData.handicap !== undefined ? pData.handicap : null;
-                const status = pData.paymentStatus === '입금완료' || pData.paymentStatus === 'PAID' ? 'PAID' : 'PENDING';
+                const status = (pData.paymentStatus === '입금완료' || pData.paymentStatus === 'PAID') ? 'PAID' : 'PENDING';
 
                 if (existingReg) {
                     registrationId = existingReg.id;
@@ -1044,10 +1051,11 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                         where: { id: registrationId },
                         data: {
                             userId: existingReg.userId || userId, // Link userId if found
-                            guestName: userId ? null : (pData.name || existingReg.guestName), // Clear guestName if member
+                            guestName: userId ? null : (trimmedName || existingReg.guestName), // Clear guestName if member
                             guestTeamName: userId ? null : (pData.teamName || existingReg.guestTeamName),
                             handicap: handicapVal !== null ? handicapVal : existingReg.handicap,
-                            paymentStatus: status
+                            paymentStatus: status,
+                            createdAt: nowWithOffset // Update createdAt to preserve Excel order
                         }
                     });
                     results.updatedTitle++;
@@ -1058,17 +1066,17 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                             id: registrationId,
                             tournamentId: info.tournamentId,
                             userId: userId, // Could be null if no member found
-                            guestName: userId ? null : pData.name,
+                            guestName: userId ? null : trimmedName,
                             guestTeamName: userId ? null : (pData.teamName || null),
                             handicap: handicapVal,
                             paymentStatus: status,
-                            createdAt: new Date()
+                            createdAt: nowWithOffset
                         }
                     });
                     results.createdTitle++;
                 }
 
-                // 2. Ensure RoundParticipant entry
+                // 3. Ensure RoundParticipant entry
                 let participant = await prisma.roundParticipant.findUnique({
                     where: {
                         roundId_registrationId: {
@@ -1084,12 +1092,18 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                             id: randomUUID(),
                             roundId,
                             registrationId,
-                            createdAt: new Date()
+                            createdAt: nowWithOffset
                         }
+                    });
+                } else {
+                    // Update existing participant createdAt too to preserve Excel order
+                    await prisma.roundParticipant.update({
+                        where: { id: participant.id },
+                        data: { createdAt: nowWithOffset }
                     });
                 }
 
-                // 3. Update Lane if provided
+                // 4. Update Lane if provided
                 if (pData.laneDisplay && pData.laneDisplay.includes('-')) {
                     const [lane, slot] = pData.laneDisplay.split('-').map(Number);
                     if (!isNaN(lane) && !isNaN(slot)) {

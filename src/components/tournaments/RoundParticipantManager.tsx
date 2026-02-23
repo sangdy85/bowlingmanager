@@ -723,58 +723,7 @@ export default function RoundParticipantManager({
                 </div>
             </div>
 
-            {/* Manager-only: List of tournament registrants NOT in this round (Hide for CHAMP) */}
-            {isManager && !isEvent && tournamentType !== 'CHAMP' && (
-                <div className="mt-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 p-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <h4 className="text-sm font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                            <span>👥</span> 대회 전체 신청자 중 미참여 인원
-                        </h4>
-                        <span className="text-xs font-bold text-slate-400">
-                            {allRegistrations.filter((reg: any) => !roundParticipants.some((p: any) => p.id === reg.id)).length}명
-                        </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {(allRegistrations || [])
-                            .filter((reg: any) => !roundParticipants.some((p: any) => p.id === reg.id))
-                            .map((reg: any) => (
-                                <div key={reg.id} className="bg-white p-3 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-black text-slate-800">{reg.user?.name || reg.guestName}</span>
-                                        <span className="text-[10px] font-bold text-slate-400">{reg.guestTeamName || reg.team?.name || '개인'}</span>
-                                    </div>
-                                    <button
-                                        onClick={async () => {
-                                            try {
-                                                const res = await manualRegister(selectedRound.id, {
-                                                    type: reg.userId ? 'MEMBER' : 'GUEST',
-                                                    userId: reg.userId || undefined,
-                                                    guestName: reg.guestName || undefined,
-                                                    guestTeam: reg.guestTeamName || undefined,
-                                                    handicap: reg.handicap || reg.user?.handicap || 0
-                                                });
-                                                if (res.success) {
-                                                    window.location.reload();
-                                                }
-                                            } catch (e: any) {
-                                                alert(e.message);
-                                            }
-                                        }}
-                                        className="btn btn-xs bg-slate-100 hover:bg-primary hover:text-white border-0 text-slate-600 font-bold px-3 h-8 rounded-lg transition-all"
-                                    >
-                                        + 회차 추가
-                                    </button>
-                                </div>
-                            ))}
-                        {(allRegistrations || []).filter((reg: any) => !roundParticipants.some((p: any) => p.id === reg.id)).length === 0 && (
-                            <div className="col-span-full py-6 text-center text-xs font-bold text-slate-400 italic">
-                                모든 신청자가 이 회차에 참여 중입니다.
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
+            {/* Manager-only: List of tournament registrants NOT in this round (Deleted as requested) */}
         </div>
     );
 }

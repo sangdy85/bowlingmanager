@@ -1136,7 +1136,18 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             const validScores = scores.filter(s => s > 0);
             const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
 
-            const finalHandicapValue = totalHandicap - minusApplied;
+            // BUG FIX: If user manually entered a negative handicap (penalty) already, 
+            // don't apply the system penalty again if it matches or exceeds the penalty.
+            // This prevents "cumulative" penalties when user manually adjusts them.
+            let effectiveMinus = minusApplied;
+            if (handicap < 0) {
+                // If user already has -20 handicap and penalty is 20, we don't need to subtract more.
+                // We only subtract the difference if minusApplied is greater than the existing penalty.
+                const existingPenalty = Math.abs(handicap);
+                effectiveMinus = Math.max(0, minusApplied - existingPenalty);
+            }
+
+            const finalHandicapValue = (handicap * gamesPlayed) - effectiveMinus;
             const total = totalRaw + finalHandicapValue;
 
             return {
