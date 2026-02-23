@@ -150,22 +150,60 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         }
     });
 
-    // 데이터 규격화 (Normalization for display)
-    const officialRecords = [
-        ...leagueScores.flatMap((ls: any) => [
-            { id: `${ls.id}-1`, score: ls.score1, date: ls.createdAt, type: '리그', tournamentName: ls.LeagueMatchup.round.tournament.name, teamName: ls.Team.name },
-            { id: `${ls.id}-2`, score: ls.score2, date: ls.createdAt, type: '리그', tournamentName: ls.LeagueMatchup.round.tournament.name, teamName: ls.Team.name },
-            { id: `${ls.id}-3`, score: ls.score3, date: ls.createdAt, type: '리그', tournamentName: ls.LeagueMatchup.round.tournament.name, teamName: ls.Team.name }
-        ].filter(s => s.score > 0)),
-        ...tournamentScores.map((ts: any) => ({
-            id: ts.id,
-            score: ts.score,
-            date: ts.createdAt,
-            type: ts.round ? '이벤트' : '대회',
-            tournamentName: ts.registration.tournament.name,
-            teamName: ts.registration.team?.name || ts.registration.guestTeamName || '개인'
-        }))
-    ].sort((a, b) => b.date.getTime() - a.date.getTime());
+    // --- 공식 기록 데이터 그룹화 로직 ---
+    const groupedOfficialMap = new Map<string, any>();
+
+    // 1. 리그 기록 그룹화 (ls 하나가 1-3G 세트이므로 이미 그룹화하기 쉬움)
+    leagueScores.forEach((ls: any) => {
+        const dateStr = ls.createdAt.toLocaleDateString();
+        const key = `${dateStr}_${ls.LeagueMatchup.round.tournament.name}_${ls.Team.name}`;
+
+        const scores = [ls.score1, ls.score2, ls.score3].filter(s => s > 0);
+        if (scores.length === 0) return;
+
+        const total = scores.reduce((a, b) => a + b, 0);
+        const avg = total / scores.length;
+
+        groupedOfficialMap.set(key, {
+            id: ls.id,
+            date: ls.createdAt,
+            type: '리그',
+            tournamentName: ls.LeagueMatchup.round.tournament.name,
+            teamName: ls.Team.name,
+            scores,
+            total,
+            avg: avg.toFixed(1)
+        });
+    });
+
+    // 2. 대회 기록 그룹화 (ts는 단일 게임 기록일 수 있으므로 병합 필요)
+    tournamentScores.forEach((ts: any) => {
+        const dateStr = ts.createdAt.toLocaleDateString();
+        const tName = ts.registration.tournament.name;
+        const team = ts.registration.team?.name || ts.registration.guestTeamName || '개인';
+        const key = `${dateStr}_${tName}_${team}`;
+
+        if (!groupedOfficialMap.has(key)) {
+            groupedOfficialMap.set(key, {
+                id: ts.id,
+                date: ts.createdAt,
+                type: ts.round ? '이벤트' : '대회',
+                tournamentName: tName,
+                teamName: team,
+                scores: [],
+                total: 0,
+                avg: '0'
+            });
+        }
+
+        const group = groupedOfficialMap.get(key);
+        group.scores.push(ts.score);
+        group.total += ts.score;
+        group.avg = (group.total / group.scores.length).toFixed(1);
+    });
+
+    const officialRecords = Array.from(groupedOfficialMap.values())
+        .sort((a, b) => b.date.getTime() - a.date.getTime());
 
 
     // 팀별 그룹화 (상주리그 팀 통합 로직 적용)
@@ -180,10 +218,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             teamName = teamName.slice(0, -2);
         }
 
-        const teamKey = teamName; // Use Name as Key to merge
-        // Find existing or create new. 
-        // Note: score.teamId might be different for A and B teams, but we use one representative ID or just store it.
-        // We'll use the ID from the first encountered record.
+        const teamKey = teamName;
 
         if (!scoresByTeamName.has(teamKey)) {
             scoresByTeamName.set(teamKey, {
@@ -197,8 +232,6 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
 
     // Convert to array
     const teamGroups = Array.from(scoresByTeamName.values());
-
-
 
     // 전체 게임에 대한 분류별 필터링 (Global)
     const globalRegularScores = myYearlyScores.filter((s: any) => s.gameType === '정기전');
@@ -311,38 +344,61 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                             아직 등록된 공식 경기(리그/대회) 기록이 없습니다.
                         </p>
                     ) : (
-                        <div className="flex flex-col border rounded-xl overflow-hidden divide-y divide-border bg-slate-50/30">
-                            {officialRecords.map((record: any) => (
-                                <div key={record.id} className="flex items-center justify-between p-4 hover:bg-white transition-colors">
-                                    <div className="flex flex-col gap-1 min-w-[120px]">
-                                        <span className="text-sm font-bold text-slate-800">
-                                            {record.date.toLocaleDateString()}
-                                        </span>
-                                        <div className="flex gap-1">
-                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border ${record.type === '리그' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                                                    record.type === '이벤트' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                        'bg-amber-50 text-amber-600 border-amber-100'
-                                                }`}>
-                                                {record.type}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex-1 px-4">
-                                        <div className="text-xs font-black text-slate-400 mb-0.5">{record.teamName}</div>
-                                        <div className="text-sm font-bold text-slate-600 truncate max-w-[200px]">
-                                            {record.tournamentName}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-baseline gap-1">
-                                        <span className={`text-2xl font-black ${record.score >= 200 ? 'text-blue-600 italic' : 'text-slate-700'}`}>
-                                            {record.score}
-                                        </span>
-                                        <span className="text-xs font-bold text-slate-400">점</span>
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm border-collapse bg-white">
+                                <thead className="bg-slate-100 border-y-2 border-slate-300">
+                                    <tr>
+                                        <th className="p-2 border border-slate-200 text-slate-600 font-bold w-[90px]">날짜</th>
+                                        <th className="p-2 border border-slate-200 text-slate-600 font-bold text-left">대회/경기명</th>
+                                        <th className="p-2 border border-slate-200 text-slate-600 font-bold w-[160px]">게임별 기록</th>
+                                        <th className="p-2 border border-slate-200 text-slate-600 font-bold w-[60px]">총점</th>
+                                        <th className="p-2 border border-slate-200 text-slate-600 font-bold w-[60px] bg-slate-200/50">평균</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {officialRecords.map((record: any) => (
+                                        <tr key={record.id} className="hover:bg-blue-50/30 transition-colors group">
+                                            <td className="p-2 border border-slate-100 text-center text-slate-500 font-medium">
+                                                {record.date.toLocaleDateString().split('.').slice(1, 3).join('/').trim()}
+                                            </td>
+                                            <td className="p-2 border border-slate-100">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-[9px] px-1 rounded-sm font-black ${record.type === '리그' ? 'bg-indigo-100 text-indigo-600' :
+                                                            record.type === '이벤트' ? 'bg-emerald-100 text-emerald-600' :
+                                                                'bg-amber-100 text-amber-600'
+                                                            }`}>
+                                                            {record.type}
+                                                        </span>
+                                                        <span className="text-xs font-black text-slate-400">{record.teamName}</span>
+                                                    </div>
+                                                    <span className="font-bold text-slate-700 truncate block">
+                                                        {record.tournamentName}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="p-2 border border-slate-100">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {record.scores.map((s: number, idx: number) => (
+                                                        <React.Fragment key={idx}>
+                                                            <span className={`font-bold ${s >= 200 ? 'text-blue-600' : 'text-slate-600'}`}>
+                                                                {s}
+                                                            </span>
+                                                            {idx < record.scores.length - 1 && <span className="text-slate-200 text-[10px]">|</span>}
+                                                        </React.Fragment>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                            <td className="p-2 border border-slate-100 text-center font-bold text-slate-700">
+                                                {record.total}
+                                            </td>
+                                            <td className="p-2 border border-slate-100 text-center font-black text-primary bg-slate-50/50 group-hover:bg-blue-50/50">
+                                                {record.avg}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     )}
                 </div>

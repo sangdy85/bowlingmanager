@@ -12,8 +12,24 @@ export async function getLeagueRoundResults(roundId: string) {
                 },
                 matchups: {
                     include: {
-                        teamA: true,
-                        teamB: true,
+                        teamA: {
+                            include: {
+                                members: {
+                                    include: {
+                                        user: true
+                                    }
+                                }
+                            }
+                        },
+                        teamB: {
+                            include: {
+                                members: {
+                                    include: {
+                                        user: true
+                                    }
+                                }
+                            }
+                        },
                         individualScores: {
                             include: { User: true, Team: true },
                             orderBy: { id: 'asc' }
