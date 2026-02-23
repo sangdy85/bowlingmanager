@@ -275,21 +275,21 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             <div className="grid grid-cols-1 gap-8">
-                <div className="bg-[#E7EBF1] border border-slate-300 p-2 font-black text-slate-800 text-sm">
+                <div className="bg-[#E7EBF1] border border-slate-400 p-2 font-black !text-slate-900 text-sm" style={{ border: '1px solid #94a3b8' }}>
                     📊 {currentYear}년 개인 통계
                 </div>
 
-                <div className="overflow-x-auto p-0 bg-white">
+                <div className="overflow-x-auto p-0 !bg-white" style={{ backgroundColor: 'white' }}>
                     {/* 1. 전체 종합 (모든 팀 합산) */}
-                    <table className="w-full text-[13px] border-collapse bg-white">
+                    <table className="w-full text-[13px] border-collapse !bg-white !text-slate-900" style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>
                         <thead>
-                            <tr className="bg-[#f2f2f2]">
-                                <th className="p-2 border border-slate-300 text-slate-800 font-black text-left">분류 (전체 종합)</th>
-                                <th className="p-2 border border-slate-300 text-slate-800 font-black w-[80px] text-center">게임수</th>
-                                <th className="p-2 border border-slate-300 text-slate-800 font-black w-[100px] text-center">총점</th>
-                                <th className="p-2 border border-slate-300 text-slate-800 font-black w-[120px] text-center">하이(시리즈)</th>
-                                <th className="p-2 border border-slate-300 text-slate-800 font-black w-[100px] text-center">하이(단게임)</th>
-                                <th className="p-2 border border-slate-300 text-slate-800 font-black w-[70px] text-center bg-[#E7EBF1]">평균</th>
+                            <tr className="!bg-[#f2f2f2]" style={{ backgroundColor: '#f2f2f2' }}>
+                                <th className="p-2 border border-slate-400 !text-slate-900 font-black text-left" style={{ border: '1px solid #94a3b8' }}>분류 (전체 종합)</th>
+                                <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>게임수</th>
+                                <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[100px] text-center" style={{ border: '1px solid #94a3b8' }}>총점</th>
+                                <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[120px] text-center" style={{ border: '1px solid #94a3b8' }}>하이(시리즈)</th>
+                                <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[100px] text-center" style={{ border: '1px solid #94a3b8' }}>하이(단게임)</th>
+                                <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1' }}>평균</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -312,15 +312,15 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         const other = teamScores.filter((s: any) => !['정기전', '벙개', '교류전', '상주'].includes(s.gameType || ''));
 
                         return (
-                            <table key={teamGroup.id} className="w-full text-[13px] border-collapse bg-white mt-4 border-t-2 border-slate-400">
+                            <table key={teamGroup.id} className="w-full text-[13px] border-collapse !bg-white !text-slate-900 mt-4" style={{ backgroundColor: 'white', color: '#0f172a', border: '2px solid #64748b' }}>
                                 <thead>
-                                    <tr className="bg-[#f2f2f2]">
-                                        <th className="p-2 border border-slate-300 text-primary font-black text-left">🛡️ {teamGroup.name}</th>
-                                        <th className="p-2 border border-slate-300 text-slate-800 font-black w-[80px] text-center">게임수</th>
-                                        <th className="p-2 border border-slate-300 text-slate-800 font-black w-[100px] text-center">총점</th>
-                                        <th className="p-2 border border-slate-300 text-slate-800 font-black w-[120px] text-center">하이(시리즈)</th>
-                                        <th className="p-2 border border-slate-300 text-slate-800 font-black w-[100px] text-center">하이(단게임)</th>
-                                        <th className="p-2 border border-slate-300 text-slate-800 font-black w-[70px] text-center bg-[#E7EBF1]">평균</th>
+                                    <tr className="!bg-[#f2f2f2]" style={{ backgroundColor: '#f2f2f2' }}>
+                                        <th className="p-2 border border-slate-400 !text-blue-700 font-black text-left" style={{ border: '1px solid #94a3b8' }}>🛡️ {teamGroup.name}</th>
+                                        <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>게임수</th>
+                                        <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[100px] text-center" style={{ border: '1px solid #94a3b8' }}>총점</th>
+                                        <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[120px] text-center" style={{ border: '1px solid #94a3b8' }}>하이(시리즈)</th>
+                                        <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[100px] text-center" style={{ border: '1px solid #94a3b8' }}>하이(단게임)</th>
+                                        <th className="p-2 border border-slate-300 !text-black font-black w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1' }}>평균</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -341,27 +341,27 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                 </div>
             </div>
 
-            <div className="card !bg-white !text-slate-900 border border-slate-300 shadow-none overflow-hidden p-0 rounded-none mb-4">
-                <div className="bg-[#E7EBF1] p-2 border-b border-slate-300">
-                    <h2 className="text-sm font-black text-slate-800 flex items-center gap-2">
+            <div className="card !bg-white !text-slate-900 border border-slate-400 shadow-none overflow-hidden p-0 rounded-none mb-4" style={{ backgroundColor: 'white', border: '1px solid #94a3b8' }}>
+                <div className="bg-[#E7EBF1] p-2 border-b border-slate-400" style={{ backgroundColor: '#E7EBF1', borderBottom: '1px solid #94a3b8' }}>
+                    <h2 className="text-sm font-black !text-slate-900 flex items-center gap-2">
                         🎳 {currentYear}년 볼링장 공식 기록
                     </h2>
                 </div>
 
                 {officialRecords.length === 0 ? (
-                    <p className="text-center py-8 text-slate-400 text-xs italic">
+                    <p className="text-center py-8 !text-slate-400 text-xs italic">
                         아직 등록된 공식 경기 기록이 없습니다.
                     </p>
                 ) : (
-                    <div className="overflow-x-auto bg-white">
-                        <table className="w-full text-[13px] border-collapse">
+                    <div className="overflow-x-auto !bg-white" style={{ backgroundColor: 'white' }}>
+                        <table className="w-full text-[13px] border-collapse !bg-white !text-slate-900" style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>
                             <thead>
-                                <tr className="bg-[#f2f2f2]">
-                                    <th className="p-2 border border-slate-300 text-slate-800 font-black w-[80px] text-center">날짜</th>
-                                    <th className="p-2 border border-slate-300 text-slate-800 font-black text-left">대회 / 경기명</th>
-                                    <th className="p-2 border border-slate-300 text-slate-800 font-black w-[180px] text-center">게임별 기록</th>
-                                    <th className="p-2 border border-slate-300 text-slate-800 font-black w-[80px] text-center">총점</th>
-                                    <th className="p-2 border border-slate-300 text-slate-800 font-black w-[70px] text-center bg-[#E7EBF1]">평균</th>
+                                <tr className="!bg-[#f2f2f2]" style={{ backgroundColor: '#f2f2f2' }}>
+                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>날짜</th>
+                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black text-left" style={{ border: '1px solid #94a3b8' }}>대회 / 경기명</th>
+                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[180px] text-center" style={{ border: '1px solid #94a3b8' }}>게임별 기록</th>
+                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>총점</th>
+                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1' }}>평균</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -370,42 +370,42 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                     const dateLabel = `${d.getMonth() + 1}/${d.getDate()}`;
 
                                     return (
-                                        <tr key={record.id} className="hover:bg-slate-50 transition-colors group">
-                                            <td className="p-2 border border-slate-300 text-center text-slate-600 font-bold bg-[#f8fafc]">
+                                        <tr key={record.id} className="hover:!bg-slate-50 transition-colors group" style={{ backgroundColor: 'white' }}>
+                                            <td className="p-2 border border-slate-400 text-center !text-slate-800 font-bold !bg-[#f8fafc]" style={{ border: '1px solid #94a3b8' }}>
                                                 {dateLabel}
                                             </td>
-                                            <td className="p-2 border border-slate-300 group-hover:bg-white">
+                                            <td className="p-2 border border-slate-400 group-hover:!bg-white" style={{ border: '1px solid #94a3b8' }}>
                                                 <div className="flex flex-col gap-0.5">
                                                     <div className="flex items-center gap-2">
-                                                        <span className={`text-[8px] font-black px-1 py-0.25 rounded-sm border ${record.typeLabel === '상주리그' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
-                                                            record.typeLabel === '이벤트전' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                                                'bg-amber-50 text-amber-700 border-amber-100'
+                                                        <span className={`text-[8px] font-black px-1 py-0.25 rounded-sm border ${record.typeLabel === '상주리그' ? '!bg-indigo-50 !text-indigo-700 !border-indigo-100' :
+                                                            record.typeLabel === '이벤트전' ? '!bg-emerald-50 !text-emerald-700 !border-emerald-100' :
+                                                                '!bg-amber-50 !text-amber-700 !border-amber-100'
                                                             }`}>
                                                             {record.typeLabel}
                                                         </span>
-                                                        <span className="text-[9px] font-bold text-slate-400">{record.teamName}</span>
+                                                        <span className="text-[9px] font-bold !text-slate-500">{record.teamName}</span>
                                                     </div>
-                                                    <span className="text-[13px] font-black text-slate-800 leading-tight">
+                                                    <span className="text-[13px] font-black !text-slate-900 leading-tight">
                                                         {record.tournamentName} {record.roundNumber ? `${record.roundNumber}회차` : ''}
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="p-2 border border-slate-300 text-center group-hover:bg-white">
+                                            <td className="p-2 border border-slate-400 text-center group-hover:!bg-white" style={{ border: '1px solid #94a3b8' }}>
                                                 <div className="flex items-center justify-center gap-2">
                                                     {record.scores.map((s: number, idx: number) => (
                                                         <React.Fragment key={idx}>
-                                                            <span className={`text-[14px] font-black ${s >= 200 ? 'text-blue-700 italic' : 'text-slate-800'}`}>
+                                                            <span className={`text-[14px] font-black ${s >= 200 ? '!text-blue-700 italic' : '!text-slate-800'}`}>
                                                                 {s}
                                                             </span>
-                                                            {idx < record.scores.length - 1 && <span className="text-slate-200 text-[10px]">|</span>}
+                                                            {idx < record.scores.length - 1 && <span className="!text-slate-300 text-[10px]">|</span>}
                                                         </React.Fragment>
                                                     ))}
                                                 </div>
                                             </td>
-                                            <td className="p-2 border border-slate-300 text-center text-[14px] font-black text-slate-900 group-hover:bg-white">
+                                            <td className="p-2 border border-slate-400 text-center text-[14px] font-black !text-slate-900 group-hover:!bg-white" style={{ border: '1px solid #94a3b8' }}>
                                                 {record.total}
                                             </td>
-                                            <td className="p-2 border border-slate-300 text-center text-[14px] font-black text-blue-800 bg-[#E7EBF1] group-hover:bg-[#d1d9e6]">
+                                            <td className="p-2 border border-slate-400 text-center text-[14px] font-black !text-blue-800 !bg-[#E7EBF1] group-hover:!bg-[#d1d9e6]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1' }}>
                                                 {record.avg}
                                             </td>
                                         </tr>
@@ -417,26 +417,26 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                 )}
             </div>
 
-            <div className="card !bg-white !text-slate-900 border border-slate-300 shadow-none overflow-hidden p-0 rounded-none mb-8">
-                <div className="bg-[#E7EBF1] p-2 border-b border-slate-300">
-                    <h2 className="text-sm font-black text-slate-800 flex items-center gap-2">
+            <div className="card !bg-white !text-slate-900 border border-slate-400 shadow-none overflow-hidden p-0 rounded-none mb-8" style={{ backgroundColor: 'white', border: '1px solid #94a3b8' }}>
+                <div className="bg-[#E7EBF1] p-2 border-b border-slate-400" style={{ backgroundColor: '#E7EBF1', borderBottom: '1px solid #94a3b8' }}>
+                    <h2 className="text-sm font-black !text-slate-900 flex items-center gap-2">
                         📅 {currentYear}년 일별 기록 (직접 입력)
                     </h2>
                 </div>
                 {myYearlyScores.length === 0 ? (
-                    <p className="text-center py-8 text-slate-400 text-xs italic">
+                    <p className="text-center py-8 !text-slate-400 text-xs italic">
                         아직 등록된 점수가 없습니다.
                     </p>
                 ) : (
-                    <div className="overflow-x-auto bg-white">
-                        <table className="w-full text-[13px] border-collapse">
+                    <div className="overflow-x-auto !bg-white" style={{ backgroundColor: 'white' }}>
+                        <table className="w-full text-[13px] border-collapse !bg-white !text-slate-900" style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>
                             <thead>
-                                <tr className="bg-[#f2f2f2]">
-                                    <th className="p-2 border border-slate-300 text-slate-800 font-black w-[80px] text-center">날짜</th>
-                                    <th className="p-2 border border-slate-300 text-slate-800 font-black w-[70px] text-center">게임수</th>
-                                    <th className="p-2 border border-slate-300 text-slate-800 font-black text-left">게임별 점수</th>
-                                    <th className="p-2 border border-slate-300 text-slate-800 font-black w-[80px] text-center">총점</th>
-                                    <th className="p-2 border border-slate-300 text-slate-800 font-black w-[70px] text-center bg-[#E7EBF1]">평균</th>
+                                <tr className="!bg-[#f2f2f2]" style={{ backgroundColor: '#f2f2f2' }}>
+                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>날짜</th>
+                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[70px] text-center" style={{ border: '1px solid #94a3b8' }}>게임수</th>
+                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black text-left" style={{ border: '1px solid #94a3b8' }}>게임별 점수</th>
+                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>총점</th>
+                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1' }}>평균</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -453,29 +453,29 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                     const avg = (totalScore / scores.length).toFixed(1);
 
                                     return (
-                                        <tr key={date} className="hover:bg-slate-50 transition-colors group">
-                                            <td className="p-2 border border-slate-300 text-center text-slate-600 font-bold bg-[#f8fafc]">
+                                        <tr key={date} className="hover:!bg-slate-50 transition-colors group" style={{ backgroundColor: 'white' }}>
+                                            <td className="p-2 border border-slate-400 text-center !text-slate-700 font-bold !bg-[#f8fafc]" style={{ border: '1px solid #94a3b8' }}>
                                                 {date.split('-').slice(1).join('/')}
                                             </td>
-                                            <td className="p-2 border border-slate-300 text-center font-bold text-slate-800">
+                                            <td className="p-2 border border-slate-400 text-center font-bold !text-slate-800" style={{ border: '1px solid #94a3b8' }}>
                                                 {scores.length}
                                             </td>
-                                            <td className="p-2 border border-slate-300 group-hover:bg-white px-4">
+                                            <td className="p-2 border border-slate-400 group-hover:!bg-white px-4" style={{ border: '1px solid #94a3b8' }}>
                                                 <div className="flex items-center gap-3 flex-wrap">
                                                     {scores.map((s: any, idx: number) => (
                                                         <React.Fragment key={s.id}>
-                                                            <span className={`text-[14px] font-black ${s.score >= 200 ? 'text-blue-700 italic' : 'text-slate-800'}`}>
+                                                            <span className={`text-[14px] font-black ${s.score >= 200 ? '!text-blue-700 italic' : '!text-slate-800'}`}>
                                                                 {s.score}
                                                             </span>
-                                                            {idx < scores.length - 1 && <span className="text-slate-200 text-xs">|</span>}
+                                                            {idx < scores.length - 1 && <span className="!text-slate-200 text-xs">|</span>}
                                                         </React.Fragment>
                                                     ))}
                                                 </div>
                                             </td>
-                                            <td className="p-2 border border-slate-300 text-center font-black text-slate-900 group-hover:bg-white text-[14px]">
+                                            <td className="p-2 border border-slate-400 text-center font-black !text-slate-900 group-hover:!bg-white text-[14px]" style={{ border: '1px solid #94a3b8' }}>
                                                 {totalScore}
                                             </td>
-                                            <td className="p-2 border border-slate-300 text-center font-black text-blue-800 bg-[#E7EBF1] group-hover:bg-[#d1d9e6] text-[14px]">
+                                            <td className="p-2 border border-slate-400 text-center font-black !text-blue-800 !bg-[#E7EBF1] group-hover:!bg-[#d1d9e6] text-[14px]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1' }}>
                                                 {avg}
                                             </td>
                                         </tr>

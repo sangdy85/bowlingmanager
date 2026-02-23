@@ -40,23 +40,23 @@ export default function StatsDisplayRow({ title, scores, className = "" }: Stats
     // or maybe show them but empty. Usually showing 0 is better.
 
     return (
-        <tr className={`hover:bg-slate-50 transition-colors group ${className}`}>
-            <td className="p-2 border border-slate-300 bg-[#f8fafc] font-bold text-slate-800 text-[13px]">
+        <tr className={`hover:!bg-slate-100 transition-colors group ${className}`} style={{ backgroundColor: 'white' }}>
+            <td className="p-2 border border-slate-400 !bg-[#f8fafc] font-bold !text-slate-900 text-[13px]" style={{ border: '1px solid #cbd5e1' }}>
                 {title}
             </td>
-            <td className="p-2 border border-slate-300 text-center font-bold text-slate-900 text-[14px]">
+            <td className="p-2 border border-slate-400 text-center font-bold !text-slate-900 text-[14px]" style={{ border: '1px solid #cbd5e1' }}>
                 {totalGames}
             </td>
-            <td className="p-2 border border-slate-300 text-center font-bold text-slate-900 text-[14px]">
+            <td className="p-2 border border-slate-400 text-center font-bold !text-slate-900 text-[14px]" style={{ border: '1px solid #cbd5e1' }}>
                 {totalScore.toLocaleString()}
             </td>
-            <td className="p-2 border border-slate-300 text-center font-black text-blue-700 italic text-[14px]">
+            <td className="p-2 border border-slate-400 text-center font-black !text-blue-700 italic text-[14px]" style={{ border: '1px solid #cbd5e1' }}>
                 Avg {maxDailyAvg.toFixed(1)}
             </td>
-            <td className="p-2 border border-slate-300 text-center font-black text-blue-700 text-[14px]">
+            <td className="p-2 border border-slate-400 text-center font-black !text-blue-700 text-[14px]" style={{ border: '1px solid #cbd5e1' }}>
                 {highScore}
             </td>
-            <td className="p-2 border border-slate-300 text-center font-black text-blue-800 bg-[#E7EBF1] group-hover:bg-[#d1d9e6] text-[14px]">
+            <td className="p-2 border border-slate-400 text-center font-black !text-blue-900 !bg-[#E7EBF1] group-hover:!bg-[#d1d9e6] text-[14px]" style={{ border: '1px solid #cbd5e1' }}>
                 {avgScore}
             </td>
         </tr>
