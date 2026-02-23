@@ -1118,22 +1118,41 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
             // 1. Calculate system penalty from previous round (minusApplied)
             let minusApplied = 0;
+            let rankCap = 0; // The limit/cap based on the rank setting
+
             if (gamesPlayed === gameCount) {
                 const matchWinner = (winner: any) => winner && winner.name === pName && winner.team === pTeam;
 
-                if (matchWinner(prevWinners.rank1)) minusApplied += Math.abs(mRank1);
-                else if (matchWinner(prevWinners.rank2)) minusApplied += Math.abs(mRank2);
-                else if (matchWinner(prevWinners.rank3)) minusApplied += Math.abs(mRank3);
+                if (matchWinner(prevWinners.rank1)) {
+                    minusApplied += Math.abs(mRank1);
+                    rankCap = Math.abs(mRank1);
+                } else if (matchWinner(prevWinners.rank2)) {
+                    minusApplied += Math.abs(mRank2);
+                    rankCap = Math.abs(mRank2);
+                } else if (matchWinner(prevWinners.rank3)) {
+                    minusApplied += Math.abs(mRank3);
+                    rankCap = Math.abs(mRank3);
+                }
 
-                if (matchWinner(prevWinners.femaleChamp)) minusApplied += Math.abs(mRankFemale);
+                if (matchWinner(prevWinners.femaleChamp)) {
+                    minusApplied += Math.abs(mRankFemale);
+                    // If no rankCap was set (not a top 3 winner but female champ), cap by female champ setting itself
+                    if (rankCap === 0) rankCap = Math.abs(mRankFemale);
+                }
+
+                // [AUTO CAP] Limit the total system penalty by the rankCap (or highest of applied penalties)
+                // This ensures if rank1 is -20, the total minus won't exceed 20 even with female champ bonus.
+                if (minusApplied > rankCap && rankCap > 0) {
+                    minusApplied = rankCap;
+                }
             }
 
             const validScores = scores.filter(s => s > 0);
             const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
 
-            // Penalty Calculation (Non-cumulative)
+            // Penalty Calculation (Non-cumulative vs Manual)
             // 1. Manual Penalty: From registration.handicap (if negative)
-            // 2. System Penalty: From previous round result (minusApplied)
+            // 2. System Penalty: From previous round result (minusApplied - now capped)
             const manualPenaltyTotal = handicap < 0 ? Math.abs(handicap) : 0;
             const systemPenaltyTotal = minusApplied;
 
