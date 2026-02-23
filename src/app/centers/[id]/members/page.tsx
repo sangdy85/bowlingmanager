@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { removeCenterMember } from "@/app/actions/center-members";
 import MemberSearchModal from "@/components/tournaments/MemberSearchModal";
+import CenterGuestManager from "@/components/tournaments/CenterGuestManager";
 
 export default async function CenterMembersPage({ params }: { params: { id: string } }) {
     const { id } = await params;
@@ -28,6 +29,14 @@ export default async function CenterMembersPage({ params }: { params: { id: stri
     }
 
     const members = center.CenterMember || [];
+
+    // Prepare simplified member list for guest manager
+    const guestManagerMembers = members.map((m: any) => ({
+        id: m.User.id,
+        name: m.User.name,
+        email: m.User.email,
+        alias: m.alias || null
+    }));
 
     return (
         <div className="max-w-4xl mx-auto py-8">
@@ -63,6 +72,13 @@ export default async function CenterMembersPage({ params }: { params: { id: stri
                             </div>
                         )}
                     </section>
+
+                    <div className="mt-8">
+                        <CenterGuestManager
+                            centerId={id}
+                            members={guestManagerMembers}
+                        />
+                    </div>
                 </div>
 
                 <div>

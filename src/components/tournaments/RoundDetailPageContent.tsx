@@ -653,25 +653,30 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
         const moveType = round.moveLaneType;
         const moveCount = (round.moveLaneCount || 0);
         const offset = moveCount * 2;
-        const firstLane = round.startLane || 1;
-        const lastLane = round.endLane || 20;
+
+        const allLanesFromParticipants = round.participants.map((p: any) => p.lane ? Math.floor(p.lane / 10) : null).filter((l: any) => l !== null);
+        const detectedFirstLane = allLanesFromParticipants.length > 0 ? Math.min(...allLanesFromParticipants) : 1;
+        const detectedLastLane = allLanesFromParticipants.length > 0 ? Math.max(...allLanesFromParticipants) : 20;
+
+        const firstLane = round.startLane || detectedFirstLane;
+        const lastLane = round.endLane || detectedLastLane;
         const totalLanes = (lastLane - firstLane) + 1;
 
         const calculateNextLane = (curr: number) => {
             let next = curr;
             if (moveType === 'RIGHT') {
                 next = curr + offset;
-                if (next > lastLane) next = next - totalLanes;
+                while (next > lastLane) next = next - totalLanes;
             } else if (moveType === 'LEFT') {
                 next = curr - offset;
-                if (next < firstLane) next = next + totalLanes;
+                while (next < firstLane) next = next + totalLanes;
             } else if (moveType === 'CROSS') {
                 if (curr % 2 === 0) { // Even
                     next = curr + offset;
-                    if (next > lastLane) next = next - totalLanes;
+                    while (next > lastLane) next = next - totalLanes;
                 } else { // Odd
                     next = curr - offset;
-                    if (next < firstLane) next = next + totalLanes;
+                    while (next < firstLane) next = next + totalLanes;
                 }
             }
             return next;

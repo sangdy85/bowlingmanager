@@ -178,10 +178,16 @@ export default function RoundBulkResultEditor({
                         };
 
                         // Movement Logic (Copied from RoundDetailPageContent)
-                        const totalLanes = (round.endLane && round.startLane) ? (round.endLane - round.startLane) + 1 : 20; // Default or Calc
+                        const allLanesFromMatchups = round.matchups.flatMap(mu => mu.lanes?.split('-').map(l => parseInt(l.trim())) || []).filter(l => !isNaN(l));
+                        const detectedFirstLane = allLanesFromMatchups.length > 0 ? Math.min(...allLanesFromMatchups) : 1;
+                        const detectedLastLane = allLanesFromMatchups.length > 0 ? Math.max(...allLanesFromMatchups) : 20;
+
+                        const firstLane = round.startLane || detectedFirstLane;
+                        const lastLane = round.endLane || detectedLastLane;
+                        const totalLanesInRound = (lastLane - firstLane) + 1;
+
                         const moveType = round.moveLaneType;
                         const moveCount = round.moveLaneCount || 0;
-                        const startLaneBase = round.startLane || 1;
 
                         currentScores.forEach((playerScore, pIdx) => {
                             const { lane: startLane, slot } = getStartInfo(pIdx);
@@ -244,11 +250,11 @@ export default function RoundBulkResultEditor({
                                     // Even -> Move Right, Odd -> Move Left
                                     if (currLane % 2 === 0) {
                                         let next = currLane + offset;
-                                        if (next > lastLane) next -= totalLanesInRound;
+                                        while (next > lastLane) next -= totalLanesInRound;
                                         return next;
                                     } else {
                                         let next = currLane - offset;
-                                        if (next < firstLane) next += totalLanesInRound;
+                                        while (next < firstLane) next += totalLanesInRound;
                                         return next;
                                     }
                                 }

@@ -9,6 +9,31 @@ function generateTeamCode() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+async function migrateUserRecordsToTeam(userId: string, teamId: string) {
+    try {
+        await Promise.all([
+            // 1. Update general scores
+            prisma.score.updateMany({
+                where: { userId },
+                data: { teamId }
+            }),
+            // 2. Update tournament registrations
+            prisma.tournamentRegistration.updateMany({
+                where: { userId },
+                data: { teamId }
+            }),
+            // 3. Update league individual scores
+            prisma.leagueMatchupIndividualScore.updateMany({
+                where: { userId },
+                data: { teamId }
+            })
+        ]);
+        console.log(`Migrated records for user ${userId} to team ${teamId}`);
+    } catch (error) {
+        console.error("Migration failed:", error);
+    }
+}
+
 export async function createTeam(prevState: string | undefined, formData: FormData) {
     const session = await auth();
     if (!session?.user?.id) {
@@ -40,6 +65,9 @@ export async function createTeam(prevState: string | undefined, formData: FormDa
         // No need for raw query fix if we set ownerId in create, 
         // assuming no circular dependency issues. 
         // If previous issue was file lock, this might be safe now.
+
+        // Migrate existing user records to the new team
+        await migrateUserRecordsToTeam(session.user.id, team.id);
 
     } catch (error) {
         console.error(error);
@@ -97,7 +125,7 @@ export async function joinTeam(prevState: string | undefined, formData: FormData
         // We look for members whose original name matches, OR whose current alias suggests they are this person?
         // Actually, strictly speaking, we check against their *User Name*.
         // If "John" joins, we look for other users named "John".
-        const sameNameMembers = allMembers.filter(m => m.user.name === userName);
+        const sameNameMembers = allMembers.filter((m: any) => m.user.name === userName);
 
         let newAlias: string | null = null;
 
@@ -135,6 +163,9 @@ export async function joinTeam(prevState: string | undefined, formData: FormData
                 alias: newAlias
             }
         });
+
+        // Migrate existing user records to the new team
+        await migrateUserRecordsToTeam(session.user.id, team.id);
 
     } catch (error) {
         console.error(error);
@@ -396,7 +427,7 @@ export async function transferOwnership(teamId: string, newOwnerId: string) {
         if (!team) return { success: false, message: "팀을 찾을 수 없습니다." };
         if (team.ownerId !== session.user.id) return { success: false, message: "권한이 없습니다." };
 
-        const isMember = team.members.some(m => m.userId === newOwnerId);
+        const isMember = team.members.some((m: any) => m.userId === newOwnerId);
         if (!isMember) return { success: false, message: "팀원이 아닙니다." };
 
         await prisma.team.update({
