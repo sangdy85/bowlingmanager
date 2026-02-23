@@ -434,7 +434,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                 <tr className="!bg-[#f2f2f2]" style={{ backgroundColor: '#f2f2f2' }}>
                                     <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>날짜</th>
                                     <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[70px] text-center" style={{ border: '1px solid #94a3b8' }}>게임수</th>
-                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black text-left" style={{ border: '1px solid #94a3b8' }}>게임별 점수</th>
+                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black text-center" style={{ border: '1px solid #94a3b8' }}>게임별 점수</th>
                                     <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>총점</th>
                                     <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1' }}>평균</th>
                                 </tr>
@@ -460,8 +460,8 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                             <td className="p-2 border border-slate-400 text-center font-bold !text-slate-800" style={{ border: '1px solid #94a3b8' }}>
                                                 {scores.length}
                                             </td>
-                                            <td className="p-2 border border-slate-400 group-hover:!bg-white px-4" style={{ border: '1px solid #94a3b8' }}>
-                                                <div className="flex items-center gap-3 flex-wrap">
+                                            <td className="p-2 border border-slate-400 group-hover:!bg-white px-4 text-center" style={{ border: '1px solid #94a3b8' }}>
+                                                <div className="flex items-center justify-center gap-3 flex-wrap">
                                                     {scores.map((s: any, idx: number) => (
                                                         <React.Fragment key={s.id}>
                                                             <span className={`text-[14px] font-black ${s.score >= 200 ? '!text-blue-700 italic' : '!text-slate-800'}`}>
