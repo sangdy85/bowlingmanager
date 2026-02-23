@@ -123,7 +123,7 @@ export default function RoundParticipantManager({
             if (!selectedRound) throw new Error("라운드를 선택해주세요.");
 
             if (isEditMode && selectedReg) {
-                await updateRegistration(selectedReg.id, {
+                await updateRegistration(selectedReg.id, selectedRound.id, {
                     guestName: manualName,
                     guestTeamName: manualTeam,
                     handicap: manualHandicap === '' ? 0 : Number(manualHandicap)

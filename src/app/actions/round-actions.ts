@@ -824,32 +824,84 @@ export async function removeFromRound(roundId: string, registrationId: string) {
 // 11. Update Registration (Edit info)
 export async function updateRegistration(
     registrationId: string,
+    roundId: string,
     data: { guestName?: string, guestTeamName?: string, handicap?: number }
 ) {
     try {
-        const regs: any[] = await prisma.$queryRaw`SELECT "tournamentId" FROM "TournamentRegistration" WHERE id = ${registrationId}`;
-        if (regs.length === 0) throw new Error("Registration not found");
-
-        const handicapVal = data.handicap !== undefined ? data.handicap : undefined;
-
-        // Use Prisma Client for simpler conditional updates if possible, 
-        // but since we've been using raw queries for RoundParticipant, 
-        // let's stick to standard prisma for this simple update.
-        await (prisma as any).tournamentRegistration.update({
+        const reg = await prisma.tournamentRegistration.findUnique({
             where: { id: registrationId },
-            data: {
-                guestName: data.guestName,
-                guestTeamName: data.guestTeamName,
-                handicap: handicapVal
+            include: {
+                roundParticipations: true,
+                scores: true
             }
         });
 
-        const tournamentId = regs[0].tournamentId;
-        const tournaments: any[] = await prisma.$queryRaw`SELECT "centerId" FROM "Tournament" WHERE id = ${tournamentId}`;
-        if (tournaments.length > 0) {
-            revalidatePath(`/centers/${tournaments[0].centerId}/tournaments/${tournamentId}`);
+        if (!reg) throw new Error("Registration not found");
+
+        const hasChanges = (data.guestName !== undefined && data.guestName !== reg.guestName) ||
+            (data.guestTeamName !== undefined && data.guestTeamName !== reg.guestTeamName) ||
+            (data.handicap !== undefined && data.handicap !== reg.handicap);
+
+        if (!hasChanges) return { success: true };
+
+        // Check if shared with other rounds
+        const sharedRounds = reg.roundParticipations.filter((rp: any) => rp.roundId !== roundId);
+        const isShared = sharedRounds.length > 0;
+
+        if (isShared) {
+            // FORK: Create a new registration for THIS round only
+            await prisma.$transaction(async (tx: any) => {
+                const newRegId = randomUUID();
+                await tx.tournamentRegistration.create({
+                    data: {
+                        id: newRegId,
+                        tournamentId: reg.tournamentId,
+                        userId: null,
+                        guestName: data.guestName ?? reg.guestName,
+                        guestTeamName: data.guestTeamName ?? reg.guestTeamName,
+                        handicap: data.handicap !== undefined ? data.handicap : (reg.handicap ?? 0),
+                        paymentStatus: reg.paymentStatus,
+                        createdAt: new Date()
+                    }
+                });
+
+                // Re-link this round's participant to the NEW registration
+                await tx.roundParticipant.update({
+                    where: {
+                        roundId_registrationId: {
+                            roundId,
+                            registrationId
+                        }
+                    },
+                    data: {
+                        registrationId: newRegId
+                    }
+                });
+
+                // Move existing scores for this round to the new registration
+                await tx.tournamentScore.updateMany({
+                    where: {
+                        registrationId,
+                        roundId
+                    },
+                    data: {
+                        registrationId: newRegId
+                    }
+                });
+            });
+        } else {
+            // NOT SHARED: Direct update is fine
+            await prisma.tournamentRegistration.update({
+                where: { id: registrationId },
+                data: {
+                    guestName: data.guestName,
+                    guestTeamName: data.guestTeamName,
+                    handicap: data.handicap
+                }
+            });
         }
 
+        revalidatePath(`/centers`); // Broad revalidation for safety
         return { success: true };
     } catch (e: any) {
         console.error(e);
@@ -1085,20 +1137,54 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                 const status = (pData.paymentStatus === '입금완료' || pData.paymentStatus === 'PAID') ? 'PAID' : 'PENDING';
 
                 if (existingReg) {
-                    registrationId = existingReg.id;
-                    await prisma.tournamentRegistration.update({
-                        where: { id: registrationId },
-                        data: {
-                            userId: userId || existingReg.userId, // Link userId if found now
-                            teamId: teamId || existingReg.teamId,
-                            guestName: userId ? null : (trimmedName || existingReg.guestName),
-                            guestTeamName: (userId || teamId) ? null : (trimmedTeamName || existingReg.guestTeamName),
-                            handicap: handicapVal !== null ? handicapVal : existingReg.handicap,
-                            paymentStatus: status,
-                            createdAt: nowWithOffset
+                    // Check if this participant is already in THIS round
+                    const inThisRound = await prisma.roundParticipant.findUnique({
+                        where: {
+                            roundId_registrationId: {
+                                roundId: roundId,
+                                registrationId: existingReg.id
+                            }
                         }
                     });
-                    results.updatedTitle++;
+
+                    const infoChanged = (trimmedName !== (existingReg.guestName || '')) ||
+                        (trimmedTeamName !== (existingReg.guestTeamName || '')) ||
+                        (handicapVal !== null && handicapVal !== existingReg.handicap);
+
+                    // FORK Condition: Not in this round yet AND info is different
+                    if (!inThisRound && infoChanged) {
+                        registrationId = randomUUID();
+                        await prisma.tournamentRegistration.create({
+                            data: {
+                                id: registrationId,
+                                tournamentId: info.tournamentId,
+                                userId: null, // IMPORTANT: Must be null to avoid unique constraint conflict if they were a member
+                                teamId: teamId,
+                                guestName: trimmedName, // Always treated as guest for the fork
+                                guestTeamName: teamId ? null : (trimmedTeamName || null),
+                                handicap: handicapVal,
+                                paymentStatus: status,
+                                createdAt: nowWithOffset
+                            }
+                        });
+                        results.createdTitle++;
+                    } else {
+                        // Regular update (either already in round or info is same)
+                        registrationId = existingReg.id;
+                        await prisma.tournamentRegistration.update({
+                            where: { id: registrationId },
+                            data: {
+                                userId: userId || existingReg.userId,
+                                teamId: teamId || existingReg.teamId,
+                                guestName: userId ? null : (trimmedName || existingReg.guestName),
+                                guestTeamName: (userId || teamId) ? null : (trimmedTeamName || existingReg.guestTeamName),
+                                handicap: handicapVal !== null ? handicapVal : existingReg.handicap,
+                                paymentStatus: status,
+                                createdAt: nowWithOffset
+                            }
+                        });
+                        results.updatedTitle++;
+                    }
                 } else {
                     registrationId = randomUUID();
                     await prisma.tournamentRegistration.create({
