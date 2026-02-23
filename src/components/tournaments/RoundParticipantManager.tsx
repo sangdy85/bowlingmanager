@@ -89,11 +89,20 @@ export default function RoundParticipantManager({
             return [...registrations].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         }
         if (!selectedRound) return [];
-        const participantRegIds = new Set(selectedRound.participants?.map((p: any) => p.registrationId) || []);
+
+        // Match registration to RoundParticipant entry to get current round's entry order
+        const participantMap = new Map();
+        selectedRound.participants?.forEach((p: any) => {
+            participantMap.set(p.registrationId, p.createdAt);
+        });
 
         return registrations
-            .filter(reg => participantRegIds.has(reg.id))
-            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            .filter(reg => participantMap.has(reg.id))
+            .sort((a, b) => {
+                const dateA = new Date(participantMap.get(a.id) || 0).getTime();
+                const dateB = new Date(participantMap.get(b.id) || 0).getTime();
+                return dateA - dateB;
+            });
     }, [allRegistrations, selectedRound, isEvent]);
 
     const openRegisterModal = () => {
