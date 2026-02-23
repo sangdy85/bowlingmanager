@@ -35,6 +35,7 @@ export default function TournamentManager({
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [leagueDay, setLeagueDay] = useState(1); // Monday (1)
     const [skippedDates, setSkippedDates] = useState<string[]>([]);
+    const [dateToAdd, setDateToAdd] = useState('');
 
     // --- Rules State ---
     const [rules, setRules] = useState({
@@ -260,6 +261,52 @@ export default function TournamentManager({
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Skipped Dates Management */}
+                    <div className="bg-background p-4 rounded-xl border border-border space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h5 className="font-bold text-sm">제외 일자(쉬는 날) 관리</h5>
+                            <span className="text-[10px] text-secondary-foreground font-medium">명절, 공휴일 등 일정을 건너뛸 날짜를 추가하세요.</span>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <input
+                                type="date"
+                                className="input h-10 flex-1 border-2 focus:border-primary transition-colors"
+                                value={dateToAdd}
+                                onChange={(e) => setDateToAdd(e.target.value)}
+                            />
+                            <button
+                                onClick={() => {
+                                    if (dateToAdd) {
+                                        toggleSkippedDate(dateToAdd);
+                                        setDateToAdd('');
+                                    }
+                                }}
+                                className="btn btn-secondary h-10 px-6 font-black shadow-sm"
+                            >
+                                추가
+                            </button>
+                        </div>
+
+                        {skippedDates.length > 0 ? (
+                            <div className="flex flex-wrap gap-2 pt-2 border-t border-dashed mt-2">
+                                {skippedDates.sort().map(date => (
+                                    <div key={date} className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-2 border border-blue-100 shadow-sm animate-in zoom-in-95 duration-200">
+                                        <span>📅 {date}</span>
+                                        <button
+                                            onClick={() => toggleSkippedDate(date)}
+                                            className="hover:bg-blue-200 w-5 h-5 rounded-full flex items-center justify-center transition-colors"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-[11px] text-slate-400 font-medium text-center py-2">추가된 제외 일자가 없습니다.</p>
+                        )}
                     </div>
 
                     <button
