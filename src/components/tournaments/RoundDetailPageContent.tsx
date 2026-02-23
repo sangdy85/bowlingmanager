@@ -390,12 +390,26 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
         }
     }
 
-
     // Generate array of lanes to display in grid
     const lanes = [];
     for (let i = parseInt(startLane); i <= parseInt(endLane); i++) {
         lanes.push(i);
     }
+
+    // Group participants by lane for the results view
+    const laneMap: Record<number, any[]> = {};
+    round.participants.forEach((p: any) => {
+        if (p.lane) {
+            const laneNum = Math.floor(p.lane / 10);
+            if (!laneMap[laneNum]) laneMap[laneNum] = [];
+            laneMap[laneNum].push(p);
+        }
+    });
+    // Sort slots within each lane
+    Object.keys(laneMap).forEach(key => {
+        laneMap[Number(key)].sort((a, b) => (a.lane % 10) - (b.lane % 10));
+    });
+    const unassigned = round.participants.filter((p: any) => !p.lane);
 
     return (
         <div className="space-y-8">
@@ -528,20 +542,53 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                         참가자가 없습니다. 참가자 탭에서 인원을 등록해주세요.
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {round.participants.map((p: any) => (
-                            <div key={p.id} className={`p-3 border rounded-lg flex items-center justify-between shadow-sm hover:shadow transition-all ${p.lane ? 'bg-white border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
-                                <span className="font-bold text-sm text-gray-800 truncate mr-2">
-                                    {p.registration.guestTeamName ? `[${p.registration.guestTeamName}] ` : (p.registration.team ? `[${p.registration.team.name}] ` : '')}
-                                    {p.registration.user ? p.registration.user.name : p.registration.guestName}
-                                </span>
-                                <div className="flex items-center gap-1">
-                                    <div className={`w-16 h-10 flex items-center justify-center font-black text-xs ${p.lane ? 'text-blue-600 bg-blue-50 rounded' : 'bg-gray-100 text-gray-300 rounded'}`}>
-                                        {formatLane(p.lane, p.isManual)}
+                    <div className="space-y-2">
+                        {lanes.map(lane => {
+                            const ps = laneMap[lane] || [];
+                            return (
+                                <div key={lane} className="flex items-stretch border rounded-xl overflow-hidden bg-white shadow-sm hover:border-blue-300 transition-all">
+                                    <div className={`w-20 flex flex-col items-center justify-center py-2 ${ps.length > 0 ? 'bg-slate-900 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                                        <span className="text-[10px] font-bold opacity-60">LANE</span>
+                                        <span className="text-xl font-black">{lane}</span>
+                                    </div>
+                                    <div className="flex-1 flex flex-wrap items-center p-3 gap-y-2 gap-x-6">
+                                        {ps.length > 0 ? ps.map((p: any) => (
+                                            <div key={p.id} className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-[10px] border border-blue-200">
+                                                    {p.lane % 10}
+                                                </div>
+                                                <span className="font-bold text-sm text-gray-800">
+                                                    {p.registration.user?.name || p.registration.guestName}
+                                                    {(p.registration.guestTeamName || p.registration.team?.name) && (
+                                                        <span className="ml-1 text-[10px] text-gray-400 font-medium">
+                                                            ({p.registration.guestTeamName || p.registration.team?.name})
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            </div>
+                                        )) : (
+                                            <span className="text-gray-300 text-xs italic">배정된 선수가 없습니다.</span>
+                                        )}
                                     </div>
                                 </div>
+                            );
+                        })}
+
+                        {unassigned.length > 0 && (
+                            <div className="mt-6 border-t pt-6">
+                                <h4 className="font-bold text-sm text-red-500 mb-3 flex items-center gap-2">
+                                    ⚠️ 미배정 참가자 ({unassigned.length})
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {unassigned.map((p: any) => (
+                                        <div key={p.id} className="px-3 py-1.5 bg-gray-100 rounded-lg text-xs font-bold text-gray-500 border border-gray-200">
+                                            {p.registration.guestTeamName ? `[${p.registration.guestTeamName}] ` : (p.registration.team ? `[${p.registration.team.name}] ` : '')}
+                                            {p.registration.user ? p.registration.user.name : p.registration.guestName}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        ))}
+                        )}
                     </div>
                 )}
             </div>

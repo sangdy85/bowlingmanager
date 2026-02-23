@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { updatePaymentStatus, deleteRegistration, manualRegister, updateRegistration, updateRoundLanes, searchPlayers } from '@/app/actions/round-actions';
+import { updatePaymentStatus, deleteRegistration, manualRegister, updateRegistration, updateRoundLanes, searchPlayers, bulkRegisterParticipants } from '@/app/actions/round-actions';
 import { formatLane } from '@/lib/tournament-utils';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
@@ -59,6 +59,7 @@ export default function RoundParticipantManager({
         }
     }, [selectedRoundId, isManager]);
 
+    const [loading, setLoading] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [selectedReg, setSelectedReg] = useState<any>(null);
@@ -238,15 +239,73 @@ export default function RoundParticipantManager({
         saveAs(finalData, `참가자명단_${selectedRound.roundNumber}회차_${new Date().toLocaleDateString()}.xlsx`);
     };
 
-    const saveAsImage = async () => {
-        if (tableRef.current === null) return;
-        try {
-            const dataUrl = await toPng(tableRef.current, { backgroundColor: '#ffffff', quality: 1, pixelRatio: 2 });
-            saveAs(dataUrl, `참가자명단_${selectedRound.roundNumber}회차_${new Date().toLocaleDateString()}.png`);
-        } catch (err) {
-            console.error('oops, something went wrong!', err);
-        }
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const bstr = evt.target?.result;
+                const wb = XLSX.read(bstr, { type: 'binary' });
+                const wsname = wb.SheetNames[0];
+                const ws = wb.Sheets[wsname];
+                const data = XLSX.utils.sheet_to_json(ws);
+
+                if (data.length === 0) {
+                    alert("엑셀 파일에 데이터가 없습니다.");
+                    return;
+                }
+
+                // Map Korean columns to English keys
+                const mappedData = data.map((row: any) => ({
+                    teamName: row['팀명'] || row['소속'] || '',
+                    name: row['이름'] || row['성함'] || row['닉네임'],
+                    handicap: Number(row['핸디'] || row['핸디캡'] || 0),
+                    paymentStatus: row['현황'] || row['입금현황'] || 'PENDING',
+                    laneDisplay: row['레인'] || row['레인번호'] || ''
+                })).filter(p => p.name); // Final validation: must have name
+
+                if (mappedData.length === 0) {
+                    alert("올바른 형식의 데이터가 없습니다. (이름 컬럼 필수)");
+                    return;
+                }
+
+                if (!confirm(`${mappedData.length}명의 데이터를 업로드하시겠습니까? (이름이 같으면 기존 정보 업데이트)`)) return;
+
+                setLoading(true);
+                const res = await bulkRegisterParticipants(selectedRound.id, mappedData);
+
+                if (res.success) {
+                    alert(`업로드 완료!\n신규 등록: ${res.createdTitle}명\n기존 수정: ${res.updatedTitle}명${res.errors.length > 0 ? `\n오류: ${res.errors.length}건` : ''}`);
+                    triggerUpdate();
+                }
+            } catch (err: any) {
+                console.error(err);
+                alert("엑셀 파싱 중 오류가 발생했습니다: " + err.message);
+            } finally {
+                setLoading(false);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            }
+        };
+        reader.readAsBinaryString(file);
     };
+
+    const downloadTemplate = () => {
+        const data = [
+            { '순번': 1, '팀명': '볼링팀A', '이름': '홍길동', '핸디': 0, '현황': '입금대기', '레인': '1-1' },
+            { '순번': 2, '팀명': '볼링팀B', '이름': '김철수', '핸디': 10, '현황': '입금완료', '레인': '1-2' },
+        ];
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Template");
+        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const finalData = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+        saveAs(finalData, `참가자등록_양식.xlsx`);
+    };
+
 
     if (!rounds || rounds.length === 0) return null;
 
@@ -291,12 +350,35 @@ export default function RoundParticipantManager({
                     </p>
                 </div>
                 {isManager && (
-                    <button
-                        onClick={openRegisterModal}
-                        className="btn btn-primary h-12 px-8 font-black shadow-lg shadow-primary/20 flex items-center gap-2"
-                    >
-                        <span className="text-lg">+</span> 수동 등록
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleExcelUpload}
+                            accept=".xlsx, .xls"
+                            className="hidden"
+                        />
+                        <button
+                            onClick={downloadTemplate}
+                            className="btn bg-white border-2 border-slate-300 text-slate-600 h-12 px-4 font-black hover:bg-slate-50 transition-all text-xs"
+                            title="양식 다운로드"
+                        >
+                            📄 양식
+                        </button>
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={loading}
+                            className="btn bg-white border-2 border-green-600 text-green-600 h-12 px-5 font-black hover:bg-green-50 transition-all text-xs flex items-center gap-1"
+                        >
+                            📊 엑셀 업로드
+                        </button>
+                        <button
+                            onClick={openRegisterModal}
+                            className="btn btn-primary h-12 px-6 font-black shadow-lg shadow-primary/20 flex items-center gap-2"
+                        >
+                            <span className="text-lg">+</span> 수동 등록
+                        </button>
+                    </div>
                 )}
             </div>
 

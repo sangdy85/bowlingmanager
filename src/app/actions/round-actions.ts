@@ -943,3 +943,117 @@ export async function checkAndCancelUnpaidRegistrations(roundId: string) {
         return { count: 0 };
     }
 }
+// 12. Bulk Register Participants from Excel
+export async function bulkRegisterParticipants(roundId: string, participants: {
+    teamName?: string,
+    name: string,
+    handicap?: number,
+    paymentStatus?: string, // 'PAID' or 'PENDING'
+    laneDisplay?: string // '1-2'
+}[]) {
+    try {
+        const info = await getTournamentInfo(roundId);
+        if (!info) throw new Error("라운드 정보를 찾을 수 없습니다.");
+
+        const round = await prisma.leagueRound.findUnique({
+            where: { id: roundId },
+            include: { participants: true }
+        });
+        if (!round) throw new Error("라운드 정보를 찾을 수 없습니다.");
+
+        const results = {
+            createdTitle: 0,
+            updatedTitle: 0,
+            errors: [] as string[]
+        };
+
+        for (const pData of participants) {
+            try {
+                // 1. Find or Create Registration
+                // We match by name for guests.
+                const existingReg = await prisma.tournamentRegistration.findFirst({
+                    where: {
+                        tournamentId: info.tournamentId,
+                        guestName: pData.name,
+                        userId: null // Only match ad-hoc guest registrations
+                    }
+                });
+
+                let registrationId = '';
+                const handicapVal = pData.handicap !== undefined ? pData.handicap : null;
+                const status = pData.paymentStatus === '입금완료' || pData.paymentStatus === 'PAID' ? 'PAID' : 'PENDING';
+
+                if (existingReg) {
+                    registrationId = existingReg.id;
+                    await prisma.tournamentRegistration.update({
+                        where: { id: registrationId },
+                        data: {
+                            guestTeamName: pData.teamName || existingReg.guestTeamName,
+                            handicap: handicapVal !== null ? handicapVal : existingReg.handicap,
+                            paymentStatus: status
+                        }
+                    });
+                    results.updatedTitle++;
+                } else {
+                    registrationId = randomUUID();
+                    await prisma.tournamentRegistration.create({
+                        data: {
+                            id: registrationId,
+                            tournamentId: info.tournamentId,
+                            guestName: pData.name,
+                            guestTeamName: pData.teamName || null,
+                            handicap: handicapVal,
+                            paymentStatus: status,
+                            createdAt: new Date()
+                        }
+                    });
+                    results.createdTitle++;
+                }
+
+                // 2. Ensure RoundParticipant entry
+                let participant = await prisma.roundParticipant.findUnique({
+                    where: {
+                        roundId_registrationId: {
+                            roundId,
+                            registrationId
+                        }
+                    }
+                });
+
+                if (!participant) {
+                    participant = await prisma.roundParticipant.create({
+                        data: {
+                            id: randomUUID(),
+                            roundId,
+                            registrationId,
+                            createdAt: new Date()
+                        }
+                    });
+                }
+
+                // 3. Update Lane if provided
+                if (pData.laneDisplay && pData.laneDisplay.includes('-')) {
+                    const [lane, slot] = pData.laneDisplay.split('-').map(Number);
+                    if (!isNaN(lane) && !isNaN(slot)) {
+                        const encodedLane = lane * 10 + slot;
+                        await prisma.roundParticipant.update({
+                            where: { id: participant.id },
+                            data: {
+                                lane: encodedLane,
+                                isManual: true
+                            }
+                        });
+                    }
+                }
+            } catch (err: any) {
+                results.errors.push(`${pData.name}: ${err.message}`);
+            }
+        }
+
+        revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
+        return { success: true, ...results };
+    } catch (error: any) {
+        console.error("Bulk registration failed:", error);
+        throw new Error(error.message || "일괄 등록 실패");
+    }
+}

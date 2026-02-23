@@ -116,10 +116,10 @@ export default function LaneDrawPage() {
     };
 
     const getFontSize = () => {
-        if (availableLanes.length > 40) return 'text-[8px]';
-        if (availableLanes.length > 30) return 'text-[10px]';
-        if (availableLanes.length > 20) return 'text-[12px]';
-        if (availableLanes.length > 10) return 'text-sm';
+        if (availableLanes.length > 50) return 'text-[10px]';
+        if (availableLanes.length > 40) return 'text-[12px]';
+        if (availableLanes.length > 30) return 'text-[14px]';
+        if (availableLanes.length > 20) return 'text-base';
         return 'text-xl';
     };
 
@@ -170,11 +170,11 @@ export default function LaneDrawPage() {
                                     />
                                     <text
                                         x="250"
-                                        y="70"
+                                        y="100"
                                         fill="white"
                                         textAnchor="middle"
                                         className={`${getFontSize()} font-black fill-white pointer-events-none drop-shadow-lg`}
-                                        transform={`rotate(${i * currentSliceAngle + currentSliceAngle / 2}, 250, 250)`}
+                                        transform={`rotate(${i * currentSliceAngle + currentSliceAngle / 2}, 250, 250) rotate(90, 250, 100)`}
                                     >
                                         {lane >= 11 ? `${Math.floor(lane / 10)}-${lane % 10}` : lane}
                                     </text>
