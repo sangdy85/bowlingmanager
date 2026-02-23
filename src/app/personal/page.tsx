@@ -37,15 +37,44 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     const kstOffset = 9 * 60 * 60 * 1000;
     const thisYear = new Date().getFullYear();
 
-    // 사용자의 모든 점수 기록에서 연도 추출
-    const allUserScores = await prisma.score.findMany({
-        where: { userId: user.id },
-        select: { gameDate: true }
+    // 사용자의 모든 점수 기록에서 연도 추출 (개인, 리그, 대회 통합)
+    const [allUserScores, allLeagueRoundDates, allTournamentRoundDates] = await Promise.all([
+        prisma.score.findMany({
+            where: { userId: user.id },
+            select: { gameDate: true }
+        }),
+        prisma.leagueMatchupIndividualScore.findMany({
+            where: {
+                OR: [
+                    { userId: user.id },
+                    { AND: [{ playerName: user.name }, { teamId: { in: user.teamMemberships.map((tm: any) => tm.teamId) } }] }
+                ]
+            },
+            select: { LeagueMatchup: { select: { round: { select: { date: true } } } } }
+        }),
+        prisma.tournamentScore.findMany({
+            where: {
+                OR: [
+                    { registration: { userId: user.id } },
+                    { AND: [{ registration: { guestName: user.name } }, { registration: { teamId: { in: user.teamMemberships.map((tm: any) => tm.teamId) } } }] }
+                ]
+            },
+            select: { round: { select: { date: true } } }
+        })
+    ]);
+
+    const activeYearsSet = new Set<number>();
+    allUserScores.forEach((s: any) => activeYearsSet.add(new Date(s.gameDate.getTime() + kstOffset).getFullYear()));
+    allLeagueRoundDates.forEach((s: any) => {
+        const d = s.LeagueMatchup?.round?.date;
+        if (d) activeYearsSet.add(new Date(d.getTime() + kstOffset).getFullYear());
+    });
+    allTournamentRoundDates.forEach((s: any) => {
+        const d = s.round?.date;
+        if (d) activeYearsSet.add(new Date(d.getTime() + kstOffset).getFullYear());
     });
 
-    const activeYears = Array.from(new Set(allUserScores.map((s: any) =>
-        new Date(s.gameDate.getTime() + kstOffset).getFullYear()
-    ))) as number[];
+    const activeYears = Array.from(activeYearsSet) as number[];
 
     // 기록이 없으면 올해만 표시
     if (activeYears.length === 0) {
@@ -105,9 +134,13 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                     ]
                 }
             ],
-            createdAt: {
-                gte: startOfYear,
-                lte: endOfYear
+            LeagueMatchup: {
+                round: {
+                    date: {
+                        gte: startOfYear,
+                        lte: endOfYear
+                    }
+                }
             }
         },
         include: {
@@ -134,9 +167,11 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                     ]
                 }
             ],
-            createdAt: {
-                gte: startOfYear,
-                lte: endOfYear
+            round: {
+                date: {
+                    gte: startOfYear,
+                    lte: endOfYear
+                }
             }
         },
         include: {
@@ -155,7 +190,8 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
 
     // 1. 리그 기록 그룹화 (ls 하나가 1-3G 세트이므로 이미 그룹화하기 쉬움)
     leagueScores.forEach((ls: any) => {
-        const dateStr = ls.createdAt.toLocaleDateString();
+        const gameDate = ls.LeagueMatchup.round.date || ls.createdAt;
+        const dateStr = gameDate.toLocaleDateString();
         const tName = ls.LeagueMatchup.round.tournament.name;
         const rNum = ls.LeagueMatchup.round.roundNumber;
         const team = ls.Team.name;
@@ -169,7 +205,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
 
         groupedOfficialMap.set(key, {
             id: ls.id,
-            date: ls.createdAt,
+            date: gameDate,
             typeLabel: '상주리그',
             tournamentName: tName,
             roundNumber: rNum,
@@ -182,7 +218,8 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
 
     // 2. 대회 기록 그룹화 
     tournamentScores.forEach((ts: any) => {
-        const dateStr = ts.createdAt.toLocaleDateString();
+        const gameDate = ts.round?.date || ts.createdAt;
+        const dateStr = gameDate.toLocaleDateString();
         const tName = ts.registration.tournament.name;
         const tType = ts.registration.tournament.type;
         const rNum = ts.round?.roundNumber;
@@ -192,7 +229,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         if (!groupedOfficialMap.has(key)) {
             groupedOfficialMap.set(key, {
                 id: ts.id,
-                date: ts.createdAt,
+                date: gameDate,
                 typeLabel: tType === 'EVENT' ? '이벤트전' : '챔프전',
                 tournamentName: tName,
                 roundNumber: rNum,
@@ -211,6 +248,21 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
 
     const officialRecords = Array.from(groupedOfficialMap.values())
         .sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    // --- 통계 통합용 점수 배열 생성 ---
+    const allIntegratedScores = [
+        ...myYearlyScores.map((s: any) => ({ score: s.score, gameDate: s.gameDate })),
+        ...leagueScores.flatMap((ls: any) => {
+            const d = ls.LeagueMatchup.round.date || ls.createdAt;
+            return [ls.score1, ls.score2, ls.score3]
+                .filter(s => s > 0)
+                .map(s => ({ score: s, gameDate: d }));
+        }),
+        ...tournamentScores.map((ts: any) => ({
+            score: ts.score,
+            gameDate: ts.round?.date || ts.createdAt
+        }))
+    ];
 
 
     // 팀별 그룹화 (상주리그 팀 통합 로직 적용)
@@ -293,7 +345,8 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                             </tr>
                         </thead>
                         <tbody>
-                            <StatsDisplayRow title="👑 전체 종합" scores={myYearlyScores as any} />
+                            <StatsDisplayRow title="👑 통합 종합 (공식포함)" scores={allIntegratedScores as any} />
+                            {myYearlyScores.length > 0 && <StatsDisplayRow title="개인 기록 (전체)" scores={myYearlyScores as any} />}
                             {globalRegularScores.length > 0 && <StatsDisplayRow title="정기전 (전체)" scores={globalRegularScores} />}
                             {globalImpromptuScores.length > 0 && <StatsDisplayRow title="벙개 (전체)" scores={globalImpromptuScores} />}
                             {globalMatchScores.length > 0 && <StatsDisplayRow title="교류전 (전체)" scores={globalMatchScores} />}
@@ -391,7 +444,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                                 </div>
                                             </td>
                                             <td className="p-2 border border-slate-400 text-center group-hover:!bg-white" style={{ border: '1px solid #94a3b8' }}>
-                                                <div className="flex items-center justify-center gap-2">
+                                                <div className="flex items-center justify-center gap-2 w-full">
                                                     {record.scores.map((s: number, idx: number) => (
                                                         <React.Fragment key={idx}>
                                                             <span className={`text-[14px] font-black ${s >= 200 ? '!text-blue-700 italic' : '!text-slate-800'}`}>
@@ -461,7 +514,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                                 {scores.length}
                                             </td>
                                             <td className="p-2 border border-slate-400 group-hover:!bg-white px-4 text-center" style={{ border: '1px solid #94a3b8' }}>
-                                                <div className="flex items-center justify-center gap-3 flex-wrap">
+                                                <div className="flex items-center justify-center gap-3 flex-wrap w-full">
                                                     {scores.map((s: any, idx: number) => (
                                                         <React.Fragment key={s.id}>
                                                             <span className={`text-[14px] font-black ${s.score >= 200 ? '!text-blue-700 italic' : '!text-slate-800'}`}>
