@@ -12,9 +12,9 @@ async function getTournamentInfo(roundId: string) {
     const rounds: any[] = await prisma.$queryRaw`SELECT "tournamentId" FROM "LeagueRound" WHERE id = ${roundId}`;
     if (rounds.length > 0) {
         const tournamentId = rounds[0].tournamentId;
-        const tournaments: any[] = await prisma.$queryRaw`SELECT "centerId" FROM "Tournament" WHERE id = ${tournamentId}`;
+        const tournaments: any[] = await prisma.$queryRaw`SELECT "centerId", "type" FROM "Tournament" WHERE id = ${tournamentId}`;
         if (tournaments.length > 0) {
-            return { centerId: tournaments[0].centerId, tournamentId };
+            return { centerId: tournaments[0].centerId, tournamentId, type: tournaments[0].type };
         }
     }
     return null;
@@ -1045,10 +1045,17 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
             errors: [] as string[]
         };
 
-        const processedRoundParticipantIds = new Set<string>();
+        const isChampOrLeague = info.type === 'CHAMP' || info.type === 'LEAGUE';
 
         await prisma.$transaction(async (tx: any) => {
+            // 1. [STRICT SYNC] For Champ/League, pre-emptively clear the slate to avoid "Appending" concern.
+            if (isChampOrLeague) {
+                await tx.roundParticipant.deleteMany({ where: { roundId } });
+            }
+
             let index = 0;
+            const processedIds = new Set<string>();
+
             for (const pData of participants) {
                 try {
                     const trimmedName = pData.name.trim();
@@ -1057,21 +1064,7 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                     const handicapVal = pData.handicap !== undefined ? pData.handicap : null;
                     const status = (pData.paymentStatus === '입금완료' || pData.paymentStatus === 'PAID') ? 'PAID' : 'PENDING';
 
-                    // 1. Resolve Team ID only for explicit grouping (still useful if team exists)
-                    let teamId = null;
-                    if (trimmedTeamName) {
-                        const team = await tx.team.findFirst({
-                            where: {
-                                centerId: info.centerId,
-                                name: { contains: trimmedTeamName },
-                                isActive: true
-                            },
-                            select: { id: true }
-                        });
-                        teamId = team?.id || null;
-                    }
-
-                    // 2. Find existing TournamentRegistration in this tournament (Strict Name + Team Match)
+                    // 2. Identify existing registration to maintain Member/Team link
                     let existingReg = await tx.tournamentRegistration.findFirst({
                         where: {
                             tournamentId: info.tournamentId,
@@ -1081,90 +1074,61 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                                 { user: { name: trimmedName }, guestTeamName: trimmedTeamName || null }
                             ]
                         },
-                        include: { roundParticipations: true, user: true, team: true }
+                        include: { roundParticipations: true }
                     });
 
-                    let registrationId = '';
+                    let registrationId = randomUUID();
+                    let useExisting = false;
 
                     if (existingReg) {
-                        const sharedRounds = existingReg.roundParticipations.filter((rp: any) => rp.roundId !== roundId);
-                        const isShared = sharedRounds.length > 0;
+                        const isParticipatingInOtherRounds = existingReg.roundParticipations.some((rp: any) => rp.roundId !== roundId);
 
-                        const existingRoundPart = await tx.roundParticipant.findUnique({
-                            where: {
-                                roundId_registrationId: {
-                                    roundId: roundId,
-                                    registrationId: existingReg.id
-                                }
-                            }
-                        });
-
-                        const infoChanged = (trimmedName !== (existingReg.guestName || existingReg.user?.name || '')) ||
-                            (trimmedTeamName !== (existingReg.guestTeamName || existingReg.team?.name || '')) ||
-                            (handicapVal !== null && handicapVal !== existingReg.handicap);
-
-                        if (infoChanged && isShared) {
-                            registrationId = randomUUID();
+                        // Champ/League: Always Fork if it exists elsewhere to ensure independence
+                        if (isChampOrLeague && isParticipatingInOtherRounds) {
                             await tx.tournamentRegistration.create({
                                 data: {
                                     id: registrationId,
                                     tournamentId: info.tournamentId,
-                                    userId: null,
-                                    teamId: teamId,
-                                    guestName: trimmedName,
-                                    guestTeamName: teamId ? null : (trimmedTeamName || null),
+                                    userId: existingReg.userId,
+                                    teamId: existingReg.teamId,
+                                    guestName: existingReg.userId ? null : trimmedName,
+                                    guestTeamName: (existingReg.userId || existingReg.teamId) ? null : (trimmedTeamName || null),
                                     handicap: handicapVal,
                                     paymentStatus: status,
                                     createdAt: nowWithOffset
                                 }
                             });
-
-                            if (existingRoundPart) {
-                                await tx.roundParticipant.update({
-                                    where: { id: existingRoundPart.id },
-                                    data: { registrationId, createdAt: nowWithOffset }
-                                });
-                                processedRoundParticipantIds.add(existingRoundPart.id);
-
-                                await tx.tournamentScore.updateMany({
-                                    where: { roundId, registrationId: existingReg.id },
-                                    data: { registrationId }
-                                });
-                            }
                             results.createdTitle++;
-                        } else {
+                        } else if (!isParticipatingInOtherRounds) {
+                            // Safe to reuse (only exists in this round or brand new tournament entry)
                             registrationId = existingReg.id;
-                            await tx.tournamentRegistration.update({
-                                where: { id: registrationId },
+                            useExisting = true;
+                            results.updatedTitle++;
+                        } else {
+                            // Non-Champ but shared: Fork for safety if the user wants individual management
+                            await tx.tournamentRegistration.create({
                                 data: {
+                                    id: registrationId,
+                                    tournamentId: info.tournamentId,
                                     userId: existingReg.userId,
-                                    teamId: teamId || existingReg.teamId,
-                                    guestName: existingReg.userId ? null : (trimmedName || existingReg.guestName),
-                                    guestTeamName: (existingReg.userId || teamId) ? null : (trimmedTeamName || existingReg.guestTeamName),
-                                    handicap: handicapVal !== null ? handicapVal : existingReg.handicap,
-                                    paymentStatus: status
+                                    teamId: existingReg.teamId,
+                                    guestName: existingReg.userId ? null : trimmedName,
+                                    guestTeamName: (existingReg.userId || existingReg.teamId) ? null : (trimmedTeamName || null),
+                                    handicap: handicapVal,
+                                    paymentStatus: status,
+                                    createdAt: nowWithOffset
                                 }
                             });
-
-                            if (existingRoundPart) {
-                                await tx.roundParticipant.update({
-                                    where: { id: existingRoundPart.id },
-                                    data: { createdAt: nowWithOffset }
-                                });
-                                processedRoundParticipantIds.add(existingRoundPart.id);
-                            }
-                            results.updatedTitle++;
+                            results.createdTitle++;
                         }
                     } else {
-                        registrationId = randomUUID();
+                        // Truly New Tournament Registration
                         await tx.tournamentRegistration.create({
                             data: {
                                 id: registrationId,
                                 tournamentId: info.tournamentId,
-                                userId: null, // New registration from Excel-First is always guest
-                                teamId: teamId,
                                 guestName: trimmedName,
-                                guestTeamName: teamId ? null : (trimmedTeamName || null),
+                                guestTeamName: trimmedTeamName || null,
                                 handicap: handicapVal,
                                 paymentStatus: status,
                                 createdAt: nowWithOffset
@@ -1173,41 +1137,34 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                         results.createdTitle++;
                     }
 
-                    // 3. Ensure RoundParticipant entry
-                    let participant = await tx.roundParticipant.findUnique({
-                        where: {
-                            roundId_registrationId: {
-                                roundId,
-                                registrationId
-                            }
-                        }
-                    });
-
-                    if (!participant) {
-                        participant = await tx.roundParticipant.create({
+                    if (useExisting) {
+                        await tx.tournamentRegistration.update({
+                            where: { id: registrationId },
                             data: {
-                                id: randomUUID(),
-                                roundId,
-                                registrationId,
-                                createdAt: nowWithOffset
+                                handicap: handicapVal !== null ? handicapVal : undefined,
+                                paymentStatus: status
                             }
-                        });
-                    } else {
-                        // Update existing participant createdAt too to preserve Excel order
-                        await tx.roundParticipant.update({
-                            where: { id: participant.id },
-                            data: { createdAt: nowWithOffset }
                         });
                     }
-                    processedRoundParticipantIds.add(participant.id);
 
-                    // 4. Update Lane if provided
+                    // 3. Create RoundParticipant entry
+                    const rp = await tx.roundParticipant.create({
+                        data: {
+                            id: randomUUID(),
+                            roundId,
+                            registrationId,
+                            createdAt: nowWithOffset
+                        }
+                    });
+                    processedIds.add(rp.id);
+
+                    // 4. Lane Assignment
                     if (pData.laneDisplay && pData.laneDisplay.includes('-')) {
                         const [lane, slot] = pData.laneDisplay.split('-').map(Number);
                         if (!isNaN(lane) && !isNaN(slot)) {
                             const encodedLane = lane * 10 + slot;
                             await tx.roundParticipant.update({
-                                where: { id: participant.id },
+                                where: { id: rp.id },
                                 data: { lane: encodedLane, isManual: true }
                             });
                         }
@@ -1217,13 +1174,15 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                 }
             }
 
-            // 5. [STRICT SYNC] Remove any participants in this round that were NOT in the Excel file
-            await tx.roundParticipant.deleteMany({
-                where: {
-                    roundId: roundId,
-                    id: { notIn: Array.from(processedRoundParticipantIds) }
-                }
-            });
+            // 5. Final Synchronous Cleanup for non-Champ
+            if (!isChampOrLeague) {
+                await tx.roundParticipant.deleteMany({
+                    where: {
+                        roundId: roundId,
+                        id: { notIn: Array.from(processedIds) }
+                    }
+                });
+            }
         });
 
         revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
