@@ -997,6 +997,7 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
         for (const pData of participants) {
             try {
                 const trimmedName = pData.name.trim();
+                const trimmedTeamName = pData.teamName?.trim() || '';
                 const nowWithOffset = new Date(Date.now() + (index++ * 1000)); // Add 1s offset to preserve order
 
                 // 1. Try to find a matching member in the center (By Name or Alias)
@@ -1017,9 +1018,26 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
 
                 const userId = member?.id || null;
 
-                // 2. Find or Create Registration
+                // 2. Resolve Team ID if possible
+                let teamId = null;
+                if (trimmedTeamName) {
+                    const team = await prisma.team.findFirst({
+                        where: {
+                            centerId: info.centerId,
+                            name: { contains: trimmedTeamName },
+                            isActive: true
+                        },
+                        select: { id: true }
+                    });
+                    teamId = team?.id || null;
+                }
+
+                // 3. Find existing TournamentRegistration precisely
+                // Strategy: Match by (User OR Name) AND (Team OR TeamName) to prevent duplication
                 let existingReg = null;
+
                 if (userId) {
+                    // Try exact member match first
                     existingReg = await prisma.tournamentRegistration.findUnique({
                         where: {
                             tournamentId_userId: {
@@ -1030,13 +1048,34 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                     });
                 }
 
-                // If no registration found for the userId, try looking for a guest registration with the same name
                 if (!existingReg) {
+                    // Try match by name and team (covering guest-to-member or just guests)
+                    existingReg = await prisma.tournamentRegistration.findFirst({
+                        where: {
+                            tournamentId: info.tournamentId,
+                            OR: [
+                                { userId: userId }, // Case where member exists but Unique index didn't catch (defensive)
+                                { guestName: trimmedName }
+                            ],
+                            AND: [
+                                {
+                                    OR: [
+                                        { teamId: teamId },
+                                        { guestTeamName: trimmedTeamName }
+                                    ]
+                                }
+                            ]
+                        }
+                    });
+                }
+
+                // Final fallback: Match by name only (if team is empty in both places)
+                if (!existingReg && !trimmedTeamName) {
                     existingReg = await prisma.tournamentRegistration.findFirst({
                         where: {
                             tournamentId: info.tournamentId,
                             guestName: trimmedName,
-                            userId: null // Only match guest registrations
+                            guestTeamName: null
                         }
                     });
                 }
@@ -1050,12 +1089,13 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                     await prisma.tournamentRegistration.update({
                         where: { id: registrationId },
                         data: {
-                            userId: existingReg.userId || userId, // Link userId if found
-                            guestName: userId ? null : (trimmedName || existingReg.guestName), // Clear guestName if member
-                            guestTeamName: userId ? null : (pData.teamName || existingReg.guestTeamName),
+                            userId: userId || existingReg.userId, // Link userId if found now
+                            teamId: teamId || existingReg.teamId,
+                            guestName: userId ? null : (trimmedName || existingReg.guestName),
+                            guestTeamName: (userId || teamId) ? null : (trimmedTeamName || existingReg.guestTeamName),
                             handicap: handicapVal !== null ? handicapVal : existingReg.handicap,
                             paymentStatus: status,
-                            createdAt: nowWithOffset // Update createdAt to preserve Excel order
+                            createdAt: nowWithOffset
                         }
                     });
                     results.updatedTitle++;
@@ -1065,9 +1105,10 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                         data: {
                             id: registrationId,
                             tournamentId: info.tournamentId,
-                            userId: userId, // Could be null if no member found
+                            userId: userId,
+                            teamId: teamId,
                             guestName: userId ? null : trimmedName,
-                            guestTeamName: userId ? null : (pData.teamName || null),
+                            guestTeamName: (userId || teamId) ? null : (trimmedTeamName || null),
                             handicap: handicapVal,
                             paymentStatus: status,
                             createdAt: nowWithOffset
