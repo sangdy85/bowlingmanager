@@ -163,7 +163,7 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                 }
             });
 
-            const aggregatedList = Array.from(aggregatedMap.values());
+            const aggregatedList = Array.from(aggregatedMap.values()).filter(p => p.participationCount > 0);
 
             // Sorting: 1. Points, 2. Participation, 3. Cumulative
             return aggregatedList.sort((a, b) => {
