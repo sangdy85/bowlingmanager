@@ -1050,8 +1050,29 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
         await prisma.$transaction(async (tx: any) => {
             // 1. [STRICT SYNC] Clear the slate for this round.
             if (isChampOrLeague) {
-                await tx.roundParticipant.deleteMany({ where: { roundId } });
-                await tx.tournamentScore.deleteMany({ where: { roundId } });
+                // Find all registrationIds used in this specific round
+                const prevParticipants = await tx.roundParticipant.findMany({
+                    where: { roundId },
+                    select: { registrationId: true }
+                });
+                const prevRegIds = prevParticipants.map((p: any) => p.registrationId);
+
+                if (prevRegIds.length > 0) {
+                    // Delete the registrations (cascades to RoundParticipant, TournamentScore, etc.)
+                    await tx.tournamentRegistration.deleteMany({
+                        where: { id: { in: prevRegIds } }
+                    });
+                }
+
+                // [ORPHAN CLEANUP] Additionally, remove any registrations in this tournament 
+                // that have no round participations (except maybe the current user's persistent reg if we ever use that, 
+                // but in this mode it's safe to clear all orphans).
+                await tx.tournamentRegistration.deleteMany({
+                    where: {
+                        tournamentId: info.tournamentId,
+                        roundParticipations: { none: {} }
+                    }
+                });
             }
 
             let index = 0;
