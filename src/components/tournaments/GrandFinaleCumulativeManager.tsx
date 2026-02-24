@@ -68,85 +68,48 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
             return (tournament.leagueRounds || []).filter(r => r.individualScores && r.individualScores.length > 0);
         }, [tournament?.leagueRounds]);
 
-        const participants = tournament?.registrations || [];
-
         // Generate the cumulative list
         const cumulativeList = useMemo(() => {
-            const normalize = (str: string) => (str || '').trim().replace(/\s+/g, ' ');
-
-            // Point configuration defaults
             const femaleBonus = pointConfig['female'] || 20;
 
-            // 1. Calculate and Pre-Aggregate results for each round independently
+            // 1. Calculate results for each round as they appear (Raw Final Tables)
             const roundResults = finishedRounds.map(round => {
-                // Map registrationId to participant context (HANDICAP + FEMALE)
-                const participantMap = new Map<string, { handicap: number, isFemaleChamp: boolean }>();
-                round.participants?.forEach((p: any) => {
-                    participantMap.set(p.registrationId, {
-                        handicap: p.registration?.handicap || 0,
-                        isFemaleChamp: p.isFemaleChamp || false
-                    });
-                });
+                const roundRankings = (round.participants || []).map((p: any) => {
+                    const regId = p.registrationId;
+                    const scores = (round.individualScores || []).filter(s => s.registrationId === regId);
 
-                // Aggregate scores strictly for valid participants, up to 3 games
-                const scoreAggByPerson = new Map<string, {
-                    totalRaw: number,
-                    games: number[],
-                    handicap: number,
-                    isFemaleChamp: boolean,
-                    userName: string,
-                    teamName: string
-                }>();
+                    const g1 = scores.find(s => s.gameNumber === 1)?.score || 0;
+                    const g2 = scores.find(s => s.gameNumber === 2)?.score || 0;
+                    const g3 = scores.find(s => s.gameNumber === 3)?.score || 0;
+                    const totalRaw = g1 + g2 + g3;
+                    const handicap = p.registration?.handicap || 0;
+                    const totalWithHandicap = totalRaw + (handicap * 3);
 
-                round.individualScores.forEach((s: any) => {
-                    const regId = s.registrationId;
-                    // ONLY include scores for players actually in the official participants list for this round
-                    if (participantMap.has(regId)) {
-                        const meta = participantMap.get(regId)!;
-                        const reg = s.registration;
-                        const teamName = normalize(reg?.guestTeamName || reg?.team?.name || '-');
-                        const userName = normalize(reg?.user?.name || reg?.guestName);
-                        const key = `${teamName}|${userName}`;
+                    const reg = p.registration;
+                    const teamName = reg?.guestTeamName || reg?.team?.name || '-';
+                    const userName = reg?.user?.name || reg?.guestName || 'GUEST';
 
-                        if (!scoreAggByPerson.has(key)) {
-                            scoreAggByPerson.set(key, {
-                                totalRaw: 0,
-                                games: [0, 0, 0], // Store max 3 games
-                                handicap: meta.handicap,
-                                isFemaleChamp: meta.isFemaleChamp,
-                                userName,
-                                teamName
-                            });
-                        }
-
-                        const pData = scoreAggByPerson.get(key)!;
-                        if (s.gameNumber >= 1 && s.gameNumber <= 3) {
-                            // Enforce 1-3 game limit per person (Take highest if duplicate records exist for same game)
-                            pData.games[s.gameNumber - 1] = Math.max(pData.games[s.gameNumber - 1], s.score || 0);
-                        }
-                    }
-                });
-
-                // Calculate total with handicap for each person in this round
-                const roundRankings = Array.from(scoreAggByPerson.entries()).map(([key, data]) => {
-                    const totalRaw = data.games.reduce((a, b) => a + b, 0);
-                    const totalWithHandicap = totalRaw + (data.handicap * 3);
                     return {
-                        key,
+                        id: regId,
+                        userName,
+                        teamName,
                         totalWithHandicap,
-                        ...data
+                        isFemaleChamp: p.isFemaleChamp || false,
+                        hasScore: totalRaw > 0
                     };
-                }).sort((a, b) => b.totalWithHandicap - a.totalWithHandicap);
+                })
+                    .filter(entry => entry.hasScore)
+                    .sort((a, b) => b.totalWithHandicap - a.totalWithHandicap);
 
                 return roundRankings;
             });
 
-            // 2. Global Aggregation across all rounds
+            // 2. Global Aggregation across all rounds (Strict String Match)
             const globalAggregatedMap = new Map<string, any>();
 
             roundResults.forEach(roundRankings => {
                 roundRankings.forEach((entry, index) => {
-                    const key = entry.key;
+                    const key = `${entry.teamName}|${entry.userName}`;
                     const rank = index + 1;
 
                     if (!globalAggregatedMap.has(key)) {
@@ -164,12 +127,10 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                     global.participationCount += 1;
                     global.cumulativeScore += entry.totalWithHandicap;
 
-                    // Calculate Points (Addative: Rank Points + Female Bonus)
                     const rankPoints = pointConfig[rank.toString()] || 0;
                     const bonusPoints = entry.isFemaleChamp ? femaleBonus : 0;
                     global.totalPoints += (rankPoints + bonusPoints);
 
-                    // Calculate Award (Rank 1-3 or Female Champ earns a star)
                     if (rank <= 3 || entry.isFemaleChamp) {
                         global.awardCount += 1;
                     }
@@ -178,7 +139,6 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
 
             const aggregatedList = Array.from(globalAggregatedMap.values());
 
-            // Final Sorting: 1. Points, 2. Participation, 3. Cumulative Score
             return aggregatedList.sort((a, b) => {
                 if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
                 if (b.participationCount !== a.participationCount) return b.participationCount - a.participationCount;
@@ -190,12 +150,12 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
             const bigStars = Math.floor(count / 5);
             const smallStars = count % 5;
             return (
-                <div className="flex items-center gap-0.5 justify-center">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'center' }}>
                     {Array.from({ length: bigStars }).map((_, i) => (
-                        <span key={`big-${i}`} className="text-yellow-500 text-xl drop-shadow-sm">★</span>
+                        <span key={`big-${i}`} style={{ color: '#eab308', fontSize: '20px' }}>★</span>
                     ))}
                     {Array.from({ length: smallStars }).map((_, i) => (
-                        <span key={`small-${i}`} className="text-yellow-400/60 text-lg">☆</span>
+                        <span key={`small-${i}`} style={{ color: '#facc15', fontSize: '18px', opacity: 0.6 }}>☆</span>
                     ))}
                 </div>
             );
@@ -239,10 +199,8 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
         return (
             <div
                 ref={mainRef}
-                style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.5s ease-in-out', backgroundColor: '#ffffff', padding: '16px' }}
-                className="animate-in fade-in duration-500"
+                style={{ display: 'flex', flexDirection: 'column', gap: '24px', backgroundColor: '#ffffff', padding: '16px' }}
             >
-                {/* Legend / Info Bar */}
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
