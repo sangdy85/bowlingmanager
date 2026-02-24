@@ -1048,25 +1048,16 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
         const isChampOrLeague = info.type === 'CHAMP' || info.type === 'LEAGUE';
 
         await prisma.$transaction(async (tx: any) => {
-            // 1. [STRICT SYNC] Clear the slate for this round.
+            // 1. [STRICT SYNC] Clear the total slate for this round and cleanup artifacts.
             if (isChampOrLeague) {
-                // Find all registrationIds used in this specific round
-                const prevParticipants = await tx.roundParticipant.findMany({
-                    where: { roundId },
-                    select: { registrationId: true }
-                });
-                const prevRegIds = prevParticipants.map((p: any) => p.registrationId);
+                // Delete all round-specific data records first to avoid any leftovers
+                await tx.tournamentScore.deleteMany({ where: { roundId } });
+                await tx.rawLaneScore.deleteMany({ where: { roundId } });
+                await tx.leagueMatchup.deleteMany({ where: { roundId } }); // Cascades to IndividualScores
+                await tx.roundParticipant.deleteMany({ where: { roundId } });
 
-                if (prevRegIds.length > 0) {
-                    // Delete the registrations (cascades to RoundParticipant, TournamentScore, etc.)
-                    await tx.tournamentRegistration.deleteMany({
-                        where: { id: { in: prevRegIds } }
-                    });
-                }
-
-                // [ORPHAN CLEANUP] Additionally, remove any registrations in this tournament 
-                // that have no round participations (except maybe the current user's persistent reg if we ever use that, 
-                // but in this mode it's safe to clear all orphans).
+                // [ORPHAN CLEANUP] Remove ANY registrations in this tournament that have no round participations.
+                // This prevents "Ghost" registrations with no context from appearing in leaderboards or being duplicated.
                 await tx.tournamentRegistration.deleteMany({
                     where: {
                         tournamentId: info.tournamentId,
