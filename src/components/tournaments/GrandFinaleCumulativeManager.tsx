@@ -72,98 +72,105 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
 
         // Generate the cumulative list
         const cumulativeList = useMemo(() => {
-            const list = participants.map(participant => {
-                let totalPoints = 0;
-                let participationCount = 0;
-                let cumulativeScore = 0;
-                let awardCount = 0;
+            const normalize = (str: string) => (str || '').trim().replace(/\s+/g, ' ');
 
-                finishedRounds.forEach(round => {
-                    const scoresByReg: Record<string, { scores: number[], handicap: number, isFemaleChamp: boolean }> = {};
+            // 1. Calculate results for each round independently (Round-First)
+            const roundResults = finishedRounds.map(round => {
+                const roundAggregatedMap = new Map<string, {
+                    totalRaw: number,
+                    handicap: number,
+                    isFemaleChamp: boolean,
+                    userName: string,
+                    teamName: string,
+                    registrationIds: Set<string>
+                }>();
 
-                    // Initialize from participants to get isFemaleChamp and handicap context for this round
-                    round.participants?.forEach((p: any) => {
-                        scoresByReg[p.registrationId] = {
-                            scores: [0, 0, 0],
-                            handicap: p.registration?.handicap || 0,
-                            isFemaleChamp: p.isFemaleChamp || false
-                        };
+                // Build mapping of registrationId to metadata for this round
+                const regMeta = new Map<string, { handicap: number, isFemaleChamp: boolean }>();
+                round.participants?.forEach((p: any) => {
+                    regMeta.set(p.registrationId, {
+                        handicap: p.registration?.handicap || 0,
+                        isFemaleChamp: p.isFemaleChamp || false
                     });
-
-                    // Accumulate game scores
-                    round.individualScores.forEach((s: any) => {
-                        const regId = s.registrationId;
-                        // ONLY include scores for players actually in the participants list for this round
-                        if (scoresByReg[regId]) {
-                            if (s.gameNumber >= 1 && s.gameNumber <= 3) {
-                                scoresByReg[regId].scores[s.gameNumber - 1] = s.score || 0;
-                            }
-                        }
-                    });
-
-                    const roundSummaries = Object.entries(scoresByReg).map(([regId, data]) => {
-                        const totalRaw = data.scores.reduce((a, b) => a + b, 0);
-                        const totalWithHandicap = totalRaw + (data.handicap * 3);
-                        return {
-                            regId,
-                            totalRaw,
-                            totalWithHandicap,
-                            handicap: data.handicap,
-                            isFemaleChamp: data.isFemaleChamp
-                        };
-                    }).sort((a, b) => b.totalWithHandicap - a.totalWithHandicap);
-
-                    const mySummary = roundSummaries.find(s => s.regId === participant.id);
-                    if (mySummary) {
-                        participationCount++;
-                        cumulativeScore += mySummary.totalWithHandicap;
-
-                        const rank = roundSummaries.indexOf(mySummary) + 1;
-                        let points = 0;
-
-                        if (mySummary.isFemaleChamp) {
-                            points = (pointConfig['female'] || 0);
-                        } else {
-                            points = pointConfig[rank.toString()] || 0;
-                        }
-
-                        if (rank >= 1 && rank <= 3 || mySummary.isFemaleChamp) {
-                            awardCount++;
-                        }
-
-                        totalPoints += points;
-                    }
                 });
 
-                return {
-                    ...participant,
-                    totalPoints,
-                    participationCount,
-                    cumulativeScore,
-                    awardCount
-                };
+                // Group score entries by (Normalized Team | Name)
+                round.individualScores.forEach((s: any) => {
+                    const reg = s.registration;
+                    const teamName = normalize(reg?.guestTeamName || reg?.team?.name || '-');
+                    const userName = normalize(reg?.user?.name || reg?.guestName);
+                    const key = `${teamName}|${userName}`;
+
+                    const meta = regMeta.get(s.registrationId) || { handicap: reg?.handicap || 0, isFemaleChamp: false };
+
+                    if (!roundAggregatedMap.has(key)) {
+                        roundAggregatedMap.set(key, {
+                            totalRaw: 0,
+                            handicap: meta.handicap,
+                            isFemaleChamp: meta.isFemaleChamp,
+                            userName,
+                            teamName,
+                            registrationIds: new Set([s.registrationId])
+                        });
+                    }
+                    roundAggregatedMap.get(key)!.totalRaw += (s.score || 0);
+                    roundAggregatedMap.get(key)!.registrationIds.add(s.registrationId);
+                });
+
+                // Convert to ranking sorted list for this round
+                const roundRankings = Array.from(roundAggregatedMap.entries()).map(([key, data]) => {
+                    // Note: We use 3 games as standard for grand finale total
+                    const totalWithHandicap = data.totalRaw + (data.handicap * 3);
+                    return {
+                        key,
+                        totalWithHandicap,
+                        ...data
+                    };
+                }).sort((a, b) => b.totalWithHandicap - a.totalWithHandicap);
+
+                return roundRankings;
             });
 
-            // Aggregate by Team and Name
-            const aggregatedMap = new Map<string, any>();
-            list.forEach(item => {
-                const teamName = item.team?.name || item.guestTeamName || '-';
-                const userName = item.user?.name || item.guestName;
-                const key = `${teamName}|${userName}`;
+            // 2. Global Aggregation across all rounds
+            const globalAggregatedMap = new Map<string, any>();
 
-                if (aggregatedMap.has(key)) {
-                    const existing = aggregatedMap.get(key);
-                    existing.totalPoints += item.totalPoints;
-                    existing.participationCount += item.participationCount;
-                    existing.cumulativeScore += item.cumulativeScore;
-                    existing.awardCount += item.awardCount;
-                } else {
-                    // Start with a copy of item
-                    aggregatedMap.set(key, { ...item });
-                }
+            roundResults.forEach(roundRankings => {
+                roundRankings.forEach((entry, index) => {
+                    const key = entry.key;
+                    const rank = index + 1;
+
+                    if (!globalAggregatedMap.has(key)) {
+                        globalAggregatedMap.set(key, {
+                            userName: entry.userName,
+                            teamName: entry.teamName,
+                            totalPoints: 0,
+                            participationCount: 0,
+                            cumulativeScore: 0,
+                            awardCount: 0
+                        });
+                    }
+
+                    const global = globalAggregatedMap.get(key);
+                    global.participationCount += 1;
+                    global.cumulativeScore += entry.totalWithHandicap;
+
+                    // Calculate Points for this round
+                    let points = 0;
+                    if (entry.isFemaleChamp) {
+                        points = (pointConfig['female'] || 0);
+                    } else {
+                        points = pointConfig[rank.toString()] || 0;
+                    }
+                    global.totalPoints += points;
+
+                    // Calculate Award for this round
+                    if (rank >= 1 && rank <= 3 || entry.isFemaleChamp) {
+                        global.awardCount += 1;
+                    }
+                });
             });
 
-            const aggregatedList = Array.from(aggregatedMap.values()).filter(p => p.participationCount > 0);
+            const aggregatedList = Array.from(globalAggregatedMap.values()).filter(p => p.participationCount > 0);
 
             // Sorting: 1. Points, 2. Participation, 3. Cumulative
             return aggregatedList.sort((a, b) => {
@@ -171,7 +178,7 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                 if (b.participationCount !== a.participationCount) return b.participationCount - a.participationCount;
                 return b.cumulativeScore - a.cumulativeScore;
             });
-        }, [participants, finishedRounds, pointConfig]);
+        }, [finishedRounds, pointConfig]);
 
         const getAwardStars = (count: number) => {
             const bigStars = Math.floor(count / 5);
@@ -191,8 +198,8 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
         const handleDownloadExcel = () => {
             const data = cumulativeList.map((p, idx) => ({
                 '순위': idx + 1,
-                '팀명': p.team?.name || p.guestTeamName || '-',
-                '성함': p.user?.name || p.guestName,
+                '팀명': p.teamName,
+                '성함': p.userName,
                 '종합 포인트': p.totalPoints,
                 '참여횟수': p.participationCount,
                 '누적 점수': p.cumulativeScore,
@@ -283,19 +290,17 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                             </thead>
                             <tbody>
                                 {cumulativeList.map((p, idx) => {
-                                    const teamName = p.team?.name || p.guestTeamName || '-';
-                                    const userName = p.user?.name || p.guestName;
-                                    const compositeKey = `${teamName}|${userName}|${idx}`;
+                                    const compositeKey = `${p.teamName}|${p.userName}|${idx}`;
                                     return (
                                         <tr key={compositeKey}>
                                             <td className="rank-cell">
                                                 {idx + 1}
                                             </td>
                                             <td>
-                                                {p.team?.name || p.guestTeamName || '-'}
+                                                {p.teamName}
                                             </td>
                                             <td>
-                                                {p.user?.name || p.guestName}
+                                                {p.userName}
                                             </td>
                                             <td className="points-cell">
                                                 {p.totalPoints}
