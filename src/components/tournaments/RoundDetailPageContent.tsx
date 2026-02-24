@@ -1685,7 +1685,8 @@ function RoundPointsTab({ round }: { round: any }) {
                     <tbody className="divide-y divide-slate-100">
                         {results.map((res: any, idx: number) => {
                             const rank = idx + 1;
-                            const rankPoints = pointConfig[rank.toString()] || 0;
+                            // 여성 챔프의 경우 순위 포인트를 지급하지 않고 여성 챔프 포인트만 지급
+                            const rankPoints = res.isFemaleChamp ? 0 : (pointConfig[rank.toString()] || 0);
                             const bonusPoints = res.isFemaleChamp ? femaleBonus : 0;
                             const totalPoints = rankPoints + bonusPoints;
 
@@ -1705,6 +1706,7 @@ function RoundPointsTab({ round }: { round: any }) {
                                         <div className="inline-flex flex-col items-center">
                                             <span className="text-xl font-black text-blue-600">{totalPoints}P</span>
                                             {rankPoints > 0 && <span className="text-[10px] text-gray-400 font-bold">순위 {rankPoints}P</span>}
+                                            {res.isFemaleChamp && <span className="text-[10px] text-pink-500 font-bold">여챔보너스 {femaleBonus}P</span>}
                                         </div>
                                     </td>
                                 </tr>
@@ -2115,8 +2117,8 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
         { id: 'scoring', label: '점수 입력' },
         { id: 'sideGame', label: '사이드게임' },
         { id: 'finalResults', label: '최종결과' },
-        ...(isManager && round.tournament.type === 'CHAMP' ? [{ id: 'points', label: '포인트 현황' }] : []),
         { id: 'luckyDraw', label: '행운권 추첨' },
+        ...(isManager && round.tournament.type === 'CHAMP' ? [{ id: 'points', label: '포인트 현황' }] : []),
     ];
 
     const refresh = () => {
