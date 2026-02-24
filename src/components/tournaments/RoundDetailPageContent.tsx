@@ -17,6 +17,7 @@ import SideGameManager from './SideGameManager';
 import RoundResultSummary from './RoundResultSummary';
 import RoundParticipantManager from '@/components/tournaments/RoundParticipantManager';
 import { getEffectiveRoundDate, formatLane } from '@/lib/tournament-utils';
+import GrandFinaleCumulativeManager from './GrandFinaleCumulativeManager';
 
 // --- Tab Components ---
 
@@ -2359,7 +2360,31 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                             </div>
                         )}
                         {activeTab === 'finalResults' && <RoundFinalResultsTab round={round} isManager={isManager || false} />}
-                        {activeTab === 'points' && isManager && <RoundPointsTab round={round} />}
+                        {activeTab === 'points' && isManager && (
+                            <div className="space-y-12 pb-12">
+                                {/* Current Round Points */}
+                                <div className="px-6 pt-6">
+                                    <RoundPointsTab round={round} />
+                                </div>
+
+                                {/* Cumulative Points Status */}
+                                <div className="px-6 border-t pt-12">
+                                    <div className="bg-white p-6 rounded-xl border-2 border-slate-900 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] overflow-hidden">
+                                        <h3 className="text-xl font-black mb-6 flex items-center gap-3">
+                                            <span className="p-2 bg-blue-600 rounded-lg text-white">🏆</span> 토너먼트 누적 포인트 현황
+                                        </h3>
+                                        <GrandFinaleCumulativeManager
+                                            tournament={{
+                                                ...round.tournament,
+                                                leagueRounds: round.tournament.rounds.filter((r: any) => r.roundNumber <= round.roundNumber)
+                                            }}
+                                            centerId={centerId || ''}
+                                            isManager={isManager}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         {activeTab === 'luckyDraw' && <RoundLuckyDrawTab round={round} />}
                     </>
                 )}

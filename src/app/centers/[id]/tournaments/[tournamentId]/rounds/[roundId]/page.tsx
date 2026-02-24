@@ -174,13 +174,16 @@ export default async function RoundDetailPage({ params }: { params: { id: string
         orderBy: { roundNumber: 'asc' },
         include: {
             participants: {
-                select: {
-                    id: true,
-                    registrationId: true,
-                    lane: true,
-                    isManual: true
+                include: {
+                    registration: {
+                        include: {
+                            user: true,
+                            team: true
+                        }
+                    }
                 }
-            }
+            },
+            individualScores: true
         }
     });
 

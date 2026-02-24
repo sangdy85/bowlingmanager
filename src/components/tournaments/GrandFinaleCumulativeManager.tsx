@@ -127,7 +127,7 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                     global.participationCount += 1;
                     global.cumulativeScore += entry.totalWithHandicap;
 
-                    const rankPoints = pointConfig[rank.toString()] || 0;
+                    const rankPoints = entry.isFemaleChamp ? 0 : (pointConfig[rank.toString()] || 0);
                     const bonusPoints = entry.isFemaleChamp ? femaleBonus : 0;
                     global.totalPoints += (rankPoints + bonusPoints);
 
