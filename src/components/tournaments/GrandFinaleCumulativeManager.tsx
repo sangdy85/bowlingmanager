@@ -93,16 +93,11 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                     // Accumulate game scores
                     round.individualScores.forEach((s: any) => {
                         const regId = s.registrationId;
-                        if (!scoresByReg[regId]) {
-                            // Fallback if participant record is missing
-                            scoresByReg[regId] = {
-                                scores: [0, 0, 0],
-                                handicap: s.registration?.handicap || 0,
-                                isFemaleChamp: false
-                            };
-                        }
-                        if (s.gameNumber >= 1 && s.gameNumber <= 3) {
-                            scoresByReg[regId].scores[s.gameNumber - 1] = s.score || 0;
+                        // ONLY include scores for players actually in the participants list for this round
+                        if (scoresByReg[regId]) {
+                            if (s.gameNumber >= 1 && s.gameNumber <= 3) {
+                                scoresByReg[regId].scores[s.gameNumber - 1] = s.score || 0;
+                            }
                         }
                     });
 

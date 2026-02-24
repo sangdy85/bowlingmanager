@@ -1051,6 +1051,7 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
             // 1. [STRICT SYNC] Clear the slate for this round.
             if (isChampOrLeague) {
                 await tx.roundParticipant.deleteMany({ where: { roundId } });
+                await tx.tournamentScore.deleteMany({ where: { roundId } });
             }
 
             let index = 0;
