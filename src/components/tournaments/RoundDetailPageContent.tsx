@@ -1700,7 +1700,6 @@ function RoundPointsTab({ round }: { round: any }) {
                                     </td>
                                     <td className="py-4 px-4 font-bold text-slate-800">
                                         {res.name}
-                                        {res.isFemaleChamp && <span className="ml-2 text-[10px] bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full font-black">여챔 +{femaleBonus}</span>}
                                     </td>
                                     <td className="py-4 px-4 text-center">
                                         <div className="inline-flex flex-col items-center">
