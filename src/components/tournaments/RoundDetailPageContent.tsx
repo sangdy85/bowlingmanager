@@ -1635,6 +1635,94 @@ function TournamentEditModal({ tournament, onClose, onUpdate }: { tournament: an
     );
 }
 
+// 7.5 Round Points Tab (for Grand Finale Points inspection)
+function RoundPointsTab({ round }: { round: any }) {
+    const settings = round.tournament?.settings ? JSON.parse(round.tournament.settings) : {};
+    const pointConfig = settings.grandFinalePoints || {};
+    const femaleBonus = pointConfig['female'] || 20;
+
+    // Logic to calculate rankings (same as in FinalResultsTab but simpler)
+    const results = round.participants.map((p: any) => {
+        const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
+        let totalRaw = 0;
+        let gamesPlayed = 0;
+        pScores.forEach((s: any) => {
+            if (s.score > 0) {
+                totalRaw += s.score;
+                gamesPlayed++;
+            }
+        });
+        const handicap = p.registration.handicap || 0;
+        const totalWithHandicap = totalRaw + (handicap * gamesPlayed);
+        return {
+            id: p.registrationId,
+            name: p.registration.user?.name || p.registration.guestName || 'Unknown',
+            team: p.registration.guestTeamName || p.registration.team?.name || '개인',
+            totalWithHandicap,
+            isFemaleChamp: p.isFemaleChamp || false,
+            hasScore: totalRaw > 0
+        };
+    })
+        .filter((r: any) => r.hasScore)
+        .sort((a: any, b: any) => b.totalWithHandicap - a.totalWithHandicap);
+
+    return (
+        <div className="bg-white p-6 rounded-xl border-2 border-slate-900 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] overflow-hidden">
+            <h3 className="text-xl font-black mb-6 flex items-center gap-3">
+                <span className="p-2 bg-yellow-400 rounded-lg text-black">💰</span> 이번 회차 지급 포인트 현황
+            </h3>
+
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                    <thead>
+                        <tr className="bg-slate-900 text-white font-black uppercase tracking-wider text-[11px]">
+                            <th className="py-4 px-4 text-center border border-slate-700 w-20">순위</th>
+                            <th className="py-4 px-4 text-left border border-slate-700">팀명</th>
+                            <th className="py-4 px-4 text-left border border-slate-700">성함</th>
+                            <th className="py-4 px-4 text-center border border-slate-700 w-32">지급 포인트</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {results.map((res: any, idx: number) => {
+                            const rank = idx + 1;
+                            const rankPoints = pointConfig[rank.toString()] || 0;
+                            const bonusPoints = res.isFemaleChamp ? femaleBonus : 0;
+                            const totalPoints = rankPoints + bonusPoints;
+
+                            return (
+                                <tr key={res.id} className="hover:bg-slate-50 transition-colors">
+                                    <td className="py-4 px-4 text-center font-black text-lg bg-slate-50/50 border-r border-slate-100">
+                                        {rank}
+                                    </td>
+                                    <td className="py-4 px-4 text-gray-500 font-medium">
+                                        {res.team}
+                                    </td>
+                                    <td className="py-4 px-4 font-bold text-slate-800">
+                                        {res.name}
+                                        {res.isFemaleChamp && <span className="ml-2 text-[10px] bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full font-black">여챔 +{femaleBonus}</span>}
+                                    </td>
+                                    <td className="py-4 px-4 text-center">
+                                        <div className="inline-flex flex-col items-center">
+                                            <span className="text-xl font-black text-blue-600">{totalPoints}P</span>
+                                            {rankPoints > 0 && <span className="text-[10px] text-gray-400 font-bold">순위 {rankPoints}P</span>}
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+
+            {results.length === 0 && (
+                <div className="py-20 text-center text-slate-300 font-black italic uppercase tracking-widest text-xl">
+                    No Data Available
+                </div>
+            )}
+        </div>
+    );
+}
+
 // 8. Lucky Draw Tab
 function RoundLuckyDrawTab({ round }: { round: any }) {
     const [winnerCount, setWinnerCount] = useState(1);
@@ -2027,6 +2115,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
         { id: 'scoring', label: '점수 입력' },
         { id: 'sideGame', label: '사이드게임' },
         { id: 'finalResults', label: '최종결과' },
+        ...(isManager && round.tournament.type === 'CHAMP' ? [{ id: 'points', label: '포인트 현황' }] : []),
         { id: 'luckyDraw', label: '행운권 추첨' },
     ];
 
@@ -2269,6 +2358,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                             </div>
                         )}
                         {activeTab === 'finalResults' && <RoundFinalResultsTab round={round} isManager={isManager || false} />}
+                        {activeTab === 'points' && isManager && <RoundPointsTab round={round} />}
                         {activeTab === 'luckyDraw' && <RoundLuckyDrawTab round={round} />}
                     </>
                 )}
