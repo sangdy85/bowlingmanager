@@ -431,37 +431,3 @@ export async function updateLeagueRoundResults(roundId: string, results: {
 
     revalidatePath(`/centers/${round.tournament.centerId}/tournaments/${round.tournamentId}`);
 }
-
-export async function updateLeagueMatchup(
-    matchupId: string,
-    data: {
-        teamAId?: string | null;
-        teamASquad?: string | null;
-        teamBId?: string | null;
-        teamBSquad?: string | null;
-        lanes?: string;
-    }
-) {
-    const matchup = (await (prisma as any).leagueMatchup.findUnique({
-        where: { id: matchupId },
-        include: {
-            round: { include: { tournament: true } }
-        }
-    })) as any;
-
-    if (!matchup) throw new Error("Matchup not found");
-    await verifyCenterAdmin(matchup.round.tournament.centerId);
-
-    await (prisma as any).leagueMatchup.update({
-        where: { id: matchupId },
-        data: {
-            teamAId: data.teamAId !== undefined ? data.teamAId : matchup.teamAId,
-            teamASquad: data.teamASquad !== undefined ? data.teamASquad : matchup.teamASquad,
-            teamBId: data.teamBId !== undefined ? data.teamBId : matchup.teamBId,
-            teamBSquad: data.teamBSquad !== undefined ? data.teamBSquad : matchup.teamBSquad,
-            lanes: data.lanes !== undefined ? data.lanes : matchup.lanes
-        }
-    });
-
-    revalidatePath(`/centers/${matchup.round.tournament.centerId}/tournaments/${matchup.round.tournamentId}`);
-}
