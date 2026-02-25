@@ -31,14 +31,7 @@ export async function getLeagueRoundResults(roundId: string) {
                             }
                         },
                         individualScores: {
-                            include: {
-                                User: true,
-                                Team: {
-                                    include: {
-                                        registrations: true
-                                    }
-                                }
-                            },
+                            include: { User: true, Team: true },
                             orderBy: { id: 'asc' }
                         }
                     }
