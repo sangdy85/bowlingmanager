@@ -214,10 +214,10 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
             return (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'center' }}>
                     {Array.from({ length: bigStars }).map((_, i) => (
-                        <span key={`big-${i}`} style={{ color: '#eab308', fontSize: '20px' }}>★</span>
+                        <span key={`big-${i}`} style={{ color: '#000000', fontSize: '20px' }}>★</span>
                     ))}
                     {Array.from({ length: smallStars }).map((_, i) => (
-                        <span key={`small-${i}`} style={{ color: '#facc15', fontSize: '18px', opacity: 0.6 }}>☆</span>
+                        <span key={`small-${i}`} style={{ color: '#000000', fontSize: '18px', opacity: 0.6 }}>☆</span>
                     ))}
                 </div>
             );
@@ -297,7 +297,7 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                                 <span style={{ textTransform: 'uppercase' }}>입상 1회</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ fontSize: '20px', color: '#ca8a04' }}>★</span>
+                                <span style={{ fontSize: '20px', color: '#000000' }}>★</span>
                                 <span style={{ textTransform: 'uppercase' }}>입상 5회</span>
                             </div>
                         </div>
