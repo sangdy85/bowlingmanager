@@ -123,6 +123,8 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     const userTeamIds = user.teamMemberships.map((tm: any) => tm.teamId);
 
     // 1. 상주리그 기록
+    const currentTeamNames = user.teamMemberships.map((tm: any) => tm.team.name);
+
     const leagueScores = await prisma.leagueMatchupIndividualScore.findMany({
         where: {
             OR: [
@@ -131,6 +133,12 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                     AND: [
                         { playerName: user.name },
                         { teamId: { in: userTeamIds } }
+                    ]
+                },
+                {
+                    AND: [
+                        { playerName: user.name },
+                        { Team: { name: { in: currentTeamNames } } }
                     ]
                 }
             ],
@@ -164,6 +172,12 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                     AND: [
                         { registration: { guestName: user.name } },
                         { registration: { teamId: { in: userTeamIds } } }
+                    ]
+                },
+                {
+                    AND: [
+                        { registration: { guestName: user.name } },
+                        { registration: { guestTeamName: { in: currentTeamNames } } }
                     ]
                 }
             ],
