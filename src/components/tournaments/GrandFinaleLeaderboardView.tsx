@@ -25,15 +25,6 @@ export default function GrandFinaleLeaderboardView({
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', paddingBottom: '80px', color: '#000000' }}>
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                .excel-table { border-collapse: collapse !important; width: 100% !important; background-color: white !important; color: black !important; table-layout: fixed !important; }
-                .excel-table th, .excel-table td { border: 2px solid black !important; padding: 14px 8px !important; text-align: center !important; color: black !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; font-size: 18px !important; font-weight: 900 !important; }
-                .excel-table th { background-color: #d9ead3 !important; }
-                .excel-table td { background-color: white !important; }
-                .excel-table .rank-cell { background-color: #f0f0f0 !important; }
-                .excel-table .points-cell { color: #dc2626 !important; }
-            `}} />
             <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: '40px' }}>
                 {/* Header Section */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
