@@ -342,8 +342,22 @@ export async function manualRegister(roundId: string, input: {
         let registrationId = '';
 
         if (input.type === 'MEMBER' && input.userId) {
-            // CHAMP/LEAGUE: No reuse, always fork/create new for this round
-            if (isChampOrLeague) {
+            // Check for existing registration in this tournament
+            const existing: any[] = await prisma.$queryRaw`
+                SELECT id FROM "TournamentRegistration" 
+                WHERE "tournamentId" = ${info.tournamentId} AND "userId" = ${input.userId}
+            `;
+
+            if (existing.length > 0) {
+                registrationId = existing[0].id;
+                // Update handicap if provided OR use from input/user
+                const handicapVal = input.handicap !== undefined ? input.handicap : null;
+                if (handicapVal !== null) {
+                    await prisma.$executeRaw`
+                        UPDATE "TournamentRegistration" SET "handicap" = ${handicapVal} WHERE "id" = ${registrationId}
+                    `;
+                }
+            } else {
                 registrationId = randomUUID();
                 const userAndMember: any[] = await prisma.$queryRaw`
                     SELECT u.handicap, cm."teamId" 
@@ -358,35 +372,6 @@ export async function manualRegister(roundId: string, input: {
                     INSERT INTO "TournamentRegistration" ("id", "tournamentId", "userId", "createdAt", "teamId", "guestName", "guestTeamName", "handicap")
                     VALUES (${registrationId}, ${info.tournamentId}, ${input.userId}, ${new Date()}, ${teamId}, null, null, ${handicapVal})
                 `;
-            } else {
-                // Regular Event/League: Try to reuse existing registration
-                const existing: any[] = await prisma.$queryRaw`
-                    SELECT id FROM "TournamentRegistration" 
-                    WHERE "tournamentId" = ${info.tournamentId} AND "userId" = ${input.userId}
-                `;
-
-                if (existing.length > 0) {
-                    registrationId = existing[0].id;
-                    // Update handicap if provided
-                    if (input.handicap !== undefined) {
-                        await prisma.$executeRaw`
-                            UPDATE "TournamentRegistration" SET "handicap" = ${input.handicap} WHERE "id" = ${registrationId}
-                        `;
-                    }
-                } else {
-                    registrationId = randomUUID();
-                    const centerMembers: any[] = await prisma.$queryRaw`
-                        SELECT "teamId" FROM "CenterMember" 
-                        WHERE "userId" = ${input.userId} AND "centerId" = ${info.centerId}
-                    `;
-                    const teamId = centerMembers.length > 0 ? centerMembers[0].teamId : null;
-                    const handicapVal = input.handicap !== undefined ? input.handicap : null;
-
-                    await prisma.$executeRaw`
-                        INSERT INTO "TournamentRegistration" ("id", "tournamentId", "userId", "createdAt", "teamId", "guestName", "guestTeamName", "handicap")
-                        VALUES (${registrationId}, ${info.tournamentId}, ${input.userId}, ${new Date()}, ${teamId}, null, null, ${handicapVal})
-                    `;
-                }
             }
         } else if (input.type === 'GUEST' && input.guestName) {
             registrationId = randomUUID();

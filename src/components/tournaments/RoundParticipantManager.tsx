@@ -242,8 +242,8 @@ export default function RoundParticipantManager({
         const data = roundParticipants.map((reg, idx) => ({
             '순번': idx + 1 > maxParticipants && maxParticipants > 0 ? `대기 ${idx + 1 - maxParticipants}` : idx + 1,
             '팀명': reg.guestTeamName || reg.team?.name || '개인',
-            '성함': reg.user?.name || reg.guestName,
-            '핸디캡': reg.user?.handicap ?? reg.handicap ?? 0,
+            '성함': reg.guestName || reg.user?.name,
+            '핸디캡': reg.handicap ?? reg.user?.handicap ?? 0,
             '입금현황': reg.paymentStatus === 'PAID' ? '입금완료' : '입금대기',
             '레인': (() => {
                 const p = selectedRound.participants?.find((p: any) => p.registrationId === reg.id);
@@ -563,7 +563,7 @@ export default function RoundParticipantManager({
                                     const isEven = idx % 2 === 1;
                                     const bgColor = isCurrentUser ? '#e0f2fe' : (isWaitlisted ? '#fffbeb' : (isEven ? '#f8fafc' : '#FFFFFF')); // Sky blue for current user
 
-                                    const handicap = reg.user?.handicap ?? reg.handicap ?? '0';
+                                    const handicap = reg.handicap ?? reg.user?.handicap ?? '0';
                                     const isPaid = reg.paymentStatus === 'PAID';
 
                                     return (
@@ -579,7 +579,7 @@ export default function RoundParticipantManager({
                                                 {reg.guestTeamName || reg.team?.name || '개인'}
                                             </td>
                                             <td className="border-2 border-slate-900 p-1 truncate px-4 font-black">
-                                                {reg.user?.name || reg.guestName}
+                                                {reg.guestName || reg.user?.name}
                                             </td>
                                             <td className="border-2 border-slate-900 p-1">
                                                 {handicap}
