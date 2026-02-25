@@ -344,7 +344,7 @@ export async function manualRegister(roundId: string, input: {
         if (input.type === 'MEMBER' && input.userId) {
             // Check for existing registration in this tournament
             const existing: any[] = await prisma.$queryRaw`
-                SELECT id FROM "TournamentRegistration" 
+                SELECT id, "guestName", "guestTeamName", "handicap" FROM "TournamentRegistration" 
                 WHERE "tournamentId" = ${info.tournamentId} AND "userId" = ${input.userId}
             `;
 
@@ -359,18 +359,22 @@ export async function manualRegister(roundId: string, input: {
                 }
             } else {
                 registrationId = randomUUID();
+                // Fetch User name and Team name for snapshotting
                 const userAndMember: any[] = await prisma.$queryRaw`
-                    SELECT u.handicap, cm."teamId" 
+                    SELECT u.name, u.handicap, cm."teamId", t.name as "teamName"
                     FROM "User" u
                     JOIN "CenterMember" cm ON u.id = cm."userId"
+                    LEFT JOIN "Team" t ON cm."teamId" = t.id
                     WHERE u.id = ${input.userId} AND cm."centerId" = ${info.centerId}
                 `;
                 const teamId = userAndMember.length > 0 ? userAndMember[0].teamId : null;
+                const snapName = userAndMember.length > 0 ? userAndMember[0].name : null;
+                const snapTeamName = userAndMember.length > 0 ? userAndMember[0].teamName : null;
                 const handicapVal = input.handicap !== undefined ? input.handicap : (userAndMember.length > 0 ? userAndMember[0].handicap : 0);
 
                 await prisma.$executeRaw`
                     INSERT INTO "TournamentRegistration" ("id", "tournamentId", "userId", "createdAt", "teamId", "guestName", "guestTeamName", "handicap")
-                    VALUES (${registrationId}, ${info.tournamentId}, ${input.userId}, ${new Date()}, ${teamId}, null, null, ${handicapVal})
+                    VALUES (${registrationId}, ${info.tournamentId}, ${input.userId}, ${new Date()}, ${teamId}, ${snapName}, ${snapTeamName}, ${handicapVal})
                 `;
             }
         } else if (input.type === 'GUEST' && input.guestName) {
@@ -867,8 +871,8 @@ export async function updateRegistration(
                         id: newRegId,
                         tournamentId: reg.tournamentId,
                         userId: null,
-                        guestName: data.guestName ?? reg.guestName,
-                        guestTeamName: data.guestTeamName ?? reg.guestTeamName,
+                        guestName: data.guestName !== undefined ? data.guestName : (reg.guestName ?? (reg.user?.name || null)),
+                        guestTeamName: data.guestTeamName !== undefined ? data.guestTeamName : (reg.guestTeamName ?? (reg.team?.name || null)),
                         handicap: data.handicap !== undefined ? data.handicap : (reg.handicap ?? 0),
                         paymentStatus: reg.paymentStatus,
                         createdAt: new Date()
@@ -1129,12 +1133,15 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                             await tx.tournamentRegistration.update({
                                 where: { id: registrationId },
                                 data: {
+                                    guestName: trimmedName,
+                                    guestTeamName: trimmedTeamName || null,
                                     handicap: handicapVal !== null ? handicapVal : undefined,
                                     paymentStatus: status
                                 }
                             });
                             results.updatedTitle++;
-                        } else {
+                        }
+                        else {
                             await tx.tournamentRegistration.create({
                                 data: {
                                     id: registrationId,

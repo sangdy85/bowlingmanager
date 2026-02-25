@@ -559,7 +559,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                                                     {p.lane % 10}
                                                 </div>
                                                 <span className="font-bold text-sm text-gray-800">
-                                                    {p.registration.guestName || p.registration.user?.name}
+                                                    {p.registration.guestName ?? p.registration.user?.name}
                                                     {((p.registration.guestTeamName ?? p.registration.team?.name)) && (
                                                         <span className="ml-1 text-[10px] text-gray-400 font-medium">
                                                             ({p.registration.guestTeamName ?? p.registration.team?.name})
@@ -760,8 +760,8 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
         if (a.lane && b.lane) return a.lane - b.lane;
         if (a.lane) return -1;
         if (b.lane) return 1;
-        const nameA = a.registration.guestName || a.registration.user?.name || '';
-        const nameB = b.registration.guestName || b.registration.user?.name || '';
+        const nameA = a.registration.guestName ?? a.registration.user?.name ?? '';
+        const nameB = b.registration.guestName ?? b.registration.user?.name ?? '';
         return nameA.localeCompare(nameB);
     });
 
@@ -849,7 +849,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                         {formatLane(p.lane, p.isManual)}
                                     </td>
                                     <td className="p-2 text-center text-gray-600 truncate" style={{ width: '90px', whiteSpace: 'nowrap' }}>
-                                        {p.registration.guestTeamName || p.registration.team?.name || '-'}
+                                        {(p.registration.guestTeamName ?? p.registration.team?.name) || '-'}
                                     </td>
                                     <td className="p-2 text-center font-bold text-gray-800 truncate" style={{ width: '130px', whiteSpace: 'nowrap' }}>
                                         {p.registration.user?.name || p.registration.guestName}
@@ -925,7 +925,7 @@ function RoundSideGameTab({ round }: { round: any }) {
             const handicap = p.registration.handicap || 0;
             return {
                 id: p.registrationId,
-                name: p.registration.guestName || p.registration.user?.name,
+                name: p.registration.guestName ?? p.registration.user?.name,
                 team: (p.registration.guestTeamName ?? p.registration.team?.name) || '-',
                 score: pScore,
                 handicap: handicap,
@@ -1059,7 +1059,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     totalRaw: 0,
                     totalHandicap: 0,
                     gameScores: new Array(gameCount).fill(0),
-                    teamName: p.registration.guestTeamName || p.registration.team?.name || '팀'
+                    teamName: (p.registration.guestTeamName ?? p.registration.team?.name) || '팀'
                 };
             }
             const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
@@ -1074,7 +1074,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             const handicap = p.registration.handicap || 0;
             groups[groupId].totalRaw += pTotalRaw;
             groups[groupId].totalHandicap += (handicap * pGamesPlayed);
-            groups[groupId].members.push(p.registration.guestName || p.registration.user?.name || 'Unknown');
+            groups[groupId].members.push(p.registration.guestName ?? p.registration.user?.name ?? 'Unknown');
         });
 
         results = Object.values(groups).map((g: any) => ({
@@ -1114,7 +1114,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             }
 
             const handicap = p.registration.handicap || 0;
-            const pName = p.registration.guestName || p.registration.user?.name || 'Unknown';
+            const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
             const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인회원';
 
             // 1. Calculate system penalty from previous round (minusApplied)
@@ -1666,8 +1666,8 @@ function RoundPointsTab({ round }: { round: any }) {
         }
 
         const handicap = p.registration.handicap || 0;
-        const pName = p.registration.user?.name || p.registration.guestName || 'Unknown';
-        const pTeam = p.registration.guestTeamName || p.registration.team?.name || '개인';
+        const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
+        const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인';
 
         let minusApplied = 0;
         let rankCap = 0;
@@ -1824,7 +1824,7 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
                 if (data.isFinalized) setIsFinalized(true);
                 if (data.winners && data.winners.length > 0) {
                     const lastWinner = data.winners[data.winners.length - 1];
-                    setCurrentCandidate(lastWinner.registration.guestName || lastWinner.registration.user?.name);
+                    setCurrentCandidate(lastWinner.registration.guestName ?? lastWinner.registration.user?.name);
                 }
             } catch (e) {
                 console.error("Failed to parse lucky draw result. Malformed JSON:", e);
@@ -1866,7 +1866,7 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
         const interval = setInterval(() => {
             const randomIndex = Math.floor(Math.random() * pool.length);
             const candidate = pool[randomIndex];
-            setCurrentCandidate(candidate.registration.guestName || candidate.registration.user?.name);
+            setCurrentCandidate(candidate.registration.guestName ?? candidate.registration.user?.name);
 
             if (Date.now() - startTime > duration) {
                 clearInterval(interval);
@@ -1874,7 +1874,7 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
                 // Final selection
                 const winnerIndex = Math.floor(Math.random() * pool.length);
                 const winner = pool[winnerIndex];
-                const winnerName = winner.registration.guestName || winner.registration.user?.name;
+                const winnerName = winner.registration.guestName ?? winner.registration.user?.name;
 
                 setCurrentCandidate(winnerName);
                 setWinners(prev => [...prev, winner]);
@@ -2072,13 +2072,13 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
                                         </td>
                                         <td style={{ padding: '2.5rem 2rem' }}>
                                             <span style={{ fontWeight: 700, color: '#64748b', fontSize: '1.75rem', letterSpacing: '-0.025em' }}>
-                                                {winner.registration.guestTeamName || winner.registration.team?.name || '개인'}
+                                                {(winner.registration.guestTeamName ?? winner.registration.team?.name) || '개인'}
                                             </span>
                                         </td>
                                         <td style={{ padding: '2.5rem 2rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                                                 <span style={{ fontWeight: 900, color: '#0f172a', fontSize: '3.5rem', letterSpacing: '-0.05em' }}>
-                                                    {winner.registration.guestName || winner.registration.user?.name}
+                                                    {winner.registration.guestName ?? winner.registration.user?.name}
                                                 </span>
                                                 {idx === winners.length - 1 && !isRunning && (
                                                     <span style={{ backgroundColor: '#2563eb', color: '#ffffff', padding: '0.375rem 1rem', borderRadius: '1rem', fontWeight: 900, fontSize: '0.875rem', verticalAlign: 'middle' }}>
@@ -2369,7 +2369,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                                                     {result.winners.map((winner: any, idx: number) => (
                                                         <div key={idx} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1">
                                                             <span className="text-blue-600 font-black text-lg">
-                                                                {winner.registration?.guestName || winner.registration?.user?.name}
+                                                                {winner.registration?.guestName ?? winner.registration?.user?.name}
                                                             </span>
                                                             <span className="text-[10px] font-bold text-slate-400">
                                                                 {(winner.registration?.guestTeamName ?? winner.registration?.team?.name) || '개인회원'}
