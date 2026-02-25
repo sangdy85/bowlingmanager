@@ -133,7 +133,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
 
             const handicap = p.registration.handicap || 0;
             const pName = p.registration.guestName || p.registration.user?.name || 'Unknown';
-            const pTeam = p.registration.guestTeamName || p.registration.team?.name || '개인';
+            const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인';
 
             let minusApplied = 0;
             let rankCap = 0;

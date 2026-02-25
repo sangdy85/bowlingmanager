@@ -560,9 +560,9 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                                                 </div>
                                                 <span className="font-bold text-sm text-gray-800">
                                                     {p.registration.guestName || p.registration.user?.name}
-                                                    {(p.registration.guestTeamName || p.registration.team?.name) && (
+                                                    {((p.registration.guestTeamName ?? p.registration.team?.name)) && (
                                                         <span className="ml-1 text-[10px] text-gray-400 font-medium">
-                                                            ({p.registration.guestTeamName || p.registration.team?.name})
+                                                            ({p.registration.guestTeamName ?? p.registration.team?.name})
                                                         </span>
                                                     )}
                                                 </span>
@@ -926,7 +926,7 @@ function RoundSideGameTab({ round }: { round: any }) {
             return {
                 id: p.registrationId,
                 name: p.registration.guestName || p.registration.user?.name,
-                team: p.registration.guestTeamName || p.registration.team?.name || '-',
+                team: (p.registration.guestTeamName ?? p.registration.team?.name) || '-',
                 score: pScore,
                 handicap: handicap,
                 total: pScore > 0 ? pScore + handicap : 0
@@ -1115,7 +1115,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
             const handicap = p.registration.handicap || 0;
             const pName = p.registration.guestName || p.registration.user?.name || 'Unknown';
-            const pTeam = p.registration.guestTeamName || p.registration.team?.name || '개인회원';
+            const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인회원';
 
             // 1. Calculate system penalty from previous round (minusApplied)
             let minusApplied = 0;
@@ -2372,7 +2372,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                                                                 {winner.registration?.guestName || winner.registration?.user?.name}
                                                             </span>
                                                             <span className="text-[10px] font-bold text-slate-400">
-                                                                {winner.registration?.guestTeamName || winner.registration?.team?.name || '개인회원'}
+                                                                {(winner.registration?.guestTeamName ?? winner.registration?.team?.name) || '개인회원'}
                                                             </span>
                                                         </div>
                                                     ))}

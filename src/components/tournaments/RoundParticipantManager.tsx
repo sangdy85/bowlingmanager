@@ -241,7 +241,7 @@ export default function RoundParticipantManager({
     const downloadExcel = () => {
         const data = roundParticipants.map((reg, idx) => ({
             '순번': idx + 1 > maxParticipants && maxParticipants > 0 ? `대기 ${idx + 1 - maxParticipants}` : idx + 1,
-            '팀명': reg.guestTeamName || reg.team?.name || '개인',
+            '팀명': (reg.guestTeamName ?? reg.team?.name) || '개인',
             '성함': reg.guestName || reg.user?.name,
             '핸디캡': reg.handicap ?? reg.user?.handicap ?? 0,
             '입금현황': reg.paymentStatus === 'PAID' ? '입금완료' : '입금대기',
@@ -576,7 +576,7 @@ export default function RoundParticipantManager({
                                                 {isWaitlisted ? `대기 ${waitNumber}` : idx + 1}
                                             </td>
                                             <td className="border-2 border-slate-900 p-1 truncate px-4">
-                                                {reg.guestTeamName || reg.team?.name || '개인'}
+                                                {(reg.guestTeamName ?? reg.team?.name) || '개인'}
                                             </td>
                                             <td className="border-2 border-slate-900 p-1 truncate px-4 font-black">
                                                 {reg.guestName || reg.user?.name}
