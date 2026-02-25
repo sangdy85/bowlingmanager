@@ -205,6 +205,25 @@ export default function TournamentMemberView({
                         {/* 3. Current Round Participation & Sidebar Results */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                             <div className="lg:col-span-2 space-y-12">
+                                {isCHAMPResults && (
+                                    <section className="space-y-6 pt-0 mb-12">
+                                        <div className="flex items-center gap-3 px-2">
+                                            <span className="text-2xl">📜</span>
+                                            <h3 className="text-xl font-black italic">전체 회차 기록 및 결과</h3>
+                                        </div>
+                                        <div className="bg-slate-50 p-8 rounded-3xl border-2 border-black shadow-inner">
+                                            <ChampManager
+                                                tournament={tournament}
+                                                centerId={centerId}
+                                                isManager={false}
+                                                currentUserId={currentUserId}
+                                                isMemberView={true}
+                                                isArchiveView={true}
+                                            />
+                                        </div>
+                                    </section>
+                                )}
+
                                 <section className="card p-8 border-2 border-black transition-all hover:shadow-2xl h-full">
                                     <div className="flex flex-col items-start gap-4 mb-8 border-b-2 border-slate-100 pb-6">
                                         <h2 className="text-2xl font-black italic flex items-center gap-2">
@@ -246,25 +265,6 @@ export default function TournamentMemberView({
                                         );
                                     })()}
                                 </section>
-
-                                {isCHAMPResults && (
-                                    <section className="space-y-6 pt-0">
-                                        <div className="flex items-center gap-3 px-2">
-                                            <span className="text-2xl">📜</span>
-                                            <h3 className="text-xl font-black italic">전체 회차 기록 및 결과</h3>
-                                        </div>
-                                        <div className="bg-slate-50 p-8 rounded-3xl border-2 border-black shadow-inner">
-                                            <ChampManager
-                                                tournament={tournament}
-                                                centerId={centerId}
-                                                isManager={false}
-                                                currentUserId={currentUserId}
-                                                isMemberView={true}
-                                                isArchiveView={true}
-                                            />
-                                        </div>
-                                    </section>
-                                )}
                             </div>
 
                             <div className="space-y-8">

@@ -352,6 +352,59 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                             </div>
                         </section>
 
+                        {/* 🏆 Leaderboard (Grand Finale) section moved UP for consistency */}
+                        <div className="card p-6 border-l-8 border-primary shadow-lg bg-primary/5">
+                            <h3 className="font-black text-lg mb-4 flex items-center gap-2">🏆 리더보드 (왕중왕전)</h3>
+                            <p className="text-sm text-secondary-foreground mb-6 font-medium">대회가 진행됨에 따라 실시간 순위 데이터가 집계됩니다.</p>
+                            <div className="flex flex-col">
+                                {(() => {
+                                    const s = tournamentSettings;
+
+                                    return (
+                                        <>
+                                            {s.hasGrandFinale === 'WINNERS' && (
+                                                <GrandFinaleQualifiersButton
+                                                    centerId={centerId}
+                                                    tournamentId={tournamentId}
+                                                />
+                                            )}
+                                            {s.hasGrandFinale === 'CUMULATIVE' && (
+                                                <Link
+                                                    href={`/centers/${centerId}/tournaments/${tournamentId}/grand-finale-leaderboard`}
+                                                    className="btn btn-primary w-full text-sm font-black h-12 shadow-md flex items-center justify-center border-2 border-black bg-indigo-600 hover:bg-indigo-700 text-white mb-3"
+                                                >
+                                                    🎖️ 왕중왕전 포인트 현황
+                                                </Link>
+                                            )}
+                                        </>
+                                    );
+                                })()}
+
+                                {safeTournament.type === 'LEAGUE' && (
+                                    <>
+                                        <Link
+                                            href={`/centers/${centerId}/tournaments/${tournamentId}/leaderboard`}
+                                            className="btn btn-primary w-full text-sm font-black h-12 shadow-md flex items-center justify-center border-2 border-black mb-3"
+                                        >
+                                            순위표 열기
+                                        </Link>
+                                        <Link
+                                            href={`/centers/${centerId}/tournaments/${tournamentId}/individual-leaderboard`}
+                                            className="btn btn-primary w-full text-sm font-black h-12 shadow-md flex items-center justify-center border-2 border-black mb-3"
+                                        >
+                                            개인 순위표
+                                        </Link>
+                                        <Link
+                                            href={`/centers/${centerId}/tournaments/${tournamentId}/top30`}
+                                            className="btn btn-primary w-full text-sm font-black h-12 shadow-md flex items-center justify-center border-2 border-black"
+                                        >
+                                            개인 평균 Top
+                                        </Link>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
                         {safeTournament.type === 'LEAGUE' && isManager && (
                             <div className="space-y-4">
                                 <TournamentManager
@@ -411,58 +464,6 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                                 isManager={isManager}
                             />
                         )}
-
-                        <div className="card p-6 border-l-8 border-primary shadow-lg bg-primary/5">
-                            <h3 className="font-black text-lg mb-4 flex items-center gap-2">🏆 리더보드 (왕중왕전)</h3>
-                            <p className="text-sm text-secondary-foreground mb-6 font-medium">대회가 진행됨에 따라 실시간 순위 데이터가 집계됩니다.</p>
-                            <div className="flex flex-col">
-                                {(() => {
-                                    const s = tournamentSettings;
-
-                                    return (
-                                        <>
-                                            {s.hasGrandFinale === 'WINNERS' && (
-                                                <GrandFinaleQualifiersButton
-                                                    centerId={centerId}
-                                                    tournamentId={tournamentId}
-                                                />
-                                            )}
-                                            {s.hasGrandFinale === 'CUMULATIVE' && (
-                                                <Link
-                                                    href={`/centers/${centerId}/tournaments/${tournamentId}/grand-finale-leaderboard`}
-                                                    className="btn btn-primary w-full text-sm font-black h-12 shadow-md flex items-center justify-center border-2 border-black bg-indigo-600 hover:bg-indigo-700 text-white mb-3"
-                                                >
-                                                    🎖️ 왕중왕전 포인트 현황
-                                                </Link>
-                                            )}
-                                        </>
-                                    );
-                                })()}
-
-                                {safeTournament.type === 'LEAGUE' && (
-                                    <>
-                                        <Link
-                                            href={`/centers/${centerId}/tournaments/${tournamentId}/leaderboard`}
-                                            className="btn btn-primary w-full text-sm font-black h-12 shadow-md flex items-center justify-center border-2 border-black mb-3"
-                                        >
-                                            순위표 열기
-                                        </Link>
-                                        <Link
-                                            href={`/centers/${centerId}/tournaments/${tournamentId}/individual-leaderboard`}
-                                            className="btn btn-primary w-full text-sm font-black h-12 shadow-md flex items-center justify-center border-2 border-black mb-3"
-                                        >
-                                            개인 순위표
-                                        </Link>
-                                        <Link
-                                            href={`/centers/${centerId}/tournaments/${tournamentId}/top30`}
-                                            className="btn btn-primary w-full text-sm font-black h-12 shadow-md flex items-center justify-center border-2 border-black"
-                                        >
-                                            개인 평균 Top
-                                        </Link>
-                                    </>
-                                )}
-                            </div>
-                        </div>
 
                         {safeTournament.type !== 'LEAGUE' && (
                             <section className="card p-8 border-2 border-black">
