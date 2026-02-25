@@ -286,10 +286,21 @@ export async function updateLeagueRoundDate(roundId: string, newDateStr: string)
 }
 
 export async function updateLeagueMatchupResult(matchupId: string, data: {
-    individualScores: {
+    teamAScores: {
         userId?: string;
         playerName?: string;
         teamId: string;
+        teamSquad?: string | null;
+        handicap: number;
+        score1: number;
+        score2: number;
+        score3: number;
+    }[];
+    teamBScores: {
+        userId?: string;
+        playerName?: string;
+        teamId: string;
+        teamSquad?: string | null;
         handicap: number;
         score1: number;
         score2: number;
@@ -308,8 +319,9 @@ export async function updateLeagueMatchupResult(matchupId: string, data: {
     if (!matchup) throw new Error("Matchup not found");
     await verifyCenterAdmin(matchup.round.tournament.centerId);
 
-    const teamAScores = data.individualScores.filter(s => s.teamId === matchup.teamAId && (s as any).teamSquad === matchup.teamASquad);
-    const teamBScores = data.individualScores.filter(s => s.teamId === matchup.teamBId && (s as any).teamSquad === matchup.teamBSquad);
+    const teamAScores = data.teamAScores;
+    const teamBScores = data.teamBScores;
+    const allIndividualScores = [...teamAScores, ...teamBScores];
 
     const calculateCappedTotal = (scores: any[], gameNum: number) => {
         return scores.reduce((sum, s) => sum + Math.min((s[`score${gameNum}`] || 0) + (s.handicap || 0), 300), 0);
@@ -376,27 +388,16 @@ export async function updateLeagueMatchupResult(matchupId: string, data: {
             individualScores: {
                 deleteMany: {},
                 createMany: {
-                    data: data.individualScores.map(s => {
-                        const squad = (s.teamId === matchup.teamAId && (matchup as any).teamASquad === matchup.teamASquad) // just logic check
-                            ? (s.teamId === matchup.teamAId ? matchup.teamASquad : matchup.teamBSquad)
-                            : null; // Fallback or more precise check needed? 
-
-                        // Refined logic:
-                        let assignedSquad = null;
-                        if (s.teamId === matchup.teamAId) assignedSquad = matchup.teamASquad;
-                        else if (s.teamId === matchup.teamBId) assignedSquad = matchup.teamBSquad;
-
-                        return {
-                            teamId: s.teamId,
-                            teamSquad: assignedSquad,
-                            userId: s.userId || null,
-                            playerName: s.playerName || null,
-                            handicap: s.handicap,
-                            score1: s.score1,
-                            score2: s.score2,
-                            score3: s.score3
-                        };
-                    })
+                    data: allIndividualScores.map(s => ({
+                        teamId: s.teamId,
+                        teamSquad: s.teamSquad || null,
+                        userId: s.userId || null,
+                        playerName: s.playerName || null,
+                        handicap: s.handicap,
+                        score1: s.score1,
+                        score2: s.score2,
+                        score3: s.score3
+                    }))
                 }
             }
         }
@@ -407,15 +408,8 @@ export async function updateLeagueMatchupResult(matchupId: string, data: {
 
 export async function updateLeagueRoundResults(roundId: string, results: {
     matchupId: string;
-    individualScores: {
-        userId?: string;
-        playerName?: string;
-        teamId: string;
-        handicap: number;
-        score1: number;
-        score2: number;
-        score3: number;
-    }[];
+    teamAScores: any[];
+    teamBScores: any[];
 }[]) {
     const round = (await (prisma as any).leagueRound.findUnique({
         where: { id: roundId },
@@ -426,7 +420,10 @@ export async function updateLeagueRoundResults(roundId: string, results: {
     await verifyCenterAdmin(round.tournament.centerId);
 
     for (const res of results) {
-        await updateLeagueMatchupResult(res.matchupId, { individualScores: res.individualScores });
+        await updateLeagueMatchupResult(res.matchupId, {
+            teamAScores: res.teamAScores,
+            teamBScores: res.teamBScores
+        });
     }
 
     revalidatePath(`/centers/${round.tournament.centerId}/tournaments/${round.tournamentId}`);
