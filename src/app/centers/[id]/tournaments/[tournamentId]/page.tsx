@@ -412,46 +412,8 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                             />
                         )}
 
-                        {safeTournament.type !== 'LEAGUE' && (
-                            <section className="card p-8 border-2 border-black">
-                                <div className="flex flex-col items-start gap-4 mb-8 border-b-2 border-slate-100 pb-6">
-                                    <h2 className="text-2xl font-bold italic flex items-center gap-2">
-                                        <span className="text-3xl">👥</span> 참가자 명단 ({safeTournament.registrations.length}/{safeTournament.maxParticipants})
-                                    </h2>
-                                    {!isManager && (
-                                        <div className="w-full">
-                                            <TournamentRegButton
-                                                tournament={safeTournament}
-                                                isRegistered={isRegisteredInRound}
-                                                canJoin={safeTournament.status !== 'FINISHED'}
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-
-                                {(() => {
-                                    const rounds = safeTournament.leagueRounds || [];
-                                    return (
-                                        <RoundParticipantManager
-                                            rounds={rounds}
-                                            initialRoundId={initialRound?.id}
-                                            allRegistrations={safeTournament.registrations}
-                                            isManager={isManager}
-                                            maxParticipants={safeTournament.maxParticipants}
-                                            isEvent={safeTournament.type === 'EVENT'}
-                                            hideRoundTabs={safeTournament.type === 'EVENT' || !isManager}
-                                            currentUserId={session?.user?.id}
-                                            centerId={centerId}
-                                        />
-                                    );
-                                })()}
-                            </section>
-                        )}
-                    </div>
-
-                    <div className="space-y-8">
                         <div className="card p-6 border-l-8 border-primary shadow-lg bg-primary/5">
-                            <h3 className="font-black text-lg mb-4 flex items-center gap-2">🏆 리더보드</h3>
+                            <h3 className="font-black text-lg mb-4 flex items-center gap-2">🏆 리더보드 (왕중왕전)</h3>
                             <p className="text-sm text-secondary-foreground mb-6 font-medium">대회가 진행됨에 따라 실시간 순위 데이터가 집계됩니다.</p>
                             <div className="flex flex-col">
                                 {(() => {
@@ -501,6 +463,45 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                                 )}
                             </div>
                         </div>
+
+                        {safeTournament.type !== 'LEAGUE' && (
+                            <section className="card p-8 border-2 border-black">
+                                <div className="flex flex-col items-start gap-4 mb-8 border-b-2 border-slate-100 pb-6">
+                                    <h2 className="text-2xl font-bold italic flex items-center gap-2">
+                                        <span className="text-3xl">👥</span> 참가자 명단 ({safeTournament.registrations.length}/{safeTournament.maxParticipants})
+                                    </h2>
+                                    {!isManager && (
+                                        <div className="w-full">
+                                            <TournamentRegButton
+                                                tournament={safeTournament}
+                                                isRegistered={isRegisteredInRound}
+                                                canJoin={safeTournament.status !== 'FINISHED'}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {(() => {
+                                    const rounds = safeTournament.leagueRounds || [];
+                                    return (
+                                        <RoundParticipantManager
+                                            rounds={rounds}
+                                            initialRoundId={initialRound?.id}
+                                            allRegistrations={safeTournament.registrations}
+                                            isManager={isManager}
+                                            maxParticipants={safeTournament.maxParticipants}
+                                            isEvent={safeTournament.type === 'EVENT'}
+                                            hideRoundTabs={safeTournament.type === 'EVENT' || !isManager}
+                                            currentUserId={session?.user?.id}
+                                            centerId={centerId}
+                                        />
+                                    );
+                                })()}
+                            </section>
+                        )}
+                    </div>
+
+                    <div className="space-y-8">
 
                         <div className="card p-6 border-2 border-black shadow-lg">
                             <h3 className="font-black text-lg mb-4">📍 참여 볼링장</h3>
