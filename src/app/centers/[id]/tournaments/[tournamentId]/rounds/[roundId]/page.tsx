@@ -63,16 +63,18 @@ export default async function RoundDetailPage({ params }: { params: { id: string
     `;
 
     // Merge manual status into participants
-    const augmentedParticipants = roundData.participants.map((p: any) => ({
-        ...p,
-        isManual: manualStatus.find(m => m.id === p.id)?.isManual === 1 || manualStatus.find(m => m.id === p.id)?.isManual === true,
-        // Serialize Dates inside participants
-        registration: {
-            ...p.registration,
-            createdAt: p.registration.createdAt?.toISOString(),
-            updatedAt: p.registration.updatedAt?.toISOString()
-        }
-    }));
+    const augmentedParticipants = roundData.participants.map((p: any) => {
+        const registration = p.registration || {};
+        return {
+            ...p,
+            isManual: manualStatus.find(m => m.id === p.id)?.isManual === 1 || manualStatus.find(m => m.id === p.id)?.isManual === true,
+            // Serialize Dates inside participants
+            registration: {
+                ...registration,
+                createdAt: registration.createdAt?.toISOString() || null
+            }
+        };
+    });
 
     // Calculate current round status
     const effectiveDate = getEffectiveRoundDate(roundData.date, roundData.tournament.leagueTime);
@@ -105,7 +107,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
 
     // 3. Sequential winner tracking (CHAMP type logic)
     let runningPrevWinners: any = {};
-    const processedRounds = [];
+    const processedRounds: any[] = [];
     const gameCount = tournamentSettings.gameCount || 3;
 
     for (const r of allRoundsRaw) {
@@ -174,7 +176,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
                 isFemaleChamp: p.isFemaleChamp
             };
         })
-            .filter(entry => entry.total > 0)
+            .filter((entry: any) => entry.total > 0)
             .sort((a: any, b: any) => {
                 if (b.total !== a.total) return b.total - a.total;
                 if (a.handicap !== b.handicap) return a.handicap - b.handicap;
@@ -186,7 +188,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
         if (rankings.length > 0) runningPrevWinners.rank1 = { name: rankings[0].name, team: rankings[0].team };
         if (rankings.length > 1) runningPrevWinners.rank2 = { name: rankings[1].name, team: rankings[1].team };
         if (rankings.length > 2) runningPrevWinners.rank3 = { name: rankings[2].name, team: rankings[2].team };
-        const fWinner = rankings.find(r => r.isFemaleChamp);
+        const fWinner = rankings.find((r: any) => r.isFemaleChamp);
         if (fWinner) runningPrevWinners.femaleChamp = { name: fWinner.name, team: fWinner.team };
 
         // Prepare for client serialization
@@ -211,15 +213,19 @@ export default async function RoundDetailPage({ params }: { params: { id: string
     const currentProcessedRound = processedRounds.find(r => r.id === roundId);
     if (!currentProcessedRound) notFound();
 
-    const finalParticipants = roundData.participants.map((p: any) => ({
-        ...p,
-        isManual: processedRounds.find(r => r.id === roundId)?.participants.find((rp: any) => rp.id === p.id)?.isManual || false,
-        registration: {
-            ...p.registration,
-            createdAt: p.registration.createdAt?.toISOString(),
-            updatedAt: p.registration.updatedAt?.toISOString()
-        }
-    }));
+    const currentProcessedParticipants = currentProcessedRound.participants || [];
+
+    const finalParticipants = roundData.participants.map((p: any) => {
+        const registration = p.registration || {};
+        return {
+            ...p,
+            isManual: currentProcessedParticipants.find((rp: any) => rp.id === p.id)?.isManual || false,
+            registration: {
+                ...registration,
+                createdAt: registration.createdAt?.toISOString() || null
+            }
+        };
+    });
 
     // Assemble final object
     const finalRoundRaw = {
