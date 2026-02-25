@@ -419,12 +419,93 @@ export async function updateLeagueRoundResults(roundId: string, results: {
     if (!round) throw new Error("Round not found");
     await verifyCenterAdmin(round.tournament.centerId);
 
-    for (const res of results) {
-        await updateLeagueMatchupResult(res.matchupId, {
-            teamAScores: res.teamAScores,
-            teamBScores: res.teamBScores
+    const calculateCappedTotal = (scores: any[], gameNum: number) => {
+        return scores.reduce((sum, s) => sum + Math.min((s[`score${gameNum}`] || 0) + (s.handicap || 0), 300), 0);
+    };
+
+    const getHiLow = (scores: any[], gameNum: number) => {
+        const gameScores = scores.map(s => s[`score${gameNum}`] || 0);
+        if (gameScores.length === 0) return 0;
+        return Math.max(...gameScores) - Math.min(...gameScores);
+    };
+
+    const calculatePoints = (valA: number, valB: number, hA: number, hB: number, hiLowA: number, hiLowB: number) => {
+        if (valA > valB) return [1, 0];
+        if (valA < valB) return [0, 1];
+        if (hA < hB) return [1, 0];
+        if (hB < hA) return [0, 1];
+        if (hiLowA < hiLowB) return [1, 0];
+        if (hiLowB < hiLowA) return [0, 1];
+        return [0.5, 0.5];
+    };
+
+    const getSeriesHiLow = (g1: number, g2: number, g3: number) => {
+        return Math.max(g1, g2, g3) - Math.min(g1, g2, g3);
+    };
+
+    const updates = results.map(res => {
+        const teamAScores = res.teamAScores;
+        const teamBScores = res.teamBScores;
+        const allIndividualScores = [...teamAScores, ...teamBScores];
+
+        const aH = teamAScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
+        const bH = teamBScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
+
+        const aG1 = calculateCappedTotal(teamAScores, 1);
+        const aG2 = calculateCappedTotal(teamAScores, 2);
+        const aG3 = calculateCappedTotal(teamAScores, 3);
+        const aTotal = aG1 + aG2 + aG3;
+
+        const bG1 = calculateCappedTotal(teamBScores, 1);
+        const bG2 = calculateCappedTotal(teamBScores, 2);
+        const bG3 = calculateCappedTotal(teamBScores, 3);
+        const bTotal = bG1 + bG2 + bG3;
+
+        const pG1 = calculatePoints(aG1, bG1, aH, bH, getHiLow(teamAScores, 1), getHiLow(teamBScores, 1));
+        const pG2 = calculatePoints(aG2, bG2, aH, bH, getHiLow(teamAScores, 2), getHiLow(teamBScores, 2));
+        const pG3 = calculatePoints(aG3, bG3, aH, bH, getHiLow(teamAScores, 3), getHiLow(teamBScores, 3));
+
+        const pTotal = calculatePoints(
+            aTotal, bTotal, aH, bH,
+            getSeriesHiLow(teamAScores.reduce((sum, s) => sum + (s.score1 || 0), 0), teamAScores.reduce((sum, s) => sum + (s.score2 || 0), 0), teamAScores.reduce((sum, s) => sum + (s.score3 || 0), 0)),
+            getSeriesHiLow(teamBScores.reduce((sum, s) => sum + (s.score1 || 0), 0), teamBScores.reduce((sum, s) => sum + (s.score2 || 0), 0), teamBScores.reduce((sum, s) => sum + (s.score3 || 0), 0))
+        );
+
+        const pointsA = pG1[0] + pG2[0] + pG3[0] + pTotal[0];
+        const pointsB = pG1[1] + pG2[1] + pG3[1] + pTotal[1];
+
+        return (prisma as any).leagueMatchup.update({
+            where: { id: res.matchupId },
+            data: {
+                scoreA1: aG1,
+                scoreA2: aG2,
+                scoreA3: aG3,
+                scoreB1: bG1,
+                scoreB2: bG2,
+                scoreB3: bG3,
+                pointsA,
+                pointsB,
+                status: 'FINISHED',
+                individualScores: {
+                    deleteMany: {},
+                    createMany: {
+                        data: allIndividualScores.map(s => ({
+                            teamId: s.teamId,
+                            teamSquad: s.teamSquad || null,
+                            userId: s.userId || null,
+                            playerName: s.playerName || null,
+                            handicap: s.handicap,
+                            score1: s.score1,
+                            score2: s.score2,
+                            score3: s.score3
+                        }))
+                    }
+                }
+            }
         });
-    }
+    });
+
+    await (prisma as any).$transaction(updates);
 
     revalidatePath(`/centers/${round.tournament.centerId}/tournaments/${round.tournamentId}`);
 }
