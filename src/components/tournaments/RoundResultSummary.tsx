@@ -22,6 +22,7 @@ interface IndividualScore {
     userId?: string | null;
     playerName?: string | null;
     teamId: string;
+    teamSquad?: string | null;
     handicap: number;
     score1: number;
     score2: number;
@@ -85,8 +86,8 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                     const laneA = m.lanes?.split('-')[0] || '??';
                     const laneB = m.lanes?.split('-')[1] || '??';
 
-                    const renderTeamTable = (team: Team | null, teamId: string | null, laneNum: string, points: number | null, isRight: boolean) => {
-                        const teamScores = m.individualScores.filter(s => s.teamId === teamId);
+                    const renderTeamTable = (team: Team | null, teamId: string | null, squad: string | undefined | null, laneNum: string, points: number | null, isRight: boolean) => {
+                        const teamScores = m.individualScores.filter(s => s.teamId === teamId && s.teamSquad === squad);
                         const rawHSum = teamScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
                         const hSum = (teamHandicapLimit !== undefined && teamHandicapLimit !== null && rawHSum > teamHandicapLimit) ? teamHandicapLimit : rawHSum;
 
@@ -95,7 +96,8 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                         const g3 = teamScores.reduce((sum, s) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0);
 
                         const opponentId = isRight ? m.teamAId : m.teamBId;
-                        const opponentScores = m.individualScores.filter(s => s.teamId === opponentId);
+                        const opponentSquad = isRight ? m.teamASquad : m.teamBSquad;
+                        const opponentScores = m.individualScores.filter(s => s.teamId === opponentId && s.teamSquad === opponentSquad);
                         const rawOHSum = opponentScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
                         const ohSum = (teamHandicapLimit !== undefined && teamHandicapLimit !== null && rawOHSum > teamHandicapLimit) ? teamHandicapLimit : rawOHSum;
 
@@ -202,8 +204,8 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
 
                     return (
                         <div key={m.id} style={{ display: 'flex', gap: '1rem', padding: '0.5rem', marginBottom: '1rem', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
-                            {renderTeamTable(m.teamA, m.teamAId, laneA, m.pointsA, false)}
-                            {renderTeamTable(m.teamB, m.teamBId, laneB, m.pointsB, true)}
+                            {renderTeamTable(m.teamA, m.teamAId, m.teamASquad, laneA, m.pointsA, false)}
+                            {renderTeamTable(m.teamB, m.teamBId, m.teamBSquad, laneB, m.pointsB, true)}
                         </div>
                     );
                 })}

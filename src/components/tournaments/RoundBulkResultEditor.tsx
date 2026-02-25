@@ -26,6 +26,7 @@ interface IndividualScore {
     userId?: string | null;
     playerName?: string | null;
     teamId: string;
+    teamSquad?: string | null;
     handicap: number;
     score1: number;
     score2: number;
@@ -79,8 +80,8 @@ export default function RoundBulkResultEditor({
     const [results, setResults] = useState<{ [matchupId: string]: IndividualScore[] }>(() => {
         const initial: { [key: string]: IndividualScore[] } = {};
         round.matchups.forEach(m => {
-            const teamAScores = m.individualScores.filter(s => s.teamId === m.teamAId);
-            const teamBScores = m.individualScores.filter(s => s.teamId === m.teamBId);
+            const teamAScores = m.individualScores.filter(s => s.teamId === m.teamAId && s.teamSquad === m.teamASquad);
+            const teamBScores = m.individualScores.filter(s => s.teamId === m.teamBId && s.teamSquad === m.teamBSquad);
 
             const fillRows = (team: Team | null, teamId: string | null, existing: IndividualScore[]) => {
                 const rows: IndividualScore[] = [...existing.map(s => ({ ...s }))];
@@ -380,14 +381,14 @@ export default function RoundBulkResultEditor({
         round.matchups.forEach(m => {
             const scores = results[m.id] || [];
 
-            const calculateTeam = (teamId: string | undefined | null) => {
+            const calculateTeam = (teamId: string | undefined | null, squad: string | undefined | null) => {
                 if (!teamId) return {
                     g1: 0, g2: 0, g3: 0, hSum: 0,
                     g1Total: 0, g2Total: 0, g3Total: 0, total: 0,
                     hiLow: [0, 0, 0] as [number, number, number],
                     seriesHiLow: 0
                 };
-                const teamScores = scores.filter(s => s.teamId === teamId);
+                const teamScores = scores.filter(s => s.teamId === teamId && s.teamSquad === squad);
                 const g1 = teamScores.reduce((sum, s) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0);
                 const g2 = teamScores.reduce((sum, s) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0);
                 const g3 = teamScores.reduce((sum, s) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0);
@@ -414,8 +415,8 @@ export default function RoundBulkResultEditor({
                 };
             };
 
-            const a = calculateTeam(m.teamAId);
-            const b = calculateTeam(m.teamBId);
+            const a = calculateTeam(m.teamAId, m.teamASquad);
+            const b = calculateTeam(m.teamBId, m.teamBSquad);
 
             const calculateWin = (valA: number, valB: number, hA: number, hB: number, hlA: number, hlB: number): [number, number, string, string] => {
                 if (valA > valB) return [1, 0, 'O', 'X'];
