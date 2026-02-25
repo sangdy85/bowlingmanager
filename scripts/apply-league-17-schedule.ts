@@ -27,7 +27,11 @@ async function main() {
     if (tournamentId) {
         tournament = await prisma.tournament.findUnique({
             where: { id: tournamentId },
-            include: { registrations: true }
+            include: {
+                registrations: {
+                    include: { team: true }
+                }
+            }
         });
     }
 
@@ -40,7 +44,11 @@ async function main() {
                     { name: { contains: "상주리그" } }
                 ]
             },
-            include: { registrations: true }
+            include: {
+                registrations: {
+                    include: { team: true }
+                }
+            }
         });
     }
 
@@ -65,12 +73,17 @@ async function main() {
     for (let i = 0; i < TEAM_NAME_ORDER.length; i++) {
         const teamName = TEAM_NAME_ORDER[i];
         const reg = tournament.registrations.find((r: any) =>
-            r.guestName === teamName || r.guestTeamName === teamName || (r as any).playerName === teamName
+            r.guestName === teamName ||
+            r.guestTeamName === teamName ||
+            (r as any).playerName === teamName ||
+            (r.team && r.team.name === teamName)
         );
 
         if (!reg) {
             console.error(`Error: Team "${teamName}" not found in tournament registrations.`);
-            console.log('Available teams:', tournament.registrations.map((r: any) => r.guestName || r.guestTeamName).filter(Boolean));
+            console.log('Available teams:', tournament.registrations.map((r: any) =>
+                r.guestName || r.guestTeamName || (r.team && r.team.name)
+            ).filter(Boolean));
             return;
         }
         teamMap[i + 1] = reg.id;
