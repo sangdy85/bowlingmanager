@@ -102,7 +102,7 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                     }
 
                     const handicap = p.registration?.handicap || 0;
-                    const pName = p.registration?.guestName ?? p.registration?.user?.name ?? 'GUEST';
+                    const pName = p.registration?.guestName ?? p.registration?.user?.name ?? 'Unknown';
                     const pTeam = (p.registration?.guestTeamName ?? p.registration?.team?.name) || '개인';
 
                     let minusApplied = 0;
@@ -201,7 +201,7 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
 
             const aggregatedList = Array.from(globalAggregatedMap.values());
 
-            return aggregatedList.sort((a, b) => {
+            return aggregatedList.sort((a: any, b: any) => {
                 if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
                 if (b.participationCount !== a.participationCount) return b.participationCount - a.participationCount;
                 return b.cumulativeScore - a.cumulativeScore;
@@ -224,7 +224,7 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
         };
 
         const handleDownloadExcel = () => {
-            const data = cumulativeList.map((p, idx) => ({
+            const data = cumulativeList.map((p: any, idx: number) => ({
                 '순위': idx + 1,
                 '팀명': p.teamName,
                 '성함': p.userName,
@@ -324,7 +324,7 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                                 </tr>
                             </thead>
                             <tbody>
-                                {cumulativeList.map((p, idx) => {
+                                {cumulativeList.map((p: any, idx: number) => {
                                     const compositeKey = `${p.teamName}|${p.userName}|${idx}`;
                                     return (
                                         <tr key={compositeKey}>
