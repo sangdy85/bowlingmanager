@@ -530,41 +530,21 @@ export async function autoAssignRemaining(roundId: string) {
     try {
         const round = await prisma.leagueRound.findUnique({
             where: { id: roundId },
-            include: { participants: true }
+            include: {
+                participants: {
+                    include: { registration: true }
+                }
+            }
         });
 
         if (!round) throw new Error("Round not found");
 
         const laneConfig = round.laneConfig ? JSON.parse(round.laneConfig) : {};
-        const allSlots: { lane: number, slot: number }[] = [];
-
-        // Build all available slots based on config
-        for (const [laneStr, slots] of Object.entries(laneConfig)) {
-            const lane = parseInt(laneStr);
-            const activeSlots = slots as number[];
-            activeSlots.forEach(slot => {
-                allSlots.push({ lane, slot }); // Slot logic is just for count, but we track them if needed. 
-                // Actually, simple lane assignment just needs to know capacity. 
-                // If config says lane 1 has slots [1,2,3], it means capacity is 3. 
-            });
-        }
-
-        // If no config, fallback to default (start-end, 3 per lane?) 
-        // Better to require config for this advanced feature, or fallback to start-end with 3 per lane.
-        if (Object.keys(laneConfig).length === 0 && (round as any).startLane && (round as any).endLane) {
-            for (let i = (round as any).startLane; i <= (round as any).endLane; i++) {
-                allSlots.push({ lane: i, slot: 1 });
-                allSlots.push({ lane: i, slot: 2 });
-                allSlots.push({ lane: i, slot: 3 });
-            }
-        }
-
-        // Filter out taken spots
         const assignedParticipants = round.participants.filter((p: any) => p.lane);
         const takenSlots = new Set(assignedParticipants.map((p: any) => p.lane));
 
-        // Available slots pool (encoded as lane * 10 + slot)
-        const availableSlots: number[] = [];
+        // Group available slots by lane
+        const laneToSlots = new Map<number, number[]>();
 
         if (Object.keys(laneConfig).length > 0) {
             for (const [laneStr, slots] of Object.entries(laneConfig)) {
@@ -573,17 +553,18 @@ export async function autoAssignRemaining(roundId: string) {
                 activeSlots.forEach(slot => {
                     const encoded = lane * 10 + slot;
                     if (!takenSlots.has(encoded)) {
-                        availableSlots.push(encoded);
+                        if (!laneToSlots.has(lane)) laneToSlots.set(lane, []);
+                        laneToSlots.get(lane)!.push(encoded);
                     }
                 });
             }
         } else if ((round as any).startLane && (round as any).endLane) {
-            // Default logic if no config
             for (let i = (round as any).startLane; i <= (round as any).endLane; i++) {
                 for (let k = 1; k <= 3; k++) {
                     const encoded = i * 10 + k;
                     if (!takenSlots.has(encoded)) {
-                        availableSlots.push(encoded);
+                        if (!laneToSlots.has(i)) laneToSlots.set(i, []);
+                        laneToSlots.get(i)!.push(encoded);
                     }
                 }
             }
@@ -591,33 +572,96 @@ export async function autoAssignRemaining(roundId: string) {
 
         // Unassigned participants
         const unassigned = round.participants.filter((p: any) => !p.lane);
+        const totalAvailableCount = Array.from(laneToSlots.values()).reduce((acc, curr) => acc + curr.length, 0);
 
-        if (availableSlots.length < unassigned.length) {
-            throw new Error(`자리가 부족합니다. (남은 자리: ${availableSlots.length}, 대기 인원: ${unassigned.length})`);
+        if (totalAvailableCount < unassigned.length) {
+            throw new Error(`자리가 부족합니다. (남은 자리: ${totalAvailableCount}, 대기 인원: ${unassigned.length})`);
         }
 
-        // Shuffle available slots
-        for (let i = availableSlots.length - 1; i > 0; i--) {
+        // Group unassigned by entryGroupId
+        const groupsMap = new Map<string, any[]>();
+        const indivs: any[] = [];
+
+        unassigned.forEach((p: any) => {
+            const gid = p.registration?.entryGroupId;
+            if (gid) {
+                if (!groupsMap.has(gid)) groupsMap.set(gid, []);
+                groupsMap.get(gid)!.push(p);
+            } else {
+                indivs.push(p);
+            }
+        });
+
+        // Split grouped participants: those with group size > 1 vs isolated ones
+        const multiGroups = Array.from(groupsMap.values()).filter(g => g.length > 1);
+        const isolated = Array.from(groupsMap.values()).filter(g => g.length === 1).map(g => g[0]);
+        const allIndivs = [...indivs, ...isolated];
+
+        // Shuffle groups and individuals
+        for (let i = multiGroups.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [availableSlots[i], availableSlots[j]] = [availableSlots[j], availableSlots[i]];
+            [multiGroups[i], multiGroups[j]] = [multiGroups[j], multiGroups[i]];
         }
-
-        // Shuffle unassigned participants for even better randomness
-        const shuffledUnassigned = [...unassigned];
-        for (let i = shuffledUnassigned.length - 1; i > 0; i--) {
+        for (let i = allIndivs.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [shuffledUnassigned[i], shuffledUnassigned[j]] = [shuffledUnassigned[j], shuffledUnassigned[i]];
+            [allIndivs[i], allIndivs[j]] = [allIndivs[j], allIndivs[i]];
         }
 
-        // Assign
-        for (let i = 0; i < shuffledUnassigned.length; i++) {
-            const encodedLane = availableSlots[i];
-            await prisma.$executeRaw`
-                UPDATE "RoundParticipant"
-                SET "lane" = ${encodedLane}, "isManual" = ${false}
-                WHERE "id" = ${shuffledUnassigned[i].id}
-            `;
+        const assignments: { id: string, lane: number }[] = [];
+
+        // 1. Assign Multi-Groups
+        for (const group of multiGroups) {
+            const size = group.length;
+            const availableLanes = Array.from(laneToSlots.keys());
+            // Randomly shuffle lanes to check
+            for (let i = availableLanes.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [availableLanes[i], availableLanes[j]] = [availableLanes[j], availableLanes[i]];
+            }
+
+            let assigned = false;
+            for (const lane of availableLanes) {
+                const slots = laneToSlots.get(lane)!;
+                if (slots.length >= size) {
+                    // Take first 'size' slots from this lane
+                    const picked = slots.splice(0, size);
+                    group.forEach((p, idx) => {
+                        assignments.push({ id: p.id, lane: picked[idx] });
+                    });
+                    assigned = true;
+                    break;
+                }
+            }
+
+            if (!assigned) {
+                // If no single lane has enough space, split the group (last resort)
+                group.forEach(p => allIndivs.push(p));
+            }
         }
+
+        // 2. Assign Individuals
+        const remainingSlots: number[] = [];
+        laneToSlots.forEach(slots => remainingSlots.push(...slots));
+        // Shuffle remaining slots
+        for (let i = remainingSlots.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [remainingSlots[i], remainingSlots[j]] = [remainingSlots[j], remainingSlots[i]];
+        }
+
+        for (let i = 0; i < allIndivs.length; i++) {
+            assignments.push({ id: allIndivs[i].id, lane: remainingSlots[i] });
+        }
+
+        // Apply assignments
+        await prisma.$transaction(
+            assignments.map(a =>
+                prisma.$executeRaw`
+                    UPDATE "RoundParticipant"
+                    SET "lane" = ${a.lane}, "isManual" = ${false}
+                    WHERE "id" = ${a.id}
+                `
+            )
+        );
 
         const info = await getTournamentInfo(roundId);
         if (info) revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
