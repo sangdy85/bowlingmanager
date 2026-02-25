@@ -1645,20 +1645,19 @@ function RoundPointsTab({ round }: { round: any }) {
     // Logic to calculate rankings (same as in FinalResultsTab but simpler)
     const results = round.participants.map((p: any) => {
         const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
-        let totalRaw = 0;
-        let gamesPlayed = 0;
-        pScores.forEach((s: any) => {
-            if (s.score > 0) {
-                totalRaw += s.score;
-                gamesPlayed++;
-            }
-        });
+        const g1 = pScores.find((s: any) => s.gameNumber === 1)?.score || 0;
+        const g2 = pScores.find((s: any) => s.gameNumber === 2)?.score || 0;
+        const g3 = pScores.find((s: any) => s.gameNumber === 3)?.score || 0;
+        const totalRaw = g1 + g2 + g3;
+        const gamesPlayed = [g1, g2, g3].filter(s => s > 0).length;
+
         const handicap = p.registration.handicap || 0;
         const totalWithHandicap = totalRaw + (handicap * gamesPlayed);
         return {
             id: p.registrationId,
             name: p.registration.user?.name || p.registration.guestName || 'Unknown',
             team: p.registration.guestTeamName || p.registration.team?.name || '개인',
+            scores: [g1, g2, g3],
             totalWithHandicap,
             isFemaleChamp: p.isFemaleChamp || false,
             hasScore: totalRaw > 0
@@ -1677,10 +1676,14 @@ function RoundPointsTab({ round }: { round: any }) {
                 <table className="w-full text-sm border-collapse">
                     <thead>
                         <tr className="bg-slate-900 text-white font-black uppercase tracking-wider text-[11px]">
-                            <th className="py-4 px-4 text-center border border-slate-700 w-20">순위</th>
+                            <th className="py-4 px-4 text-center border border-slate-700 w-16">순위</th>
                             <th className="py-4 px-4 text-left border border-slate-700">팀명</th>
                             <th className="py-4 px-4 text-left border border-slate-700">성함</th>
-                            <th className="py-4 px-4 text-center border border-slate-700 w-32">지급 포인트</th>
+                            <th className="py-4 px-2 text-center border border-slate-700 w-16">G1</th>
+                            <th className="py-4 px-2 text-center border border-slate-700 w-16">G2</th>
+                            <th className="py-4 px-2 text-center border border-slate-700 w-16">G3</th>
+                            <th className="py-4 px-2 text-center border border-slate-700 w-20">총점</th>
+                            <th className="py-4 px-4 text-center border border-slate-700 w-28">지급 포인트</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -1701,6 +1704,18 @@ function RoundPointsTab({ round }: { round: any }) {
                                     </td>
                                     <td className="py-4 px-4 font-bold text-slate-800">
                                         {res.name}
+                                    </td>
+                                    <td className="py-4 px-2 text-center text-slate-400 font-bold">
+                                        {res.scores[0] || '-'}
+                                    </td>
+                                    <td className="py-4 px-2 text-center text-slate-400 font-bold">
+                                        {res.scores[1] || '-'}
+                                    </td>
+                                    <td className="py-4 px-2 text-center text-slate-400 font-bold">
+                                        {res.scores[2] || '-'}
+                                    </td>
+                                    <td className="py-4 px-2 text-center font-black text-slate-900 bg-slate-50">
+                                        {res.totalWithHandicap}
                                     </td>
                                     <td className="py-4 px-4 text-center">
                                         <div className="inline-flex flex-col items-center">
