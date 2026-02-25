@@ -74,6 +74,8 @@ export async function getLeagueRoundResults(roundId: string) {
                 id: m.id,
                 teamAId: m.teamAId,
                 teamBId: m.teamBId,
+                teamASquad: m.teamASquad,
+                teamBSquad: m.teamBSquad,
                 teamA: m.teamA,
                 teamB: m.teamB,
                 lanes: m.lanes,

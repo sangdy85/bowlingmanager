@@ -34,6 +34,8 @@ interface Matchup {
     teamB: Team | null;
     teamAId: string | null;
     teamBId: string | null;
+    teamASquad?: string | null;
+    teamBSquad?: string | null;
     lanes: string | null;
     individualScores: IndividualScore[];
     pointsA: number | null;
@@ -143,7 +145,10 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                                     {/* Lane & Team & Record Header Row */}
                                     <tr style={{ backgroundColor: '#e2e8f0', borderBottom: '2px solid #000000' }}>
                                         <th style={baseCell}>{laneNum.padStart(2, '0')}레인</th>
-                                        <th style={{ ...baseCell, fontSize: '14px' }} colSpan={4}>{team?.name || '부전승'}</th>
+                                        <th style={{ ...baseCell, fontSize: '14px' }} colSpan={4}>
+                                            {team?.name || '부전승'}
+                                            {(isRight ? m.teamBSquad : m.teamASquad) ? ` (${isRight ? m.teamBSquad : m.teamASquad})` : ''}
+                                        </th>
                                         <th style={{ ...baseCell, color: isWinner ? '#e11d48' : '#000000' }}>
                                             {getRecord(points)}
                                         </th>
