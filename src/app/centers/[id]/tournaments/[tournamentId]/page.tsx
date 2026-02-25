@@ -437,11 +437,13 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                             </div>
                         )}
 
+
                         {safeTournament.type === 'LEAGUE' && safeTournament.leagueRounds.length > 0 && (
                             <LeagueScheduleView
                                 tournamentName={safeTournament.name}
                                 leagueRounds={safeTournament.leagueRounds}
                                 isManager={isManager}
+                                participants={safeTournament.registrations}
                             />
                         )}
 
