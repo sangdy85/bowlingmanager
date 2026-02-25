@@ -264,7 +264,7 @@ export default function SideGameManager({
                 return {
                     ...p,
                     gameScore: gScore,
-                    total: gScore + p.score.handicap
+                    total: gScore > 0 ? Math.min(gScore + p.score.handicap, 300) : 0
                 };
             })
             .sort((a, b) => {

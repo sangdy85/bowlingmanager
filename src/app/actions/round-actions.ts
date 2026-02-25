@@ -260,17 +260,19 @@ export async function updateRoundScores(
             `;
 
             if (existing.length > 0) {
-                if (existing[0].score !== item.score) {
+                const cappedScore = Math.min(item.score, 300);
+                if (existing[0].score !== cappedScore) {
                     await prisma.$executeRaw`
-                        UPDATE "TournamentScore" SET "score" = ${item.score} WHERE "id" = ${existing[0].id}
+                        UPDATE "TournamentScore" SET "score" = ${cappedScore} WHERE "id" = ${existing[0].id}
                     `;
                 }
             } else {
                 if (item.score > 0) {
                     const id = randomUUID();
+                    const cappedScore = Math.min(item.score, 300);
                     await prisma.$executeRaw`
                        INSERT INTO "TournamentScore" ("id", "registrationId", "roundId", "gameNumber", "score", "createdAt")
-                       VALUES (${id}, ${item.regId}, ${roundId}, ${item.game}, ${item.score}, ${new Date()})
+                       VALUES (${id}, ${item.regId}, ${roundId}, ${item.game}, ${cappedScore}, ${new Date()})
                    `;
                 }
             }

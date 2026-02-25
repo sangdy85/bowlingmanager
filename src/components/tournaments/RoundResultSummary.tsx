@@ -88,9 +88,9 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                         const rawHSum = teamScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
                         const hSum = (teamHandicapLimit !== undefined && teamHandicapLimit !== null && rawHSum > teamHandicapLimit) ? teamHandicapLimit : rawHSum;
 
-                        const g1 = teamScores.reduce((sum, s) => sum + (s.score1 || 0), 0);
-                        const g2 = teamScores.reduce((sum, s) => sum + (s.score2 || 0), 0);
-                        const g3 = teamScores.reduce((sum, s) => sum + (s.score3 || 0), 0);
+                        const g1 = teamScores.reduce((sum, s) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0);
+                        const g2 = teamScores.reduce((sum, s) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0);
+                        const g3 = teamScores.reduce((sum, s) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0);
 
                         const opponentId = isRight ? m.teamAId : m.teamBId;
                         const opponentScores = m.individualScores.filter(s => s.teamId === opponentId);
@@ -112,9 +112,9 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                         };
 
                         const marks = [
-                            getMarker(g1 + hSum, og1 + ohSum),
-                            getMarker(g2 + hSum, og2 + ohSum),
-                            getMarker(g3 + hSum, og3 + ohSum)
+                            getMarker(g1, og1),
+                            getMarker(g2, og2),
+                            getMarker(g3, og3)
                         ];
 
                         const baseCell: React.CSSProperties = {
@@ -165,10 +165,10 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                                             <tr key={idx} style={{ borderBottom: '1px solid #000000', height: '32px' }}>
                                                 <td style={{ ...baseCell }}>{s?.playerName || ''}</td>
                                                 <td style={{ ...baseCell, fontWeight: 400, color: '#64748b' }}>{s?.handicap || ''}</td>
-                                                <td style={baseCell}>{s ? s.score1 + s.handicap : ''}</td>
-                                                <td style={baseCell}>{s ? s.score2 + s.handicap : ''}</td>
-                                                <td style={baseCell}>{s ? s.score3 + s.handicap : ''}</td>
-                                                <td style={{ ...baseCell, backgroundColor: '#f8fafc', fontWeight: 400 }}>{s ? s.score1 + s.score2 + s.score3 + (s.handicap * 3) : ''}</td>
+                                                <td style={baseCell}>{s ? Math.min(s.score1 + s.handicap, 300) : ''}</td>
+                                                <td style={baseCell}>{s ? Math.min(s.score2 + s.handicap, 300) : ''}</td>
+                                                <td style={baseCell}>{s ? Math.min(s.score3 + s.handicap, 300) : ''}</td>
+                                                <td style={{ ...baseCell, backgroundColor: '#f8fafc', fontWeight: 400 }}>{s ? Math.min(s.score1 + s.handicap, 300) + Math.min(s.score2 + s.handicap, 300) + Math.min(s.score3 + s.handicap, 300) : ''}</td>
                                             </tr>
                                         );
                                     })}
@@ -176,10 +176,10 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                                     <tr style={{ backgroundColor: '#d9ead3', borderBottom: '2px solid #000000', height: '32px' }}>
                                         <td style={baseCell}>종합</td>
                                         <td style={{ ...baseCell, fontWeight: 400 }}>{hSum || '0'}</td>
-                                        <td style={{ ...baseCell, ...(marks[0] === 'O' ? winStyle : {}) }}>{g1 + hSum}</td>
-                                        <td style={{ ...baseCell, ...(marks[1] === 'O' ? winStyle : {}) }}>{g2 + hSum}</td>
-                                        <td style={{ ...baseCell, ...(marks[2] === 'O' ? winStyle : {}) }}>{g3 + hSum}</td>
-                                        <td style={{ ...baseCell, backgroundColor: 'rgba(226, 232, 240, 0.5)', ...(isWinner ? winStyle : { fontWeight: 900 }) }}>{(g1 + hSum) + (g2 + hSum) + (g3 + hSum)}</td>
+                                        <td style={{ ...baseCell, ...(marks[0] === 'O' ? winStyle : {}) }}>{g1}</td>
+                                        <td style={{ ...baseCell, ...(marks[1] === 'O' ? winStyle : {}) }}>{g2}</td>
+                                        <td style={{ ...baseCell, ...(marks[2] === 'O' ? winStyle : {}) }}>{g3}</td>
+                                        <td style={{ ...baseCell, backgroundColor: 'rgba(226, 232, 240, 0.5)', ...(isWinner ? winStyle : { fontWeight: 900 }) }}>{g1 + g2 + g3}</td>
                                     </tr>
                                     {/* Win/Loss Record */}
                                     <tr style={{ height: '36px' }}>

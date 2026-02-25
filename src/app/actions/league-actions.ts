@@ -311,24 +311,21 @@ export async function updateLeagueMatchupResult(matchupId: string, data: {
     const teamAScores = data.individualScores.filter(s => s.teamId === matchup.teamAId);
     const teamBScores = data.individualScores.filter(s => s.teamId === matchup.teamBId);
 
-    const aG1Raw = teamAScores.reduce((sum, s) => sum + (s.score1 || 0), 0);
-    const aG2Raw = teamAScores.reduce((sum, s) => sum + (s.score2 || 0), 0);
-    const aG3Raw = teamAScores.reduce((sum, s) => sum + (s.score3 || 0), 0);
-    const aH = teamAScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
+    const calculateCappedTotal = (scores: any[], gameNum: number) => {
+        return scores.reduce((sum, s) => sum + Math.min((s[`score${gameNum}`] || 0) + (s.handicap || 0), 300), 0);
+    };
 
-    const bG1Raw = teamBScores.reduce((sum, s) => sum + (s.score1 || 0), 0);
-    const bG2Raw = teamBScores.reduce((sum, s) => sum + (s.score2 || 0), 0);
-    const bG3Raw = teamBScores.reduce((sum, s) => sum + (s.score3 || 0), 0);
+    const aH = teamAScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
     const bH = teamBScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
 
-    const aG1 = aG1Raw + aH;
-    const aG2 = aG2Raw + aH;
-    const aG3 = aG3Raw + aH;
+    const aG1 = calculateCappedTotal(teamAScores, 1);
+    const aG2 = calculateCappedTotal(teamAScores, 2);
+    const aG3 = calculateCappedTotal(teamAScores, 3);
     const aTotal = aG1 + aG2 + aG3;
 
-    const bG1 = bG1Raw + bH;
-    const bG2 = bG2Raw + bH;
-    const bG3 = bG3Raw + bH;
+    const bG1 = calculateCappedTotal(teamBScores, 1);
+    const bG2 = calculateCappedTotal(teamBScores, 2);
+    const bG3 = calculateCappedTotal(teamBScores, 3);
     const bTotal = bG1 + bG2 + bG3;
 
     const getHiLow = (scores: any[], gameNum: number) => {
@@ -357,8 +354,8 @@ export async function updateLeagueMatchupResult(matchupId: string, data: {
 
     const pTotal = calculatePoints(
         aTotal, bTotal, aH, bH,
-        getSeriesHiLow(aG1Raw, aG2Raw, aG3Raw),
-        getSeriesHiLow(bG1Raw, bG2Raw, bG3Raw)
+        getSeriesHiLow(teamAScores.reduce((sum, s) => sum + (s.score1 || 0), 0), teamAScores.reduce((sum, s) => sum + (s.score2 || 0), 0), teamAScores.reduce((sum, s) => sum + (s.score3 || 0), 0)),
+        getSeriesHiLow(teamBScores.reduce((sum, s) => sum + (s.score1 || 0), 0), teamBScores.reduce((sum, s) => sum + (s.score2 || 0), 0), teamBScores.reduce((sum, s) => sum + (s.score3 || 0), 0))
     );
 
     const pointsA = pG1[0] + pG2[0] + pG3[0] + pTotal[0];

@@ -124,13 +124,17 @@ export default async function RoundDetailPage({ params }: { params: { id: string
         const rankings = r.participants.map((p: any) => {
             const pScores = r.individualScores.filter((s: any) => s.registrationId === p.registrationId);
             const scoreList: number[] = [];
-            let totalRaw = 0;
+            let totalWithPlusHandicap = 0;
             let gamesPlayed = 0;
+            const plusHandicap = p.registration.handicap > 0 ? p.registration.handicap : 0;
+
             for (let g = 1; g <= gameCount; g++) {
                 const s = pScores.find((sc: any) => sc.gameNumber === g)?.score || 0;
                 scoreList.push(s);
-                totalRaw += s;
-                if (s > 0) gamesPlayed++;
+                if (s > 0) {
+                    totalWithPlusHandicap += Math.min(s + plusHandicap, 300);
+                    gamesPlayed++;
+                }
             }
 
             const handicap = p.registration.handicap || 0;
@@ -161,8 +165,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
 
             const manualPenaltyTotal = handicap < 0 ? Math.abs(handicap) : 0;
             const finalPenaltyTotal = Math.max(manualPenaltyTotal, minusApplied);
-            const positiveHandicapTotal = (handicap > 0 ? handicap : 0) * gamesPlayed;
-            const total = totalRaw + positiveHandicapTotal - finalPenaltyTotal;
+            const total = totalWithPlusHandicap - finalPenaltyTotal;
 
             const validScores = scoreList.filter(s => s > 0);
             const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;

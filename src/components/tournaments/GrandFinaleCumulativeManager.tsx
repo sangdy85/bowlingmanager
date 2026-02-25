@@ -92,13 +92,17 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                     const scores = (round.individualScores || []).filter(s => s.registrationId === regId);
 
                     const scoreList: number[] = [];
-                    let totalRaw = 0;
+                    let totalWithPlusHandicap = 0;
                     let gamesPlayed = 0;
+                    const plusHandicap = (p.registration?.handicap || 0) > 0 ? p.registration.handicap : 0;
+
                     for (let g = 1; g <= gameCount; g++) {
                         const s = scores.find(sc => sc.gameNumber === g)?.score || 0;
                         scoreList.push(s);
-                        totalRaw += s;
-                        if (s > 0) gamesPlayed++;
+                        if (s > 0) {
+                            totalWithPlusHandicap += Math.min(s + plusHandicap, 300);
+                            gamesPlayed++;
+                        }
                     }
 
                     const handicap = p.registration?.handicap || 0;
@@ -128,9 +132,7 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
 
                     const manualPenaltyTotal = handicap < 0 ? Math.abs(handicap) : 0;
                     const finalPenaltyTotal = Math.max(manualPenaltyTotal, minusApplied);
-                    const positiveHandicapTotal = (handicap > 0 ? handicap : 0) * gamesPlayed;
-                    const finalHandicapValue = positiveHandicapTotal - finalPenaltyTotal;
-                    const totalWithHandicap = totalRaw + finalHandicapValue;
+                    const totalWithHandicap = totalWithPlusHandicap - finalPenaltyTotal;
 
                     const validScores = scoreList.filter(s => s > 0);
                     const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
@@ -143,7 +145,7 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                         handicapEach: handicap,
                         hiLow,
                         isFemaleChamp: p.isFemaleChamp || false,
-                        hasScore: totalRaw > 0
+                        hasScore: totalWithPlusHandicap > 0
                     };
                 })
                     .filter(entry => entry.hasScore)

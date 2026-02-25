@@ -388,10 +388,13 @@ export default function RoundBulkResultEditor({
                     seriesHiLow: 0
                 };
                 const teamScores = scores.filter(s => s.teamId === teamId);
-                const g1 = teamScores.reduce((sum, s) => sum + s.score1, 0);
-                const g2 = teamScores.reduce((sum, s) => sum + s.score2, 0);
-                const g3 = teamScores.reduce((sum, s) => sum + s.score3, 0);
-                const rawHSum = teamScores.reduce((sum, s) => sum + s.handicap, 0);
+                const g1 = teamScores.reduce((sum, s) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0);
+                const g2 = teamScores.reduce((sum, s) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0);
+                const g3 = teamScores.reduce((sum, s) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0);
+
+                // Note: In League, "hSum" usually means team handicap sum, but the user wants individual points capped.
+                // We keep hSum for display but use the capped game totals for win/loss points.
+                const rawHSum = teamScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
                 const hSum = (teamHandicapLimit !== undefined && teamHandicapLimit !== null && rawHSum > teamHandicapLimit) ? teamHandicapLimit : rawHSum;
 
                 const getHL = (gameIdx: 1 | 2 | 3) => {
@@ -402,10 +405,10 @@ export default function RoundBulkResultEditor({
 
                 return {
                     g1, g2, g3, hSum,
-                    g1Total: g1 + hSum,
-                    g2Total: g2 + hSum,
-                    g3Total: g3 + hSum,
-                    total: (g1 + hSum) + (g2 + hSum) + (g3 + hSum),
+                    g1Total: g1, // Already include capped handicap above
+                    g2Total: g2,
+                    g3Total: g3,
+                    total: g1 + g2 + g3,
                     hiLow: [getHL(1), getHL(2), getHL(3)] as [number, number, number],
                     seriesHiLow: Math.max(g1, g2, g3) - Math.min(g1, g2, g3)
                 };
@@ -608,6 +611,11 @@ export default function RoundBulkResultEditor({
                                                             <td key={g} className="p-1 border-r border-black/10">
                                                                 <input
                                                                     type="number"
+                                                                    max={300}
+                                                                    onInput={(e) => {
+                                                                        const target = e.target as HTMLInputElement;
+                                                                        if (parseInt(target.value) > 300) target.value = "300";
+                                                                    }}
                                                                     value={r[`score${g}` as keyof IndividualScore] ?? 0}
                                                                     onChange={(e) => handlePlayerChange(matchup.id, rowIdx, `score${g}` as any, parseInt(e.target.value) || 0)}
                                                                     className="w-full h-10 text-center font-black bg-primary/5 focus:bg-white border-2 border-transparent focus:border-black rounded-lg outline-none transition-all"
@@ -615,7 +623,7 @@ export default function RoundBulkResultEditor({
                                                             </td>
                                                         ))}
                                                         <td className="p-3 text-center bg-slate-50 text-base font-black">
-                                                            {r.score1 + r.score2 + r.score3 + (r.handicap * 3)}
+                                                            {Math.min(r.score1 + r.handicap, 300) + Math.min(r.score2 + r.handicap, 300) + Math.min(r.score3 + r.handicap, 300)}
                                                         </td>
                                                     </tr>
                                                 );
@@ -626,16 +634,16 @@ export default function RoundBulkResultEditor({
                                                 <td className="p-4 border-r border-black/10 uppercase tracking-tighter">팀 종합</td>
                                                 <td className="p-4 border-r border-black/10 text-center text-primary text-base">{s.hSum}</td>
                                                 <td className="p-4 border-r border-black/10 text-center text-base font-black">
-                                                    {s.g1 + s.hSum}
+                                                    {s.g1}
                                                 </td>
                                                 <td className="p-4 border-r border-black/10 text-center text-base font-black">
-                                                    {s.g2 + s.hSum}
+                                                    {s.g2}
                                                 </td>
                                                 <td className="p-4 border-r border-black/10 text-center text-base font-black">
-                                                    {s.g3 + s.hSum}
+                                                    {s.g3}
                                                 </td>
                                                 <td className="p-3 bg-slate-900 text-white text-center text-xl italic">
-                                                    {s.g1 + s.g2 + s.g3 + (s.hSum * 3)}
+                                                    {s.g1 + s.g2 + s.g3}
                                                 </td>
                                             </tr>
                                             <tr className="bg-white border-t border-black/10">

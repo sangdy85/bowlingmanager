@@ -814,19 +814,15 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                     <tbody className="divide-y divide-gray-100">
                         {sortedParticipants.map((p: any) => {
                             const currentScores = scoreMap[p.registrationId] || {};
-                            let totalScore = 0;
-                            let gamesPlayed = 0;
+                            let totalWithHandicap = 0;
+                            const handicap = p.registration.handicap || 0;
 
                             for (let g = 1; g <= gameCount; g++) {
                                 const val = parseInt(currentScores[g] || '0');
                                 if (val > 0) {
-                                    totalScore += val;
-                                    gamesPlayed++;
+                                    totalWithHandicap += Math.min(val + handicap, 300);
                                 }
                             }
-
-                            const handicap = p.registration.handicap || 0;
-                            const totalWithHandicap = totalScore + (handicap * gamesPlayed);
 
                             // Optimized widths for 1-5 games
                             const pxWidth = gameCount === 5 ? 85 : 100;
@@ -862,6 +858,14 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                                         <input
                                                             type="number"
                                                             value={currentScores[g] || ''}
+                                                            max={300}
+                                                            onInput={(e) => {
+                                                                const target = e.target as HTMLInputElement;
+                                                                if (parseInt(target.value) > 300) {
+                                                                    target.value = "300";
+                                                                    handleScoreChange(p.registrationId, g, "300");
+                                                                }
+                                                            }}
                                                             onChange={(e) => handleScoreChange(p.registrationId, g, e.target.value)}
                                                             className="h-11 text-center font-black bg-white text-gray-900 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 z-0 focus:z-10 p-0 transition-all shadow-inner"
                                                             style={{
@@ -929,7 +933,7 @@ function RoundSideGameTab({ round }: { round: any }) {
                 team: (p.registration.guestTeamName ?? p.registration.team?.name) || '-',
                 score: pScore,
                 handicap: handicap,
-                total: pScore > 0 ? pScore + handicap : 0
+                total: pScore > 0 ? Math.min(pScore + handicap, 300) : 0
             };
         }).filter((r: any) => r.total > 0);
 
