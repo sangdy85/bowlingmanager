@@ -533,11 +533,22 @@ export async function autoAssignRemaining(roundId: string) {
             include: {
                 participants: {
                     include: { registration: true }
-                }
+                },
+                tournament: true
             }
         });
 
         if (!round) throw new Error("Round not found");
+
+        // 1. Determine team size from settings
+        const settings = round.tournament.settings ? JSON.parse(round.tournament.settings) : {};
+        const gameMode = settings.gameMode || 'INDIVIDUAL';
+        const teamSize = gameMode.startsWith('TEAM_') ? parseInt(gameMode.split('_')[1]) : 1;
+
+        // 2. Fetch all participants of this round, sorted by registration date to establish "sequence"
+        const allParticipants = [...round.participants].sort((a: any, b: any) =>
+            new Date(a.registration.createdAt).getTime() - new Date(b.registration.createdAt).getTime()
+        );
 
         const laneConfig = round.laneConfig ? JSON.parse(round.laneConfig) : {};
         const assignedParticipants = round.participants.filter((p: any) => p.lane);
@@ -545,7 +556,6 @@ export async function autoAssignRemaining(roundId: string) {
 
         // Group available slots by lane
         const laneToSlots = new Map<number, number[]>();
-
         if (Object.keys(laneConfig).length > 0) {
             for (const [laneStr, slots] of Object.entries(laneConfig)) {
                 const lane = parseInt(laneStr);
@@ -578,40 +588,31 @@ export async function autoAssignRemaining(roundId: string) {
             throw new Error(`자리가 부족합니다. (남은 자리: ${totalAvailableCount}, 대기 인원: ${unassigned.length})`);
         }
 
-        // Group unassigned by entryGroupId
-        const groupsMap = new Map<string, any[]>();
-        const indivs: any[] = [];
-
-        unassigned.forEach((p: any) => {
-            const gid = p.registration?.entryGroupId;
-            if (gid) {
-                if (!groupsMap.has(gid)) groupsMap.set(gid, []);
-                groupsMap.get(gid)!.push(p);
-            } else {
-                indivs.push(p);
-            }
+        // 3. Group ALL participants by teamSize relative to their position in sorted list
+        const groups = new Map<number, any[]>();
+        allParticipants.forEach((p, index) => {
+            const groupIdx = Math.floor(index / teamSize);
+            if (!groups.has(groupIdx)) groups.set(groupIdx, []);
+            groups.get(groupIdx)!.push(p);
         });
 
-        // Split grouped participants: those with group size > 1 vs isolated ones
-        const multiGroups = Array.from(groupsMap.values()).filter(g => g.length > 1);
-        const isolated = Array.from(groupsMap.values()).filter(g => g.length === 1).map(g => g[0]);
-        const allIndivs = [...indivs, ...isolated];
+        // 4. Filter groups that have unassigned members
+        const groupsWithUnassigned = Array.from(groups.values()).filter(g => g.some(p => !p.lane));
 
-        // Shuffle groups and individuals
-        for (let i = multiGroups.length - 1; i > 0; i--) {
+        // Randomly shuffle unassigned groups for fairness in lane picking
+        for (let i = groupsWithUnassigned.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [multiGroups[i], multiGroups[j]] = [multiGroups[j], multiGroups[i]];
-        }
-        for (let i = allIndivs.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [allIndivs[i], allIndivs[j]] = [allIndivs[j], allIndivs[i]];
+            [groupsWithUnassigned[i], groupsWithUnassigned[j]] = [groupsWithUnassigned[j], groupsWithUnassigned[i]];
         }
 
         const assignments: { id: string, lane: number }[] = [];
 
-        // 1. Assign Multi-Groups
-        for (const group of multiGroups) {
-            const size = group.length;
+        // 5. Assign groups
+        for (const group of groupsWithUnassigned) {
+            const unassignedInGroup = group.filter(p => !p.lane);
+            const sizeNeeded = unassignedInGroup.length;
+
+            // Try to find a lane that can fit everyone unassigned in this group
             const availableLanes = Array.from(laneToSlots.keys());
             // Randomly shuffle lanes to check
             for (let i = availableLanes.length - 1; i > 0; i--) {
@@ -622,10 +623,9 @@ export async function autoAssignRemaining(roundId: string) {
             let assigned = false;
             for (const lane of availableLanes) {
                 const slots = laneToSlots.get(lane)!;
-                if (slots.length >= size) {
-                    // Take first 'size' slots from this lane
-                    const picked = slots.splice(0, size);
-                    group.forEach((p, idx) => {
+                if (slots.length >= sizeNeeded) {
+                    const picked = slots.splice(0, sizeNeeded);
+                    unassignedInGroup.forEach((p, idx) => {
                         assignments.push({ id: p.id, lane: picked[idx] });
                     });
                     assigned = true;
@@ -634,22 +634,24 @@ export async function autoAssignRemaining(roundId: string) {
             }
 
             if (!assigned) {
-                // If no single lane has enough space, split the group (last resort)
-                group.forEach(p => allIndivs.push(p));
+                // Last resort: If no single lane has enough space, split these unassigned members 
+                // into individual pool to be handled at the end
+                unassignedInGroup.forEach(p => {
+                    const allSlotsPool: number[] = [];
+                    laneToSlots.forEach(s => allSlotsPool.push(...s));
+                    if (allSlotsPool.length > 0) {
+                        const randomIndex = Math.floor(Math.random() * allSlotsPool.length);
+                        const pickedSlot = allSlotsPool[randomIndex];
+                        assignments.push({ id: p.id, lane: pickedSlot });
+
+                        // Remove from laneToSlots
+                        const lane = Math.floor(pickedSlot / 10);
+                        const slots = laneToSlots.get(lane)!;
+                        const sIdx = slots.indexOf(pickedSlot);
+                        if (sIdx > -1) slots.splice(sIdx, 1);
+                    }
+                });
             }
-        }
-
-        // 2. Assign Individuals
-        const remainingSlots: number[] = [];
-        laneToSlots.forEach(slots => remainingSlots.push(...slots));
-        // Shuffle remaining slots
-        for (let i = remainingSlots.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [remainingSlots[i], remainingSlots[j]] = [remainingSlots[j], remainingSlots[i]];
-        }
-
-        for (let i = 0; i < allIndivs.length; i++) {
-            assignments.push({ id: allIndivs[i].id, lane: remainingSlots[i] });
         }
 
         // Apply assignments
@@ -732,11 +734,23 @@ export async function drawLane(roundId: string, registrationId: string) {
 
         if (availableSlots.length === 0) throw new Error("남은 레인이 없습니다.");
 
-        // --- Team Set Assignment Logic ---
-        const entryGroupId = participant.registration.entryGroupId;
-        if (entryGroupId) {
-            const groupMembers = round.participants.filter((p: any) => p.registration.entryGroupId === entryGroupId)
-                .sort((a: any, b: any) => a.registration.createdAt.getTime() - b.registration.createdAt.getTime());
+        // --- Team Set Assignment Logic (Sequence Based) ---
+        // 1. Determine team size from settings
+        const settings = round.tournament.settings ? JSON.parse(round.tournament.settings) : {};
+        const gameMode = settings.gameMode || 'INDIVIDUAL';
+        const teamSize = gameMode.startsWith('TEAM_') ? parseInt(gameMode.split('_')[1]) : 1;
+
+        if (teamSize > 1) {
+            // Fetch all participants sorted by registration date to find the "team" by sequence
+            const allParticipantsSorted = [...round.participants].sort((a: any, b: any) =>
+                new Date(a.registration.createdAt).getTime() - new Date(b.registration.createdAt).getTime()
+            );
+
+            const myIndex = allParticipantsSorted.findIndex((p: any) => p.id === participant.id);
+            if (myIndex === -1) throw new Error("Participant not found in sorted list");
+
+            const groupIdx = Math.floor(myIndex / teamSize);
+            const groupMembers = allParticipantsSorted.filter((p: any, idx) => Math.floor(idx / teamSize) === groupIdx);
 
             const groupSize = groupMembers.length;
 
