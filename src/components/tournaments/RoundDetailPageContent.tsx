@@ -1642,29 +1642,83 @@ function RoundPointsTab({ round }: { round: any }) {
     const pointConfig = settings.grandFinalePoints || {};
     const femaleBonus = pointConfig['female'] || 20;
 
-    // Logic to calculate rankings (same as in FinalResultsTab but simpler)
+    const gameCount = round.tournament?.settings ? JSON.parse(round.tournament.settings).gameCount || 3 : 3;
+    const prevWinners = round.prevRoundWinners || {};
+    const roundHandicaps = settings.roundMinusHandicaps?.[round.roundNumber] || {
+        rank1: settings.minusHandicapRank1 || 0,
+        rank2: settings.minusHandicapRank2 || 0,
+        rank3: settings.minusHandicapRank3 || 0,
+        female: settings.minusHandicapFemale || 0
+    };
+
+    // Logic to calculate rankings (same as in FinalResultsTab)
     const results = round.participants.map((p: any) => {
         const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
-        const g1 = pScores.find((s: any) => s.gameNumber === 1)?.score || 0;
-        const g2 = pScores.find((s: any) => s.gameNumber === 2)?.score || 0;
-        const g3 = pScores.find((s: any) => s.gameNumber === 3)?.score || 0;
-        const totalRaw = g1 + g2 + g3;
-        const gamesPlayed = [g1, g2, g3].filter(s => s > 0).length;
+        const scores: number[] = [];
+        let totalRaw = 0;
+        let gamesPlayed = 0;
+        for (let g = 1; g <= gameCount; g++) {
+            const sRecord = pScores.find((s: any) => s.gameNumber === g);
+            const score = sRecord?.score || 0;
+            scores.push(score);
+            totalRaw += score;
+            if (sRecord && score > 0) gamesPlayed++;
+        }
 
         const handicap = p.registration.handicap || 0;
-        const totalWithHandicap = totalRaw + (handicap * gamesPlayed);
+        const pName = p.registration.user?.name || p.registration.guestName || 'Unknown';
+        const pTeam = p.registration.guestTeamName || p.registration.team?.name || '개인';
+
+        let minusApplied = 0;
+        let rankCap = 0;
+        if (gamesPlayed === gameCount) {
+            const matchWinner = (winner: any) => winner && winner.name === pName && winner.team === pTeam;
+            if (matchWinner(prevWinners.rank1)) {
+                minusApplied += Math.abs(roundHandicaps.rank1);
+                rankCap = Math.abs(roundHandicaps.rank1);
+            } else if (matchWinner(prevWinners.rank2)) {
+                minusApplied += Math.abs(roundHandicaps.rank2);
+                rankCap = Math.abs(roundHandicaps.rank2);
+            } else if (matchWinner(prevWinners.rank3)) {
+                minusApplied += Math.abs(roundHandicaps.rank3);
+                rankCap = Math.abs(roundHandicaps.rank3);
+            }
+            if (matchWinner(prevWinners.femaleChamp)) {
+                minusApplied += Math.abs(roundHandicaps.female);
+                if (rankCap === 0) rankCap = Math.abs(roundHandicaps.female);
+            }
+            if (minusApplied > rankCap && rankCap > 0) minusApplied = rankCap;
+        }
+
+        const manualPenaltyTotal = handicap < 0 ? Math.abs(handicap) : 0;
+        const finalPenaltyTotal = Math.max(manualPenaltyTotal, minusApplied);
+        const positiveHandicapTotal = (handicap > 0 ? handicap : 0) * gamesPlayed;
+        const finalHandicapValue = positiveHandicapTotal - finalPenaltyTotal;
+        const totalWithHandicap = totalRaw + finalHandicapValue;
+
+        const validScores = scores.filter(s => s > 0);
+        const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
+
         return {
             id: p.registrationId,
-            name: p.registration.user?.name || p.registration.guestName || 'Unknown',
-            team: p.registration.guestTeamName || p.registration.team?.name || '개인',
-            scores: [g1, g2, g3],
+            name: pName,
+            team: pTeam,
+            scores: scores,
             totalWithHandicap,
+            handicapEach: handicap,
+            hiLow,
             isFemaleChamp: p.isFemaleChamp || false,
             hasScore: totalRaw > 0
         };
     })
         .filter((r: any) => r.hasScore)
-        .sort((a: any, b: any) => b.totalWithHandicap - a.totalWithHandicap);
+        .sort((a: any, b: any) => {
+            if (b.totalWithHandicap !== a.totalWithHandicap) return b.totalWithHandicap - a.totalWithHandicap;
+            const handicapA = a.handicapEach || 0;
+            const handicapB = b.handicapEach || 0;
+            if (handicapA !== handicapB) return handicapA - handicapB;
+            return a.hiLow - b.hiLow;
+        });
 
     return (
         <div className="bg-white p-6 rounded-xl border-2 border-slate-900 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] overflow-hidden">

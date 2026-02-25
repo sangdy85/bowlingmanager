@@ -68,41 +68,103 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
             return (tournament.leagueRounds || []).filter(r => r.individualScores && r.individualScores.length > 0);
         }, [tournament?.leagueRounds]);
 
-        // Generate the cumulative list
         const cumulativeList = useMemo(() => {
+            const settings = tournament.settings ? JSON.parse(tournament.settings) : {};
             const femaleBonus = pointConfig['female'] || 20;
+            const gameCount = settings.gameCount || 3;
 
-            // 1. Calculate results for each round as they appear (Raw Final Tables)
-            const roundResults = finishedRounds.map(round => {
-                const roundRankings = (round.participants || []).map((p: any) => {
+            // Sort by roundNumber for sequential calculation of penalties
+            const sortedRounds = [...finishedRounds].sort((a, b) => a.roundNumber - b.roundNumber);
+
+            let prevWinners: any = {};
+            const roundResults = [];
+
+            for (const round of sortedRounds) {
+                const roundHandicaps = settings.roundMinusHandicaps?.[round.roundNumber] || {
+                    rank1: settings.minusHandicapRank1 || 0,
+                    rank2: settings.minusHandicapRank2 || 0,
+                    rank3: settings.minusHandicapRank3 || 0,
+                    female: settings.minusHandicapFemale || 0
+                };
+
+                const rankings = (round.participants || []).map((p: any) => {
                     const regId = p.registrationId;
                     const scores = (round.individualScores || []).filter(s => s.registrationId === regId);
 
-                    const g1 = scores.find(s => s.gameNumber === 1)?.score || 0;
-                    const g2 = scores.find(s => s.gameNumber === 2)?.score || 0;
-                    const g3 = scores.find(s => s.gameNumber === 3)?.score || 0;
-                    const totalRaw = g1 + g2 + g3;
-                    const handicap = p.registration?.handicap || 0;
-                    const totalWithHandicap = totalRaw + (handicap * 3);
+                    const scoreList: number[] = [];
+                    let totalRaw = 0;
+                    let gamesPlayed = 0;
+                    for (let g = 1; g <= gameCount; g++) {
+                        const s = scores.find(sc => sc.gameNumber === g)?.score || 0;
+                        scoreList.push(s);
+                        totalRaw += s;
+                        if (s > 0) gamesPlayed++;
+                    }
 
-                    const reg = p.registration;
-                    const teamName = reg?.guestTeamName || reg?.team?.name || '-';
-                    const userName = reg?.user?.name || reg?.guestName || 'GUEST';
+                    const handicap = p.registration?.handicap || 0;
+                    const pName = p.registration?.user?.name || p.registration?.guestName || 'GUEST';
+                    const pTeam = p.registration?.guestTeamName || p.registration?.team?.name || '개인';
+
+                    let minusApplied = 0;
+                    let rankCap = 0;
+                    if (gamesPlayed === gameCount) {
+                        const matchWinner = (winner: any) => winner && winner.name === pName && winner.team === pTeam;
+                        if (matchWinner(prevWinners.rank1)) {
+                            minusApplied += Math.abs(roundHandicaps.rank1);
+                            rankCap = Math.abs(roundHandicaps.rank1);
+                        } else if (matchWinner(prevWinners.rank2)) {
+                            minusApplied += Math.abs(roundHandicaps.rank2);
+                            rankCap = Math.abs(roundHandicaps.rank2);
+                        } else if (matchWinner(prevWinners.rank3)) {
+                            minusApplied += Math.abs(roundHandicaps.rank3);
+                            rankCap = Math.abs(roundHandicaps.rank3);
+                        }
+                        if (matchWinner(prevWinners.femaleChamp)) {
+                            minusApplied += Math.abs(roundHandicaps.female);
+                            if (rankCap === 0) rankCap = Math.abs(roundHandicaps.female);
+                        }
+                        if (minusApplied > rankCap && rankCap > 0) minusApplied = rankCap;
+                    }
+
+                    const manualPenaltyTotal = handicap < 0 ? Math.abs(handicap) : 0;
+                    const finalPenaltyTotal = Math.max(manualPenaltyTotal, minusApplied);
+                    const positiveHandicapTotal = (handicap > 0 ? handicap : 0) * gamesPlayed;
+                    const finalHandicapValue = positiveHandicapTotal - finalPenaltyTotal;
+                    const totalWithHandicap = totalRaw + finalHandicapValue;
+
+                    const validScores = scoreList.filter(s => s > 0);
+                    const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
 
                     return {
                         id: regId,
-                        userName,
-                        teamName,
+                        userName: pName,
+                        teamName: pTeam,
                         totalWithHandicap,
+                        handicapEach: handicap,
+                        hiLow,
                         isFemaleChamp: p.isFemaleChamp || false,
                         hasScore: totalRaw > 0
                     };
                 })
                     .filter(entry => entry.hasScore)
-                    .sort((a, b) => b.totalWithHandicap - a.totalWithHandicap);
+                    .sort((a, b) => {
+                        if (b.totalWithHandicap !== a.totalWithHandicap) return b.totalWithHandicap - a.totalWithHandicap;
+                        const handicapA = a.handicapEach || 0;
+                        const handicapB = b.handicapEach || 0;
+                        if (handicapA !== handicapB) return handicapA - handicapB;
+                        return a.hiLow - b.hiLow;
+                    });
 
-                return roundRankings;
-            });
+                roundResults.push(rankings);
+
+                // Extract winners for the next round's penalty calculation
+                prevWinners = {};
+                if (rankings.length > 0) prevWinners.rank1 = { name: rankings[0].userName, team: rankings[0].teamName };
+                if (rankings.length > 1) prevWinners.rank2 = { name: rankings[1].userName, team: rankings[1].teamName };
+                if (rankings.length > 2) prevWinners.rank3 = { name: rankings[2].userName, team: rankings[2].teamName };
+                const femaleWinner = rankings.find(r => r.isFemaleChamp);
+                if (femaleWinner) prevWinners.femaleChamp = { name: femaleWinner.userName, team: femaleWinner.teamName };
+            }
 
             // 2. Global Aggregation across all rounds (Strict String Match)
             const globalAggregatedMap = new Map<string, any>();
