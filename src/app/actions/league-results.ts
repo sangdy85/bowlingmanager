@@ -35,7 +35,7 @@ export async function getLeagueRoundResults(roundId: string) {
                                 User: true,
                                 Team: {
                                     include: {
-                                        leagueRegistrations: true
+                                        registrations: true
                                     }
                                 }
                             },
@@ -94,7 +94,7 @@ export async function getLeagueRoundResults(roundId: string) {
                     userId: s.userId,
                     playerName: s.playerName,
                     teamId: s.teamId,
-                    teamSquad: s.Team?.leagueRegistrations?.find((r: any) => r.tournamentId === round.tournamentId)?.squad,
+                    teamSquad: s.Team?.registrations?.find((r: any) => r.tournamentId === round.tournamentId)?.squad,
                     handicap: s.handicap,
                     score1: s.score1,
                     score2: s.score2,
