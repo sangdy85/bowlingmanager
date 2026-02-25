@@ -460,6 +460,7 @@ export default function RoundBulkResultEditor({
                     userId: s.userId || undefined,
                     playerName: s.playerName || undefined,
                     teamId: s.teamId,
+                    teamSquad: (s as any).teamSquad, // Using (s as any) to ensure it's picked up if interface isn't enough
                     handicap: s.handicap,
                     score1: s.score1,
                     score2: s.score2,

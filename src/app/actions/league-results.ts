@@ -94,7 +94,7 @@ export async function getLeagueRoundResults(roundId: string) {
                     userId: s.userId,
                     playerName: s.playerName,
                     teamId: s.teamId,
-                    teamSquad: s.Team?.registrations?.find((r: any) => r.tournamentId === round.tournamentId)?.squad,
+                    teamSquad: s.teamSquad,
                     handicap: s.handicap,
                     score1: s.score1,
                     score2: s.score2,

@@ -308,8 +308,8 @@ export async function updateLeagueMatchupResult(matchupId: string, data: {
     if (!matchup) throw new Error("Matchup not found");
     await verifyCenterAdmin(matchup.round.tournament.centerId);
 
-    const teamAScores = data.individualScores.filter(s => s.teamId === matchup.teamAId);
-    const teamBScores = data.individualScores.filter(s => s.teamId === matchup.teamBId);
+    const teamAScores = data.individualScores.filter(s => s.teamId === matchup.teamAId && (s as any).teamSquad === matchup.teamASquad);
+    const teamBScores = data.individualScores.filter(s => s.teamId === matchup.teamBId && (s as any).teamSquad === matchup.teamBSquad);
 
     const calculateCappedTotal = (scores: any[], gameNum: number) => {
         return scores.reduce((sum, s) => sum + Math.min((s[`score${gameNum}`] || 0) + (s.handicap || 0), 300), 0);
