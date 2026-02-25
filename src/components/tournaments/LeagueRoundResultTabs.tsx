@@ -10,9 +10,18 @@ interface LeagueRoundResultTabsProps {
     tournamentName: string;
     teamHandicapLimit: number | null;
     isManager?: boolean;
+    centerId: string;
+    tournamentId: string;
 }
 
-export default function LeagueRoundResultTabs({ round, tournamentName, teamHandicapLimit, isManager = false }: LeagueRoundResultTabsProps) {
+export default function LeagueRoundResultTabs({
+    round,
+    tournamentName,
+    teamHandicapLimit,
+    isManager = false,
+    centerId,
+    tournamentId
+}: LeagueRoundResultTabsProps) {
     const [activeTab, setActiveTab] = useState<'results' | 'scoring' | 'sideGame'>(isManager ? 'scoring' : 'results');
 
     return (
@@ -59,8 +68,8 @@ export default function LeagueRoundResultTabs({ round, tournamentName, teamHandi
                 ) : activeTab === 'scoring' ? (
                     <div className="p-4 md:p-8">
                         <RoundBulkResultEditor
-                            centerId="" // Not strictly needed for logic but props require
-                            tournamentId="" // Same
+                            centerId={centerId}
+                            tournamentId={tournamentId}
                             round={round}
                             teamHandicapLimit={teamHandicapLimit}
                         />

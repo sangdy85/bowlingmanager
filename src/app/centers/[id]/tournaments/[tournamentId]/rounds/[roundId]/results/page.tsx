@@ -49,6 +49,8 @@ export default async function ResultsPage({ params, searchParams }: any) {
                         tournamentName={tournament.name}
                         teamHandicapLimit={leagueData.teamHandicapLimit}
                         isManager={isManager}
+                        centerId={centerId}
+                        tournamentId={tournamentId}
                     />
 
                     <div className="flex justify-center pb-8 pt-6">
