@@ -8,7 +8,8 @@ import { LEAGUE_TEMPLATES } from '../src/lib/league-templates';
  *    npx tsx scripts/apply-league-17-schedule.ts
  */
 
-const TOURNAMENT_ID = 'cmm21m35n000113o049zwsoof';
+const TOURNAMENT_ID_ARG = process.argv[2];
+const TOURNAMENT_NAME = "제 17차 상주리그"; // 또는 "제 17회차 상주리그"
 
 const TEAM_NAME_ORDER = [
     "럭셔리A", "럭셔리B", "마블러스A", "마블러스B", "올앤텐핀A", "올앤텐핀B",
@@ -19,26 +20,38 @@ const TEAM_NAME_ORDER = [
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log(`Starting schedule update for tournament: ${TOURNAMENT_ID}`);
+    let tournamentId = TOURNAMENT_ID_ARG;
 
-    // 1. 토너먼트 및 참가 팀 확인
-    const tournament = await prisma.tournament.findUnique({
-        where: { id: TOURNAMENT_ID },
-        include: {
-            registrations: {
-                select: {
-                    id: true,
-                    guestName: true,
-                    guestTeamName: true
-                }
-            }
-        }
-    });
+    // 1. 토너먼트 찾기 (인자 -> 이름 검색)
+    let tournament: any = null;
+    if (tournamentId) {
+        tournament = await prisma.tournament.findUnique({
+            where: { id: tournamentId },
+            include: { registrations: true }
+        });
+    }
 
     if (!tournament) {
-        console.error('Error: Tournament not found.');
+        console.log(`Searching for tournament with name containing "17" and "상주리그"...`);
+        tournament = await prisma.tournament.findFirst({
+            where: {
+                AND: [
+                    { name: { contains: "17" } },
+                    { name: { contains: "상주리그" } }
+                ]
+            },
+            include: { registrations: true }
+        });
+    }
+
+    if (!tournament) {
+        console.error('Error: Tournament "제 17차 상주리그" not found in the database.');
+        console.log('Please specify the tournament ID as an argument: npx tsx scripts/apply-league-17-schedule.ts <TournamentId>');
         return;
     }
+
+    tournamentId = tournament.id;
+    console.log(`Starting schedule update for tournament: [${tournamentId}] ${tournament.name}`);
 
     if (tournament.type !== 'LEAGUE') {
         console.error('Error: This tournament is not a LEAGUE type.');
@@ -51,13 +64,13 @@ async function main() {
     const teamMap: Record<number, string> = {};
     for (let i = 0; i < TEAM_NAME_ORDER.length; i++) {
         const teamName = TEAM_NAME_ORDER[i];
-        const reg = tournament.registrations.find(r =>
+        const reg = tournament.registrations.find((r: any) =>
             r.guestName === teamName || r.guestTeamName === teamName || (r as any).playerName === teamName
         );
 
         if (!reg) {
             console.error(`Error: Team "${teamName}" not found in tournament registrations.`);
-            console.log('Available teams:', tournament.registrations.map(r => r.guestName || r.guestTeamName).filter(Boolean));
+            console.log('Available teams:', tournament.registrations.map((r: any) => r.guestName || r.guestTeamName).filter(Boolean));
             return;
         }
         teamMap[i + 1] = reg.id;
@@ -68,7 +81,7 @@ async function main() {
     // 3. 기존 대진표 삭제
     console.log('Deleting existing league rounds and matchups...');
     await prisma.leagueRound.deleteMany({
-        where: { tournamentId: TOURNAMENT_ID }
+        where: { tournamentId: tournamentId }
     });
 
     // 4. 새 대진표 생성 (LEAGUE_TEMPLATES[18] 사용)
@@ -97,7 +110,7 @@ async function main() {
 
         const round = await prisma.leagueRound.create({
             data: {
-                tournamentId: TOURNAMENT_ID,
+                tournamentId: tournamentId,
                 roundNumber: i + 1,
                 date: roundDate
             }
