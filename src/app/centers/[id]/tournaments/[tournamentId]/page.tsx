@@ -1,4 +1,5 @@
 import { updateTournamentStatus } from "@/app/actions/tournament-center";
+export const dynamic = 'force-dynamic';
 import Link from "next/link";
 import TournamentRegButton from "@/components/tournaments/TournamentRegButton";
 import prisma from "@/lib/prisma";

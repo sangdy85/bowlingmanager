@@ -25,7 +25,7 @@ export async function updateTournamentRules(
             } as any
         });
 
-        revalidatePath(`/centers/[id]/tournaments/${tournamentId}`);
+        revalidatePath(`/centers/[id]/tournaments/${tournamentId}`, 'layout');
         return { success: true };
     } catch (error: any) {
         console.error("Failed to update tournament rules:", error);
@@ -48,7 +48,7 @@ export async function updateTeamHandicaps(
             }
         });
 
-        revalidatePath(`/centers/[id]/tournaments/${tournamentId}`);
+        revalidatePath(`/centers/[id]/tournaments/${tournamentId}`, 'layout');
         return { success: true };
     } catch (error: any) {
         console.error("Failed to update team handicaps:", error);

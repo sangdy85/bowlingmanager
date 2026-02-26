@@ -1,4 +1,5 @@
 import { getLeagueLeaderboard } from "@/app/actions/league-leaderboard";
+export const dynamic = 'force-dynamic';
 import LeagueLeaderboard from "@/components/tournaments/LeagueLeaderboard";
 import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
