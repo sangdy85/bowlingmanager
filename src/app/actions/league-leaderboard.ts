@@ -524,8 +524,12 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
         .map(team => ({
             ...team,
             players: Object.values(team.players).sort((a, b) => {
-                const aHavg = (a.totalRawPins + (a.handicap * a.gamesCount)) / (a.gamesCount || 1);
-                const bHavg = (b.totalRawPins + (b.handicap * b.gamesCount)) / (b.gamesCount || 1);
+                const aTotal = a.totalRawPins + (a.handicap * a.gamesCount);
+                const bTotal = b.totalRawPins + (b.handicap * b.gamesCount);
+                if (bTotal !== aTotal) return bTotal - aTotal;
+
+                const aHavg = aTotal / (a.gamesCount || 1);
+                const bHavg = bTotal / (b.gamesCount || 1);
                 return bHavg - aHavg;
             })
         }));
