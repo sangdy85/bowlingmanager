@@ -86,17 +86,36 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
     for (const round of tournament.leagueRounds) {
         // Skip rounds beyond the limit
         if (roundLimit && round.roundNumber > roundLimit) continue;
-
         const isLastRound = round.roundNumber === lastRoundNumber;
 
         for (const match of round.matchups) {
+
+            // Create a lookup for player -> squad based on THIS match's scores and registrations
+            const squadLookup: Record<string, string | null> = {};
+            match.individualScores.forEach((s: any) => {
+                const key = s.userId || s.playerName || 'Unknown';
+                if (s.teamSquad) {
+                    squadLookup[key] = s.teamSquad;
+                } else {
+                    const reg = tournament.registrations.find((r: any) =>
+                        (s.userId && r.userId === s.userId) || (!s.userId && r.guestName === s.playerName)
+                    );
+                    if (reg?.squad) squadLookup[key] = reg.squad;
+                }
+            });
 
             // Helper to calculate team game score with limits
             const calculateTeamGameScore = (teamId: string | null, squad: string | null, gameIndex: number, individualScores: any[]) => {
                 if (!teamId) return 0;
 
                 // Get players for this team AND squad in this match
-                const teamScores = individualScores.filter(s => s.teamId === teamId && s.teamSquad === squad);
+                const teamScores = individualScores.filter(s => {
+                    if (s.teamId !== teamId) return false;
+
+                    const sKey = s.userId || s.playerName || 'Unknown';
+                    const sSquad = s.teamSquad || squadLookup[sKey];
+                    return sSquad === squad;
+                });
 
                 let rawScoreSum = 0;
                 let handicapSum = 0;
@@ -184,17 +203,21 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
             processTeam(match.teamAId, (match as any).teamASquad, match.teamA?.name || 'Team A', match.pointsA || 0, match.pointsB || 0, match.individualScores);
 
             // Team B
-            processTeam(match.teamBId, (match as any).teamBSquad, match.teamB?.name || 'Team B', match.pointsB || 0, match.pointsA || 0, match.individualScores);
+            processTeam(match.teamBSquad ? match.teamBId : match.teamBId, (match as any).teamBSquad, match.teamB?.name || 'Team B', match.pointsB || 0, match.pointsA || 0, match.individualScores);
 
             // Individual Stats (unchanged logic mostly, but use awardMinGames)
             for (const score of match.individualScores) {
                 // Get squad for this score's team in this match
-                let currentSquad = (score as any).teamSquad;
+                const key = score.userId || score.playerName || 'Unknown';
+                let currentSquad = score.teamSquad || squadLookup[key];
+
                 if (!currentSquad) {
                     // Fallback to match squads based on teamId
-                    if (score.teamId === match.teamAId && match.teamBId !== match.teamAId) {
+                    if (match.teamAId === match.teamBId) {
+                        // Same team matchup! If we reach here, squadLookup failed too. Empty fallback.
+                    } else if (score.teamId === match.teamAId) {
                         currentSquad = (match as any).teamASquad;
-                    } else if (score.teamId === match.teamBId && match.teamAId !== match.teamBId) {
+                    } else if (score.teamId === match.teamBId) {
                         currentSquad = (match as any).teamBSquad;
                     }
                 }
@@ -202,7 +225,6 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                 const rawTeamName = match.teamAId === score.teamId ? match.teamA?.name : match.teamB?.name;
                 const teamDisplayName = currentSquad ? `${rawTeamName} (${currentSquad})` : (rawTeamName || '-');
 
-                const key = score.userId || score.playerName || 'Unknown';
                 const name = score.playerName || score.User?.name || 'Unknown';
 
                 if (!individualStats[key]) {
@@ -269,17 +291,19 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
     // Let's stick to strict threshold for verified awards.
     const totalRounds = tournament.leagueRounds.length;
     const minRequiredRounds = Math.ceil(awardMinGames / 3);
-    const maxAbsences = totalRounds - minRequiredRounds;
+    // maxAbsences: How many rounds can a player miss in the WHOLE tournament?
+    // If totalRounds < minRequiredRounds, we cap at 0 (must play all rounds)
+    const maxAbsences = Math.max(0, totalRounds - minRequiredRounds);
 
     let individuals = Object.values(individualStats).filter(p => {
         if (p.totalGames === 0) return false; // Must have played at least one game
         if (p.playerName === 'Unknown') return false; // Skip placeholder names
 
         const playedRounds = p.totalGames / 3;
-        const currentAbsences = lastRoundNumber - playedRounds;
+        // currentAbsences: How many rounds has the player missed SO FAR?
+        const currentAbsences = Math.max(0, lastRoundNumber - playedRounds);
 
-        // Qualification: Current absences (including potential future ones) 
-        // must not exceed the maximum allowed absences for the whole tournament.
+        // Qualification: Current absences must not exceed the maximum allowed for the tournament.
         return currentAbsences <= maxAbsences;
     });
 
