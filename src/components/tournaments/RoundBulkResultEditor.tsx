@@ -370,6 +370,19 @@ export default function RoundBulkResultEditor({
     const handleSave = async () => {
         setLoading(true);
         try {
+            // Validate scores before saving
+            const allScores: number[] = [];
+            Object.values(results).forEach(m => {
+                m.teamA.forEach(s => allScores.push(s.score1, s.score2, s.score3));
+                m.teamB.forEach(s => allScores.push(s.score1, s.score2, s.score3));
+            });
+
+            if (allScores.some(s => s > 300)) {
+                alert("300점을 초과하는 점수가 있습니다. 오타가 없는지 확인해 주세요.");
+                setLoading(false);
+                return;
+            }
+
             const dataToSave = Object.entries(results).map(([matchupId, teamData]) => ({
                 matchupId,
                 teamAScores: teamData.teamA.map(s => ({
@@ -534,14 +547,12 @@ export default function RoundBulkResultEditor({
                                                         <td key={g} className="p-1 border-r border-black/10">
                                                             <input
                                                                 type="number"
-                                                                max={300}
-                                                                onInput={(e) => {
-                                                                    const target = e.target as HTMLInputElement;
-                                                                    if (parseInt(target.value) > 300) target.value = "300";
-                                                                }}
                                                                 value={r[`score${g}` as keyof IndividualScore] ?? 0}
                                                                 onChange={(e) => handlePlayerChange(matchup.id, teamKey, rowIdx, `score${g}` as any, parseInt(e.target.value) || 0)}
-                                                                className="w-full h-10 text-center font-black bg-primary/5 focus:bg-white border-2 border-transparent focus:border-black rounded-lg outline-none transition-all"
+                                                                className={`w-full h-10 text-center font-black bg-primary/5 focus:bg-white border-2 rounded-lg outline-none transition-all ${(r[`score${g}` as keyof IndividualScore] as number) > 300
+                                                                        ? 'border-red-500 bg-red-50 ring-2 ring-red-500/20'
+                                                                        : 'border-transparent focus:border-black'
+                                                                    }`}
                                                             />
                                                         </td>
                                                     ))}

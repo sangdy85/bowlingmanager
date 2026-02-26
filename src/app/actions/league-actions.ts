@@ -323,6 +323,11 @@ export async function updateLeagueMatchupResult(matchupId: string, data: {
     const teamBScores = data.teamBScores;
     const allIndividualScores = [...teamAScores, ...teamBScores];
 
+    // Score validation (>300)
+    if (allIndividualScores.some(s => (s.score1 || 0) > 300 || (s.score2 || 0) > 300 || (s.score3 || 0) > 300)) {
+        throw new Error("300점을 초과하는 점수가 입력되었습니다.");
+    }
+
     const calculateCappedTotal = (scores: any[], gameNum: number) => {
         return scores.reduce((sum, s) => sum + Math.min((s[`score${gameNum}`] || 0) + (s.handicap || 0), 300), 0);
     };
@@ -418,6 +423,14 @@ export async function updateLeagueRoundResults(roundId: string, results: {
 
     if (!round) throw new Error("Round not found");
     await verifyCenterAdmin(round.tournament.centerId);
+
+    // Score validation (>300) for all matchups in the bulk update
+    results.forEach(res => {
+        const allMatchupScores = [...res.teamAScores, ...res.teamBScores];
+        if (allMatchupScores.some(s => (s.score1 || 0) > 300 || (s.score2 || 0) > 300 || (s.score3 || 0) > 300)) {
+            throw new Error("300점을 초과하는 점수가 포함되어 있습니다.");
+        }
+    });
 
     const calculateCappedTotal = (scores: any[], gameNum: number) => {
         return scores.reduce((sum, s) => sum + Math.min((s[`score${gameNum}`] || 0) + (s.handicap || 0), 300), 0);
