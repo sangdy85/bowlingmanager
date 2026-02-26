@@ -85,23 +85,6 @@ export default function RoundBulkResultEditor({
 
             const fillRows = (team: Team | null, teamId: string | null, squad: string | null, existing: IndividualScore[]) => {
                 const rows: IndividualScore[] = [...existing.map(s => ({ ...s, teamSquad: squad }))];
-                const members = team?.members || [];
-
-                // If not enough existing scores, fill from members
-                members.forEach(mem => {
-                    if (rows.length < 3 && !rows.find(r => r.userId === mem.user.id)) {
-                        rows.push({
-                            teamId: teamId!,
-                            teamSquad: squad,
-                            userId: mem.user.id,
-                            playerName: mem.user.name,
-                            handicap: 0,
-                            score1: 0,
-                            score2: 0,
-                            score3: 0,
-                        });
-                    }
-                });
 
                 // Still not 3? Fill with empty
                 while (rows.length < 3 && teamId) {
