@@ -112,7 +112,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                 const teamScores = individualScores.filter(s => {
                     if (s.teamId !== teamId) return false;
 
-                    const sKey = s.userId || s.playerName || 'Unknown';
+                    const sKey = s.userId ? `${s.userId}-${s.playerName || ''}` : (s.playerName || 'Unknown');
                     const sSquad = s.teamSquad || squadLookup[sKey];
                     return sSquad === squad;
                 });
@@ -215,7 +215,9 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                 if (!currentSquad) {
                     // Final fallback to match squads based on teamId
                     if (match.teamAId === match.teamBId) {
-                        // Same team matchup! If we reach here, squadLookup failed too. Empty fallback.
+                        // Same team matchup! If we reach here, squadLookup (which uses registrations) 
+                        // is our best hope. If it failed, we can try to find side by userId/playerName
+                        // but it's risky. Let's stick to squadLookup's result which already handled registrations.
                     } else if (score.teamId === match.teamAId) {
                         currentSquad = (match as any).teamASquad;
                     } else if (score.teamId === match.teamBId) {
@@ -418,6 +420,22 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
         }>
     }> = {};
 
+    const squadLookup: Record<string, string> = {};
+    tournament.leagueRounds.forEach((round: any) => {
+        round.matchups.forEach((match: any) => {
+            match.individualScores.forEach((s: any) => {
+                const key = s.userId ? `${s.userId}-${s.playerName || ''}` : (s.playerName || 'Unknown');
+                if (s.teamSquad) squadLookup[key] = s.teamSquad;
+                else {
+                    const reg = tournament.registrations.find((r: any) =>
+                        (s.userId && r.userId === s.userId) || (!s.userId && r.guestName === s.playerName)
+                    );
+                    if (reg?.squad) squadLookup[key] = reg.squad;
+                }
+            });
+        });
+    });
+
     let lastRoundNumber = 0;
     const playedRounds = tournament.leagueRounds.filter((r: any) => r.matchups.some((m: any) => m.status === 'FINISHED'));
     if (playedRounds.length > 0) {
@@ -435,11 +453,11 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                 const curTeamId = score.teamId;
                 if (!curTeamId) continue;
 
-                // COMPOSITE KEY: Important to prevent different guests sharing the same userId (e.g. admin id) from merging
+                // COMPOSITE KEY
                 const playerKey = score.userId ? `${score.userId}-${score.playerName || ''}` : (score.playerName || 'Unknown');
 
-                // Determine squad/team name for grouping
-                const squad = score.teamSquad || (match.teamAId === curTeamId ? (match as any).teamASquad : (match as any).teamBSquad);
+                // Determine squad/team name for grouping using squadLookup too
+                const squad = score.teamSquad || squadLookup[playerKey] || (match.teamAId === curTeamId && match.teamAId !== match.teamBId ? (match as any).teamASquad : (match.teamBId === curTeamId && match.teamAId !== match.teamBId ? (match as any).teamBSquad : null));
                 const teamKey = squad ? `${curTeamId}-${squad}` : curTeamId;
 
                 const rawTeamName = curTeamId === match.teamAId ? match.teamA?.name : match.teamB?.name;
