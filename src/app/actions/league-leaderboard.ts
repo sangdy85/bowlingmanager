@@ -92,11 +92,11 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
         for (const match of round.matchups) {
 
             // Helper to calculate team game score with limits
-            const calculateTeamGameScore = (teamId: string | null, gameIndex: number, individualScores: any[]) => {
+            const calculateTeamGameScore = (teamId: string | null, squad: string | null, gameIndex: number, individualScores: any[]) => {
                 if (!teamId) return 0;
 
-                // Get players for this team in this match
-                const teamScores = individualScores.filter(s => s.teamId === teamId);
+                // Get players for this team AND squad in this match
+                const teamScores = individualScores.filter(s => s.teamId === teamId && s.teamSquad === squad);
 
                 let rawScoreSum = 0;
                 let handicapSum = 0;
@@ -155,9 +155,9 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                 stats.losses += opponentPoints;
 
                 // Calculate Adjusted Scores
-                const g1 = calculateTeamGameScore(teamId, 0, individualScores);
-                const g2 = calculateTeamGameScore(teamId, 1, individualScores);
-                const g3 = calculateTeamGameScore(teamId, 2, individualScores);
+                const g1 = calculateTeamGameScore(teamId, squad, 0, individualScores);
+                const g2 = calculateTeamGameScore(teamId, squad, 1, individualScores);
+                const g3 = calculateTeamGameScore(teamId, squad, 2, individualScores);
                 const series = g1 + g2 + g3;
 
                 stats.totalPinfall += series;
@@ -421,10 +421,19 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
 
                 const playerKey = score.userId || score.playerName || 'Unknown';
                 const currentSquad = (score as any).teamSquad || (match.teamAId === teamId ? (match as any).teamASquad : (match as any).teamBSquad);
-                const displayTeamName = currentSquad ? `${dataByTeam[teamId].teamName} (${currentSquad})` : dataByTeam[teamId].teamName;
+                const teamKey = currentSquad ? `${teamId}-${currentSquad}` : teamId;
+                const displayTeamName = currentSquad ? `${match.teamAId === teamId ? match.teamA?.name : match.teamB?.name} (${currentSquad})` : (match.teamAId === teamId ? match.teamA?.name : match.teamB?.name) || 'Unknown';
 
-                if (!dataByTeam[teamId].players[playerKey]) {
-                    dataByTeam[teamId].players[playerKey] = {
+                if (!dataByTeam[teamKey]) {
+                    dataByTeam[teamKey] = {
+                        teamId,
+                        teamName: displayTeamName,
+                        players: {}
+                    };
+                }
+
+                if (!dataByTeam[teamKey].players[playerKey]) {
+                    dataByTeam[teamKey].players[playerKey] = {
                         userId: score.userId,
                         name: score.User?.name || score.playerName || 'Unknown',
                         gamesCount: 0,
@@ -438,7 +447,7 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                     };
                 }
 
-                const p = dataByTeam[teamId].players[playerKey];
+                const p = dataByTeam[teamKey].players[playerKey];
                 const rawSeries = score.score1 + score.score2 + score.score3;
 
                 // Current Match
