@@ -29,6 +29,7 @@ interface LeaderboardData {
     };
     metadata: {
         currentRound: number;
+        reportNotice?: string | null;
     };
 }
 
@@ -241,7 +242,7 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                 {/* Right Column: Individual Awards */}
                 <div>
                     {/* Individual Average */}
-                    <div style={awardHeaderStyle}>개인 에버 (12주 이상)</div>
+                    <div style={awardHeaderStyle}>개인 에버</div>
                     <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                         <thead>
                             <tr>
@@ -320,11 +321,17 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                 </div>
             </div>
 
-            <div style={{ marginTop: '1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 700, color: '#dc2626', lineHeight: 1.5 }}>
-                <p>* 개인 에버 / 개인 시리즈 / 단게임은 12주(36게임) 이상 참여자 대상</p>
-                <p>* 개인 하이, 개인 단게임은 핸디 비포함(Raw Score) 우선</p>
-                <p>* 단체전은 중복시상 가능하나 개인전은 중복시상 불가 (에버 {'>'} 시리즈 {'>'} 단게임)</p>
-            </div>
+            {metadata.reportNotice ? (
+                <div style={{ marginTop: '1rem', whiteSpace: 'pre-wrap', textAlign: 'right', fontSize: '0.75rem', fontWeight: 700, color: '#dc2626', lineHeight: 1.5 }}>
+                    {metadata.reportNotice}
+                </div>
+            ) : (
+                <div style={{ marginTop: '1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 700, color: '#dc2626', lineHeight: 1.5 }}>
+                    <p>* 개인 에버 / 개인 시리즈 / 단게임은 12주(36게임) 이상 참여자 대상</p>
+                    <p>* 개인 하이, 개인 단게임은 핸디 비포함(Raw Score) 우선</p>
+                    <p>* 단체전은 중복시상 가능하나 개인전은 중복시상 불가 (에버 {'>'} 시리즈 {'>'} 단게임)</p>
+                </div>
+            )}
         </div>
     );
 }

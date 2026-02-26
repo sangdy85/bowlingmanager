@@ -89,7 +89,8 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                     const renderTeamTable = (team: Team | null, teamId: string | null, squad: string | undefined | null, laneNum: string, points: number | null, isRight: boolean) => {
                         const teamScores = m.individualScores.filter(s => s.teamId === teamId && s.teamSquad === squad);
                         const rawHSum = teamScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
-                        const hSum = (teamHandicapLimit !== undefined && teamHandicapLimit !== null && rawHSum > teamHandicapLimit) ? teamHandicapLimit : rawHSum;
+                        const hLimit = teamHandicapLimit !== undefined && teamHandicapLimit !== null ? Number(teamHandicapLimit) : null;
+                        const hSum = (hLimit !== null && rawHSum > hLimit) ? hLimit : rawHSum;
 
                         const g1 = teamScores.reduce((sum, s) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0);
                         const g2 = teamScores.reduce((sum, s) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0);

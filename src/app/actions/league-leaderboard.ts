@@ -57,8 +57,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
         userId: string | null;
         playerName: string;
         teamName: string;
-        totalPinfall: number; // Raw Pins
-        totalHandicapPins: number; // Handicap Pins
+        totalPinfall: number;
         totalGames: number;
         highSeries: number;
         highGame: number;
@@ -239,7 +238,6 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                         playerName: name,
                         teamName: teamDisplayName,
                         totalPinfall: 0,
-                        totalHandicapPins: 0,
                         totalGames: 0,
                         highSeries: 0,
                         highGame: 0,
@@ -261,8 +259,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                 if (s1 > 0 || s2 > 0 || s3 > 0) {
                     const hTotal = score.handicap * 3;
                     const series = s1 + s2 + s3 + hTotal;
-                    individualStats[key].totalPinfall += (s1 + s2 + s3);
-                    individualStats[key].totalHandicapPins += hTotal;
+                    individualStats[key].totalPinfall += series;
                     individualStats[key].totalGames += 3;
 
                     individualStats[key].highSeries = Math.max(individualStats[key].highSeries, series);
@@ -324,12 +321,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
     // User Priority: Avg 1 -> Avg 2 -> Avg 3 -> Series 1 -> Game 1 -> Series 2 -> Game 2 -> Series 3 -> Game 3
 
     // Sort individuals for each category
-    // Sort individuals for each category by Handicap Average (Raw + Handicap)
-    const sortedByAvg = [...individuals].sort((a, b) => {
-        const aAvg = (a.totalPinfall + a.totalHandicapPins) / (a.totalGames || 1);
-        const bAvg = (b.totalPinfall + b.totalHandicapPins) / (b.totalGames || 1);
-        return bAvg - aAvg;
-    });
+    const sortedByAvg = [...individuals].sort((a, b) => (b.totalPinfall / b.totalGames) - (a.totalPinfall / a.totalGames));
     const sortedBySeries = [...individuals].sort((a, b) => b.highSeries - a.highSeries);
     const sortedByGame = [...individuals].sort((a, b) => b.highGame - a.highGame);
 
@@ -423,7 +415,6 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
             gamesCount: number;
             handicap: number;
             totalRawPins: number;
-            totalHandicapPins: number;
             highSeries: number;
             highGame: number;
             lastMatchRawScore: number;
@@ -491,7 +482,6 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                         gamesCount: 0,
                         handicap: score.handicap,
                         totalRawPins: 0,
-                        totalHandicapPins: 0,
                         highSeries: 0,
                         highGame: 0,
                         lastMatchRawScore: 0,
@@ -508,7 +498,6 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                     const hSeries = rawSeries + hTotal;
                     p.gamesCount += 3;
                     p.totalRawPins += rawSeries;
-                    p.totalHandicapPins += hTotal;
                     p.highSeries = Math.max(p.highSeries, hSeries);
                     p.highGame = Math.max(p.highGame, score.score1 + score.handicap, score.score2 + score.handicap, score.score3 + score.handicap);
                     p.handicap = score.handicap;
@@ -530,8 +519,8 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
         .map(team => ({
             ...team,
             players: Object.values(team.players).sort((a, b) => {
-                const aHavg = (a.totalRawPins + a.totalHandicapPins) / (a.gamesCount || 1);
-                const bHavg = (b.totalRawPins + b.totalHandicapPins) / (b.gamesCount || 1);
+                const aHavg = (a.totalRawPins + (a.handicap * a.gamesCount)) / (a.gamesCount || 1);
+                const bHavg = (b.totalRawPins + (b.handicap * b.gamesCount)) / (b.gamesCount || 1);
                 return bHavg - aHavg;
             })
         }));
@@ -558,8 +547,8 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
             return true;
         })
         .sort((a, b) => {
-            const aTotalWithH = a.totalRawPins + a.totalHandicapPins;
-            const bTotalWithH = b.totalRawPins + b.totalHandicapPins;
+            const aTotalWithH = a.totalRawPins + a.handicap * a.gamesCount;
+            const bTotalWithH = b.totalRawPins + b.handicap * b.gamesCount;
             return (bTotalWithH / (b.gamesCount || 1)) - (aTotalWithH / (a.gamesCount || 1));
         })
         .slice(0, avgTopRankCount);

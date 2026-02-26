@@ -518,6 +518,7 @@ export default function RoundBulkResultEditor({
                                                             value={r.playerName ?? ''}
                                                             onChange={(e) => handlePlayerChange(matchup.id, teamKey, rowIdx, 'playerName', e.target.value)}
                                                             className="w-full h-10 px-3 text-center bg-transparent border-2 border-transparent focus:border-black rounded-lg outline-none transition-all text-sm"
+                                                            lang="ko"
                                                         />
                                                     </td>
                                                     <td className="p-1 border-r border-black/10">
