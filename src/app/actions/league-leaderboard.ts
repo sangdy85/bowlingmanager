@@ -93,7 +93,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
             // Create a lookup for player -> squad based on THIS match's scores and registrations
             const squadLookup: Record<string, string | null> = {};
             match.individualScores.forEach((s: any) => {
-                const key = s.userId || s.playerName || 'Unknown';
+                const key = s.userId ? `${s.userId}-${s.playerName || ''}` : (s.playerName || 'Unknown');
                 if (s.teamSquad) {
                     squadLookup[key] = s.teamSquad;
                 } else {
