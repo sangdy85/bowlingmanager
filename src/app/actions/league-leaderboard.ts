@@ -414,6 +414,8 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
     const dataByTeam: Record<string, {
         teamId: string;
         teamName: string;
+        wins: number;
+        totalPinfall: number;
         players: Record<string, {
             userId: string | null;
             name: string;
@@ -457,6 +459,24 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
         const isLastRound = round.roundNumber === lastRoundNumber;
 
         for (const match of round.matchups) {
+            // Track wins for Team A and B
+            const teamAKey = (match as any).teamASquad ? `${match.teamAId}-${(match as any).teamASquad}` : match.teamAId;
+            const teamBKey = (match as any).teamBSquad ? `${match.teamBId}-${(match as any).teamBSquad}` : match.teamBId;
+
+            if (teamAKey && !dataByTeam[teamAKey]) {
+                const name = match.teamA?.name || 'Unknown';
+                const disp = (match as any).teamASquad ? `${name} (${(match as any).teamASquad})` : name;
+                dataByTeam[teamAKey] = { teamId: match.teamAId, teamName: disp, wins: 0, totalPinfall: 0, players: {} };
+            }
+            if (teamBKey && !dataByTeam[teamBKey]) {
+                const name = match.teamB?.name || 'Unknown';
+                const disp = (match as any).teamBSquad ? `${name} (${(match as any).teamBSquad})` : name;
+                dataByTeam[teamBKey] = { teamId: match.teamBId, teamName: disp, wins: 0, totalPinfall: 0, players: {} };
+            }
+
+            if (dataByTeam[teamAKey]) dataByTeam[teamAKey].wins += (match.pointsA || 0);
+            if (dataByTeam[teamBKey]) dataByTeam[teamBKey].wins += (match.pointsB || 0);
+
             for (const score of match.individualScores) {
                 const curTeamId = score.teamId;
                 if (!curTeamId) continue;
@@ -476,6 +496,8 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                     dataByTeam[teamKey] = {
                         teamId: curTeamId,
                         teamName: displayTeamName,
+                        wins: 0,
+                        totalPinfall: 0,
                         players: {}
                     };
                 }
@@ -497,6 +519,12 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
 
                 const p = dataByTeam[teamKey].players[playerKey];
                 const rawSeries = score.score1 + score.score2 + score.score3;
+
+                // Team Total Pinfall (capped individual pins like main leaderboard)
+                const teamCappedSeries = Math.min(score.score1 + score.handicap, 300) +
+                    Math.min(score.score2 + score.handicap, 300) +
+                    Math.min(score.score3 + score.handicap, 300);
+                dataByTeam[teamKey].totalPinfall += teamCappedSeries;
 
                 if (rawSeries > 0) {
                     const hTotal = score.handicap * 3;
@@ -520,7 +548,10 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
 
     // Convert to sorted array
     const sortedTeams = Object.values(dataByTeam)
-        .sort((a, b) => a.teamName.localeCompare(b.teamName))
+        .sort((a, b) => {
+            if (b.wins !== a.wins) return b.wins - a.wins;
+            return b.totalPinfall - a.totalPinfall;
+        })
         .map(team => ({
             ...team,
             players: Object.values(team.players).sort((a, b) => {
