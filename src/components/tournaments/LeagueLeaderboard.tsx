@@ -268,7 +268,7 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                     </table>
 
                     {/* Individual Series */}
-                    <div style={{ ...awardHeaderStyle, borderTop: '2px solid #000000' }}>개인 시리즈 (1명 x 3게임)</div>
+                    <div style={{ ...awardHeaderStyle, borderTop: '2px solid #000000' }}>개인 시리즈</div>
                     <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                         <thead>
                             <tr>
@@ -322,7 +322,7 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
             </div>
 
             {metadata.reportNotice ? (
-                <div style={{ marginTop: '1rem', whiteSpace: 'pre-wrap', textAlign: 'right', fontSize: '0.75rem', fontWeight: 700, color: '#dc2626', lineHeight: 1.5 }}>
+                <div style={{ marginTop: '1.5rem', whiteSpace: 'pre-wrap', textAlign: 'center', fontSize: '0.85rem', fontWeight: 800, color: '#dc2626', lineHeight: 1.6, padding: '1rem', border: '1px solid #fee2e2', borderRadius: '0.5rem', backgroundColor: '#fffafb' }}>
                     {metadata.reportNotice}
                 </div>
             ) : (

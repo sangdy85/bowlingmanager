@@ -100,7 +100,7 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                         const opponentSquad = isRight ? m.teamASquad : m.teamBSquad;
                         const opponentScores = m.individualScores.filter(s => s.teamId === opponentId && s.teamSquad === opponentSquad);
                         const rawOHSum = opponentScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
-                        const ohSum = (teamHandicapLimit !== undefined && teamHandicapLimit !== null && rawOHSum > teamHandicapLimit) ? teamHandicapLimit : rawOHSum;
+                        const ohSum = (hLimit !== null && rawOHSum > hLimit) ? hLimit : rawOHSum;
 
                         const og1 = opponentScores.reduce((sum, s) => sum + (s.score1 || 0), 0);
                         const og2 = opponentScores.reduce((sum, s) => sum + (s.score2 || 0), 0);

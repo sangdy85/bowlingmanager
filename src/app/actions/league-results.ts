@@ -8,7 +8,7 @@ export async function getLeagueRoundResults(roundId: string) {
             where: { id: roundId },
             include: {
                 tournament: {
-                    select: { name: true, settings: true, type: true }
+                    select: { name: true, settings: true, type: true, teamHandicapLimit: true, reportNotice: true }
                 },
                 matchups: {
                     include: {
@@ -52,7 +52,7 @@ export async function getLeagueRoundResults(roundId: string) {
         if (!round) throw new Error("라운드 정보를 찾을 수 없습니다.");
 
         const settings = round.tournament.settings ? JSON.parse(round.tournament.settings) : {};
-        const teamHandicapLimit = settings.teamHandicapLimit;
+        const teamHandicapLimit = round.tournament.teamHandicapLimit ?? settings.teamHandicapLimit;
 
         return {
             id: round.id,
