@@ -188,18 +188,22 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
 
             // Individual Stats (unchanged logic mostly, but use awardMinGames)
             for (const score of match.individualScores) {
-                const key = score.userId || score.playerName || 'Unknown';
-                const name = score.User?.name || score.playerName || 'Unknown';
-
                 // Get squad for this score's team in this match
                 let currentSquad = (score as any).teamSquad;
                 if (!currentSquad) {
-                    if (score.teamId === match.teamAId) currentSquad = (match as any).teamASquad;
-                    else if (score.teamId === match.teamBId) currentSquad = (match as any).teamBSquad;
+                    // Fallback to match squads based on teamId
+                    if (score.teamId === match.teamAId && match.teamBId !== match.teamAId) {
+                        currentSquad = (match as any).teamASquad;
+                    } else if (score.teamId === match.teamBId && match.teamAId !== match.teamBId) {
+                        currentSquad = (match as any).teamBSquad;
+                    }
                 }
 
                 const rawTeamName = match.teamAId === score.teamId ? match.teamA?.name : match.teamB?.name;
                 const teamDisplayName = currentSquad ? `${rawTeamName} (${currentSquad})` : (rawTeamName || '-');
+
+                const key = score.userId || score.playerName || 'Unknown';
+                const name = score.playerName || score.User?.name || 'Unknown';
 
                 if (!individualStats[key]) {
                     individualStats[key] = {
@@ -268,6 +272,9 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
     const maxAbsences = totalRounds - minRequiredRounds;
 
     let individuals = Object.values(individualStats).filter(p => {
+        if (p.totalGames === 0) return false; // Must have played at least one game
+        if (p.playerName === 'Unknown') return false; // Skip placeholder names
+
         const playedRounds = p.totalGames / 3;
         const currentAbsences = lastRoundNumber - playedRounds;
 
@@ -435,7 +442,7 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                 if (!dataByTeam[teamKey].players[playerKey]) {
                     dataByTeam[teamKey].players[playerKey] = {
                         userId: score.userId,
-                        name: score.User?.name || score.playerName || 'Unknown',
+                        name: score.playerName || score.User?.name || 'Unknown',
                         gamesCount: 0,
                         handicap: score.handicap,
                         totalRawPins: 0,

@@ -113,7 +113,14 @@ export default function RoundBulkResultEditor({
     const handlePlayerChange = (matchupId: string, team: 'teamA' | 'teamB', index: number, field: keyof IndividualScore, value: any) => {
         setResults(prev => {
             const teamResults = [...prev[matchupId][team]];
-            teamResults[index] = { ...teamResults[index], [field]: value };
+            const updatedRow = { ...teamResults[index], [field]: value };
+
+            // If playerName is manually changed, clear userId to prevent wrong name from being shown in leaderboard
+            if (field === 'playerName') {
+                updatedRow.userId = null;
+            }
+
+            teamResults[index] = updatedRow;
             return {
                 ...prev,
                 [matchupId]: {
