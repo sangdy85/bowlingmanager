@@ -373,7 +373,12 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
             individual: allocated
         },
         metadata: {
-            currentRound: lastRoundNumber
+            currentRound: lastRoundNumber,
+            totalPossibleGames: lastRoundNumber * 3,
+            awardMinGames: tournament.awardMinGames,
+            avgTopRankCount: tournament.avgTopRankCount,
+            avgMinParticipationPct: tournament.avgMinParticipationPct,
+            reportNotice: tournament.reportNotice
         }
     };
 }
