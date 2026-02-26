@@ -95,7 +95,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                     const reg = tournament.registrations.find((r: any) =>
                         (s.userId && r.userId === s.userId) || (!s.userId && r.guestName === s.playerName)
                     );
-                    if (reg?.squad) squadLookup[key] = reg.squad;
+                    squadLookup[key] = reg?.squad || null;
                 }
             });
         });
@@ -116,8 +116,9 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                     if (s.teamId !== teamId) return false;
 
                     const sKey = s.userId ? `${s.userId}-${s.playerName || ''}` : (s.playerName || 'Unknown');
-                    const sSquad = s.teamSquad || squadLookup[sKey];
-                    return sSquad === squad;
+                    const sSquad = s.teamSquad || squadLookup[sKey] || null;
+                    const targetSquad = squad || null;
+                    return sSquad === targetSquad;
                 });
 
                 let rawScoreSum = 0;
@@ -213,18 +214,16 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                 // Get squad for this score's team in this match
                 // COMPOSITE KEY: Important to prevent different guests sharing the same userId (e.g. admin id) from merging
                 const key = score.userId ? `${score.userId}-${score.playerName || ''}` : (score.playerName || 'Unknown');
-                let currentSquad = score.teamSquad || squadLookup[key];
+                let currentSquad = score.teamSquad || squadLookup[key] || null;
 
                 if (!currentSquad) {
                     // Final fallback to match squads based on teamId
                     if (match.teamAId === match.teamBId) {
-                        // Same team matchup! If we reach here, squadLookup (which uses registrations) 
-                        // is our best hope. If it failed, we can try to find side by userId/playerName
-                        // but it's risky. Let's stick to squadLookup's result which already handled registrations.
+                        // Same team matchup
                     } else if (score.teamId === match.teamAId) {
-                        currentSquad = (match as any).teamASquad;
+                        currentSquad = (match as any).teamASquad || null;
                     } else if (score.teamId === match.teamBId) {
-                        currentSquad = (match as any).teamBSquad;
+                        currentSquad = (match as any).teamBSquad || null;
                     }
                 }
 
@@ -434,7 +433,7 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                     const reg = tournament.registrations.find((r: any) =>
                         (s.userId && r.userId === s.userId) || (!s.userId && r.guestName === s.playerName)
                     );
-                    if (reg?.squad) squadLookup[key] = reg.squad;
+                    squadLookup[key] = reg?.squad || null;
                 }
             });
         });
@@ -461,7 +460,8 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                 const playerKey = score.userId ? `${score.userId}-${score.playerName || ''}` : (score.playerName || 'Unknown');
 
                 // Determine squad/team name for grouping using squadLookup too
-                const squad = score.teamSquad || squadLookup[playerKey] || (match.teamAId === curTeamId && match.teamAId !== match.teamBId ? (match as any).teamASquad : (match.teamBId === curTeamId && match.teamAId !== match.teamBId ? (match as any).teamBSquad : null));
+                const squadCandidate = score.teamSquad || squadLookup[playerKey] || (match.teamAId === curTeamId && match.teamAId !== match.teamBId ? (match as any).teamASquad : (match.teamBId === curTeamId && match.teamAId !== match.teamBId ? (match as any).teamBSquad : null));
+                const squad = squadCandidate || null;
                 const teamKey = squad ? `${curTeamId}-${squad}` : curTeamId;
 
                 const rawTeamName = curTeamId === match.teamAId ? match.teamA?.name : match.teamB?.name;
