@@ -203,16 +203,17 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
             processTeam(match.teamAId, (match as any).teamASquad, match.teamA?.name || 'Team A', match.pointsA || 0, match.pointsB || 0, match.individualScores);
 
             // Team B
-            processTeam(match.teamBSquad ? match.teamBId : match.teamBId, (match as any).teamBSquad, match.teamB?.name || 'Team B', match.pointsB || 0, match.pointsA || 0, match.individualScores);
+            processTeam(match.teamBId, (match as any).teamBSquad, match.teamB?.name || 'Team B', match.pointsB || 0, match.pointsA || 0, match.individualScores);
 
             // Individual Stats (unchanged logic mostly, but use awardMinGames)
             for (const score of match.individualScores) {
                 // Get squad for this score's team in this match
-                const key = score.userId || score.playerName || 'Unknown';
+                // COMPOSITE KEY: Important to prevent different guests sharing the same userId (e.g. admin id) from merging
+                const key = score.userId ? `${score.userId}-${score.playerName || ''}` : (score.playerName || 'Unknown');
                 let currentSquad = score.teamSquad || squadLookup[key];
 
                 if (!currentSquad) {
-                    // Fallback to match squads based on teamId
+                    // Final fallback to match squads based on teamId
                     if (match.teamAId === match.teamBId) {
                         // Same team matchup! If we reach here, squadLookup failed too. Empty fallback.
                     } else if (score.teamId === match.teamAId) {
@@ -240,6 +241,11 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                         previousTotalPins: 0,
                         handicap: 0
                     };
+                } else {
+                    // Update team name if currently a generic placeholder
+                    if (individualStats[key].teamName === '-' || individualStats[key].teamName === 'Unknown') {
+                        individualStats[key].teamName = teamDisplayName;
+                    }
                 }
 
                 const s1 = score.score1;
@@ -408,20 +414,9 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
             highGame: number;
             lastMatchRawScore: number;
             previousTotalRawPins: number;
-            currentWeekPins: number; // Added
+            currentWeekPins: number;
         }>
     }> = {};
-
-    // Get all team names from registrations for completeness (even teams with no scores yet)
-    tournament.registrations.forEach((reg: any) => {
-        if (reg.teamId && !dataByTeam[reg.teamId]) {
-            dataByTeam[reg.teamId] = {
-                teamId: reg.teamId,
-                teamName: reg.team?.name || 'Unknown',
-                players: {}
-            };
-        }
-    });
 
     let lastRoundNumber = 0;
     const playedRounds = tournament.leagueRounds.filter((r: any) => r.matchups.some((m: any) => m.status === 'FINISHED'));
@@ -433,31 +428,26 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
     for (const round of tournament.leagueRounds) {
         // Skip rounds beyond the limit
         if (roundLimit && round.roundNumber > roundLimit) continue;
-
         const isLastRound = round.roundNumber === lastRoundNumber;
 
         for (const match of round.matchups) {
             for (const score of match.individualScores) {
-                const teamId = score.teamId;
-                if (!teamId) continue;
+                const curTeamId = score.teamId;
+                if (!curTeamId) continue;
 
-                // Ensure team entry exists
-                if (!dataByTeam[teamId]) {
-                    dataByTeam[teamId] = {
-                        teamId,
-                        teamName: (match.teamAId === teamId ? match.teamA?.name : match.teamB?.name) || 'Unknown',
-                        players: {}
-                    };
-                }
+                // COMPOSITE KEY: Important to prevent different guests sharing the same userId (e.g. admin id) from merging
+                const playerKey = score.userId ? `${score.userId}-${score.playerName || ''}` : (score.playerName || 'Unknown');
 
-                const playerKey = score.userId || score.playerName || 'Unknown';
-                const currentSquad = (score as any).teamSquad || (match.teamAId === teamId ? (match as any).teamASquad : (match as any).teamBSquad);
-                const teamKey = currentSquad ? `${teamId}-${currentSquad}` : teamId;
-                const displayTeamName = currentSquad ? `${match.teamAId === teamId ? match.teamA?.name : match.teamB?.name} (${currentSquad})` : (match.teamAId === teamId ? match.teamA?.name : match.teamB?.name) || 'Unknown';
+                // Determine squad/team name for grouping
+                const squad = score.teamSquad || (match.teamAId === curTeamId ? (match as any).teamASquad : (match as any).teamBSquad);
+                const teamKey = squad ? `${curTeamId}-${squad}` : curTeamId;
+
+                const rawTeamName = curTeamId === match.teamAId ? match.teamA?.name : match.teamB?.name;
+                const displayTeamName = squad ? `${rawTeamName} (${squad})` : (rawTeamName || 'Unknown');
 
                 if (!dataByTeam[teamKey]) {
                     dataByTeam[teamKey] = {
-                        teamId,
+                        teamId: curTeamId,
                         teamName: displayTeamName,
                         players: {}
                     };
@@ -481,7 +471,6 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                 const p = dataByTeam[teamKey].players[playerKey];
                 const rawSeries = score.score1 + score.score2 + score.score3;
 
-                // Current Match
                 if (rawSeries > 0) {
                     const hTotal = score.handicap * 3;
                     const hSeries = rawSeries + hTotal;
@@ -489,7 +478,7 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                     p.totalRawPins += rawSeries;
                     p.highSeries = Math.max(p.highSeries, hSeries);
                     p.highGame = Math.max(p.highGame, score.score1 + score.handicap, score.score2 + score.handicap, score.score3 + score.handicap);
-                    p.handicap = score.handicap; // Update to latest
+                    p.handicap = score.handicap;
 
                     if (isLastRound) {
                         p.lastMatchRawScore = rawSeries;
@@ -514,7 +503,7 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
             })
         }));
 
-    // Global Top List (Customizable Count & Participation)
+    // Global Top List
     const avgTopRankCount = tournament.avgTopRankCount || 30;
     const avgMinParticipationPct = tournament.avgMinParticipationPct || 0;
     const totalPossibleGames = lastRoundNumber * 3;
@@ -544,16 +533,14 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
 
     return {
         teams: sortedTeams,
-        top30: topList, // Keeping key as 'top30' for compatibility, or change to 'topList'? 
-        // The UI expects 'top30'. I should probably keep it or verify UI usage.
-        // UI component 'IndividualLeaderboard' uses 'top30', wait, I removed it from there.
-        // 'Top30Leaderboard' uses 'top30'.
-        // I will keep the key 'top30' but it might contain 50 items.
+        top30: topList,
         metadata: {
             currentRound: lastRoundNumber,
+            totalPossibleGames,
+            awardMinGames: tournament.awardMinGames,
             avgTopRankCount: tournament.avgTopRankCount,
             avgMinParticipationPct: tournament.avgMinParticipationPct,
             reportNotice: (tournament as any).reportNotice
-        } as any
+        }
     };
 }
