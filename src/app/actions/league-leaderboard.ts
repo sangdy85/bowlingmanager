@@ -83,15 +83,10 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
     const teamHandicapLimit = tournament.teamHandicapLimit;
     const awardMinGames = tournament.awardMinGames;
 
-    for (const round of tournament.leagueRounds) {
-        // Skip rounds beyond the limit
-        if (roundLimit && round.roundNumber > roundLimit) continue;
-        const isLastRound = round.roundNumber === lastRoundNumber;
-
-        for (const match of round.matchups) {
-
-            // Create a lookup for player -> squad based on THIS match's scores and registrations
-            const squadLookup: Record<string, string | null> = {};
+    // 4. Global Squad Lookup for fallbacks
+    const squadLookup: Record<string, string | null> = {};
+    tournament.leagueRounds.forEach((round: any) => {
+        round.matchups.forEach((match: any) => {
             match.individualScores.forEach((s: any) => {
                 const key = s.userId ? `${s.userId}-${s.playerName || ''}` : (s.playerName || 'Unknown');
                 if (s.teamSquad) {
@@ -103,7 +98,15 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                     if (reg?.squad) squadLookup[key] = reg.squad;
                 }
             });
+        });
+    });
 
+    for (const round of tournament.leagueRounds) {
+        // Skip rounds beyond the limit
+        if (roundLimit && round.roundNumber > roundLimit) continue;
+        const isLastRound = round.roundNumber === lastRoundNumber;
+
+        for (const match of round.matchups) {
             // Helper to calculate team game score with limits
             const calculateTeamGameScore = (teamId: string | null, squad: string | null, gameIndex: number, individualScores: any[]) => {
                 if (!teamId) return 0;
@@ -330,7 +333,8 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
         highGame: [] as any[]
     };
 
-    const getWinnerId = (p: any) => p.userId || p.playerName;
+    // getWinnerId must use the same composite key to let different guests win awards
+    const getWinnerId = (p: any) => p.userId ? `${p.userId}-${p.playerName || ''}` : p.playerName;
 
     // 1-3. Average 1st, 2nd, 3rd
     for (let i = 0; i < 3; i++) {
@@ -515,8 +519,8 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
         .map(team => ({
             ...team,
             players: Object.values(team.players).sort((a, b) => {
-                const aHavg = (a.totalRawPins + a.handicap * a.gamesCount) / (a.gamesCount || 1);
-                const bHavg = (b.totalRawPins + b.handicap * b.gamesCount) / (b.gamesCount || 1);
+                const aHavg = (a.totalRawPins + (a.handicap * a.gamesCount)) / (a.gamesCount || 1);
+                const bHavg = (b.totalRawPins + (b.handicap * b.gamesCount)) / (b.gamesCount || 1);
                 return bHavg - aHavg;
             })
         }));
