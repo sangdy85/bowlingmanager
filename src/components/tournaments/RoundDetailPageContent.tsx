@@ -1098,6 +1098,33 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             groups[groupId].members.push(p.registration.guestName ?? p.registration.user?.name ?? 'Unknown');
         });
 
+        // --- Added Validation ---
+        const expectedMemberCount = parseInt(gameMode.replace('TEAM_', ''), 10);
+        const mismatchedGroups = Object.values(groups).filter((g: any) => g.members.length !== expectedMemberCount);
+
+        if (mismatchedGroups.length > 0) {
+            return (
+                <div style={{ backgroundColor: 'white', padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '20px' }}>
+                    <div style={{ padding: '20px', border: '2px solid #ef4444', borderRadius: '8px', backgroundColor: '#fef2f2', maxWidth: '600px' }}>
+                        <h3 style={{ color: '#b91c1c', fontSize: '18px', fontWeight: '900', marginBottom: '10px', textAlign: 'center' }}>
+                            ⚠️ 팀 인원 구성 오류 알림
+                        </h3>
+                        <p style={{ color: '#7f1d1d', fontSize: '14px', lineHeight: '1.6', textAlign: 'center' }}>
+                            현재 대회 설정({expectedMemberCount}인조)과 실제 등록된 조 인원이 맞지 않는 데이터가 발견되었습니다.<br />
+                            대회 설정을 변경하시거나, 참가자 등록 정보(조 번호/그룹 ID)를 확인해 주세요.
+                        </p>
+                        <div style={{ marginTop: '15px', borderTop: '1px solid #fee2e2', paddingTop: '10px' }}>
+                            {mismatchedGroups.map((g: any) => (
+                                <div key={g.id} style={{ fontSize: '13px', color: '#991b1b', marginBottom: '4px' }}>
+                                    • <strong>{g.teamName}</strong>: {g.members.length}명 ({g.members.join(', ')})
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
         results = Object.values(groups).map((g: any) => {
             const validScores = g.gameScores.filter((s: number) => s > 0);
             const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
