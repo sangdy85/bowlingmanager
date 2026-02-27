@@ -1403,8 +1403,8 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             <thead>
                 <tr style={{ backgroundColor: '#E7E9EB', height: '32px' }}>
                     <th style={{ border: '1px solid black', padding: '4px', width: '35px' }}>순위</th>
-                    <th style={{ border: '1px solid black', padding: '4px' }}>팀</th>
-                    <th style={{ border: '1px solid black', padding: '4px', width: '100px' }}>성함</th>
+                    <th style={{ border: '1px solid black', padding: '4px', width: '70px' }}>팀</th>
+                    <th style={{ border: '1px solid black', padding: '4px' }}>성함</th>
                     {Array.from({ length: gameCount }).map((_, i) => (
                         <th key={i} style={{ border: '1px solid black', padding: '4px', width: '50px' }}>{i + 1}G</th>
                     ))}
@@ -1440,7 +1440,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     return (
                         <tr key={res.id} style={{ height: '26px', backgroundColor: shouldHighlight ? '#FFFF00' : 'white' }}>
                             <td style={{ border: '1px solid black', textAlign: 'center', fontWeight: 'bold', backgroundColor: 'white' }}>{rank}</td>
-                            <td style={{ border: '1px solid black', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', padding: '0 2px', maxWidth: '80px', textOverflow: 'ellipsis' }}>{res.team}</td>
+                            <td style={{ border: '1px solid black', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', padding: '0 2px', textOverflow: 'ellipsis' }}>{res.team}</td>
                             <td style={{
                                 border: '1px solid black',
                                 textAlign: 'center',
