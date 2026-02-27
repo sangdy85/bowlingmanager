@@ -1272,7 +1272,10 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         const worksheet = workbook.addWorksheet('최종결과');
 
         // 1. Add Title
-        const titleRowValue = `${round.tournament.name} ${round.roundNumber}회차 결과`;
+        const isEvent = round.tournament.type === 'EVENT';
+        const titleRowValue = isEvent
+            ? `${round.tournament.name} 최종 결과`
+            : `${round.tournament.name} ${round.roundNumber}회차 결과`;
         const titleRow = worksheet.addRow([titleRowValue]);
         titleRow.font = { size: 16, bold: true };
 
@@ -1376,7 +1379,9 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         // 5. Generate and Save
         const buffer = await workbook.xlsx.writeBuffer();
         const data = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        saveAs(data, `${round.tournament.name}_${round.roundNumber}회차_최종결과.xlsx`);
+        saveAs(data, isEvent
+            ? `${round.tournament.name}_최종결과.xlsx`
+            : `${round.tournament.name}_${round.roundNumber}회차_최종결과.xlsx`);
     };
 
     // Dynamic row calculation
@@ -1481,7 +1486,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             <div style={{ width: '100%', maxWidth: '1000px', padding: '0 0 20px 0' }}>
                 <div style={{ backgroundColor: '#FFFF00', border: '1px solid black', borderBottomWidth: '2px', padding: '12px 20px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
                     <h2 style={{ textAlign: 'center', fontSize: '20px', fontWeight: '900', color: 'black', margin: '0' }}>
-                        {round.tournament.name} {round.roundNumber}회차 결과
+                        {round.tournament.type === 'EVENT' ? round.tournament.name : `${round.tournament.name} ${round.roundNumber}회차`} 결과
                     </h2>
                     <div style={{
                         position: 'absolute',
@@ -2319,7 +2324,9 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                             <span className="bg-yellow-500 text-black text-xs px-2 py-1 rounded-md shadow uppercase tracking-wider leading-none">{round.tournament.name}</span>
                             <div className="flex flex-col md:flex-row md:items-center gap-2">
                                 <span className="leading-tight">
-                                    {isManager ? `${round.roundNumber}회차 상세 관리` : (shouldShowSimplifiedResults ? '대회 결과 및 정보' : `${round.roundNumber}회차 상세 정보`)}
+                                    {isManager
+                                        ? (round.tournament.type === 'EVENT' ? '대회 상세 관리' : `${round.roundNumber}회차 상세 관리`)
+                                        : (shouldShowSimplifiedResults ? '대회 결과 및 정보' : (round.tournament.type === 'EVENT' ? '대회 상세 정보' : `${round.roundNumber}회차 상세 정보`))}
                                 </span>
                                 {(() => {
                                     const effectiveDate = round.effectiveDateStr ? new Date(round.effectiveDateStr) : (round.date ? new Date(round.date) : null);

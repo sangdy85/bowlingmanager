@@ -356,7 +356,10 @@ export default function RoundParticipantManager({
         XLSX.utils.book_append_sheet(wb, ws, "Participants");
         const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
         const finalData = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
-        saveAs(finalData, `참가자명단_${selectedRound.roundNumber}회차_${new Date().toLocaleDateString()}.xlsx`);
+        const isEventMode = tournamentType === 'EVENT';
+        saveAs(finalData, isEventMode
+            ? `참가자명단_${new Date().toLocaleDateString()}.xlsx`
+            : `참가자명단_${selectedRound.roundNumber}회차_${new Date().toLocaleDateString()}.xlsx`);
     };
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -449,7 +452,7 @@ export default function RoundParticipantManager({
                                     : 'bg-secondary/5 text-secondary-foreground hover:bg-secondary/20 shadow-none'
                                     }`}
                             >
-                                {r.roundNumber}회차 명단
+                                {tournamentType === 'EVENT' ? '참가 명단' : `${r.roundNumber}회차 명단`}
                             </button>
                         );
                     })}
@@ -461,7 +464,9 @@ export default function RoundParticipantManager({
                     {(!hideRoundTabs || isManager) && (
                         <h3 className="text-xl font-black text-slate-800">
                             {isManager ? (isEvent ? '참가자 명단' : '참가자 명단 관리') : '참가자 명단'}
-                            <span className="text-primary text-base ml-2">({selectedRound?.roundNumber}회차)</span>
+                            {tournamentType !== 'EVENT' && (
+                                <span className="text-primary text-base ml-2">({selectedRound?.roundNumber}회차)</span>
+                            )}
                         </h3>
                     )}
                     <p className="text-xs font-bold text-slate-500 mt-1">
