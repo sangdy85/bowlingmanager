@@ -610,11 +610,7 @@ export async function autoAssignRemaining(roundId: string) {
             throw new Error(`자리가 부족합니다. (남은 자리: ${totalAvailableCount}, 대기 인원: ${unassigned.length})`);
         }
 
-        // 3. Group ALL participants
-        const groups: any[][] = [];
-        const groupedParticipantIds = new Set<string>();
-
-        // 3a. First, group by entryGroupId (Explicit grouping)
+        // Explicit Groups Check: Ensure they match the team size
         const explicitGroups = new Map<string, any[]>();
         allParticipants.forEach(p => {
             if (p.registration.entryGroupId) {
@@ -622,6 +618,25 @@ export async function autoAssignRemaining(roundId: string) {
                 explicitGroups.get(p.registration.entryGroupId)!.push(p);
             }
         });
+
+        // 3a. Validation: Check if any group violates the team size rules
+        const errorDetails = [];
+        for (const [groupId, members] of Array.from(explicitGroups.entries())) {
+            if (members.length > teamSize) {
+                const groupNum = groupId.startsWith('group_') ? groupId.replace('group_', '') : groupId;
+                errorDetails.push(`${groupNum}조 인원이 초과되었습니다. (정원: ${teamSize}명, 현재: ${members.length}명)`);
+            } else if (members.length < teamSize) {
+                const groupNum = groupId.startsWith('group_') ? groupId.replace('group_', '') : groupId;
+                errorDetails.push(`${groupNum}조 인원이 미달입니다. (정원: ${teamSize}명, 현재: ${members.length}명)`);
+            }
+        }
+
+        if (errorDetails.length > 0) {
+            throw new Error(errorDetails.join('\n'));
+        }
+
+        const groups: any[][] = [];
+        const groupedParticipantIds = new Set<string>();
 
         explicitGroups.forEach(members => {
             groups.push(members);
@@ -1148,7 +1163,8 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
     name: string,
     handicap?: number,
     paymentStatus?: string, // 'PAID' or 'PENDING'
-    laneDisplay?: string // '1-2'
+    laneDisplay?: string, // '1-2'
+    entryGroupId?: string // 'group_1'
 }[]) {
     try {
         const info = await getTournamentInfo(roundId);
@@ -1211,6 +1227,7 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                                 tournamentId: info.tournamentId,
                                 guestName: trimmedName,
                                 guestTeamName: trimmedTeamName || null,
+                                entryGroupId: pData.entryGroupId || null,
                                 handicap: handicapVal,
                                 paymentStatus: status,
                                 createdAt: seqTime
@@ -1237,6 +1254,7 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                                 data: {
                                     guestName: trimmedName,
                                     guestTeamName: trimmedTeamName || null,
+                                    entryGroupId: pData.entryGroupId || undefined,
                                     handicap: handicapVal !== null ? handicapVal : undefined,
                                     paymentStatus: status
                                 }
@@ -1250,6 +1268,7 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                                     tournamentId: info.tournamentId,
                                     guestName: trimmedName,
                                     guestTeamName: trimmedTeamName || null,
+                                    entryGroupId: pData.entryGroupId || null,
                                     handicap: handicapVal,
                                     paymentStatus: status,
                                     createdAt: seqTime

@@ -339,6 +339,7 @@ export default function RoundParticipantManager({
 
     const downloadExcel = () => {
         const data = roundParticipants.map((reg, idx) => ({
+            '조': reg.entryGroupId ? reg.entryGroupId.replace('group_', '') : '',
             '순번': idx + 1 > maxParticipants && maxParticipants > 0 ? `대기 ${idx + 1 - maxParticipants}` : idx + 1,
             '팀명': (reg.guestTeamName ?? reg.team?.name) || '개인',
             '성함': reg.guestName ?? reg.user?.name,
@@ -379,13 +380,17 @@ export default function RoundParticipantManager({
                 }
 
                 // Map Korean columns to English keys
-                const mappedData = data.map((row: any) => ({
-                    teamName: row['팀명'] || row['소속'] || '',
-                    name: row['이름'] || row['성함'] || row['닉네임'],
-                    handicap: Number(row['핸디'] || row['핸디캡'] || 0),
-                    paymentStatus: row['현황'] || row['입금현황'] || 'PENDING',
-                    laneDisplay: row['레인'] || row['레인번호'] || ''
-                })).filter(p => p.name); // Final validation: must have name
+                const mappedData = data.map((row: any) => {
+                    const groupVal = row['조'] || row['그룹'] || '';
+                    return {
+                        teamName: row['팀명'] || row['소속'] || '',
+                        name: row['이름'] || row['성함'] || row['닉네임'],
+                        entryGroupId: groupVal ? `group_${groupVal}` : undefined,
+                        handicap: Number(row['핸디'] || row['핸디캡'] || 0),
+                        paymentStatus: row['현황'] || row['입금현황'] || 'PENDING',
+                        laneDisplay: row['레인'] || row['레인번호'] || ''
+                    };
+                }).filter(p => p.name); // Final validation: must have name
 
                 if (mappedData.length === 0) {
                     alert("올바른 형식의 데이터가 없습니다. (이름 컬럼 필수)");
