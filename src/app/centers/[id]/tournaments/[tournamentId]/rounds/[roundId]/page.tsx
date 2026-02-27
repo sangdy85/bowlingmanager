@@ -59,7 +59,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
 
     // Augment current round participants with isManual
     const manualStatus: any[] = await prisma.$queryRaw`
-        SELECT "id", "isManual" FROM "RoundParticipant" WHERE "roundId" = ${roundId}
+        SELECT id, isManual FROM RoundParticipant WHERE roundId = ${roundId}
     `;
 
     // Merge manual status into participants
@@ -126,20 +126,20 @@ export default async function RoundDetailPage({ params }: { params: { id: string
             const scoreList: number[] = [];
             let totalWithPlusHandicap = 0;
             let gamesPlayed = 0;
-            const plusHandicap = p.registration.handicap > 0 ? p.registration.handicap : 0;
+            const plusHandicap = (p.registration?.handicap ?? 0) > 0 ? p.registration.handicap : 0;
 
             for (let g = 1; g <= gameCount; g++) {
                 const s = pScores.find((sc: any) => sc.gameNumber === g)?.score || 0;
                 scoreList.push(s);
                 if (s > 0) {
-                    totalWithPlusHandicap += Math.min(s + plusHandicap, 300);
+                    totalWithPlusHandicap += Math.min(s + (plusHandicap ?? 0), 300);
                     gamesPlayed++;
                 }
             }
 
-            const handicap = p.registration.handicap || 0;
-            const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
-            const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인';
+            const handicap = p.registration?.handicap || 0;
+            const pName = p.registration?.guestName ?? p.registration?.user?.name ?? 'Unknown';
+            const pTeam = (p.registration?.guestTeamName ?? p.registration?.team?.name) || '개인';
 
             let minusApplied = 0;
             let rankCap = 0;

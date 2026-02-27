@@ -9,10 +9,10 @@ import { updateTournamentBasicInfo } from "./tournament-center";
 
 // Helper to get tournament info for revalidation
 async function getTournamentInfo(roundId: string) {
-    const rounds: any[] = await prisma.$queryRaw`SELECT "tournamentId" FROM "LeagueRound" WHERE id = ${roundId}`;
+    const rounds: any[] = await prisma.$queryRaw`SELECT tournamentId FROM LeagueRound WHERE id = ${roundId}`;
     if (rounds.length > 0) {
         const tournamentId = rounds[0].tournamentId;
-        const tournaments: any[] = await prisma.$queryRaw`SELECT "centerId", "type" FROM "Tournament" WHERE id = ${tournamentId}`;
+        const tournaments: any[] = await prisma.$queryRaw`SELECT centerId, type FROM Tournament WHERE id = ${tournamentId}`;
         if (tournaments.length > 0) {
             return { centerId: tournaments[0].centerId, tournamentId, type: tournaments[0].type };
         }
