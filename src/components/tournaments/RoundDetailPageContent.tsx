@@ -791,8 +791,8 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
         if (a.lane && b.lane) return a.lane - b.lane;
         if (a.lane) return -1;
         if (b.lane) return 1;
-        const nameA = a.registration.guestName ?? a.registration.user?.name ?? '';
-        const nameB = b.registration.guestName ?? b.registration.user?.name ?? '';
+        const nameA = a.registration?.guestName ?? a.registration?.user?.name ?? '';
+        const nameB = b.registration?.guestName ?? b.registration?.user?.name ?? '';
         return nameA.localeCompare(nameB);
     });
 
@@ -846,7 +846,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                         {sortedParticipants.map((p: any) => {
                             const currentScores = scoreMap[p.registrationId] || {};
                             let totalWithHandicap = 0;
-                            const handicap = p.registration.handicap || 0;
+                            const handicap = p.registration?.handicap || 0;
 
                             for (let g = 1; g <= gameCount; g++) {
                                 const val = parseInt(currentScores[g] || '0');
@@ -860,12 +860,12 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                             const fontSize = '18px';
 
                             // Grouping logic for background
-                            const groupId = p.registration.entryGroupId;
-                            const prevGroupId = sortedParticipants[sortedParticipants.indexOf(p) - 1]?.registration.entryGroupId;
+                            const groupId = p.registration?.entryGroupId;
+                            const prevGroupId = sortedParticipants[sortedParticipants.indexOf(p) - 1]?.registration?.entryGroupId;
                             const isFirstInGroup = groupId && groupId !== prevGroupId;
 
                             // Alternate background color per group if it's a team event
-                            const groupIndex = groupId ? Array.from(new Set(sortedParticipants.map(sp => sp.registration.entryGroupId))).indexOf(groupId) : -1;
+                            const groupIndex = groupId ? Array.from(new Set(sortedParticipants.map(sp => sp.registration?.entryGroupId))).indexOf(groupId) : -1;
                             const groupBg = isTeamEvent && groupId
                                 ? (groupIndex % 2 === 0 ? 'bg-blue-50/20' : 'bg-indigo-50/20')
                                 : '';
