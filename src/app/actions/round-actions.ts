@@ -156,6 +156,26 @@ export async function updateRoundParticipants(roundId: string, registrationIds: 
     }
 }
 
+// 2-1. Update Entry Group ID (Explicit Grouping for Event Tournaments)
+export async function updateEntryGroupId(roundId: string, registrationIds: string[], groupId: string | null) {
+    try {
+        if (registrationIds.length > 0) {
+            await prisma.tournamentRegistration.updateMany({
+                where: { id: { in: registrationIds } },
+                data: { entryGroupId: groupId }
+            });
+        }
+
+        const info = await getTournamentInfo(roundId);
+        if (info) revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update entryGroupId:", error);
+        throw new Error("그룹화 저장 실패");
+    }
+}
+
 // 3. Update Lane Assignment (Manual with Smart Swap)
 export async function updateRoundLanes(roundId: string, laneData: { participantId: string, lane: number }[]) {
     try {
@@ -590,13 +610,29 @@ export async function autoAssignRemaining(roundId: string) {
             throw new Error(`자리가 부족합니다. (남은 자리: ${totalAvailableCount}, 대기 인원: ${unassigned.length})`);
         }
 
-        // 3. Group ALL participants by teamSize relative to their position in sorted list
-        const groups = new Map<number, any[]>();
-        allParticipants.forEach((p, index) => {
-            const groupIdx = Math.floor(index / teamSize);
-            if (!groups.has(groupIdx)) groups.set(groupIdx, []);
-            groups.get(groupIdx)!.push(p);
+        // 3. Group ALL participants
+        const groups: any[][] = [];
+        const groupedParticipantIds = new Set<string>();
+
+        // 3a. First, group by entryGroupId (Explicit grouping)
+        const explicitGroups = new Map<string, any[]>();
+        allParticipants.forEach(p => {
+            if (p.registration.entryGroupId) {
+                if (!explicitGroups.has(p.registration.entryGroupId)) explicitGroups.set(p.registration.entryGroupId, []);
+                explicitGroups.get(p.registration.entryGroupId)!.push(p);
+            }
         });
+
+        explicitGroups.forEach(members => {
+            groups.push(members);
+            members.forEach(m => groupedParticipantIds.add(m.id));
+        });
+
+        // 3b. Group remaining by sequence
+        const remainingParticipants = allParticipants.filter(p => !groupedParticipantIds.has(p.id));
+        for (let i = 0; i < remainingParticipants.length; i += teamSize) {
+            groups.push(remainingParticipants.slice(i, i + teamSize));
+        }
 
         // 4. Filter groups that have unassigned members
         const groupsWithUnassigned = Array.from(groups.values()).filter(g => g.some(p => !p.lane));
@@ -743,16 +779,22 @@ export async function drawLane(roundId: string, registrationId: string) {
         const teamSize = gameMode.startsWith('TEAM_') ? parseInt(gameMode.split('_')[1]) : 1;
 
         if (teamSize > 1) {
-            // Fetch all participants sorted by registration date to find the "team" by sequence
-            const allParticipantsSorted = [...round.participants].sort((a: any, b: any) =>
-                new Date(a.registration.createdAt).getTime() - new Date(b.registration.createdAt).getTime()
-            );
-
-            const myIndex = allParticipantsSorted.findIndex((p: any) => p.id === participant.id);
-            if (myIndex === -1) throw new Error("Participant not found in sorted list");
-
-            const groupIdx = Math.floor(myIndex / teamSize);
-            const groupMembers = allParticipantsSorted.filter((p: any, idx) => Math.floor(idx / teamSize) === groupIdx);
+            // --- Team Set Assignment Logic (Explicit Grouping or Sequence Based) ---
+            let groupMembers;
+            if (participant.registration.entryGroupId) {
+                groupMembers = round.participants.filter((p: any) => p.registration.entryGroupId === participant.registration.entryGroupId);
+            } else {
+                // Sequence grouping among those without entryGroupId
+                const unexplicitParticipants = [...round.participants]
+                    .filter((p: any) => !p.registration.entryGroupId)
+                    .sort((a: any, b: any) =>
+                        new Date(a.registration.createdAt).getTime() - new Date(b.registration.createdAt).getTime()
+                    );
+                const myIndex = unexplicitParticipants.findIndex((p: any) => p.id === participant.id);
+                if (myIndex === -1) throw new Error("Participant not found in list");
+                const groupIdx = Math.floor(myIndex / teamSize);
+                groupMembers = unexplicitParticipants.filter((p: any, idx) => Math.floor(idx / teamSize) === groupIdx);
+            }
 
             const groupSize = groupMembers.length;
 
@@ -1260,5 +1302,67 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
     } catch (error: any) {
         console.error("Bulk registration failed:", error);
         throw new Error(error.message || "일괄 등록 실패");
+    }
+}
+
+// 2-2. Auto Assign Entry Groups by Team Size
+export async function autoAssignEntryGroups(roundId: string, teamSize: number) {
+    try {
+        const round = await prisma.tournamentRound.findUnique({
+            where: { id: roundId },
+            include: {
+                participants: {
+                    include: {
+                        registration: true
+                    },
+                    orderBy: {
+                        createdAt: 'asc'
+                    }
+                },
+                tournament: true
+            }
+        });
+
+        if (!round) throw new Error("라운드를 찾을 수 없습니다.");
+
+        const participants = round.participants;
+        const updates = [];
+
+        for (let i = 0; i < participants.length; i++) {
+            const groupNum = Math.floor(i / teamSize) + 1;
+            const groupId = `group_${groupNum}`;
+            updates.push(
+                prisma.tournamentRegistration.update({
+                    where: { id: participants[i].registrationId },
+                    data: { entryGroupId: groupId }
+                })
+            );
+        }
+
+        await prisma.$transaction(updates);
+
+        revalidatePath(`/centers/${round.tournament.centerId}/tournaments/${round.tournamentId}/rounds/${roundId}`);
+        return { success: true };
+    } catch (error: any) {
+        console.error("Auto assign groups failed:", error);
+        throw new Error(error.message || "자동 조 편성 실패");
+    }
+}
+
+// 2-3. Update Single Registration Group
+export async function updateSingleRegistrationGroup(regId: string, groupId: string | null, roundId: string) {
+    try {
+        await prisma.tournamentRegistration.update({
+            where: { id: regId },
+            data: { entryGroupId: groupId }
+        });
+
+        const info = await getTournamentInfo(roundId);
+        if (info) revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
+
+        return { success: true };
+    } catch (error: any) {
+        console.error("Failed to update single entryGroupId:", error);
+        throw new Error("조 번호 업데이트 실패");
     }
 }

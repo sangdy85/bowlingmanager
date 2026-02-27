@@ -558,10 +558,15 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                                                 <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-[10px] border border-blue-200">
                                                     {p.lane % 10}
                                                 </div>
-                                                <span className="font-bold text-sm text-gray-800">
-                                                    {p.registration.guestName ?? p.registration.user?.name}
-                                                    {((p.registration.guestTeamName ?? p.registration.team?.name)) && (
-                                                        <span className="ml-1 text-[10px] text-gray-400 font-medium">
+                                                <span className="font-bold text-sm text-gray-800 flex flex-col items-start leading-tight">
+                                                    <span>{p.registration.guestName ?? p.registration.user?.name}</span>
+                                                    {p.registration.entryGroupId && (
+                                                        <span className="text-[9px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded">
+                                                            조: {p.registration.entryGroupId.replace('group_', '').includes('_name_') ? p.registration.entryGroupId.split('_name_')[1] : p.registration.entryGroupId.replace('group_', '')}
+                                                        </span>
+                                                    )}
+                                                    {((p.registration.guestTeamName ?? p.registration.team?.name)) && !p.registration.entryGroupId && (
+                                                        <span className="text-[10px] text-gray-400 font-medium">
                                                             ({p.registration.guestTeamName ?? p.registration.team?.name})
                                                         </span>
                                                     )}
@@ -848,7 +853,14 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                         {(p.registration.guestTeamName ?? p.registration.team?.name) || '-'}
                                     </td>
                                     <td className="p-2 text-center font-bold text-gray-800 truncate" style={{ width: '130px', whiteSpace: 'nowrap' }}>
-                                        {p.registration.user?.name || p.registration.guestName}
+                                        <div className="flex flex-col items-center">
+                                            <span>{p.registration.user?.name || p.registration.guestName}</span>
+                                            {groupId && (
+                                                <span className="text-[9px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded leading-none mt-0.5">
+                                                    조: {groupId.replace('group_', '').includes('_name_') ? groupId.split('_name_')[1] : groupId.replace('group_', '')}
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="p-2 text-center">
                                         <div className="flex justify-center">
@@ -1057,13 +1069,17 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         round.participants.forEach((p: any) => {
             const groupId = p.registration.entryGroupId || p.id; // Fallback to p.id if no group
             if (!groups[groupId]) {
+                const groupNamePart = p.registration.entryGroupId?.includes('_name_') ? p.registration.entryGroupId.split('_name_')[1] : null;
+                const groupNumPart = p.registration.entryGroupId?.startsWith('group_') ? p.registration.entryGroupId.replace('group_', '') : null;
+
                 groups[groupId] = {
                     id: groupId,
                     members: [],
                     totalRaw: 0,
                     totalHandicap: 0,
                     gameScores: new Array(gameCount).fill(0),
-                    teamName: (p.registration.guestTeamName ?? p.registration.team?.name) || '팀'
+                    teamName: groupNamePart || (groupNumPart ? `조: ${groupNumPart}` : (p.registration.guestTeamName ?? p.registration.team?.name) || '팀'),
+                    handicapSum: 0
                 };
             }
             const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
@@ -1078,17 +1094,25 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             const handicap = p.registration.handicap || 0;
             groups[groupId].totalRaw += pTotalRaw;
             groups[groupId].totalHandicap += (handicap * pGamesPlayed);
+            groups[groupId].handicapSum += handicap;
             groups[groupId].members.push(p.registration.guestName ?? p.registration.user?.name ?? 'Unknown');
         });
 
-        results = Object.values(groups).map((g: any) => ({
-            id: g.id,
-            name: g.members.join(', '),
-            team: g.teamName,
-            scores: g.gameScores,
-            total: g.totalRaw + g.totalHandicap,
-            isTeam: true
-        }));
+        results = Object.values(groups).map((g: any) => {
+            const validScores = g.gameScores.filter((s: number) => s > 0);
+            const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
+            return {
+                id: g.id,
+                name: g.members.join(', '),
+                team: g.teamName,
+                scores: g.gameScores,
+                total: g.totalRaw + g.totalHandicap,
+                handicapEach: g.handicapSum,
+                totalHandicap: g.totalHandicap,
+                hiLow: hiLow,
+                isTeam: true
+            };
+        });
     } else {
         const prevWinners = round.prevRoundWinners || {};
         const roundHandicaps = settings.roundMinusHandicaps?.[round.roundNumber] || {

@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { updatePaymentStatus, deleteRegistration, removeFromRound, manualRegister, updateRegistration, updateRoundLanes, searchPlayers, bulkRegisterParticipants } from '@/app/actions/round-actions';
+import { updatePaymentStatus, deleteRegistration, removeFromRound, manualRegister, updateRegistration, updateRoundLanes, searchPlayers, bulkRegisterParticipants, updateEntryGroupId, autoAssignEntryGroups, updateSingleRegistrationGroup } from '@/app/actions/round-actions';
 import { formatLane } from '@/lib/tournament-utils';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
@@ -46,6 +46,9 @@ export default function RoundParticipantManager({
     // Default to initialRoundId or the latest round if not found
     const defaultRoundId = initialRoundId || (rounds && rounds.length > 0 ? rounds[0].id : '');
     const [selectedRoundId, setSelectedRoundId] = useState(defaultRoundId);
+
+    // Grouping Selection State
+    const [selectedRegIds, setSelectedRegIds] = useState<string[]>([]);
 
     // Auto Cancel Trigger on Mount
     useEffect(() => {
@@ -193,6 +196,102 @@ export default function RoundParticipantManager({
     const handleUpdatePayment = async (regId: string, newStatus: string) => {
         try {
             await updatePaymentStatus(regId, newStatus);
+            triggerUpdate();
+        } catch (e: any) {
+            alert(e.message);
+        }
+    };
+
+    const handleToggleSelection = (regId: string) => {
+        setSelectedRegIds(prev =>
+            prev.includes(regId)
+                ? prev.filter(id => id !== regId)
+                : [...prev, regId]
+        );
+    };
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedRegIds(roundParticipants.map(r => r.id));
+        } else {
+            setSelectedRegIds([]);
+        }
+    };
+
+    const handleGroupSelected = async () => {
+        if (selectedRegIds.length < 2) {
+            alert("그룹화하려면 최소 2명 이상의 참가자를 선택해야 합니다.");
+            return;
+        }
+
+        const groupName = prompt("그룹(팀) 이름을 입력하세요 (선택)", "");
+        const groupId = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}${groupName ? `_name_${groupName}` : ''}`;
+
+        try {
+            setLoading(true);
+            await updateEntryGroupId(selectedRoundId, selectedRegIds, groupId);
+            setSelectedRegIds([]);
+            triggerUpdate();
+            alert("그룹화가 완료되었습니다.");
+        } catch (e: any) {
+            alert(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUngroupSelected = async () => {
+        if (selectedRegIds.length === 0) return;
+        if (!confirm("선택한 인원들의 그룹을 해제하시겠습니까?")) return;
+        try {
+            setLoading(true);
+            await updateEntryGroupId(selectedRoundId, selectedRegIds, null);
+            setSelectedRegIds([]);
+            triggerUpdate();
+        } catch (e: any) {
+            alert(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAutoGroup = async () => {
+        if (!selectedRound) return;
+
+        let teamSize = 1;
+        try {
+            const settings = selectedRound.tournament.settings ? JSON.parse(selectedRound.tournament.settings) : {};
+            const mode = settings.gameMode || 'INDIVIDUAL';
+            if (mode === 'TEAM_2') teamSize = 2;
+            else if (mode === 'TEAM_3') teamSize = 3;
+            else if (mode === 'TEAM_4') teamSize = 4;
+            else if (mode === 'TEAM_5') teamSize = 5;
+            else if (mode === 'TEAM_6') teamSize = 6;
+        } catch (e) { }
+
+        if (teamSize === 1) {
+            alert("개인전은 자동 편성이 필요하지 않습니다.");
+            return;
+        }
+
+        if (!confirm(`${teamSize}인조 기준으로 조를 자동 편성하시겠습니까? 현재 명단 순서대로 편성됩니다.`)) return;
+
+        try {
+            setLoading(true);
+            await autoAssignEntryGroups(selectedRound.id, teamSize);
+            triggerUpdate();
+            alert("자동 편성이 완료되었습니다.");
+        } catch (e: any) {
+            alert(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateGroup = async (regId: string, groupNumStr: string) => {
+        try {
+            const groupId = groupNumStr ? `group_${groupNumStr}` : null;
+            await updateSingleRegistrationGroup(regId, groupId, selectedRound.id);
             triggerUpdate();
         } catch (e: any) {
             alert(e.message);
@@ -388,6 +487,12 @@ export default function RoundParticipantManager({
                             📊 엑셀 업로드
                         </button>
                         <button
+                            onClick={handleAutoGroup}
+                            className="btn bg-purple-600 text-white h-12 px-5 font-black hover:bg-purple-700 shadow-lg shadow-purple-600/20 text-xs flex items-center gap-1"
+                        >
+                            🔄 팀 자동 편성
+                        </button>
+                        <button
                             onClick={openRegisterModal}
                             className="btn btn-primary h-12 px-6 font-black shadow-lg shadow-primary/20 flex items-center gap-2"
                         >
@@ -543,6 +648,7 @@ export default function RoundParticipantManager({
                         >
                             <thead>
                                 <tr className="text-center" style={{ height: '48px', backgroundColor: '#e2e8f0', color: '#1e293b' }}>
+                                    <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '70px' }}>조</th>
                                     <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '60px' }}>순번</th>
                                     <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '150px' }}>팀명</th>
                                     <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '150px' }}>성함</th>
@@ -572,6 +678,21 @@ export default function RoundParticipantManager({
                                             className="text-center h-12 hover:bg-blue-50 transition-colors"
                                             style={{ backgroundColor: bgColor }}
                                         >
+                                            <td className="border-2 border-slate-900 p-1">
+                                                <input
+                                                    type="number"
+                                                    key={`${reg.id}-${reg.entryGroupId}`}
+                                                    defaultValue={reg.entryGroupId ? reg.entryGroupId.replace('group_', '') : ''}
+                                                    onBlur={(e) => handleUpdateGroup(reg.id, e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            (e.target as HTMLInputElement).blur();
+                                                        }
+                                                    }}
+                                                    className="w-full h-8 text-center border-0 bg-transparent font-black text-blue-600 focus:bg-blue-50 focus:outline-none"
+                                                    placeholder="-"
+                                                />
+                                            </td>
                                             <td className={`border-2 border-slate-900 p-1 font-black ${isWaitlisted ? 'text-amber-600' : ''}`}>
                                                 {isWaitlisted ? `대기 ${waitNumber}` : idx + 1}
                                             </td>
@@ -579,7 +700,14 @@ export default function RoundParticipantManager({
                                                 {(reg.guestTeamName ?? reg.team?.name) || '개인'}
                                             </td>
                                             <td className="border-2 border-slate-900 p-1 truncate px-4 font-black">
-                                                {reg.guestName ?? reg.user?.name}
+                                                <div className="flex flex-col items-center gap-0.5">
+                                                    <span>{reg.guestName ?? reg.user?.name}</span>
+                                                    {reg.entryGroupId && (
+                                                        <span className="text-[9px] bg-slate-800 text-white px-1.5 py-0.5 rounded leading-none">
+                                                            조: {reg.entryGroupId.replace('group_', '')}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="border-2 border-slate-900 p-1">
                                                 {handicap}
