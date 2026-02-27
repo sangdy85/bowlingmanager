@@ -1336,9 +1336,12 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         saveAs(data, `${round.tournament.name}_${round.roundNumber}회차_최종결과.xlsx`);
     };
 
-    // Precise split logic matching screenshot (27 rows per side)
-    const leftColumn = sortedResults.slice(0, 27);
-    const rightColumn = sortedResults.slice(27, 54);
+    // Dynamic row calculation for 2-6 person team events
+    const isTeam2To6 = isTeamEvent && ['TEAM_2', 'TEAM_3', 'TEAM_4', 'TEAM_5', 'TEAM_6'].includes(gameMode);
+    const rowsPerColumn = isTeam2To6 ? Math.max(1, Math.ceil(sortedResults.length / 2)) : 27;
+
+    const leftColumn = sortedResults.slice(0, rowsPerColumn);
+    const rightColumn = sortedResults.slice(rowsPerColumn, rowsPerColumn * 2);
 
     const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => (
         <table style={{
@@ -1365,7 +1368,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 </tr>
             </thead>
             <tbody>
-                {Array.from({ length: 27 }).map((_, idx) => {
+                {Array.from({ length: rowsPerColumn }).map((_, idx) => {
                     const res = data[idx];
                     const rank = startRank + idx;
                     const isTop3 = rank <= 3;
