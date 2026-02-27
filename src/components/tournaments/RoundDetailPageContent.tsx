@@ -588,12 +588,12 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                                                     <span>{p.registration?.guestName ?? p.registration?.user?.name ?? '미등록'}</span>
                                                     {p.registration?.entryGroupId && (
                                                         <span className="text-[9px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded">
-                                                            조: {p.registration.entryGroupId.replace('group_', '').includes('_name_') ? p.registration.entryGroupId.split('_name_')[1] : p.registration.entryGroupId.replace('group_', '')}
+                                                            조: {p.registration?.entryGroupId.replace('group_', '').includes('_name_') ? p.registration?.entryGroupId.split('_name_')[1] : p.registration?.entryGroupId.replace('group_', '')}
                                                         </span>
                                                     )}
                                                     {((p.registration?.guestTeamName ?? p.registration?.team?.name)) && !p.registration?.entryGroupId && (
                                                         <span className="text-[10px] text-gray-400 font-medium">
-                                                            ({p.registration.guestTeamName ?? p.registration.team?.name})
+                                                            ({p.registration?.guestTeamName ?? p.registration?.team?.name})
                                                         </span>
                                                     )}
                                                 </span>
@@ -1898,7 +1898,7 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
     // 1. Calculate Ranks once to handle exclusion
     const sortedResults = [...round.participants].map((p: any) => {
         const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
-        const total = pScores.reduce((sum: number, s: any) => sum + s.score, 0) + (p.registration.handicap || 0) * pScores.length;
+        const total = pScores.reduce((sum: number, s: any) => sum + s.score, 0) + (p.registration?.handicap || 0) * pScores.length;
         return { ...p, total };
     }).sort((a: any, b: any) => b.total - a.total);
 
@@ -1928,7 +1928,7 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
         const interval = setInterval(() => {
             const randomIndex = Math.floor(Math.random() * pool.length);
             const candidate = pool[randomIndex];
-            setCurrentCandidate(candidate.registration.guestName ?? candidate.registration.user?.name);
+            setCurrentCandidate(candidate.registration?.guestName ?? candidate.registration?.user?.name);
 
             if (Date.now() - startTime > duration) {
                 clearInterval(interval);
@@ -1936,7 +1936,7 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
                 // Final selection
                 const winnerIndex = Math.floor(Math.random() * pool.length);
                 const winner = pool[winnerIndex];
-                const winnerName = winner.registration.guestName ?? winner.registration.user?.name;
+                const winnerName = winner.registration?.guestName ?? winner.registration?.user?.name;
 
                 setCurrentCandidate(winnerName);
                 setWinners(prev => [...prev, winner]);
@@ -2238,7 +2238,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
 
     if (!round) return <div>Data not found</div>;
 
-    const participation = round.participants.find((p: any) => p.registration.userId === userId);
+    const participation = round.participants.find((p: any) => p.registration?.userId === userId);
 
     const tabs = [
         { id: 'overview', label: '대시보드' },
