@@ -263,9 +263,39 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     const officialRecords = Array.from(groupedOfficialMap.values())
         .sort((a, b) => b.date.getTime() - a.date.getTime());
 
-    // --- 통계 통합용 점수 배열 생성 ---
-    const allIntegratedScores = [
-        ...myYearlyScores.map((s: any) => ({ score: s.score, gameDate: s.gameDate })),
+    // --- 추가: 공식 기록 요약 데이터 산출 ---
+    const officialSummary = {
+        total: { games: 0, pins: 0 },
+        league: { games: 0, pins: 0 },
+        champ: { games: 0, pins: 0 },
+        event: { games: 0, pins: 0 }
+    };
+
+    officialRecords.forEach(r => {
+        const count = r.scores.length;
+        const pins = r.total;
+        officialSummary.total.games += count;
+        officialSummary.total.pins += pins;
+        if (r.typeLabel === '상주리그') {
+            officialSummary.league.games += count;
+            officialSummary.league.pins += pins;
+        } else if (r.typeLabel === '챔프전') {
+            officialSummary.champ.games += count;
+            officialSummary.champ.pins += pins;
+        } else if (r.typeLabel === '이벤트전') {
+            officialSummary.event.games += count;
+            officialSummary.event.pins += pins;
+        }
+    });
+
+    // --- 통계 전처리 로직 재배치 ---
+    const globalRegularScores = myYearlyScores.filter((s: any) => s.gameType === '정기전');
+    const globalImpromptuScores = myYearlyScores.filter((s: any) => s.gameType === '벙개');
+    const globalMatchScores = myYearlyScores.filter((s: any) => s.gameType === '교류전');
+    const globalResidentScores = myYearlyScores.filter((s: any) => s.gameType === '상주');
+    const globalOtherScores = myYearlyScores.filter((s: any) => !['정기전', '벙개', '교류전', '상주'].includes(s.gameType || ''));
+
+    const officialOnlyScores = [
         ...leagueScores.flatMap((ls: any) => {
             const d = ls.LeagueMatchup.round.date || ls.createdAt;
             return [ls.score1, ls.score2, ls.score3]
@@ -276,6 +306,16 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             score: ts.score,
             gameDate: ts.round?.date || ts.createdAt
         }))
+    ];
+
+    const allIntegratedScores = [
+        ...myYearlyScores.map((s: any) => ({ score: s.score, gameDate: s.gameDate })),
+        ...officialOnlyScores
+    ];
+
+    const regularPlusOfficialScores = [
+        ...globalRegularScores.map((s: any) => ({ score: s.score, gameDate: s.gameDate })),
+        ...officialOnlyScores
     ];
 
 
@@ -306,12 +346,6 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     // Convert to array
     const teamGroups = Array.from(scoresByTeamName.values());
 
-    // 전체 게임에 대한 분류별 필터링 (Global)
-    const globalRegularScores = myYearlyScores.filter((s: any) => s.gameType === '정기전');
-    const globalImpromptuScores = myYearlyScores.filter((s: any) => s.gameType === '벙개');
-    const globalMatchScores = myYearlyScores.filter((s: any) => s.gameType === '교류전');
-    const globalResidentScores = myYearlyScores.filter((s: any) => s.gameType === '상주');
-    const globalOtherScores = myYearlyScores.filter((s: any) => !['정기전', '벙개', '교류전', '상주'].includes(s.gameType || ''));
 
     // Check if owner or manager of ANY team
     const hasAuthority = user.teamMemberships.some((tm: any) =>
@@ -341,8 +375,13 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             <div className="grid grid-cols-1 gap-8">
-                <div className="bg-[#E7EBF1] border border-slate-400 p-2 font-black text-sm" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>
-                    📊 {currentYear}년 개인 통계
+                <div className="bg-[#1e293b] border border-[#334155] p-3 shadow-lg rounded-t-lg" style={{ borderBottom: '2px solid #3b82f6' }}>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xl">📊</span>
+                        <h2 className="font-black text-white text-base tracking-tight">
+                            {currentYear}년 개인 통계 <span className="text-blue-400 ml-1 text-xs">STATISTICS</span>
+                        </h2>
+                    </div>
                 </div>
 
                 <div className="overflow-x-auto p-0 !bg-white" style={{ backgroundColor: 'white' }}>
@@ -359,7 +398,8 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                             </tr>
                         </thead>
                         <tbody>
-                            <StatsDisplayRow title="👑 통합 종합 (공식포함)" scores={allIntegratedScores as any} />
+                            <StatsDisplayRow title="👑 통합 종합 (공식+개인 전체)" scores={allIntegratedScores as any} />
+                            <StatsDisplayRow title="🔥 정기전 + 볼링장 공식 기록" scores={regularPlusOfficialScores as any} />
                             {myYearlyScores.length > 0 && <StatsDisplayRow title="개인 기록 (전체)" scores={myYearlyScores as any} />}
                             {globalRegularScores.length > 0 && <StatsDisplayRow title="정기전 (전체)" scores={globalRegularScores} />}
                             {globalImpromptuScores.length > 0 && <StatsDisplayRow title="벙개 (전체)" scores={globalImpromptuScores} />}
@@ -409,10 +449,50 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             </div>
 
             <div className="card !bg-white !text-slate-900 border border-slate-400 shadow-none overflow-hidden p-0 rounded-none mb-4" style={{ backgroundColor: 'white', border: '1px solid #94a3b8' }}>
-                <div className="bg-[#E7EBF1] p-2 border-b border-slate-400" style={{ backgroundColor: '#E7EBF1', borderBottom: '1px solid #94a3b8' }}>
-                    <h2 className="text-sm font-black flex items-center gap-2" style={{ color: '#0f172a' }}>
+                <div className="bg-[#1e293b] p-3 border-b border-[#334155]" >
+                    <h2 className="text-sm font-black flex items-center gap-2 text-white">
                         🎳 {currentYear}년 볼링장 공식 기록
                     </h2>
+                </div>
+
+                {/* 공식 기록 요약 표 추가 */}
+                <div className="p-4 bg-slate-50 border-b border-slate-200">
+                    <table className="w-full text-xs border-collapse bg-white shadow-sm ring-1 ring-slate-200" style={{ border: '1px solid #e2e8f0' }}>
+                        <thead>
+                            <tr className="bg-slate-100">
+                                <th className="p-2 border border-slate-200 text-slate-600 font-bold">공식 기록 분류</th>
+                                <th className="p-2 border border-slate-200 text-slate-600 font-bold">게임수</th>
+                                <th className="p-2 border border-slate-200 text-slate-600 font-bold">총점</th>
+                                <th className="p-2 border border-slate-200 text-blue-600 font-black bg-blue-50">평균</th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-center font-bold">
+                            <tr className="bg-blue-50/30">
+                                <td className="p-2 border border-slate-200 text-blue-800">🏛️ 공식 종합 기록</td>
+                                <td className="p-2 border border-slate-200">{officialSummary.total.games}</td>
+                                <td className="p-2 border border-slate-200">{officialSummary.total.pins.toLocaleString()}</td>
+                                <td className="p-2 border border-slate-200 text-blue-700">{(officialSummary.total.pins / (officialSummary.total.games || 1)).toFixed(1)}</td>
+                            </tr>
+                            <tr>
+                                <td className="p-2 border border-slate-200 text-indigo-600 text-left px-4">└ 상주리그</td>
+                                <td className="p-2 border border-slate-200">{officialSummary.league.games}</td>
+                                <td className="p-2 border border-slate-200">{officialSummary.league.pins.toLocaleString()}</td>
+                                <td className="p-2 border border-slate-200 text-slate-700">{(officialSummary.league.pins / (officialSummary.league.games || 1)).toFixed(1)}</td>
+                            </tr>
+                            <tr>
+                                <td className="p-2 border border-slate-200 text-amber-600 text-left px-4">└ 챔프전</td>
+                                <td className="p-2 border border-slate-200">{officialSummary.champ.games}</td>
+                                <td className="p-2 border border-slate-200">{officialSummary.champ.pins.toLocaleString()}</td>
+                                <td className="p-2 border border-slate-200 text-slate-700">{(officialSummary.champ.pins / (officialSummary.champ.games || 1)).toFixed(1)}</td>
+                            </tr>
+                            <tr>
+                                <td className="p-2 border border-slate-200 text-emerald-600 text-left px-4">└ 이벤트전</td>
+                                <td className="p-2 border border-slate-200">{officialSummary.event.games}</td>
+                                <td className="p-2 border border-slate-200">{officialSummary.event.pins.toLocaleString()}</td>
+                                <td className="p-2 border border-slate-200 text-slate-700">{(officialSummary.event.pins / (officialSummary.event.games || 1)).toFixed(1)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
                 {officialRecords.length === 0 ? (
