@@ -385,10 +385,14 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
         setLoading(true);
         try {
             const res = await autoAssignRemaining(round.id);
-            alert(res.message || '완료되었습니다.');
-            onUpdate();
+            if (res && (res as any).success === false) {
+                alert(res.message || '처리 중 오류가 발생했습니다.');
+            } else {
+                alert(res.message || '완료되었습니다.');
+                onUpdate();
+            }
         } catch (e: any) {
-            alert(e.message);
+            alert(e.message || '통신 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
         }
