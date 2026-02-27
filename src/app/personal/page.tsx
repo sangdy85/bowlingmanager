@@ -318,6 +318,10 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         ...officialOnlyScores
     ];
 
+    const officialOnlyStatsScores = [
+        ...officialOnlyScores
+    ];
+
 
     // 팀별 그룹화 (상주리그 팀 통합 로직 적용)
     const scoresByTeamName = new Map<string, { id: string, name: string, scores: typeof myYearlyScores }>();
@@ -386,20 +390,20 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
 
                 <div className="overflow-x-auto p-0 !bg-white" style={{ backgroundColor: 'white' }}>
                     {/* 1. 전체 종합 (모든 팀 합산) */}
-                    <table className="w-full text-[13px] border-collapse !bg-white !text-slate-900" style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>
+                    <table className="w-full text-[13px] border-collapse !bg-white !text-[#0f172a]" style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>
                         <thead>
                             <tr className="!bg-[#f2f2f2]" style={{ backgroundColor: '#f2f2f2' }}>
-                                <th className="p-2 border border-slate-400 !text-slate-900 font-black text-left" style={{ border: '1px solid #94a3b8' }}>분류 (전체 종합)</th>
-                                <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>게임수</th>
-                                <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[100px] text-center" style={{ border: '1px solid #94a3b8' }}>총점</th>
-                                <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[120px] text-center" style={{ border: '1px solid #94a3b8' }}>하이(시리즈)</th>
-                                <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[100px] text-center" style={{ border: '1px solid #94a3b8' }}>하이(단게임)</th>
-                                <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1' }}>평균</th>
+                                <th className="p-2 border border-slate-400 !text-[#0f172a] font-black text-left" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>분류 (전체 종합)</th>
+                                <th className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[80px] text-center" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>게임수</th>
+                                <th className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[100px] text-center" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>총점</th>
+                                <th className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[120px] text-center" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>하이(시리즈)</th>
+                                <th className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[100px] text-center" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>하이(단게임)</th>
+                                <th className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1', color: '#0f172a' }}>평균</th>
                             </tr>
                         </thead>
                         <tbody>
                             <StatsDisplayRow title="👑 통합 종합 (공식+개인 전체)" scores={allIntegratedScores as any} />
-                            <StatsDisplayRow title="🔥 정기전 + 볼링장 공식 기록" scores={regularPlusOfficialScores as any} />
+                            <StatsDisplayRow title="🎳 볼링장 공식 기록 (전체)" scores={officialOnlyStatsScores as any} />
                             {myYearlyScores.length > 0 && <StatsDisplayRow title="개인 기록 (전체)" scores={myYearlyScores as any} />}
                             {globalRegularScores.length > 0 && <StatsDisplayRow title="정기전 (전체)" scores={globalRegularScores} />}
                             {globalImpromptuScores.length > 0 && <StatsDisplayRow title="벙개 (전체)" scores={globalImpromptuScores} />}
@@ -460,36 +464,36 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                     <table className="w-full text-xs border-collapse bg-white shadow-sm ring-1 ring-slate-200" style={{ border: '1px solid #e2e8f0' }}>
                         <thead>
                             <tr className="bg-slate-100">
-                                <th className="p-2 border border-slate-200 text-slate-600 font-bold">공식 기록 분류</th>
-                                <th className="p-2 border border-slate-200 text-slate-600 font-bold">게임수</th>
-                                <th className="p-2 border border-slate-200 text-slate-600 font-bold">총점</th>
-                                <th className="p-2 border border-slate-200 text-blue-600 font-black bg-blue-50">평균</th>
+                                <th className="p-2 border border-slate-200 text-[#1e293b] font-bold" style={{ color: '#1e293b' }}>공식 기록 분류</th>
+                                <th className="p-2 border border-slate-200 text-[#1e293b] font-bold" style={{ color: '#1e293b' }}>게임수</th>
+                                <th className="p-2 border border-slate-200 text-[#1e293b] font-bold" style={{ color: '#1e293b' }}>총점</th>
+                                <th className="p-2 border border-slate-200 text-blue-700 font-black bg-blue-50" style={{ color: '#1d4ed8' }}>평균</th>
                             </tr>
                         </thead>
-                        <tbody className="text-center font-bold">
+                        <tbody className="text-center font-bold" style={{ color: '#0f172a' }}>
                             <tr className="bg-blue-50/30">
-                                <td className="p-2 border border-slate-200 text-blue-800">🏛️ 공식 종합 기록</td>
-                                <td className="p-2 border border-slate-200">{officialSummary.total.games}</td>
-                                <td className="p-2 border border-slate-200">{officialSummary.total.pins.toLocaleString()}</td>
-                                <td className="p-2 border border-slate-200 text-blue-700">{(officialSummary.total.pins / (officialSummary.total.games || 1)).toFixed(1)}</td>
+                                <td className="p-2 border border-slate-200 text-blue-900" style={{ color: '#1e3a8a' }}>🏛️ 공식 종합 기록</td>
+                                <td className="p-2 border border-slate-200" style={{ color: '#0f172a' }}>{officialSummary.total.games}</td>
+                                <td className="p-2 border border-slate-200" style={{ color: '#0f172a' }}>{officialSummary.total.pins.toLocaleString()}</td>
+                                <td className="p-2 border border-slate-200 text-blue-800" style={{ color: '#1e40af' }}>{(officialSummary.total.pins / (officialSummary.total.games || 1)).toFixed(1)}</td>
                             </tr>
                             <tr>
-                                <td className="p-2 border border-slate-200 text-indigo-600 text-left px-4">└ 상주리그</td>
-                                <td className="p-2 border border-slate-200">{officialSummary.league.games}</td>
-                                <td className="p-2 border border-slate-200">{officialSummary.league.pins.toLocaleString()}</td>
-                                <td className="p-2 border border-slate-200 text-slate-700">{(officialSummary.league.pins / (officialSummary.league.games || 1)).toFixed(1)}</td>
+                                <td className="p-2 border border-slate-200 text-indigo-900 text-left px-4" style={{ color: '#312e81' }}>└ 상주리그</td>
+                                <td className="p-2 border border-slate-200" style={{ color: '#0f172a' }}>{officialSummary.league.games}</td>
+                                <td className="p-2 border border-slate-200" style={{ color: '#0f172a' }}>{officialSummary.league.pins.toLocaleString()}</td>
+                                <td className="p-2 border border-slate-200" style={{ color: '#1e293b' }}>{(officialSummary.league.pins / (officialSummary.league.games || 1)).toFixed(1)}</td>
                             </tr>
                             <tr>
-                                <td className="p-2 border border-slate-200 text-amber-600 text-left px-4">└ 챔프전</td>
-                                <td className="p-2 border border-slate-200">{officialSummary.champ.games}</td>
-                                <td className="p-2 border border-slate-200">{officialSummary.champ.pins.toLocaleString()}</td>
-                                <td className="p-2 border border-slate-200 text-slate-700">{(officialSummary.champ.pins / (officialSummary.champ.games || 1)).toFixed(1)}</td>
+                                <td className="p-2 border border-slate-200 text-amber-900 text-left px-4" style={{ color: '#78350f' }}>└ 챔프전</td>
+                                <td className="p-2 border border-slate-200" style={{ color: '#0f172a' }}>{officialSummary.champ.games}</td>
+                                <td className="p-2 border border-slate-200" style={{ color: '#0f172a' }}>{officialSummary.champ.pins.toLocaleString()}</td>
+                                <td className="p-2 border border-slate-200" style={{ color: '#1e293b' }}>{(officialSummary.champ.pins / (officialSummary.champ.games || 1)).toFixed(1)}</td>
                             </tr>
                             <tr>
-                                <td className="p-2 border border-slate-200 text-emerald-600 text-left px-4">└ 이벤트전</td>
-                                <td className="p-2 border border-slate-200">{officialSummary.event.games}</td>
-                                <td className="p-2 border border-slate-200">{officialSummary.event.pins.toLocaleString()}</td>
-                                <td className="p-2 border border-slate-200 text-slate-700">{(officialSummary.event.pins / (officialSummary.event.games || 1)).toFixed(1)}</td>
+                                <td className="p-2 border border-slate-200 text-emerald-900 text-left px-4" style={{ color: '#064e3b' }}>└ 이벤트전</td>
+                                <td className="p-2 border border-slate-200" style={{ color: '#0f172a' }}>{officialSummary.event.games}</td>
+                                <td className="p-2 border border-slate-200" style={{ color: '#0f172a' }}>{officialSummary.event.pins.toLocaleString()}</td>
+                                <td className="p-2 border border-slate-200" style={{ color: '#1e293b' }}>{(officialSummary.event.pins / (officialSummary.event.games || 1)).toFixed(1)}</td>
                             </tr>
                         </tbody>
                     </table>
