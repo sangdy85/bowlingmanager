@@ -419,8 +419,8 @@ export default function RoundParticipantManager({
 
     const downloadTemplate = () => {
         const data = [
-            { '순번': 1, '팀명': '볼링팀A', '이름': '홍길동', '핸디': 0, '현황': '입금대기', '레인': '1-1' },
-            { '순번': 2, '팀명': '볼링팀B', '이름': '김철수', '핸디': 10, '현황': '입금완료', '레인': '1-2' },
+            { '조': 1, '순번': 1, '팀명': '볼링팀A', '이름': '홍길동', '핸디': 0, '현황': '입금대기', '레인': '1-1' },
+            { '조': 1, '순번': 2, '팀명': '볼링팀A', '이름': '김철수', '핸디': 10, '현황': '입금완료', '레인': '1-2' },
         ];
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
