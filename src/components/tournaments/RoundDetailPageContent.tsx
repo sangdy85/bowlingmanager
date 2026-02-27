@@ -265,6 +265,9 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
     const [startLane, setStartLane] = useState(round.startLane || 1);
     const [endLane, setEndLane] = useState(round.endLane || 10);
 
+    const gameMode = round.tournament?.settings ? JSON.parse(round.tournament.settings).gameMode : 'INDIVIDUAL';
+    const isTeamEvent = round.tournament?.type === 'TEAM' || (gameMode && gameMode.startsWith('TEAM_'));
+
     // Parse existing config or default to empty
     const [laneConfig, setLaneConfig] = useState<Record<string, number[]>>(() => {
         try {
@@ -614,7 +617,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                                 <div className="flex flex-wrap gap-2">
                                     {unassigned.map((p: any) => (
                                         <div key={p.id} className="px-3 py-1.5 bg-gray-100 rounded-lg text-xs font-bold text-gray-500 border border-gray-200">
-                                            {p.registration?.guestTeamName ? `[${p.registration.guestTeamName}] ` : (p.registration?.team ? `[${p.registration.team.name}] ` : '')}
+                                            {p.registration?.guestTeamName ? `[${p.registration?.guestTeamName}] ` : (p.registration?.team ? `[${p.registration?.team?.name}] ` : '')}
                                             {p.registration?.user?.name || p.registration?.guestName || '이름 없음'}
                                         </div>
                                     ))}
@@ -2134,13 +2137,13 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
                                         </td>
                                         <td style={{ padding: '2.5rem 2rem' }}>
                                             <span style={{ fontWeight: 700, color: '#64748b', fontSize: '1.75rem', letterSpacing: '-0.025em' }}>
-                                                {(winner.registration.guestTeamName ?? winner.registration.team?.name) || '개인'}
+                                                {(winner.registration?.guestTeamName ?? winner.registration?.team?.name) || '개인'}
                                             </span>
                                         </td>
                                         <td style={{ padding: '2.5rem 2rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                                                 <span style={{ fontWeight: 900, color: '#0f172a', fontSize: '3.5rem', letterSpacing: '-0.05em' }}>
-                                                    {winner.registration.guestName ?? winner.registration.user?.name}
+                                                    {winner.registration?.guestName ?? winner.registration?.user?.name}
                                                 </span>
                                                 {idx === winners.length - 1 && !isRunning && (
                                                     <span style={{ backgroundColor: '#2563eb', color: '#ffffff', padding: '0.375rem 1rem', borderRadius: '1rem', fontWeight: 900, fontSize: '0.875rem', verticalAlign: 'middle' }}>
