@@ -1336,12 +1336,15 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         saveAs(data, `${round.tournament.name}_${round.roundNumber}회차_최종결과.xlsx`);
     };
 
-    // Dynamic row calculation for 2-6 person team events
+    // Dynamic row calculation
     const isTeam2To6 = isTeamEvent && ['TEAM_2', 'TEAM_3', 'TEAM_4', 'TEAM_5', 'TEAM_6'].includes(gameMode);
-    const rowsPerColumn = isTeam2To6 ? Math.max(1, Math.ceil(sortedResults.length / 2)) : 27;
+
+    // For Team 2-6, we use a single column (all results in left).
+    // For others, we keep the original 27-row split.
+    const rowsPerColumn = isTeam2To6 ? sortedResults.length : 27;
 
     const leftColumn = sortedResults.slice(0, rowsPerColumn);
-    const rightColumn = sortedResults.slice(rowsPerColumn, rowsPerColumn * 2);
+    const rightColumn = isTeam2To6 ? [] : sortedResults.slice(rowsPerColumn, rowsPerColumn * 2);
 
     const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => (
         <table style={{
@@ -1494,12 +1497,14 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 </div>
 
                 <div style={{ display: 'flex', width: '100%', borderTop: 'none' }}>
-                    <div style={{ flex: 1, minWidth: '450px' }}>
+                    <div style={{ flex: 1, minWidth: isTeam2To6 ? '100%' : '450px' }}>
                         <TableComponent data={leftColumn} startRank={1} />
                     </div>
-                    <div style={{ flex: 1, minWidth: '450px' }}>
-                        <TableComponent data={rightColumn} startRank={28} isRight={true} />
-                    </div>
+                    {!isTeam2To6 && (
+                        <div style={{ flex: 1, minWidth: '450px' }}>
+                            <TableComponent data={rightColumn} startRank={28} isRight={true} />
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
