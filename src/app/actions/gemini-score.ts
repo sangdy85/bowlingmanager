@@ -64,7 +64,7 @@ export async function analyzeLeagueRoundExcelWithGemini(
         if (!hasQuota) return { success: false, message: "오늘 무료 사용 횟수를 초과했습니다.", errorType: 'QUOTA' };
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); // Using newer model for better accuracy
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const prompt = `
             Task: Extract bowling scores from an Excel grid into a standardized JSON format.
@@ -80,7 +80,8 @@ export async function analyzeLeagueRoundExcelWithGemini(
             2. **Identify Game Columns**: 
                - Look for headers like "1", "2", ... "${gameCount}" OR "1G", "2G", ... "${gameCount}G".
             3. **Extract Scores per Row (RESET BY LANE)**:
-               - IMPORTANT: The "slot" represents the sequence (1, 2, 3...) within a specific Lane section.
+               - IMPORTANT: The "slot" represents the sequence (1, 2, 3, 4...) within a specific Lane section.
+               - **A lane can have 4 or more players (slots). DO NOT skip any player rows.**
                - **ALWAYS reset "slot" to 1** when a new Lane section begins.
                - For each player row:
                  - "lane": The lane number/name this player is assigned to.
@@ -96,10 +97,12 @@ export async function analyzeLeagueRoundExcelWithGemini(
             - **RETURN ONLY** THE JSON ARRAY BELOW. NO MARKDOWN. NO COMMENTS.
             - ENSURE THE OUTPUT IS A VALID JSON ARRAY.
 
-            RETURN FORMAT EXAMPLE (Assume 3 games):
+            RETURN FORMAT EXAMPLE (Assume 3 games, Lane 1 has 4 players):
             [
                { "lane": 1, "slot": 1, "games": [150, 160, 170] },
-               { "lane": 1, "slot": 2, "games": [140, 155, 130] }
+               { "lane": 1, "slot": 2, "games": [140, 155, 130] },
+               { "lane": 1, "slot": 3, "games": [180, 190, 200] },
+               { "lane": 1, "slot": 4, "games": [165, 175, 185] }
             ]
             (For your response, use exactly ${gameCount} elements in the "games" array)
         `;
@@ -244,7 +247,7 @@ export async function analyzeScoreboardWithGemini(
         const mimeType = file.type || 'image/jpeg';
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const prompt = `
       Analyze this bowling scoreboard image.
@@ -357,7 +360,7 @@ export async function analyzeExcelWithGemini(
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const prompt = `
             Analyze this raw JSON data extracted from an Excel file for professional bowling scores.
