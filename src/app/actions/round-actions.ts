@@ -565,15 +565,12 @@ export async function autoAssignRemaining(roundId: string) {
         // 1. Determine team size from settings
         const settings = round.tournament.settings ? JSON.parse(round.tournament.settings) : {};
         const gameMode = settings.gameMode || 'INDIVIDUAL';
-        const isTeamEvent = round.tournament.type === 'TEAM' || gameMode.startsWith('TEAM_');
-        const teamSize = gameMode.startsWith('TEAM_') ? (parseInt(gameMode.split('_')[1]) || 1) : 1;
+        const teamSize = gameMode.startsWith('TEAM_') ? parseInt(gameMode.split('_')[1]) : 1;
 
         // 2. Fetch all participants of this round, sorted by registration date to establish "sequence"
-        const allParticipants = [...round.participants].sort((a: any, b: any) => {
-            const dateA = a.registration?.createdAt ? new Date(a.registration.createdAt).getTime() : 0;
-            const dateB = b.registration?.createdAt ? new Date(b.registration.createdAt).getTime() : 0;
-            return dateA - dateB;
-        });
+        const allParticipants = [...round.participants].sort((a: any, b: any) =>
+            new Date(a.registration.createdAt).getTime() - new Date(b.registration.createdAt).getTime()
+        );
 
         const laneConfig = round.laneConfig ? JSON.parse(round.laneConfig) : {};
         const assignedParticipants = round.participants.filter((p: any) => p.lane);
@@ -610,37 +607,32 @@ export async function autoAssignRemaining(roundId: string) {
         const totalAvailableCount = Array.from(laneToSlots.values()).reduce((acc, curr) => acc + curr.length, 0);
 
         if (totalAvailableCount < unassigned.length) {
-            return { success: false, message: `자리가 부족합니다. (남은 자리: ${totalAvailableCount}, 대기 인원: ${unassigned.length})` };
+            throw new Error(`자리가 부족합니다. (남은 자리: ${totalAvailableCount}, 대기 인원: ${unassigned.length})`);
         }
 
         // Explicit Groups Check: Ensure they match the team size
         const explicitGroups = new Map<string, any[]>();
         allParticipants.forEach(p => {
-            const entryGroupId = p.registration?.entryGroupId;
-            if (entryGroupId) {
-                if (!explicitGroups.has(entryGroupId)) explicitGroups.set(entryGroupId, []);
-                explicitGroups.get(entryGroupId)!.push(p);
+            if (p.registration.entryGroupId) {
+                if (!explicitGroups.has(p.registration.entryGroupId)) explicitGroups.set(p.registration.entryGroupId, []);
+                explicitGroups.get(p.registration.entryGroupId)!.push(p);
             }
         });
 
         // 3a. Validation: Check if any group violates the team size rules
         const errorDetails = [];
-        if (isTeamEvent && teamSize > 1) {
-            for (const [groupId, members] of Array.from(explicitGroups.entries())) {
-                if (members.length > teamSize) {
-                    const groupName = members[0]?.registration?.guestTeamName || members[0]?.registration?.team?.name || (groupId.startsWith('group_') ? groupId.replace('group_', '') : groupId);
-                    errorDetails.push(`'${groupName}' 조의 인원이 초과되었습니다. (정원: ${teamSize}명, 현재: ${members.length}명)`);
-                } else if (members.length < teamSize) {
-                    const groupName = members[0]?.registration?.guestTeamName || members[0]?.registration?.team?.name || (groupId.startsWith('group_') ? groupId.replace('group_', '') : groupId);
-                    errorDetails.push(`'${groupName}' 조의 인원이 미달입니다. (정원: ${teamSize}명, 현재: ${members.length}명)`);
-                }
+        for (const [groupId, members] of Array.from(explicitGroups.entries())) {
+            if (members.length > teamSize) {
+                const groupNum = groupId.startsWith('group_') ? groupId.replace('group_', '') : groupId;
+                errorDetails.push(`${groupNum}조 인원이 초과되었습니다. (정원: ${teamSize}명, 현재: ${members.length}명)`);
+            } else if (members.length < teamSize) {
+                const groupNum = groupId.startsWith('group_') ? groupId.replace('group_', '') : groupId;
+                errorDetails.push(`${groupNum}조 인원이 미달입니다. (정원: ${teamSize}명, 현재: ${members.length}명)`);
             }
         }
 
         if (errorDetails.length > 0) {
-            const joinedError = errorDetails.join('\n');
-            console.error("Team validation failed:", joinedError);
-            return { success: false, message: `[데이터 오류] 팀 인원이 맞지 않습니다. 아래 내용을 확인해주세요:\n\n${joinedError}` };
+            throw new Error(errorDetails.join('\n'));
         }
 
         const groups: any[][] = [];
@@ -733,7 +725,7 @@ export async function autoAssignRemaining(roundId: string) {
 
     } catch (error: any) {
         console.error("Auto assign failed:", error);
-        return { success: false, message: error.message || "자동 배정 중 오류가 발생했습니다." };
+        throw new Error(error.message || "자동 배정 실패");
     }
 }
 
