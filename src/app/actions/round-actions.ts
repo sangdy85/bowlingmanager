@@ -1327,7 +1327,7 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
 // 2-2. Auto Assign Entry Groups by Team Size
 export async function autoAssignEntryGroups(roundId: string, teamSize: number) {
     try {
-        const round = await prisma.tournamentRound.findUnique({
+        const round = await prisma.leagueRound.findUnique({
             where: { id: roundId },
             include: {
                 participants: {
