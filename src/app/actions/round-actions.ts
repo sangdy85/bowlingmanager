@@ -565,7 +565,8 @@ export async function autoAssignRemaining(roundId: string) {
         // 1. Determine team size from settings
         const settings = round.tournament.settings ? JSON.parse(round.tournament.settings) : {};
         const gameMode = settings.gameMode || 'INDIVIDUAL';
-        const teamSize = gameMode.startsWith('TEAM_') ? parseInt(gameMode.split('_')[1]) : 1;
+        const isTeamEvent = round.tournament.type === 'TEAM' || gameMode.startsWith('TEAM_');
+        const teamSize = gameMode.startsWith('TEAM_') ? (parseInt(gameMode.split('_')[1]) || 1) : 1;
 
         // 2. Fetch all participants of this round, sorted by registration date to establish "sequence"
         const allParticipants = [...round.participants].sort((a: any, b: any) => {
@@ -624,13 +625,15 @@ export async function autoAssignRemaining(roundId: string) {
 
         // 3a. Validation: Check if any group violates the team size rules
         const errorDetails = [];
-        for (const [groupId, members] of Array.from(explicitGroups.entries())) {
-            if (members.length > teamSize) {
-                const groupName = members[0]?.registration?.guestTeamName || members[0]?.registration?.team?.name || groupId.startsWith('group_') ? groupId.replace('group_', '') : groupId;
-                errorDetails.push(`'${groupName}' 조의 인원이 초과되었습니다. (정원: ${teamSize}명, 현재: ${members.length}명)`);
-            } else if (members.length < teamSize) {
-                const groupName = members[0]?.registration?.guestTeamName || members[0]?.registration?.team?.name || groupId.startsWith('group_') ? groupId.replace('group_', '') : groupId;
-                errorDetails.push(`'${groupName}' 조의 인원이 미달입니다. (정원: ${teamSize}명, 현재: ${members.length}명)`);
+        if (isTeamEvent && teamSize > 1) {
+            for (const [groupId, members] of Array.from(explicitGroups.entries())) {
+                if (members.length > teamSize) {
+                    const groupName = members[0]?.registration?.guestTeamName || members[0]?.registration?.team?.name || (groupId.startsWith('group_') ? groupId.replace('group_', '') : groupId);
+                    errorDetails.push(`'${groupName}' 조의 인원이 초과되었습니다. (정원: ${teamSize}명, 현재: ${members.length}명)`);
+                } else if (members.length < teamSize) {
+                    const groupName = members[0]?.registration?.guestTeamName || members[0]?.registration?.team?.name || (groupId.startsWith('group_') ? groupId.replace('group_', '') : groupId);
+                    errorDetails.push(`'${groupName}' 조의 인원이 미달입니다. (정원: ${teamSize}명, 현재: ${members.length}명)`);
+                }
             }
         }
 

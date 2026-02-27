@@ -421,9 +421,9 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
     const unassigned = round.participants.filter((p: any) => !p.lane);
 
     // [New] Real-time validation for team size vs current assignments
-    const teamSize = (isTeamEvent ? parseInt(gameMode.split('_')[1]) : 1) || 1;
+    const teamSize = (isTeamEvent && gameMode.startsWith('TEAM_') ? parseInt(gameMode.split('_')[1]) : 1) || 1;
     const groupViolations: string[] = [];
-    if (isTeamEvent) {
+    if (isTeamEvent && teamSize > 1) {
         const groupMembers = new Map<string, any[]>();
         round.participants.forEach((p: any) => {
             const gid = p.registration?.entryGroupId;
