@@ -406,11 +406,32 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
             laneMap[laneNum].push(p);
         }
     });
+
     // Sort slots within each lane
     Object.keys(laneMap).forEach(key => {
         laneMap[Number(key)].sort((a, b) => (a.lane % 10) - (b.lane % 10));
     });
     const unassigned = round.participants.filter((p: any) => !p.lane);
+
+    // [New] Real-time validation for team size vs current assignments
+    const teamSize = (isTeamEvent ? parseInt(gameMode.split('_')[1]) : 1) || 1;
+    const groupViolations: string[] = [];
+    if (isTeamEvent) {
+        const groupMembers = new Map<string, any[]>();
+        round.participants.forEach((p: any) => {
+            const gid = p.registration?.entryGroupId;
+            if (gid) {
+                if (!groupMembers.has(gid)) groupMembers.set(gid, []);
+                groupMembers.get(gid)!.push(p);
+            }
+        });
+        groupMembers.forEach((members, gid) => {
+            if (members.length !== teamSize) {
+                const num = gid.replace('group_', '').includes('_name_') ? gid.split('_name_')[1] : gid.replace('group_', '');
+                groupViolations.push(`${num}조(${members.length}명)`);
+            }
+        });
+    }
 
     return (
         <div className="space-y-8">
@@ -451,6 +472,11 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                         </button>
 
                         <div className="ml-auto flex flex-wrap gap-2">
+                            {isTeamEvent && groupViolations.length > 0 && (
+                                <div className="w-full mb-2 p-2 bg-red-50 border border-red-200 rounded text-[10px] text-red-600 font-bold">
+                                    ⚠️ 인원수 불일치 조 발견: {groupViolations.join(', ')} (정원: {teamSize}명)
+                                </div>
+                            )}
                             <button
                                 type="button"
                                 onClick={setAllSelect}
@@ -475,7 +501,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                             <button
                                 onClick={handleAutoAssign}
                                 disabled={loading || round.participants.length === 0}
-                                className="btn bg-white border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 shadow-sm text-[11px]"
+                                className={`btn font-bold shadow-sm text-[11px] ${groupViolations.length > 0 ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
                             >
                                 🎲 랜덤 일괄 배정
                             </button>
@@ -559,13 +585,13 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                                                     {p.lane % 10}
                                                 </div>
                                                 <span className="font-bold text-sm text-gray-800 flex flex-col items-start leading-tight">
-                                                    <span>{p.registration.guestName ?? p.registration.user?.name}</span>
-                                                    {p.registration.entryGroupId && (
+                                                    <span>{p.registration?.guestName ?? p.registration?.user?.name ?? '미등록'}</span>
+                                                    {p.registration?.entryGroupId && (
                                                         <span className="text-[9px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded">
                                                             조: {p.registration.entryGroupId.replace('group_', '').includes('_name_') ? p.registration.entryGroupId.split('_name_')[1] : p.registration.entryGroupId.replace('group_', '')}
                                                         </span>
                                                     )}
-                                                    {((p.registration.guestTeamName ?? p.registration.team?.name)) && !p.registration.entryGroupId && (
+                                                    {((p.registration?.guestTeamName ?? p.registration?.team?.name)) && !p.registration?.entryGroupId && (
                                                         <span className="text-[10px] text-gray-400 font-medium">
                                                             ({p.registration.guestTeamName ?? p.registration.team?.name})
                                                         </span>
@@ -588,8 +614,8 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                                 <div className="flex flex-wrap gap-2">
                                     {unassigned.map((p: any) => (
                                         <div key={p.id} className="px-3 py-1.5 bg-gray-100 rounded-lg text-xs font-bold text-gray-500 border border-gray-200">
-                                            {p.registration.guestTeamName ? `[${p.registration.guestTeamName}] ` : (p.registration.team ? `[${p.registration.team.name}] ` : '')}
-                                            {p.registration.user ? p.registration.user.name : p.registration.guestName}
+                                            {p.registration?.guestTeamName ? `[${p.registration.guestTeamName}] ` : (p.registration?.team ? `[${p.registration.team.name}] ` : '')}
+                                            {p.registration?.user?.name || p.registration?.guestName || '이름 없음'}
                                         </div>
                                     ))}
                                 </div>
@@ -854,7 +880,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                     </td>
                                     <td className="p-2 text-center font-bold text-gray-800 truncate" style={{ width: '130px', whiteSpace: 'nowrap' }}>
                                         <div className="flex flex-col items-center">
-                                            <span>{p.registration.user?.name || p.registration.guestName}</span>
+                                            <span>{p.registration?.user?.name || p.registration?.guestName || '정보 없음'}</span>
                                             {groupId && (
                                                 <span className="text-[9px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded leading-none mt-0.5">
                                                     조: {groupId.replace('group_', '').includes('_name_') ? groupId.split('_name_')[1] : groupId.replace('group_', '')}
@@ -938,11 +964,11 @@ function RoundSideGameTab({ round }: { round: any }) {
     const getRankings = (filterFn: (p: any) => boolean, gameNum: number) => {
         const pool = participants.filter(filterFn).map((p: any) => {
             const pScore = scores.find((s: any) => s.registrationId === p.registrationId && s.gameNumber === gameNum)?.score || 0;
-            const handicap = p.registration.handicap || 0;
+            const handicap = p.registration?.handicap || 0;
             return {
                 id: p.registrationId,
-                name: p.registration.guestName ?? p.registration.user?.name,
-                team: (p.registration.guestTeamName ?? p.registration.team?.name) || '-',
+                name: p.registration?.guestName ?? p.registration?.user?.name ?? 'Unknown',
+                team: (p.registration?.guestTeamName ?? p.registration?.team?.name) || '-',
                 score: pScore,
                 handicap: handicap,
                 total: pScore > 0 ? Math.min(pScore + handicap, 300) : 0

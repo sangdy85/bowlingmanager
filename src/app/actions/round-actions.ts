@@ -613,9 +613,10 @@ export async function autoAssignRemaining(roundId: string) {
         // Explicit Groups Check: Ensure they match the team size
         const explicitGroups = new Map<string, any[]>();
         allParticipants.forEach(p => {
-            if (p.registration.entryGroupId) {
-                if (!explicitGroups.has(p.registration.entryGroupId)) explicitGroups.set(p.registration.entryGroupId, []);
-                explicitGroups.get(p.registration.entryGroupId)!.push(p);
+            const entryGroupId = p.registration?.entryGroupId;
+            if (entryGroupId) {
+                if (!explicitGroups.has(entryGroupId)) explicitGroups.set(entryGroupId, []);
+                explicitGroups.get(entryGroupId)!.push(p);
             }
         });
 
@@ -632,7 +633,9 @@ export async function autoAssignRemaining(roundId: string) {
         }
 
         if (errorDetails.length > 0) {
-            throw new Error(errorDetails.join('\n'));
+            const joinedError = errorDetails.join('\n');
+            console.error("Team validation failed:", joinedError);
+            throw new Error(`[데이터 오류] 아래의 내용을 수정해주세요:\n\n${joinedError}`);
         }
 
         const groups: any[][] = [];
