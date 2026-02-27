@@ -1093,10 +1093,10 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         // Aggregate by entryGroupId
         const groups: Record<string, any> = {};
         round.participants.forEach((p: any) => {
-            const groupId = p.registration.entryGroupId || p.id; // Fallback to p.id if no group
+            const groupId = p.registration?.entryGroupId || p.id; // Fallback to p.id if no group
             if (!groups[groupId]) {
-                const groupNamePart = p.registration.entryGroupId?.includes('_name_') ? p.registration.entryGroupId.split('_name_')[1] : null;
-                const groupNumPart = p.registration.entryGroupId?.startsWith('group_') ? p.registration.entryGroupId.replace('group_', '') : null;
+                const groupNamePart = p.registration?.entryGroupId?.includes('_name_') ? p.registration?.entryGroupId.split('_name_')[1] : null;
+                const groupNumPart = p.registration?.entryGroupId?.startsWith('group_') ? p.registration?.entryGroupId.replace('group_', '') : null;
 
                 groups[groupId] = {
                     id: groupId,
@@ -1104,7 +1104,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     totalRaw: 0,
                     totalHandicap: 0,
                     gameScores: new Array(gameCount).fill(0),
-                    teamName: groupNamePart || (groupNumPart ? `조: ${groupNumPart}` : (p.registration.guestTeamName ?? p.registration.team?.name) || '팀'),
+                    teamName: groupNamePart || (groupNumPart ? `조: ${groupNumPart}` : (p.registration?.guestTeamName ?? p.registration?.team?.name) || '팀'),
                     handicapSum: 0
                 };
             }
@@ -1117,11 +1117,11 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 pTotalRaw += s;
                 if (s > 0) pGamesPlayed++;
             }
-            const handicap = p.registration.handicap || 0;
+            const handicap = p.registration?.handicap || 0;
             groups[groupId].totalRaw += pTotalRaw;
             groups[groupId].totalHandicap += (handicap * pGamesPlayed);
             groups[groupId].handicapSum += handicap;
-            groups[groupId].members.push(p.registration.guestName ?? p.registration.user?.name ?? 'Unknown');
+            groups[groupId].members.push(p.registration?.guestName ?? p.registration?.user?.name ?? 'Unknown');
         });
 
         results = Object.values(groups).map((g: any) => {
@@ -1167,9 +1167,9 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 if (sRecord) gamesPlayed++;
             }
 
-            const handicap = p.registration.handicap || 0;
-            const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
-            const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인회원';
+            const handicap = p.registration?.handicap || 0;
+            const pName = p.registration?.guestName ?? p.registration?.user?.name ?? 'Unknown';
+            const pTeam = (p.registration?.guestTeamName ?? p.registration?.team?.name) || '개인회원';
 
             // 1. Calculate system penalty from previous round (minusApplied)
             let minusApplied = 0;
@@ -1727,9 +1727,9 @@ function RoundPointsTab({ round }: { round: any }) {
             if (sRecord && score > 0) gamesPlayed++;
         }
 
-        const handicap = p.registration.handicap || 0;
-        const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
-        const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인';
+        const handicap = p.registration?.handicap || 0;
+        const pName = p.registration?.guestName ?? p.registration?.user?.name ?? 'Unknown';
+        const pTeam = (p.registration?.guestTeamName ?? p.registration?.team?.name) || '개인';
 
         let minusApplied = 0;
         let rankCap = 0;
