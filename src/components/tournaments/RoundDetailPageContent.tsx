@@ -1408,14 +1408,14 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             <thead>
                 <tr style={{ backgroundColor: '#E7E9EB', height: '32px' }}>
                     <th style={{ border: '1px solid black', padding: '4px', width: '35px' }}>순위</th>
-                    <th style={{ border: '1px solid black', padding: '4px', width: '70px' }}>팀</th>
-                    <th style={{ border: '1px solid black', padding: '4px' }}>성함</th>
+                    <th style={{ border: '1px solid black', padding: '4px', width: '60px' }}>팀</th>
+                    <th style={{ border: '1px solid black', padding: '4px', width: '350px' }}>성함</th>
                     {Array.from({ length: gameCount }).map((_, i) => (
-                        <th key={i} style={{ border: '1px solid black', padding: '4px', width: '50px' }}>{i + 1}G</th>
+                        <th key={i} style={{ border: '1px solid black', padding: '4px', width: '60px' }}>{i + 1}G</th>
                     ))}
-                    <th style={{ border: '1px solid black', padding: '4px', width: '50px' }}>핸디</th>
+                    <th style={{ border: '1px solid black', padding: '4px', width: '60px' }}>핸디</th>
                     <th style={{ border: '1px solid black', padding: '4px', width: '40px' }}>H-L</th>
-                    <th style={{ border: '1px solid black', padding: '4px', width: '60px' }}>총점</th>
+                    <th style={{ border: '1px solid black', padding: '4px', width: '80px' }}>총점</th>
                 </tr>
             </thead>
             <tbody>
