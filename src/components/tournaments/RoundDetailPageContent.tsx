@@ -602,15 +602,15 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                                                     {p.lane % 10}
                                                 </div>
                                                 <span className="font-bold text-sm text-gray-800 flex flex-col items-start leading-tight">
-                                                    <span>{p.registration.guestName ?? p.registration.user?.name}</span>
-                                                    {p.registration.entryGroupId && (
+                                                    <span>{p.registration?.guestName ?? p.registration?.user?.name ?? 'Unknown'}</span>
+                                                    {p.registration?.entryGroupId && (
                                                         <span className="text-[9px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded">
                                                             조: {p.registration.entryGroupId.replace('group_', '').includes('_name_') ? p.registration.entryGroupId.split('_name_')[1] : p.registration.entryGroupId.replace('group_', '')}
                                                         </span>
                                                     )}
-                                                    {((p.registration.guestTeamName ?? p.registration.team?.name)) && !p.registration.entryGroupId && (
+                                                    {((p.registration?.guestTeamName ?? p.registration?.team?.name)) && !p.registration?.entryGroupId && (
                                                         <span className="text-[10px] text-gray-400 font-medium">
-                                                            ({p.registration.guestTeamName ?? p.registration.team?.name})
+                                                            ({p.registration?.guestTeamName ?? p.registration?.team?.name})
                                                         </span>
                                                     )}
                                                 </span>
@@ -808,8 +808,8 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
         if (a.lane && b.lane) return a.lane - b.lane;
         if (a.lane) return -1;
         if (b.lane) return 1;
-        const nameA = a.registration.guestName ?? a.registration.user?.name ?? '';
-        const nameB = b.registration.guestName ?? b.registration.user?.name ?? '';
+        const nameA = a.registration?.guestName ?? a.registration?.user?.name ?? '';
+        const nameB = b.registration?.guestName ?? b.registration?.user?.name ?? '';
         return nameA.localeCompare(nameB);
     });
 
@@ -897,7 +897,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                     </td>
                                     <td className="p-2 text-center font-bold text-gray-800 truncate" style={{ width: '130px', whiteSpace: 'nowrap' }}>
                                         <div className="flex flex-col items-center">
-                                            <span>{p.registration.user?.name || p.registration.guestName}</span>
+                                            <span>{p.registration?.user?.name || p.registration?.guestName || 'Unknown'}</span>
                                             {groupId && (
                                                 <span className="text-[9px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded leading-none mt-0.5">
                                                     조: {groupId.replace('group_', '').includes('_name_') ? groupId.split('_name_')[1] : groupId.replace('group_', '')}
@@ -984,7 +984,7 @@ function RoundSideGameTab({ round }: { round: any }) {
             const handicap = p.registration.handicap || 0;
             return {
                 id: p.registrationId,
-                name: p.registration.guestName ?? p.registration.user?.name,
+                name: p.registration?.guestName ?? p.registration?.user?.name ?? 'Unknown',
                 team: (p.registration.guestTeamName ?? p.registration.team?.name) || '-',
                 score: pScore,
                 handicap: handicap,
@@ -1110,7 +1110,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         // Aggregate by entryGroupId
         const groups: Record<string, any> = {};
         round.participants.forEach((p: any) => {
-            const groupId = p.registration.entryGroupId || p.id; // Fallback to p.id if no group
+            const groupId = p.registration?.entryGroupId || p.id; // Fallback to p.id if no group
             if (!groups[groupId]) {
                 const groupNamePart = p.registration.entryGroupId?.includes('_name_') ? p.registration.entryGroupId.split('_name_')[1] : null;
                 const groupNumPart = p.registration.entryGroupId?.startsWith('group_') ? p.registration.entryGroupId.replace('group_', '') : null;
@@ -1138,7 +1138,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             groups[groupId].totalRaw += pTotalRaw;
             groups[groupId].totalHandicap += (handicap * pGamesPlayed);
             groups[groupId].handicapSum += handicap;
-            groups[groupId].members.push(p.registration.guestName ?? p.registration.user?.name ?? 'Unknown');
+            groups[groupId].members.push(p.registration?.guestName ?? p.registration?.user?.name ?? 'Unknown');
         });
 
         results = Object.values(groups).map((g: any) => {
@@ -1184,9 +1184,9 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 if (sRecord) gamesPlayed++;
             }
 
-            const handicap = p.registration.handicap || 0;
-            const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
-            const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인회원';
+            const handicap = p.registration?.handicap || 0;
+            const pName = p.registration?.guestName ?? p.registration?.user?.name ?? 'Unknown';
+            const pTeam = (p.registration?.guestTeamName ?? p.registration?.team?.name) || '개인회원';
 
             // 1. Calculate system penalty from previous round (minusApplied)
             let minusApplied = 0;
