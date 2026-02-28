@@ -194,20 +194,37 @@ export default async function RoundDetailPage({ params }: { params: { id: string
         const fWinner = rankings.find((r: any) => r.isFemaleChamp);
         if (fWinner) runningPrevWinners.femaleChamp = { name: fWinner.name, team: fWinner.team };
 
-        // Prepare for client serialization
+        // Prepare for client serialization - LIGHTWEIGHT VERSION for navigation
         const rEffectiveDate = getEffectiveRoundDate(r.date, roundData.tournament.leagueTime);
-        const rStatus = calculateTournamentStatus(rEffectiveDate, r.registrationStart, r.date, roundData.tournament.status, now);
+        const rStatus = calculateTournamentStatus(rEffectiveDate, r.registrationEnd, r.date, roundData.tournament.status, now);
 
         processedRounds.push({
-            ...r,
+            id: r.id,
+            roundNumber: r.roundNumber,
             date: r.date?.toISOString(),
             registrationStart: r.registrationStart?.toISOString(),
             effectiveDateStr: rEffectiveDate?.toISOString(),
             calculatedStatus: rStatus,
-            prevRoundWinners: currentRoundPrevWinners, // History attached to each round
+            prevRoundWinners: currentRoundPrevWinners,
+            // For participants, only keep what's needed for history tracking if necessary, 
+            // but for simple event list, we might not even need participants here.
+            // However, RoundParticipantManager needs them, so we include them but without scores/other deep relations.
             participants: r.participants.map((p: any) => ({
-                ...p,
-                isManual: p.isManual === 1 || p.isManual === true
+                id: p.id,
+                registrationId: p.registrationId,
+                lane: p.lane,
+                isManual: p.isManual === 1 || p.isManual === true,
+                isFemaleChamp: p.isFemaleChamp,
+                registration: {
+                    id: p.registration?.id,
+                    userId: p.registration?.userId,
+                    guestName: p.registration?.guestName,
+                    guestTeamName: p.registration?.guestTeamName,
+                    entryGroupId: p.registration?.entryGroupId,
+                    handicap: p.registration?.handicap,
+                    user: p.registration?.user ? { name: p.registration.user.name } : null,
+                    team: p.registration?.team ? { name: p.registration.team.name } : null
+                }
             }))
         });
     }

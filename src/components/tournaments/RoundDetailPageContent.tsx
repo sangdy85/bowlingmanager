@@ -268,18 +268,10 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
     // Parse existing config or default to empty
     const [laneConfig, setLaneConfig] = useState<Record<string, number[]>>(() => {
         try {
-            try {
-                try {
-                    return round.laneConfig ? JSON.parse(round.laneConfig) : {};
-                } catch (e) {
-                    console.error("Failed to parse laneConfig", e);
-                    return {};
-                }
-            } catch (e) {
-                console.error("Failed to parse laneConfig", e);
-                return {};
-            }
-        } catch {
+            const parsed = round.laneConfig ? JSON.parse(round.laneConfig) : {};
+            return (parsed && typeof parsed === 'object') ? parsed : {};
+        } catch (e) {
+            console.error("Failed to parse laneConfig", e);
             return {};
         }
     });
@@ -311,7 +303,8 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
     useEffect(() => {
         try {
             if (round.laneConfig) {
-                setLaneConfig(JSON.parse(round.laneConfig));
+                const parsed = JSON.parse(round.laneConfig);
+                setLaneConfig((parsed && typeof parsed === 'object') ? parsed : {});
             }
         } catch (e) {
             console.error("Failed to parse laneConfig in useEffect", e);
@@ -527,7 +520,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
 
                     <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
                         <div className="flex justify-end items-center mb-4">
-                            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">총 설정 슬롯: {Object.values(laneConfig).reduce((s, a) => s + a.length, 0)}개</span>
+                            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">총 설정 슬롯: {Object.values(laneConfig).reduce((s: number, a: any) => s + (Array.isArray(a) ? a.length : 0), 0)}개</span>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -603,9 +596,9 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                                                 </div>
                                                 <span className="font-bold text-sm text-gray-800 flex flex-col items-start leading-tight">
                                                     <span>{p.registration?.guestName ?? p.registration?.user?.name}</span>
-                                                    {p.registration?.entryGroupId && (
+                                                    {p.registration?.entryGroupId && typeof p.registration.entryGroupId === 'string' && (
                                                         <span className="text-[9px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded">
-                                                            조: {p.registration?.entryGroupId.replace('group_', '').includes('_name_') ? p.registration?.entryGroupId.split('_name_')[1] : p.registration?.entryGroupId.replace('group_', '')}
+                                                            조: {p.registration.entryGroupId.replace('group_', '').includes('_name_') ? p.registration.entryGroupId.split('_name_')[1] : p.registration.entryGroupId.replace('group_', '')}
                                                         </span>
                                                     )}
                                                     {((p.registration?.guestTeamName ?? p.registration?.team?.name)) && !p.registration?.entryGroupId && (
@@ -898,7 +891,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                     <td className="p-2 text-center font-bold text-gray-800 truncate" style={{ width: '130px', whiteSpace: 'nowrap' }}>
                                         <div className="flex flex-col items-center">
                                             <span>{p.registration?.user?.name || p.registration?.guestName}</span>
-                                            {groupId && (
+                                            {groupId && typeof groupId === 'string' && (
                                                 <span className="text-[9px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded leading-none mt-0.5">
                                                     조: {groupId.replace('group_', '').includes('_name_') ? groupId.split('_name_')[1] : groupId.replace('group_', '')}
                                                 </span>
