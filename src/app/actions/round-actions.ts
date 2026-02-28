@@ -568,11 +568,9 @@ export async function autoAssignRemaining(roundId: string) {
         const teamSize = gameMode.startsWith('TEAM_') ? parseInt(gameMode.split('_')[1]) : 1;
 
         // 2. Fetch all participants of this round, sorted by registration date to establish "sequence"
-        const allParticipants = [...round.participants].sort((a: any, b: any) => {
-            const timeA = a.registration?.createdAt ? new Date(a.registration.createdAt).getTime() : 0;
-            const timeB = b.registration?.createdAt ? new Date(b.registration.createdAt).getTime() : 0;
-            return timeA - timeB;
-        });
+        const allParticipants = [...round.participants].sort((a: any, b: any) =>
+            new Date(a.registration.createdAt).getTime() - new Date(b.registration.createdAt).getTime()
+        );
 
         const laneConfig = round.laneConfig ? JSON.parse(round.laneConfig) : {};
         const assignedParticipants = round.participants.filter((p: any) => p.lane);
@@ -615,10 +613,9 @@ export async function autoAssignRemaining(roundId: string) {
         // Explicit Groups Check: Ensure they match the team size
         const explicitGroups = new Map<string, any[]>();
         allParticipants.forEach(p => {
-            const groupId = p.registration?.entryGroupId;
-            if (groupId) {
-                if (!explicitGroups.has(groupId)) explicitGroups.set(groupId, []);
-                explicitGroups.get(groupId)!.push(p);
+            if (p.registration.entryGroupId) {
+                if (!explicitGroups.has(p.registration.entryGroupId)) explicitGroups.set(p.registration.entryGroupId, []);
+                explicitGroups.get(p.registration.entryGroupId)!.push(p);
             }
         });
 
@@ -1194,14 +1191,11 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                 await tx.tournamentScore.deleteMany({ where: { roundId } });
                 await tx.rawLaneScore.deleteMany({ where: { roundId } });
                 await tx.leagueMatchup.deleteMany({ where: { roundId } }); // Cascades to IndividualScores
-                // [STRICT SYNC] 
-                // To prevent orphaned participants from other rounds or previous partial uploads,
-                // we delete ALL round participants in this tournament before clearing registrations.
-                await tx.roundParticipant.deleteMany({
-                    where: { round: { tournamentId: info.tournamentId } }
-                });
+                await tx.roundParticipant.deleteMany({ where: { roundId } });
 
-                // Now safe to delete all registrations for this tournament.
+                // [ORPHAN CLEANUP / FULL RESET for EVENT] 
+                // For Event/Champ/League, we want a fresh start.
+                // We delete all registrations for this tournament to ensure the excel is the absolute source of truth.
                 await tx.tournamentRegistration.deleteMany({
                     where: { tournamentId: info.tournamentId }
                 });

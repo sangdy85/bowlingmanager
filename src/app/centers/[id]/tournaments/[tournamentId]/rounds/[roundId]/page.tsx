@@ -71,7 +71,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
             // Serialize Dates inside participants
             registration: {
                 ...registration,
-                createdAt: registration.createdAt?.toISOString() || null
+                createdAt: (registration as any).createdAt?.toISOString() || null
             }
         };
     });
@@ -145,10 +145,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
             let rankCap = 0;
             // Negative handicap logic (Capped by rank winner)
             if (gamesPlayed === gameCount) {
-                const matchWinner = (winner: any) => {
-                    if (!winner) return false;
-                    return winner.name === pName && winner.team === pTeam;
-                };
+                const matchWinner = (winner: any) => winner && winner.name === pName && winner.team === pTeam;
                 if (matchWinner(currentRoundPrevWinners.rank1)) {
                     minusApplied += Math.abs(roundHandicaps.rank1);
                     rankCap = Math.abs(roundHandicaps.rank1);
@@ -179,10 +176,10 @@ export default async function RoundDetailPage({ params }: { params: { id: string
                 total,
                 handicap,
                 hiLow,
-                isFemaleChamp: !!p.isFemaleChamp
+                isFemaleChamp: p.isFemaleChamp
             };
         })
-            .filter((entry: any) => entry && entry.total > 0)
+            .filter((entry: any) => entry.total > 0)
             .sort((a: any, b: any) => {
                 if (b.total !== a.total) return b.total - a.total;
                 if (a.handicap !== b.handicap) return a.handicap - b.handicap;
@@ -228,7 +225,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
             isManual: currentProcessedParticipants.find((rp: any) => rp.id === p.id)?.isManual || false,
             registration: {
                 ...registration,
-                createdAt: registration.createdAt?.toISOString() || null
+                createdAt: (registration as any).createdAt?.toISOString() || null
             }
         };
     });
