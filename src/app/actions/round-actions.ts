@@ -1182,32 +1182,25 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
             errors: [] as string[]
         };
 
-        const isChampOrLeague = info.type === 'CHAMP' || info.type === 'LEAGUE';
+        const shouldResetAll = info.type === 'CHAMP' || info.type === 'LEAGUE' || info.type === 'EVENT';
 
         await prisma.$transaction(async (tx: any) => {
             // 1. [STRICT SYNC] Clear the total slate for this round and cleanup artifacts.
-            if (isChampOrLeague) {
+            if (shouldResetAll) {
                 // Delete all round-specific data records first to avoid any leftovers
                 await tx.tournamentScore.deleteMany({ where: { roundId } });
                 await tx.rawLaneScore.deleteMany({ where: { roundId } });
                 await tx.leagueMatchup.deleteMany({ where: { roundId } }); // Cascades to IndividualScores
                 await tx.roundParticipant.deleteMany({ where: { roundId } });
 
-                // [ORPHAN CLEANUP] Remove ANY registrations in this tournament that have no round participations.
-                // This prevents "Ghost" registrations with no context from appearing in leaderboards or being duplicated.
+                // [ORPHAN CLEANUP / FULL RESET for EVENT] 
+                // For Event/Champ/League, we want a fresh start.
+                // We delete all registrations for this tournament to ensure the excel is the absolute source of truth.
                 await tx.tournamentRegistration.deleteMany({
-                    where: {
-                        tournamentId: info.tournamentId,
-                        roundParticipations: { none: {} }
-                    }
+                    where: { tournamentId: info.tournamentId }
                 });
             }
 
-            // 0. Pre-Cleanup: Delete ALL existing participants for this round to ensure a fresh start
-            // This satisfies the requirement: "무조건 업로드 진행시 기존 데이터 삭제하고 새롭게 올려줘"
-            await tx.roundParticipant.deleteMany({
-                where: { roundId: roundId }
-            });
 
             let index = 0;
             const baseTime = new Date();
