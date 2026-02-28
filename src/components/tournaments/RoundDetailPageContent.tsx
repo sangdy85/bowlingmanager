@@ -38,10 +38,10 @@ function RoundOverviewTab({ round }: { round: any }) {
                 <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 shadow-sm">
                     <h4 className="text-gray-500 text-sm font-bold mb-2 uppercase tracking-wide">대회 일정</h4>
                     <p className="text-2xl font-black text-gray-800">
-                        {formatKSTDayLabel(round.date)}
+                        {formatKSTDayLabel(round.date || round.tournament.startDate)}
                     </p>
                     <p className="text-sm text-gray-500 mt-2 font-medium">
-                        접수: {formatKSTDate(round.registrationStart)}
+                        접수: {formatKSTDate(round.registrationStart || round.tournament.registrationStart || round.tournament.startDate)}
                     </p>
                 </div>
                 <div className="bg-green-50 p-6 rounded-xl border border-green-100 shadow-sm">
@@ -121,7 +121,7 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
 
     return (
         <form action={handleSubmit} className="space-y-6 max-w-lg">
-            {round.tournament.type !== 'EVENT' && (
+            {round.tournament.type !== 'EVENT' ? (
                 <>
                     <div>
                         <label className="block text-sm font-bold mb-2 text-gray-700">대회 날짜 (시간 제외)</label>
@@ -144,6 +144,11 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
                             ℹ️ 접수 종료 시간은 별도로 설정하지 않아도 됩니다. (상시 접수 또는 경기 시작 전까지)
                         </p>
                     </div>
+                </>
+            ) : (
+                <>
+                    <input type="hidden" name="date" value={round.date ? new Date(round.date).toISOString().slice(0, 10) : ''} />
+                    <input type="hidden" name="regStart" value={round.registrationStart ? new Date(round.registrationStart).toISOString() : ''} />
                 </>
             )}
 
@@ -2341,7 +2346,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                             </div>
                         </h1>
                         <p className="text-gray-400 text-sm mt-1 flex items-center gap-2">
-                            <span>📅 {formatKSTDate(round.effectiveDateStr || round.date)}</span>
+                            <span>📅 {formatKSTDate(round.effectiveDateStr || round.date || round.tournament.startDate)}</span>
                             <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
                             <span>👥 참가 {round.participants.length}명</span>
                         </p>

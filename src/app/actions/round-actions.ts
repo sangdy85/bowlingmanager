@@ -38,16 +38,22 @@ export async function updateRoundSettings(
         minusHandicapFemale?: number;
     }
 ) {
-    try {
-        const date = parseKSTDate(data.date);
-        const regStart = parseKSTDate(data.regStart);
-        const regEnd = parseKSTDate(data.regEnd);
-        const type = data.moveLaneType || null;
-        const count = data.moveLaneCount || null;
-        const femaleChamp = data.hasFemaleChamp || false;
+    // 1. Fetch current round to preserve dates if not provided
+    const currentRound = await prisma.leagueRound.findUnique({
+        where: { id: roundId },
+        select: { date: true, registrationStart: true, registrationEnd: true }
+    });
 
-        // 1. Update Round Dates
-        await prisma.$executeRaw`
+    const date = data.date ? parseKSTDate(data.date) : currentRound?.date;
+    const regStart = data.regStart ? parseKSTDate(data.regStart) : currentRound?.registrationStart;
+    const regEnd = data.regEnd ? parseKSTDate(data.regEnd) : currentRound?.registrationEnd;
+
+    const type = data.moveLaneType || null;
+    const count = data.moveLaneCount || null;
+    const femaleChamp = data.hasFemaleChamp || false;
+
+    // 2. Update Round Dates
+    await prisma.$executeRaw`
         UPDATE "LeagueRound" 
         SET "date" = ${date}, 
             "registrationStart" = ${regStart}, 
@@ -58,48 +64,48 @@ export async function updateRoundSettings(
         WHERE "id" = ${roundId}
     `;
 
-        // 2. Update Tournament-wide settings if minus handicaps are provided (CHAMP only)
-        if (data.minusHandicapRank1 !== undefined) {
-            const round = await prisma.leagueRound.findUnique({
-                where: { id: roundId },
-                select: { tournamentId: true, roundNumber: true }
+    // 2. Update Tournament-wide settings if minus handicaps are provided (CHAMP only)
+    if (data.minusHandicapRank1 !== undefined) {
+        const round = await prisma.leagueRound.findUnique({
+            where: { id: roundId },
+            select: { tournamentId: true, roundNumber: true }
+        });
+
+        if (round) {
+            const tournament = await prisma.tournament.findUnique({
+                where: { id: round.tournamentId },
+                select: { settings: true }
             });
 
-            if (round) {
-                const tournament = await prisma.tournament.findUnique({
-                    where: { id: round.tournamentId },
-                    select: { settings: true }
-                });
-
-                if (tournament) {
-                    const settings = tournament.settings ? JSON.parse(tournament.settings) : {};
-                    // Store round-specific minus handicaps
-                    if (!settings.roundMinusHandicaps) {
-                        settings.roundMinusHandicaps = {};
-                    }
-                    settings.roundMinusHandicaps[round.roundNumber] = {
-                        rank1: data.minusHandicapRank1,
-                        rank2: data.minusHandicapRank2,
-                        rank3: data.minusHandicapRank3,
-                        female: data.minusHandicapFemale
-                    };
-
-                    await prisma.tournament.update({
-                        where: { id: round.tournamentId },
-                        data: { settings: JSON.stringify(settings) }
-                    });
+            if (tournament) {
+                const settings = tournament.settings ? JSON.parse(tournament.settings) : {};
+                // Store round-specific minus handicaps
+                if (!settings.roundMinusHandicaps) {
+                    settings.roundMinusHandicaps = {};
                 }
+                settings.roundMinusHandicaps[round.roundNumber] = {
+                    rank1: data.minusHandicapRank1,
+                    rank2: data.minusHandicapRank2,
+                    rank3: data.minusHandicapRank3,
+                    female: data.minusHandicapFemale
+                };
+
+                await prisma.tournament.update({
+                    where: { id: round.tournamentId },
+                    data: { settings: JSON.stringify(settings) }
+                });
             }
         }
-
-        const info = await getTournamentInfo(roundId);
-        if (info) revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
-
-        return { success: true };
-    } catch (error) {
-        console.error("Failed to update round settings:", error);
-        throw new Error("설정 저장에 실패했습니다.");
     }
+
+    const info = await getTournamentInfo(roundId);
+    if (info) revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
+
+    return { success: true };
+} catch (error) {
+    console.error("Failed to update round settings:", error);
+    throw new Error("설정 저장에 실패했습니다.");
+}
 }
 
 // 2. Update Round Participants (Bulk Selection from existing)

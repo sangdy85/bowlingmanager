@@ -76,12 +76,20 @@ export default async function RoundDetailPage({ params }: { params: { id: string
         };
     });
 
-    // Calculate current round status
-    const effectiveDate = getEffectiveRoundDate(roundData.date, roundData.tournament.leagueTime);
+    // Calculate current round status with fallbacks for EVENT types
+    // 1. Effective Date: Round Date -> Tournament Start Date
+    const effectiveDate = getEffectiveRoundDate(
+        roundData.date || roundData.tournament.startDate,
+        roundData.tournament.leagueTime
+    );
+
+    // 2. Registration Start: Round RegStart -> Tournament Settings RegStart -> Tournament Start Date (fallback)
+    const regStartFallback = roundData.registrationStart || tournamentSettings.registrationStart || roundData.tournament.startDate;
+
     const calculatedStatus = calculateTournamentStatus(
         effectiveDate,
-        roundData.registrationStart || tournamentSettings.registrationStart,
-        roundData.date,
+        regStartFallback,
+        roundData.date || roundData.tournament.startDate, // Use tournament date as fallback for end check
         roundData.tournament.status,
         now
     );
