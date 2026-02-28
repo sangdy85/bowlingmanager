@@ -863,7 +863,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                         {sortedParticipants.map((p: any) => {
                             const currentScores = scoreMap[p.registrationId] || {};
                             let totalWithHandicap = 0;
-                            const handicap = p.registration.handicap || 0;
+                            const handicap = p.registration?.handicap || 0;
 
                             for (let g = 1; g <= gameCount; g++) {
                                 const val = parseInt(currentScores[g] || '0');
@@ -1112,8 +1112,8 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         round.participants.forEach((p: any) => {
             const groupId = p.registration?.entryGroupId || p.id; // Fallback to p.id if no group
             if (!groups[groupId]) {
-                const groupNamePart = p.registration.entryGroupId?.includes('_name_') ? p.registration.entryGroupId.split('_name_')[1] : null;
-                const groupNumPart = p.registration.entryGroupId?.startsWith('group_') ? p.registration.entryGroupId.replace('group_', '') : null;
+                const groupNamePart = p.registration?.entryGroupId?.includes('_name_') ? p.registration.entryGroupId.split('_name_')[1] : null;
+                const groupNumPart = p.registration?.entryGroupId?.startsWith('group_') ? p.registration.entryGroupId.replace('group_', '') : null;
 
                 groups[groupId] = {
                     id: groupId,
@@ -1121,7 +1121,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     totalRaw: 0,
                     totalHandicap: 0,
                     gameScores: new Array(gameCount).fill(0),
-                    teamName: groupNamePart || (groupNumPart ? `조: ${groupNumPart}` : (p.registration.guestTeamName ?? p.registration.team?.name) || '팀'),
+                    teamName: groupNamePart || (groupNumPart ? `조: ${groupNumPart}` : (p.registration?.guestTeamName ?? p.registration?.team?.name) || '팀'),
                     handicapSum: 0
                 };
             }
