@@ -2488,7 +2488,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                                 <span className="leading-tight">
                                     {isManager
                                         ? (round.tournament.type === 'EVENT' ? '대회 상세 관리' : `${round.roundNumber}회차 상세 관리`)
-                                        : (shouldShowSimplifiedResults ? '대회 결과 및 정보' : (round.tournament.type === 'EVENT' ? '대회 상세 정보' : `${round.roundNumber}회차 상세 정보`))}
+                                        : (round.tournament.type === 'EVENT' ? '대회 상세 정보' : (shouldShowSimplifiedResults ? '대회 결과 및 정보' : `${round.roundNumber}회차 상세 정보`))}
                                 </span>
                                 {(() => {
                                     const effectiveDate = round.effectiveDateStr ? new Date(round.effectiveDateStr) : (round.date ? new Date(round.date) : null);

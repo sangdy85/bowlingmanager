@@ -14,7 +14,9 @@ export function getEffectiveRoundDate(roundDate: Date | null | string, leagueTim
     const minutesInKST = kst.getUTCMinutes();
 
     // If leagueTime is provided, it always takes priority (for LEAGUE/CHAMP logic)
-    if (leagueTime && leagueTime.includes(':')) {
+    // IMPORTANT: Only apply leagueTime override if the hours/minutes are 0 (default/unknown) 
+    // OR if it's specifically a LEAGUE/CHAMP type where this is expected.
+    if (leagueTime && leagueTime.includes(':') && hoursInKST === 0 && minutesInKST === 0) {
         const [hours, minutes] = leagueTime.split(':').map(Number);
         const hh = String(isNaN(hours) ? 0 : hours).padStart(2, '0');
         const min = String(isNaN(minutes) ? 0 : minutes).padStart(2, '0');
