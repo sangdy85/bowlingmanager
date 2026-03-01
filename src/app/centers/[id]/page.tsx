@@ -203,7 +203,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
                     currentStatus = 'FINISHED';
                 } else {
                     const roundStatuses = t.leagueRounds.map((r: any) => {
-                        const effectiveDate = getEffectiveRoundDate(r.date, t.leagueTime, t.type);
+                        const effectiveDate = getEffectiveRoundDate(r.date, t.leagueTime);
                         return calculateTournamentStatus(effectiveDate, r.registrationStart, null, t.status);
                     });
 

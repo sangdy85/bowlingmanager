@@ -38,7 +38,7 @@ function RoundOverviewTab({ round }: { round: any }) {
                 <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 shadow-sm">
                     <h4 className="text-gray-500 text-sm font-bold mb-2 uppercase tracking-wide">대회 일정</h4>
                     <p className="text-2xl font-black text-gray-800">
-                        {formatKSTDate(round.date || round.tournament.startDate)}
+                        {formatKSTDayLabel(round.date || round.tournament.startDate)}
                     </p>
                     <p className="text-sm text-gray-500 mt-2 font-medium">
                         접수: {(() => {
@@ -2537,7 +2537,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                                     >
                                         <span className="text-xl">🎲</span>
                                         <span>내 레인 뽑기 (~{(() => {
-                                            const effective = getEffectiveRoundDate(round.date, round.tournament.leagueTime, round.tournament.type);
+                                            const effective = getEffectiveRoundDate(round.date, round.tournament.leagueTime);
                                             return effective ? new Date(effective.getTime() - 1 * 60 * 60 * 1000).toLocaleTimeString('ko-KR', {
                                                 hour: '2-digit',
                                                 minute: '2-digit',

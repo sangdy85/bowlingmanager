@@ -158,7 +158,7 @@ export async function generateLeagueSchedule(
         while (dates.length < roundsCount) {
             const dateStr = getKSTDateString(currentDate);
             if (!skippedDateStrings.has(dateStr)) {
-                const finalDate = getEffectiveRoundDate(currentDate, tournament.leagueTime || "19:30", tournament.type);
+                const finalDate = getEffectiveRoundDate(currentDate, tournament.leagueTime || "19:30");
                 if (finalDate) dates.push(finalDate);
             }
             currentDate.setDate(currentDate.getDate() + 7);
@@ -242,7 +242,7 @@ export async function updateLeagueScheduleDates(
     while (dates.length < roundsCount) {
         const dateStr = getKSTDateString(currentDate);
         if (!skippedDateStrings.has(dateStr)) {
-            const finalDate = getEffectiveRoundDate(currentDate, tournament.leagueTime || "19:30", tournament.type);
+            const finalDate = getEffectiveRoundDate(currentDate, tournament.leagueTime || "19:30");
             if (finalDate) dates.push(finalDate);
         }
         currentDate.setDate(currentDate.getDate() + 7);

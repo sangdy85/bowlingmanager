@@ -29,7 +29,7 @@ export async function registerForTournament(tournamentId: string, participants: 
         const settings = tournament.settings ? JSON.parse(tournament.settings) : {};
         const leagueTime = settings.leagueTime;
         isRecruiting = tournament.leagueRounds.some(r => {
-            const effectiveDate = getEffectiveRoundDate(r.date, leagueTime, tournament.type);
+            const effectiveDate = getEffectiveRoundDate(r.date, leagueTime);
             const status = calculateTournamentStatus(effectiveDate, r.registrationStart, r.date, tournament.status);
             return status === 'OPEN' || status === 'CLOSED' || status === 'ONGOING';
         });
@@ -54,7 +54,7 @@ export async function registerForTournament(tournamentId: string, participants: 
         const leagueTime = settings.leagueTime;
 
         const recruitingRound = tournament.leagueRounds.find(r => {
-            const effectiveDate = getEffectiveRoundDate(r.date, leagueTime, tournament.type);
+            const effectiveDate = getEffectiveRoundDate(r.date, leagueTime);
             const status = calculateTournamentStatus(effectiveDate, r.registrationStart, r.date, tournament.status);
             return status === 'OPEN' || status === 'CLOSED' || status === 'ONGOING';
         });
@@ -194,7 +194,7 @@ export async function cancelRegistration(tournamentId: string) {
         const leagueTime = settings.leagueTime;
 
         const recruitingRound = tournament.leagueRounds.find(r => {
-            const effectiveDate = getEffectiveRoundDate(r.date, leagueTime, tournament.type);
+            const effectiveDate = getEffectiveRoundDate(r.date, leagueTime);
             const status = calculateTournamentStatus(effectiveDate, r.registrationStart, r.date, tournament.status);
             return status === 'OPEN' || status === 'CLOSED' || status === 'ONGOING';
         });

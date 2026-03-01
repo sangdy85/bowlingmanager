@@ -272,16 +272,13 @@ export async function updateTournamentBasicInfo(tournamentId: string, formData: 
         if (tournament.type === 'EVENT') {
             newSettings.gameMode = formData.get("gameMode");
             newSettings.gameCount = formData.get("gameCount") ? parseInt(formData.get("gameCount") as string) : 3;
-            newSettings.gameMethod = `올핀 ${newSettings.gameCount}게임 진행`;
+            newSettings.gameMethod = `올핀 ${formData.get("gameCount")}게임 진행`;
             newSettings.target = formData.get("target");
             newSettings.entryFeeText = formData.get("entryFeeText");
             newSettings.bankAccount = formData.get("bankAccount");
             newSettings.handicapInfo = formData.get("handicapInfo");
             newSettings.pattern = formData.get("pattern");
             newSettings.registrationStart = formData.get("registrationStart") ? parseKSTDate(formData.get("registrationStart") as string) : currentSettings.registrationStart;
-
-            // For EVENT, ensure leagueTime is null to avoid any interference
-            data.leagueTime = null;
         } else if (tournament.type === 'CHAMP') {
             newSettings.gameMode = formData.get("gameMode");
             newSettings.startDateText = formData.get("startDateText") || currentSettings.startDateText;
@@ -319,14 +316,11 @@ export async function updateTournamentBasicInfo(tournamentId: string, formData: 
             });
 
             if (rounds.length > 0) {
-                // Parse it once and ensure it's a field-ready value
-                const regStart = parseKSTDate(newSettings.registrationStart);
-
                 await (prisma.leagueRound as any).update({
                     where: { id: rounds[0].id },
                     data: {
                         date: startDate,
-                        registrationStart: regStart,
+                        registrationStart: parseKSTDate(newSettings.registrationStart),
                     }
                 });
             }

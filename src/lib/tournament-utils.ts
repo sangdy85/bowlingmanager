@@ -1,43 +1,36 @@
 // Helper to combine a date string/object with a tournament's leagueTime (HH:mm).
 // Ensures that the round's effective start time is consistently calculated.
-export function getEffectiveRoundDate(
-    roundDate: Date | null | string,
-    leagueTime: string | null,
-    tournamentType?: string // Added to distinguish EVENT type
-): Date | null {
+export function getEffectiveRoundDate(roundDate: Date | null | string, leagueTime: string | null): Date | null {
     if (!roundDate) return null;
     const date = new Date(roundDate);
     if (isNaN(date.getTime())) return null;
 
-    // To check if it's midnight KST, we add 9 hours and use UTC methods
+    // Shift to KST for extraction
     const kst = new Date(date.getTime() + 9 * 60 * 60000);
-    const h = kst.getUTCHours();
-    const m = kst.getUTCMinutes();
+    const yyyy = kst.getUTCFullYear();
+    const mm = String(kst.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(kst.getUTCDate()).padStart(2, '0');
+    const hoursInKST = kst.getUTCHours();
+    const minutesInKST = kst.getUTCMinutes();
 
-    // If it's NOT exactly 00:00 KST, we respect the manually set time (EVENT/MANUAL)
-    if (h !== 0 || m !== 0) {
+    // If leagueTime is provided, it always takes priority (for LEAGUE/CHAMP logic)
+    // IMPORTANT: Only apply leagueTime override if the hours/minutes are 0 (default/unknown) 
+    // OR if it's specifically a LEAGUE/CHAMP type where this is expected.
+    if (leagueTime && leagueTime.includes(':') && hoursInKST === 0 && minutesInKST === 0) {
+        const [hours, minutes] = leagueTime.split(':').map(Number);
+        const hh = String(isNaN(hours) ? 0 : hours).padStart(2, '0');
+        const min = String(isNaN(minutes) ? 0 : minutes).padStart(2, '0');
+        return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:00+09:00`);
+    }
+
+    // If no leagueTime:
+    // If the input date already has a non-zero time, we respect it (important for EVENT types)
+    if (hoursInKST !== 0 || minutesInKST !== 0) {
         return date;
     }
 
-    // For EVENT type, we ALWAYS respect the date field time even if it's 00:00.
-    // We don't want leagueTime (which is for recurring leagues) to overwrite a specific event time.
-    if (tournamentType === 'EVENT') {
-        return date;
-    }
-
-    // If it IS exactly 00:00 KST, and we have a target leagueTime, apply it.
-    if (leagueTime && leagueTime.includes(':')) {
-        const [targetH, targetM] = leagueTime.split(':').map(Number);
-        const y = kst.getUTCFullYear();
-        const mm = String(kst.getUTCMonth() + 1).padStart(2, '0');
-        const d = String(kst.getUTCDate()).padStart(2, '0');
-        const hh = String(isNaN(targetH) ? 0 : targetH).padStart(2, '0');
-        const min = String(isNaN(targetM) ? 0 : targetM).padStart(2, '0');
-        return new Date(`${y}-${mm}-${d}T${hh}:${min}:00+09:00`);
-    }
-
-    // Otherwise, keep as is (KST 00:00)
-    return date;
+    // Otherwise, default to 00:00 KST
+    return new Date(`${yyyy}-${mm}-${dd}T00:00:00+09:00`);
 }
 
 /**
@@ -150,13 +143,8 @@ export function formatDateForInput(dateInput: Date | string | null): string {
 /**
  * Parses a datetime-local input string (YYYY-MM-DDTHH:mm) or date input string (YYYY-MM-DD) as a KST Date (+09:00).
  */
-export function parseKSTDate(dateInput: string | Date | null): Date | null {
-    if (!dateInput) return null;
-
-    // Handle Date object directly
-    if (dateInput instanceof Date) return dateInput;
-
-    const dateString = String(dateInput);
+export function parseKSTDate(dateString: string | null): Date | null {
+    if (!dateString) return null;
 
     // Handle full ISO strings or strings with timezone already
     if (dateString.includes('Z') || (dateString.includes('+') && dateString.length > 19)) {
