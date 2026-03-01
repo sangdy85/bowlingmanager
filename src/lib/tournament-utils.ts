@@ -5,26 +5,28 @@ export function getEffectiveRoundDate(roundDate: Date | null | string, leagueTim
     const date = new Date(roundDate);
     if (isNaN(date.getTime())) return null;
 
-    // Get hours and minutes in local time (which is KST in the server/browser environment for this app)
-    // IMPORTANT: In this app, we assume the environment is KST or the input already represents KST.
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
+    // To check if it's midnight KST, we add 9 hours and use UTC methods
+    const kst = new Date(date.getTime() + 9 * 60 * 60000);
+    const h = kst.getUTCHours();
+    const m = kst.getUTCMinutes();
 
-    // If the time is already set (not 00:00), it's highly likely a MANUALLY set time for an EVENT.
-    // We MUST respect this and not let leagueTime or default 00:00 override it.
-    if (hours !== 0 || minutes !== 0) {
+    // If it's NOT exactly 00:00 KST, we respect the manually set time (EVENT/MANUAL)
+    if (h !== 0 || m !== 0) {
         return date;
     }
 
-    // If leagueTime is provided and current time is exactly 00:00
+    // If it IS exactly 00:00 KST, and we have a target leagueTime, apply it.
     if (leagueTime && leagueTime.includes(':')) {
-        const [h, m] = leagueTime.split(':').map(Number);
-        const newDate = new Date(date);
-        newDate.setHours(isNaN(h) ? 0 : h, isNaN(m) ? 0 : m, 0, 0);
-        return newDate;
+        const [targetH, targetM] = leagueTime.split(':').map(Number);
+        const y = kst.getUTCFullYear();
+        const mm = String(kst.getUTCMonth() + 1).padStart(2, '0');
+        const d = String(kst.getUTCDate()).padStart(2, '0');
+        const hh = String(isNaN(targetH) ? 0 : targetH).padStart(2, '0');
+        const min = String(isNaN(targetM) ? 0 : targetM).padStart(2, '0');
+        return new Date(`${y}-${mm}-${d}T${hh}:${min}:00+09:00`);
     }
 
-    // Otherwise, it stays at 00:00 (default)
+    // Otherwise, keep as is (KST 00:00)
     return date;
 }
 
@@ -138,8 +140,13 @@ export function formatDateForInput(dateInput: Date | string | null): string {
 /**
  * Parses a datetime-local input string (YYYY-MM-DDTHH:mm) or date input string (YYYY-MM-DD) as a KST Date (+09:00).
  */
-export function parseKSTDate(dateString: string | null): Date | null {
-    if (!dateString) return null;
+export function parseKSTDate(dateInput: string | Date | null): Date | null {
+    if (!dateInput) return null;
+
+    // Handle Date object directly
+    if (dateInput instanceof Date) return dateInput;
+
+    const dateString = String(dateInput);
 
     // Handle full ISO strings or strings with timezone already
     if (dateString.includes('Z') || (dateString.includes('+') && dateString.length > 19)) {

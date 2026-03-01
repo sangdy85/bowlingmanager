@@ -2503,7 +2503,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                             </div>
                         </h1>
                         <p className="text-gray-400 text-sm mt-1 flex items-center gap-2">
-                            <span>📅 {formatKSTDate(round.date || round.tournament.startDate)}</span>
+                            <span>📅 {formatKSTDate(round.effectiveDateStr || round.date || round.tournament.startDate)}</span>
                             <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
                             <span>👥 참가 {round.participants.length}명</span>
                         </p>
