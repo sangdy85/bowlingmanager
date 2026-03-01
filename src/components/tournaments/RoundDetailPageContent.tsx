@@ -1393,8 +1393,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             : `${round.tournament.name}_${round.roundNumber}회차_최종결과.xlsx`);
     };
 
-    // Dynamic row calculation
-    const isTeam2To6 = isTeamEvent && ['TEAM_2', 'TEAM_3', 'TEAM_4', 'TEAM_5', 'TEAM_6'].includes(gameMode);
+    const isTeam2To6 = round.tournament?.settings ? (JSON.parse(round.tournament.settings).gameMode?.startsWith('TEAM_') && JSON.parse(round.tournament.settings).gameMode !== 'TEAM_1') : false;
 
     // For Team 2-6, we use a single column (all results in left).
     // For others, we keep the original 27-row split.
@@ -1403,14 +1402,27 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     const leftColumn = sortedResults.slice(0, rowsPerColumn);
     const rightColumn = isTeam2To6 ? [] : sortedResults.slice(rowsPerColumn, rowsPerColumn * 2);
 
-    const colWidths = isTeam2To6 ? {
+    // Fixed widths for non-name columns in team mode to ensure total is exactly 992px
+    const teamColWidths = {
         rank: 40,
         team: 80,
-        name: 400,
-        game: 60,
+        game: 70,
         handy: 60,
-        hl: 50,
+        hl: 62,
         total: 80
+    };
+
+    // Calculate name column width for team mode: 992 - (other fixed columns)
+    const teamNameWidth = 992 - (teamColWidths.rank + teamColWidths.team + (teamColWidths.game * gameCount) + teamColWidths.handy + teamColWidths.hl + teamColWidths.total);
+
+    const colWidths = isTeam2To6 ? {
+        rank: teamColWidths.rank,
+        team: teamColWidths.team,
+        name: teamNameWidth,
+        game: teamColWidths.game,
+        handy: teamColWidths.handy,
+        hl: teamColWidths.hl,
+        total: teamColWidths.total
     } : {
         rank: 30,
         team: 70,
@@ -1421,8 +1433,8 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         total: 70
     };
 
-    const singleTableWidth = isTeam2To6 ? (colWidths.rank + colWidths.team + colWidths.name + (colWidths.game * gameCount) + colWidths.handy + colWidths.hl + colWidths.total) : 496;
-    const totalContainerWidth = isTeam2To6 ? singleTableWidth : 992;
+    const singleTableWidth = isTeam2To6 ? 992 : 496;
+    const totalContainerWidth = 992;
 
     const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => {
         return (
