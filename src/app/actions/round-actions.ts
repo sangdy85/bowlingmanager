@@ -668,49 +668,70 @@ export async function autoAssignRemaining(roundId: string) {
         const assignments: { id: string, lane: number }[] = [];
 
         // 5. Assign groups
-        for (const group of groupsWithUnassigned) {
-            const unassignedInGroup = group.filter(p => !p.lane);
-            const sizeNeeded = unassignedInGroup.length;
+        if (teamSize === 2) {
+            // Special logic for TEAM_2: Fill slots sequentially across lanes to avoid gaps
+            const allAvailableSlots: number[] = [];
+            const sortedLanes = Array.from(laneToSlots.keys()).sort((a, b) => a - b);
+            sortedLanes.forEach(lane => {
+                const slots = laneToSlots.get(lane)!.sort((a, b) => a - b);
+                allAvailableSlots.push(...slots);
+            });
 
-            // Try to find a lane that can fit everyone unassigned in this group
-            const availableLanes = Array.from(laneToSlots.keys());
-            // Randomly shuffle lanes to check
-            for (let i = availableLanes.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [availableLanes[i], availableLanes[j]] = [availableLanes[j], availableLanes[i]];
-            }
-
-            let assigned = false;
-            for (const lane of availableLanes) {
-                const slots = laneToSlots.get(lane)!;
-                if (slots.length >= sizeNeeded) {
-                    const picked = slots.splice(0, sizeNeeded);
-                    unassignedInGroup.forEach((p, idx) => {
-                        assignments.push({ id: p.id, lane: picked[idx] });
-                    });
-                    assigned = true;
-                    break;
-                }
-            }
-
-            if (!assigned) {
-                // Last resort: If no single lane has enough space, split these unassigned members 
-                // into individual pool to be handled at the end
+            for (const group of groupsWithUnassigned) {
+                const unassignedInGroup = group.filter(p => !p.lane);
                 unassignedInGroup.forEach(p => {
-                    const allSlotsPool: number[] = [];
-                    laneToSlots.forEach(s => allSlotsPool.push(...s));
-                    if (allSlotsPool.length > 0) {
-                        const randomIndex = Math.floor(Math.random() * allSlotsPool.length);
-                        const pickedSlot = allSlotsPool[randomIndex];
+                    if (allAvailableSlots.length > 0) {
+                        const pickedSlot = allAvailableSlots.shift()!;
                         assignments.push({ id: p.id, lane: pickedSlot });
-
-                        // Remove from laneToSlots
-                        const lane = Math.floor(pickedSlot / 10);
-                        const slots = laneToSlots.get(lane)!;
-                        const sIdx = slots.indexOf(pickedSlot);
-                        if (sIdx > -1) slots.splice(sIdx, 1);
                     }
                 });
+            }
+        } else {
+            // Default logic for other sizes: Try to fit in a single lane
+            for (const group of groupsWithUnassigned) {
+                const unassignedInGroup = group.filter(p => !p.lane);
+                const sizeNeeded = unassignedInGroup.length;
+
+                // Try to find a lane that can fit everyone unassigned in this group
+                const availableLanes = Array.from(laneToSlots.keys());
+                // Randomly shuffle lanes to check
+                for (let i = availableLanes.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [availableLanes[i], availableLanes[j]] = [availableLanes[j], availableLanes[i]];
+                }
+
+                let assigned = false;
+                for (const lane of availableLanes) {
+                    const slots = laneToSlots.get(lane)!;
+                    if (slots.length >= sizeNeeded) {
+                        const picked = slots.splice(0, sizeNeeded);
+                        unassignedInGroup.forEach((p, idx) => {
+                            assignments.push({ id: p.id, lane: picked[idx] });
+                        });
+                        assigned = true;
+                        break;
+                    }
+                }
+
+                if (!assigned) {
+                    // Last resort: If no single lane has enough space, split these unassigned members 
+                    // into individual pool to be handled at the end
+                    unassignedInGroup.forEach(p => {
+                        const allSlotsPool: number[] = [];
+                        laneToSlots.forEach(s => allSlotsPool.push(...s));
+                        if (allSlotsPool.length > 0) {
+                            const randomIndex = Math.floor(Math.random() * allSlotsPool.length);
+                            const pickedSlot = allSlotsPool[randomIndex];
+                            assignments.push({ id: p.id, lane: pickedSlot });
+
+                            // Remove from laneToSlots
+                            const laneNum = Math.floor(pickedSlot / 10);
+                            const slots = laneToSlots.get(laneNum)!;
+                            const sIdx = slots.indexOf(pickedSlot);
+                            if (sIdx > -1) slots.splice(sIdx, 1);
+                        }
+                    });
+                }
             }
         }
 
@@ -822,21 +843,27 @@ export async function drawLane(roundId: string, registrationId: string) {
 
             // Find valid contiguous blocks
             const validBlocks: number[][] = [];
-            for (let i = 0; i < availableSlots.length; i++) {
-                const block = [availableSlots[i]];
-                for (let j = 1; j < groupSize; j++) {
-                    const next = availableSlots.find((s: number) => s === availableSlots[i] + j);
-                    if (next) block.push(next);
+            for (let i = 0; i <= availableSlots.length - groupSize; i++) {
+                const block = [];
+                if (teamSize === 2) {
+                    // For TEAM_2, any two adjacent slots in the sorted available list are valid
+                    block.push(availableSlots[i], availableSlots[i + 1]);
+                } else {
+                    // For others, must be contiguous in the same lane
+                    const startSlot = availableSlots[i];
+                    block.push(startSlot);
+                    for (let j = 1; j < groupSize; j++) {
+                        const next = availableSlots.find((s: number) => s === startSlot + j);
+                        if (next && Math.floor(next / 10) === Math.floor(startSlot / 10)) {
+                            block.push(next);
+                        }
+                    }
                 }
 
                 if (block.length === groupSize) {
-                    // Check if contiguous (same lane)
-                    const isContiguous = block.every((slot: number) => Math.floor(slot / 10) === Math.floor(block[0] / 10));
-                    if (isContiguous) {
-                        const anyAssigned = groupMembers.some((m: any) => m.lane);
-                        if (!anyAssigned) {
-                            validBlocks.push(block);
-                        }
+                    const anyAssigned = groupMembers.some((m: any) => m.lane);
+                    if (!anyAssigned) {
+                        validBlocks.push(block);
                     }
                 }
             }
