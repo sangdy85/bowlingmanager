@@ -85,15 +85,6 @@ export default function RoundParticipantManager({
         return rounds.find(r => r.id === selectedRoundId) || rounds[0];
     }, [rounds, selectedRoundId]);
 
-    const isIndividualMode = useMemo(() => {
-        try {
-            const settings = selectedRound?.tournament?.settings ? (typeof selectedRound.tournament.settings === 'string' ? JSON.parse(selectedRound.tournament.settings) : selectedRound.tournament.settings) : {};
-            return (settings.gameMode || 'INDIVIDUAL') === 'INDIVIDUAL';
-        } catch (e) {
-            return true;
-        }
-    }, [selectedRound]);
-
     // Filter registrations to ONLY show those participating in the selected round
     const roundParticipants = useMemo(() => {
         const registrations = allRegistrations || [];
@@ -347,22 +338,18 @@ export default function RoundParticipantManager({
     };
 
     const downloadExcel = () => {
-        const data = roundParticipants.map((reg, idx) => {
-            const row: any = {};
-            if (!isIndividualMode) {
-                row['조'] = reg.entryGroupId ? reg.entryGroupId.replace('group_', '') : '';
-            }
-            row['순번'] = idx + 1 > maxParticipants && maxParticipants > 0 ? `대기 ${idx + 1 - maxParticipants}` : idx + 1;
-            row['팀명'] = (reg.guestTeamName ?? reg.team?.name) || '개인';
-            row['성함'] = reg.guestName ?? reg.user?.name;
-            row['핸디캡'] = reg.handicap ?? reg.user?.handicap ?? 0;
-            row['입금현황'] = reg.paymentStatus === 'PAID' ? '입금완료' : '입금대기';
-            row['레인'] = (() => {
+        const data = roundParticipants.map((reg, idx) => ({
+            '조': reg.entryGroupId ? reg.entryGroupId.replace('group_', '') : '',
+            '순번': idx + 1 > maxParticipants && maxParticipants > 0 ? `대기 ${idx + 1 - maxParticipants}` : idx + 1,
+            '팀명': (reg.guestTeamName ?? reg.team?.name) || '개인',
+            '성함': reg.guestName ?? reg.user?.name,
+            '핸디캡': reg.handicap ?? reg.user?.handicap ?? 0,
+            '입금현황': reg.paymentStatus === 'PAID' ? '입금완료' : '입금대기',
+            '레인': (() => {
                 const p = selectedRound.participants?.find((p: any) => p.registrationId === reg.id);
                 return formatLane(p?.lane, p?.isManual);
-            })();
-            return row;
-        });
+            })()
+        }));
 
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
@@ -509,14 +496,12 @@ export default function RoundParticipantManager({
                         >
                             📊 엑셀 업로드
                         </button>
-                        {!isIndividualMode && (
-                            <button
-                                onClick={handleAutoGroup}
-                                className="btn bg-purple-600 text-white h-12 px-5 font-black hover:bg-purple-700 shadow-lg shadow-purple-600/20 text-xs flex items-center gap-1"
-                            >
-                                🔄 팀 자동 편성
-                            </button>
-                        )}
+                        <button
+                            onClick={handleAutoGroup}
+                            className="btn bg-purple-600 text-white h-12 px-5 font-black hover:bg-purple-700 shadow-lg shadow-purple-600/20 text-xs flex items-center gap-1"
+                        >
+                            🔄 팀 자동 편성
+                        </button>
                         <button
                             onClick={openRegisterModal}
                             className="btn btn-primary h-12 px-6 font-black shadow-lg shadow-primary/20 flex items-center gap-2"
@@ -673,7 +658,7 @@ export default function RoundParticipantManager({
                         >
                             <thead>
                                 <tr className="text-center" style={{ height: '48px', backgroundColor: '#e2e8f0', color: '#1e293b' }}>
-                                    {!isIndividualMode && <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '70px' }}>조</th>}
+                                    <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '70px' }}>조</th>
                                     <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '60px' }}>순번</th>
                                     <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '150px' }}>팀명</th>
                                     <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '150px' }}>성함</th>
@@ -703,23 +688,21 @@ export default function RoundParticipantManager({
                                             className="text-center h-12 hover:bg-blue-50 transition-colors"
                                             style={{ backgroundColor: bgColor }}
                                         >
-                                            {!isIndividualMode && (
-                                                <td className="border-2 border-slate-900 p-1">
-                                                    <input
-                                                        type="number"
-                                                        key={`${reg.id}-${reg.entryGroupId}`}
-                                                        defaultValue={reg.entryGroupId ? reg.entryGroupId.replace('group_', '') : ''}
-                                                        onBlur={(e) => handleUpdateGroup(reg.id, e.target.value)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') {
-                                                                (e.target as HTMLInputElement).blur();
-                                                            }
-                                                        }}
-                                                        className="w-full h-8 text-center border-0 bg-transparent font-black text-blue-600 focus:bg-blue-50 focus:outline-none"
-                                                        placeholder="-"
-                                                    />
-                                                </td>
-                                            )}
+                                            <td className="border-2 border-slate-900 p-1">
+                                                <input
+                                                    type="number"
+                                                    key={`${reg.id}-${reg.entryGroupId}`}
+                                                    defaultValue={reg.entryGroupId ? reg.entryGroupId.replace('group_', '') : ''}
+                                                    onBlur={(e) => handleUpdateGroup(reg.id, e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            (e.target as HTMLInputElement).blur();
+                                                        }
+                                                    }}
+                                                    className="w-full h-8 text-center border-0 bg-transparent font-black text-blue-600 focus:bg-blue-50 focus:outline-none"
+                                                    placeholder="-"
+                                                />
+                                            </td>
                                             <td className={`border-2 border-slate-900 p-1 font-black ${isWaitlisted ? 'text-amber-600' : ''}`}>
                                                 {isWaitlisted ? `대기 ${waitNumber}` : idx + 1}
                                             </td>
@@ -729,7 +712,7 @@ export default function RoundParticipantManager({
                                             <td className="border-2 border-slate-900 p-1 truncate px-4 font-black">
                                                 <div className="flex flex-col items-center gap-0.5">
                                                     <span>{reg.guestName ?? reg.user?.name}</span>
-                                                    {!isIndividualMode && reg.entryGroupId && (
+                                                    {reg.entryGroupId && (
                                                         <span className="text-[9px] bg-slate-800 text-white px-1.5 py-0.5 rounded leading-none">
                                                             조: {reg.entryGroupId.replace('group_', '')}
                                                         </span>
