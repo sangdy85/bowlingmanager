@@ -7,9 +7,33 @@ import { createTournament } from '@/app/actions/tournament-center';
 export default function NewTournamentForm({ centerId }: { centerId: string }) {
     const [type, setType] = useState('LEAGUE');
     const [iteration, setIteration] = useState(1);
+    const [gameMode, setGameMode] = useState('INDIVIDUAL');
+
+    const getStepValue = () => {
+        if (gameMode.startsWith('TEAM_')) {
+            return parseInt(gameMode.split('_')[1]);
+        }
+        return 1;
+    };
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        const formData = new FormData(e.currentTarget);
+        const maxParticipants = parseInt(formData.get('maxParticipants') as string);
+        const step = getStepValue();
+
+        if (maxParticipants % step !== 0) {
+            e.preventDefault();
+            alert(`${step}인조 경기는 참가 정원이 ${step}의 배수여야 합니다. (현재 입력: ${maxParticipants}명)`);
+            return;
+        }
+    };
 
     return (
-        <form action={createTournament.bind(null, centerId)} className="space-y-6">
+        <form
+            action={createTournament.bind(null, centerId)}
+            onSubmit={handleSubmit}
+            className="space-y-6"
+        >
             <div>
                 <label className="label">대회 유형</label>
                 <select
@@ -189,7 +213,12 @@ export default function NewTournamentForm({ centerId }: { centerId: string }) {
                             {/* Game Mode moved to top as requested */}
                             <div>
                                 <label className="label">대회 진행 설정 (모드)</label>
-                                <select name="gameMode" className="input">
+                                <select
+                                    name="gameMode"
+                                    className="input"
+                                    value={gameMode}
+                                    onChange={(e) => setGameMode(e.target.value)}
+                                >
                                     <option value="INDIVIDUAL">개인전</option>
                                     <option value="TEAM_2">2인조 전</option>
                                     <option value="TEAM_3">3인조 전</option>
@@ -231,7 +260,20 @@ export default function NewTournamentForm({ centerId }: { centerId: string }) {
                                 </div>
                                 <div>
                                     <label className="label">참가 인원 (최대 정원)</label>
-                                    <input name="maxParticipants" type="number" className="input" placeholder="예: 48" min="1" required />
+                                    <input
+                                        name="maxParticipants"
+                                        type="number"
+                                        className="input"
+                                        placeholder="예: 48"
+                                        min={getStepValue()}
+                                        step={getStepValue()}
+                                        required
+                                    />
+                                    {getStepValue() > 1 && (
+                                        <p className="text-[10px] text-blue-600 font-bold mt-1">
+                                            * {getStepValue()}인조 경기이므로 {getStepValue()}의 배수로 입력해 주세요.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 

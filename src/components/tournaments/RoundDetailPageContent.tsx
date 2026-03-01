@@ -1568,9 +1568,27 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 function TournamentEditModal({ tournament, onClose, onUpdate }: { tournament: any, onClose: () => void, onUpdate?: () => void }) {
     const [loading, setLoading] = useState(false);
     const settings = tournament.settings ? JSON.parse(tournament.settings) : {};
+    const [gameMode, setGameMode] = useState(settings.gameMode || 'INDIVIDUAL');
+
+    const getStepValue = () => {
+        if (gameMode && gameMode.startsWith('TEAM_')) {
+            return parseInt(gameMode.split('_')[1]);
+        }
+        return 1;
+    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+
+        const formData = new FormData(e.currentTarget);
+        const maxParticipants = parseInt(formData.get('maxParticipants') as string);
+        const step = getStepValue();
+
+        if (maxParticipants % step !== 0) {
+            alert(`${step}인조 경기는 참가 정원이 ${step}의 배수여야 합니다. (현재 입력: ${maxParticipants}명)`);
+            return;
+        }
+
         setLoading(true);
         const formData = new FormData(e.currentTarget);
         try {
@@ -1605,7 +1623,12 @@ function TournamentEditModal({ tournament, onClose, onUpdate }: { tournament: an
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-2">
                             <label className="text-xs font-black text-slate-500 uppercase tracking-widest block ml-1">진행 모드</label>
-                            <select name="gameMode" defaultValue={settings.gameMode} className="select select-bordered w-full h-14 bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm font-bold">
+                            <select
+                                name="gameMode"
+                                value={gameMode}
+                                onChange={(e) => setGameMode(e.target.value)}
+                                className="select select-bordered w-full h-14 bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm font-bold"
+                            >
                                 <option value="INDIVIDUAL">개인전</option>
                                 <option value="TEAM_2">2인조 전</option>
                                 <option value="TEAM_3">3인조 전</option>
@@ -1642,7 +1665,20 @@ function TournamentEditModal({ tournament, onClose, onUpdate }: { tournament: an
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-black text-slate-500 uppercase tracking-widest block ml-1">참가 정원 (명)</label>
-                                <input name="maxParticipants" type="number" defaultValue={tournament.maxParticipants} className="input input-bordered w-full h-14 bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm font-bold" min="1" required />
+                                <input
+                                    name="maxParticipants"
+                                    type="number"
+                                    defaultValue={tournament.maxParticipants}
+                                    className="input input-bordered w-full h-14 bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm font-bold"
+                                    min={getStepValue()}
+                                    step={getStepValue()}
+                                    required
+                                />
+                                {getStepValue() > 1 && (
+                                    <p className="text-[10px] text-blue-600 font-bold mt-1 ml-1 animate-pulse">
+                                        * {getStepValue()}인조 배수 필수
+                                    </p>
+                                )}
                             </div>
                         </div>
 

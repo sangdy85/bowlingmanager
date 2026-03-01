@@ -56,8 +56,15 @@ export async function createTournament(centerId: string, formData: FormData) {
         settingsObj.handicapInfo = formData.get("handicapInfo");
         settingsObj.pattern = formData.get("pattern");
         settingsObj.registrationStart = formData.get("registrationStart");
-        // For EVENT, startDate is the main event date.
-        // We might want to save it in settings too for easier access or specific formatting
+
+        // Multi-person team validation for maxParticipants
+        const gameMode = settingsObj.gameMode;
+        if (gameMode && gameMode.startsWith('TEAM_')) {
+            const teamSize = parseInt(gameMode.split('_')[1]);
+            if (maxParticipants % teamSize !== 0) {
+                throw new Error(`${teamSize}인조 경기는 참가 정원이 ${teamSize}의 배수여야 합니다. (입력값: ${maxParticipants})`);
+            }
+        }
     }
     const settings = Object.keys(settingsObj).length > 0 ? JSON.stringify(settingsObj) : null;
 
@@ -289,6 +296,15 @@ export async function updateTournamentBasicInfo(tournamentId: string, formData: 
             newSettings.minusHandicapRank2 = formData.get("minusHandicapRank2") ? parseInt(formData.get("minusHandicapRank2") as string) : 0;
             newSettings.minusHandicapRank3 = formData.get("minusHandicapRank3") ? parseInt(formData.get("minusHandicapRank3") as string) : 0;
             newSettings.minusHandicapFemale = formData.get("minusHandicapFemale") ? parseInt(formData.get("minusHandicapFemale") as string) : 0;
+        }
+
+        // Multi-person team validation for maxParticipants
+        const gameMode = newSettings.gameMode;
+        if (gameMode && gameMode.startsWith('TEAM_')) {
+            const teamSize = parseInt(gameMode.split('_')[1]);
+            if (maxParticipants % teamSize !== 0) {
+                throw new Error(`${teamSize}인조 경기는 참가 정원이 ${teamSize}의 배수여야 합니다. (입력값: ${maxParticipants})`);
+            }
         }
 
         data.settings = JSON.stringify(newSettings);
