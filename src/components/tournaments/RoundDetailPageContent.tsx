@@ -1412,22 +1412,23 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         hl: 50,
         total: 80
     } : {
-        rank: 35,
-        team: 85,
-        name: 80,
+        rank: 40,
+        team: 100,
+        name: 100,
         game: 60,
         handy: 60,
         hl: 50,
-        total: 70
+        total: 80
     };
 
-    const singleTableWidth = isTeam2To6 ? (colWidths.rank + colWidths.team + colWidths.name + (colWidths.game * gameCount) + colWidths.handy + colWidths.hl + colWidths.total) : 560;
-    const totalContainerWidth = isTeam2To6 ? singleTableWidth : 1120;
+    const totalWidthPerTable = colWidths.rank + colWidths.team + colWidths.name + (colWidths.game * gameCount) + colWidths.handy + colWidths.hl + colWidths.total;
+    const singleTableWidth = totalWidthPerTable;
+    const totalContainerWidth = isTeam2To6 ? singleTableWidth : (singleTableWidth * 2);
 
     const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => {
         return (
             <table style={{
-                width: `${singleTableWidth}px`,
+                width: '100%',
                 borderCollapse: 'collapse',
                 border: '1px solid black',
                 fontSize: '11px',
@@ -1435,9 +1436,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 backgroundColor: 'white',
                 tableLayout: 'fixed',
                 borderLeft: isRight ? 'none' : '1px solid black',
-                boxSizing: 'border-box',
-                margin: 0,
-                padding: 0
+                boxSizing: 'border-box'
             }}>
                 <colgroup>
                     <col style={{ width: `${colWidths.rank}px` }} />
@@ -1452,15 +1451,15 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 </colgroup>
                 <thead>
                     <tr style={{ backgroundColor: '#E7E9EB', height: '32px' }}>
-                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.rank}px`, minWidth: `${colWidths.rank}px`, maxWidth: `${colWidths.rank}px` }}>순위</th>
-                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.team}px`, minWidth: `${colWidths.team}px`, maxWidth: `${colWidths.team}px` }}>팀</th>
-                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.name}px`, minWidth: `${colWidths.name}px`, maxWidth: `${colWidths.name}px` }}>성함</th>
+                        <th style={{ border: '1px solid black', padding: '4px' }}>순위</th>
+                        <th style={{ border: '1px solid black', padding: '4px' }}>팀</th>
+                        <th style={{ border: '1px solid black', padding: '4px' }}>성함</th>
                         {Array.from({ length: gameCount }).map((_, i) => (
-                            <th key={i} style={{ border: '1px solid black', padding: '4px', width: `${colWidths.game}px`, minWidth: `${colWidths.game}px`, maxWidth: `${colWidths.game}px` }}>{i + 1}G</th>
+                            <th key={i} style={{ border: '1px solid black', padding: '4px' }}>{i + 1}G</th>
                         ))}
-                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.handy}px`, minWidth: `${colWidths.handy}px`, maxWidth: `${colWidths.handy}px` }}>핸디</th>
-                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.hl}px`, minWidth: `${colWidths.hl}px`, maxWidth: `${colWidths.hl}px` }}>H-L</th>
-                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.total}px`, minWidth: `${colWidths.total}px`, maxWidth: `${colWidths.total}px` }}>총점</th>
+                        <th style={{ border: '1px solid black', padding: '4px' }}>핸디</th>
+                        <th style={{ border: '1px solid black', padding: '4px' }}>H-L</th>
+                        <th style={{ border: '1px solid black', padding: '4px' }}>총점</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1474,15 +1473,15 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                         if (!res) {
                             return (
                                 <tr key={`empty-${rank}`} style={{ height: '26px' }}>
-                                    <td style={{ border: '1px solid black', textAlign: 'center', width: `${colWidths.rank}px`, minWidth: `${colWidths.rank}px` }}>&nbsp;{rank}</td>
-                                    <td style={{ border: '1px solid black', width: `${colWidths.team}px`, minWidth: `${colWidths.team}px` }}>&nbsp;</td>
-                                    <td style={{ border: '1px solid black', width: `${colWidths.name}px`, minWidth: `${colWidths.name}px` }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black', textAlign: 'center' }}>&nbsp;{rank}</td>
+                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
                                     {Array.from({ length: gameCount }).map((_, i) => (
-                                        <td key={i} style={{ border: '1px solid black', width: `${colWidths.game}px`, minWidth: `${colWidths.game}px` }}>&nbsp;</td>
+                                        <td key={i} style={{ border: '1px solid black' }}>&nbsp;</td>
                                     ))}
-                                    <td style={{ border: '1px solid black', width: `${colWidths.handy}px`, minWidth: `${colWidths.handy}px` }}>&nbsp;</td>
-                                    <td style={{ border: '1px solid black', width: `${colWidths.hl}px`, minWidth: `${colWidths.hl}px` }}>&nbsp;</td>
-                                    <td style={{ border: '1px solid black', width: `${colWidths.total}px`, minWidth: `${colWidths.total}px` }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
                                 </tr>
                             );
                         }
@@ -1493,24 +1492,11 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                     border: '1px solid black',
                                     textAlign: 'center',
                                     fontWeight: 'bold',
-                                    backgroundColor: shouldHighlight ? '#FFFF00' : 'white',
-                                    width: `${colWidths.rank}px`,
-                                    minWidth: `${colWidths.rank}px`,
-                                    maxWidth: `${colWidths.rank}px`
+                                    backgroundColor: shouldHighlight ? '#FFFF00' : 'white'
                                 }}>
                                     {rank}
                                 </td>
-                                <td style={{
-                                    border: '1px solid black',
-                                    textAlign: 'center',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    padding: '0 2px',
-                                    textOverflow: 'ellipsis',
-                                    width: `${colWidths.team}px`,
-                                    minWidth: `${colWidths.team}px`,
-                                    maxWidth: `${colWidths.team}px`
-                                }}>{res.team}</td>
+                                <td style={{ border: '1px solid black', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', padding: '0 2px', textOverflow: 'ellipsis' }}>{res.team}</td>
                                 <td style={{
                                     border: '1px solid black',
                                     textAlign: 'center',
@@ -1518,22 +1504,13 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                     padding: '0 4px',
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    width: `${colWidths.name}px`,
-                                    minWidth: `${colWidths.name}px`,
-                                    maxWidth: `${colWidths.name}px`
+                                    textOverflow: 'ellipsis'
                                 }}>
                                     {res.name}
                                     {isFemaleChamp && <span style={{ color: '#E91E63', fontSize: '9px', marginLeft: '2px' }}>(여챔)</span>}
                                 </td>
                                 {res.scores.map((s: number, i: number) => (
-                                    <td key={i} style={{
-                                        border: '1px solid black',
-                                        textAlign: 'center',
-                                        width: `${colWidths.game}px`,
-                                        minWidth: `${colWidths.game}px`,
-                                        maxWidth: `${colWidths.game}px`
-                                    }}>
+                                    <td key={i} style={{ border: '1px solid black', textAlign: 'center' }}>
                                         {s > 0 ? s + res.handicapEach : ''}
                                     </td>
                                 ))}
@@ -1541,33 +1518,14 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                     border: '1px solid black',
                                     textAlign: 'center',
                                     color: res.hasMinusHandicap ? '#ef4444' : 'inherit',
-                                    fontWeight: res.hasMinusHandicap ? 'bold' : 'normal',
-                                    width: `${colWidths.handy}px`,
-                                    minWidth: `${colWidths.handy}px`,
-                                    maxWidth: `${colWidths.handy}px`
+                                    fontWeight: res.hasMinusHandicap ? 'bold' : 'normal'
                                 }}>
                                     {res.totalHandicap === 0 ? '0' : res.totalHandicap}
                                 </td>
-                                <td style={{
-                                    border: '1px solid black',
-                                    textAlign: 'center',
-                                    fontSize: '11px',
-                                    color: '#64748b',
-                                    width: `${colWidths.hl}px`,
-                                    minWidth: `${colWidths.hl}px`,
-                                    maxWidth: `${colWidths.hl}px`
-                                }}>
+                                <td style={{ border: '1px solid black', textAlign: 'center', fontSize: '11px', color: '#64748b' }}>
                                     {res.hiLow}
                                 </td>
-                                <td style={{
-                                    border: '1px solid black',
-                                    textAlign: 'center',
-                                    fontWeight: '900',
-                                    backgroundColor: shouldHighlight ? '#FFFF00' : 'inherit',
-                                    width: `${colWidths.total}px`,
-                                    minWidth: `${colWidths.total}px`,
-                                    maxWidth: `${colWidths.total}px`
-                                }}>
+                                <td style={{ border: '1px solid black', textAlign: 'center', fontWeight: '900', backgroundColor: shouldHighlight ? '#FFFF00' : 'inherit' }}>
                                     {res.total}
                                 </td>
                             </tr>
@@ -1580,13 +1538,12 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
     return (
         <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
-            {/* Main Result Container - Fixed at 1120px for Individual/Champ */}
-            <div style={{ width: `${totalContainerWidth}px`, padding: '0 0 20px 0', boxSizing: 'border-box', overflow: 'hidden' }}>
+            <div style={{ width: `${totalContainerWidth}px`, maxWidth: '100%', padding: '0 0 20px 0', boxSizing: 'border-box' }}>
                 <div style={{
                     backgroundColor: '#FFFF00',
                     border: '1px solid black',
                     borderBottomWidth: '2px',
-                    padding: '12px 10px', // Reduced horizontal padding to maximize space
+                    padding: '12px 20px',
                     width: '100%',
                     display: 'flex',
                     justifyContent: 'center',
@@ -1599,7 +1556,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     </h2>
                     <div style={{
                         position: 'absolute',
-                        right: '10px', // Adjusted to match new padding
+                        right: '20px',
                         display: 'flex',
                         gap: '8px',
                         zIndex: 10
@@ -1608,27 +1565,6 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                             <>
                                 <button
                                     onClick={handleExcelDownload}
-                                    style={{
-                                        backgroundColor: 'white',
-                                        color: 'black',
-                                        border: '1px solid black',
-                                        borderRadius: '4px',
-                                        padding: '6px 10px',
-                                        fontSize: '11px',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '4px'
-                                    }}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                    </svg>
-                                    엑셀 다운로드
-                                </button>
-                                <button
-                                    onClick={() => window.print()}
                                     style={{
                                         backgroundColor: 'white',
                                         color: 'black',
@@ -1643,7 +1579,28 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                         gap: '4px'
                                     }}
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    엑셀 다운로드
+                                </button>
+                                <button
+                                    onClick={() => window.print()}
+                                    style={{
+                                        backgroundColor: 'white',
+                                        color: 'black',
+                                        border: '1px solid black',
+                                        borderRadius: '4px',
+                                        padding: '6px 14px',
+                                        fontSize: '11px',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                    }}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                                     </svg>
                                     출력
@@ -1661,11 +1618,11 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     justifyContent: 'center',
                     boxSizing: 'border-box'
                 }}>
-                    <div style={{ flex: isTeam2To6 ? '1' : `0 0 ${singleTableWidth}px`, width: isTeam2To6 ? 'auto' : `${singleTableWidth}px`, boxSizing: 'border-box' }}>
+                    <div style={{ width: isTeam2To6 ? '100%' : '50%', boxSizing: 'border-box' }}>
                         <TableComponent data={leftColumn} startRank={1} />
                     </div>
                     {!isTeam2To6 && (
-                        <div style={{ flex: `0 0 ${singleTableWidth}px`, width: `${singleTableWidth}px`, boxSizing: 'border-box' }}>
+                        <div style={{ width: '50%', boxSizing: 'border-box' }}>
                             <TableComponent data={rightColumn} startRank={28} isRight={true} />
                         </div>
                     )}
