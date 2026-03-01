@@ -1412,17 +1412,17 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         hl: 50,
         total: 80
     } : {
-        rank: 35,
-        team: 85,
-        name: 80,
-        game: 60,
-        handy: 60,
-        hl: 50,
+        rank: 30,
+        team: 70,
+        name: 70,
+        game: 50,
+        handy: 50,
+        hl: 56,
         total: 70
     };
 
-    const singleTableWidth = isTeam2To6 ? (colWidths.rank + colWidths.team + colWidths.name + (colWidths.game * gameCount) + colWidths.handy + colWidths.hl + colWidths.total) : 560;
-    const totalContainerWidth = isTeam2To6 ? singleTableWidth : 1120;
+    const singleTableWidth = isTeam2To6 ? (colWidths.rank + colWidths.team + colWidths.name + (colWidths.game * gameCount) + colWidths.handy + colWidths.hl + colWidths.total) : 496;
+    const totalContainerWidth = isTeam2To6 ? singleTableWidth : 992;
 
     const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => {
         return (
