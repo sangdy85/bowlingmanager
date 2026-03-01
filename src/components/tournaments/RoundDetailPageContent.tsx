@@ -1403,47 +1403,50 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     const leftColumn = sortedResults.slice(0, rowsPerColumn);
     const rightColumn = isTeam2To6 ? [] : sortedResults.slice(rowsPerColumn, rowsPerColumn * 2);
 
-    const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => {
-        const colWidths = isTeam2To6 ? {
-            rank: '40px',
-            team: '80px',
-            name: '400px',
-            game: '60px',
-            handy: '60px',
-            hl: '50px',
-            total: '80px'
-        } : {
-            rank: '35px',
-            team: '85px',
-            name: '95px',
-            game: '60px',
-            handy: '60px',
-            hl: '45px',
-            total: '60px'
-        };
-        // Total = 35 + 85 + 95 + (60*3) + 60 + 45 + 60 = 560px
+    const colWidths = isTeam2To6 ? {
+        rank: 40,
+        team: 80,
+        name: 400,
+        game: 60,
+        handy: 60,
+        hl: 50,
+        total: 80
+    } : {
+        rank: 35,
+        team: 85,
+        name: 95,
+        game: 60,
+        handy: 60,
+        hl: 45,
+        total: 60
+    };
 
+    const singleTableWidth = colWidths.rank + colWidths.team + colWidths.name + (colWidths.game * gameCount) + colWidths.handy + colWidths.hl + colWidths.total;
+    const totalContainerWidth = isTeam2To6 ? singleTableWidth : (singleTableWidth * 2);
+
+    const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => {
         return (
             <table style={{
-                width: '100%',
+                width: `${singleTableWidth}px`,
                 borderCollapse: 'collapse',
                 border: '1px solid black',
                 fontSize: '11px',
                 color: 'black',
                 backgroundColor: 'white',
                 tableLayout: 'fixed',
-                borderLeft: isRight ? 'none' : '1px solid black'
+                borderLeft: isRight ? 'none' : '1px solid black',
+                boxSizing: 'border-box'
             }}>
                 <colgroup>
-                    <col style={{ width: colWidths.rank }} />
-                    <col style={{ width: colWidths.team }} />
-                    <col style={{ width: colWidths.name }} />
+                    <col style={{ width: `${colWidths.rank}px` }} />
+                    <col style={{ width: `${colWidths.team}px` }} />
+                    <col style={{ width: `${colWidths.name}px` }} />
                     {Array.from({ length: gameCount }).map((_, i) => (
-                        <col key={i} style={{ width: colWidths.game }} />
+                        <col key={i} style={{ width: `${colWidths.game}px` }} />
                     ))}
-                    <col style={{ width: colWidths.handy }} />
-                    <col style={{ width: colWidths.hl }} />
-                    <col style={{ width: colWidths.total }} />
+                    <col style={{ width: `${colWidths.handy}px` }} />
+                    <col style={{ width: `${colWidths.hl}px` }} />
+                    <col style={{ width: `${colWidths.total}px` }} />
                 </colgroup>
                 <thead>
                     <tr style={{ backgroundColor: '#E7E9EB', height: '32px' }}>
@@ -1526,9 +1529,20 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     };
 
     return (
-        <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-            <div style={{ width: '100%', maxWidth: isTeam2To6 ? '1000px' : '1120px', padding: '0 0 20px 0' }}>
-                <div style={{ backgroundColor: '#FFFF00', border: '1px solid black', borderBottomWidth: '2px', padding: '12px 20px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+        <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+            <div style={{ width: '100%', maxWidth: `${totalContainerWidth}px`, padding: '0 0 20px 0', boxSizing: 'border-box' }}>
+                <div style={{
+                    backgroundColor: '#FFFF00',
+                    border: '1px solid black',
+                    borderBottomWidth: '2px',
+                    padding: '12px 20px',
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    position: 'relative',
+                    boxSizing: 'border-box'
+                }}>
                     <h2 style={{ textAlign: 'center', fontSize: '20px', fontWeight: '900', color: 'black', margin: '0' }}>
                         {round.tournament.type === 'EVENT' ? round.tournament.name : `${round.tournament.name} ${round.roundNumber}회차`} 결과
                     </h2>
@@ -1593,13 +1607,14 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     width: '100%',
                     borderTop: 'none',
                     gap: 0,
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    boxSizing: 'border-box'
                 }}>
-                    <div style={{ flex: isTeam2To6 ? '1' : '0 0 560px', width: isTeam2To6 ? 'auto' : '560px' }}>
+                    <div style={{ flex: isTeam2To6 ? '1' : `0 0 ${singleTableWidth}px`, width: isTeam2To6 ? 'auto' : `${singleTableWidth}px` }}>
                         <TableComponent data={leftColumn} startRank={1} />
                     </div>
                     {!isTeam2To6 && (
-                        <div style={{ flex: '0 0 560px', width: '560px' }}>
+                        <div style={{ flex: `0 0 ${singleTableWidth}px`, width: `${singleTableWidth}px` }}>
                             <TableComponent data={rightColumn} startRank={28} isRight={true} />
                         </div>
                     )}
