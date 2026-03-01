@@ -80,7 +80,8 @@ export default async function RoundDetailPage({ params }: { params: { id: string
     // 1. Effective Date: Round Date -> Tournament Start Date
     const effectiveDate = getEffectiveRoundDate(
         roundData.date || roundData.tournament.startDate,
-        roundData.tournament.leagueTime
+        roundData.tournament.leagueTime,
+        roundData.tournament.type
     );
 
     // 2. Registration Start: Round RegStart -> Tournament Settings RegStart -> Tournament Start Date (fallback)
@@ -206,7 +207,7 @@ export default async function RoundDetailPage({ params }: { params: { id: string
         const roundDate = r.date || roundData.tournament.startDate;
         const roundRegStart = r.registrationStart || tournamentSettings.registrationStart || roundData.tournament.startDate;
 
-        const rEffectiveDate = getEffectiveRoundDate(roundDate, roundData.tournament.leagueTime);
+        const rEffectiveDate = getEffectiveRoundDate(roundDate, roundData.tournament.leagueTime, roundData.tournament.type);
         const rStatus = calculateTournamentStatus(rEffectiveDate, roundRegStart, roundDate, roundData.tournament.status, now);
 
         processedRounds.push({

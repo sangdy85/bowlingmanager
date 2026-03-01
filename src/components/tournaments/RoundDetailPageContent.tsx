@@ -2537,7 +2537,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                                     >
                                         <span className="text-xl">🎲</span>
                                         <span>내 레인 뽑기 (~{(() => {
-                                            const effective = getEffectiveRoundDate(round.date, round.tournament.leagueTime);
+                                            const effective = getEffectiveRoundDate(round.date, round.tournament.leagueTime, round.tournament.type);
                                             return effective ? new Date(effective.getTime() - 1 * 60 * 60 * 1000).toLocaleTimeString('ko-KR', {
                                                 hour: '2-digit',
                                                 minute: '2-digit',

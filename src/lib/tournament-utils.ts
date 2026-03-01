@@ -1,6 +1,10 @@
 // Helper to combine a date string/object with a tournament's leagueTime (HH:mm).
 // Ensures that the round's effective start time is consistently calculated.
-export function getEffectiveRoundDate(roundDate: Date | null | string, leagueTime: string | null): Date | null {
+export function getEffectiveRoundDate(
+    roundDate: Date | null | string,
+    leagueTime: string | null,
+    tournamentType?: string // Added to distinguish EVENT type
+): Date | null {
     if (!roundDate) return null;
     const date = new Date(roundDate);
     if (isNaN(date.getTime())) return null;
@@ -12,6 +16,12 @@ export function getEffectiveRoundDate(roundDate: Date | null | string, leagueTim
 
     // If it's NOT exactly 00:00 KST, we respect the manually set time (EVENT/MANUAL)
     if (h !== 0 || m !== 0) {
+        return date;
+    }
+
+    // For EVENT type, we ALWAYS respect the date field time even if it's 00:00.
+    // We don't want leagueTime (which is for recurring leagues) to overwrite a specific event time.
+    if (tournamentType === 'EVENT') {
         return date;
     }
 
