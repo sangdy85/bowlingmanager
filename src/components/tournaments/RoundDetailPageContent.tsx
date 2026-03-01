@@ -261,6 +261,14 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
 
 // 3. Lanes Tab
 function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: () => void, isManager?: boolean }) {
+    const isIndividualMode = (() => {
+        try {
+            const settings = round.tournament?.settings ? (typeof round.tournament.settings === 'string' ? JSON.parse(round.tournament.settings) : round.tournament.settings) : {};
+            return (settings.gameMode || 'INDIVIDUAL') === 'INDIVIDUAL';
+        } catch (e) {
+            return true;
+        }
+    })();
     const [loading, setLoading] = useState(false);
     const [startLane, setStartLane] = useState(round.startLane || 1);
     const [endLane, setEndLane] = useState(round.endLane || 10);
@@ -603,7 +611,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                                                 </div>
                                                 <span className="font-bold text-sm text-gray-800 flex flex-col items-start leading-tight">
                                                     <span>{p.registration.guestName ?? p.registration.user?.name}</span>
-                                                    {p.registration.entryGroupId && (
+                                                    {!isIndividualMode && p.registration.entryGroupId && (
                                                         <span className="text-[9px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded">
                                                             조: {p.registration.entryGroupId.replace('group_', '').includes('_name_') ? p.registration.entryGroupId.split('_name_')[1] : p.registration.entryGroupId.replace('group_', '')}
                                                         </span>
@@ -898,7 +906,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                     <td className="p-2 text-center font-bold text-gray-800 truncate" style={{ width: '130px', whiteSpace: 'nowrap' }}>
                                         <div className="flex flex-col items-center">
                                             <span>{p.registration.user?.name || p.registration.guestName}</span>
-                                            {groupId && (
+                                            {isTeamEvent && groupId && (
                                                 <span className="text-[9px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded leading-none mt-0.5">
                                                     조: {groupId.replace('group_', '').includes('_name_') ? groupId.split('_name_')[1] : groupId.replace('group_', '')}
                                                 </span>
