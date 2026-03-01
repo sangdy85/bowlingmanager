@@ -1412,23 +1412,22 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         hl: 50,
         total: 80
     } : {
-        rank: 40,
-        team: 100,
-        name: 100,
+        rank: 35,
+        team: 85,
+        name: 80,
         game: 60,
         handy: 60,
         hl: 50,
-        total: 80
+        total: 70
     };
 
-    const totalWidthPerTable = colWidths.rank + colWidths.team + colWidths.name + (colWidths.game * gameCount) + colWidths.handy + colWidths.hl + colWidths.total;
-    const singleTableWidth = totalWidthPerTable;
-    const totalContainerWidth = isTeam2To6 ? singleTableWidth : (singleTableWidth * 2);
+    const singleTableWidth = isTeam2To6 ? (colWidths.rank + colWidths.team + colWidths.name + (colWidths.game * gameCount) + colWidths.handy + colWidths.hl + colWidths.total) : 560;
+    const totalContainerWidth = isTeam2To6 ? singleTableWidth : 1120;
 
     const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => {
         return (
             <table style={{
-                width: '100%',
+                width: `${singleTableWidth}px`,
                 borderCollapse: 'collapse',
                 border: '1px solid black',
                 fontSize: '11px',
@@ -1436,7 +1435,9 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 backgroundColor: 'white',
                 tableLayout: 'fixed',
                 borderLeft: isRight ? 'none' : '1px solid black',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                margin: 0,
+                padding: 0
             }}>
                 <colgroup>
                     <col style={{ width: `${colWidths.rank}px` }} />
@@ -1451,15 +1452,15 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 </colgroup>
                 <thead>
                     <tr style={{ backgroundColor: '#E7E9EB', height: '32px' }}>
-                        <th style={{ border: '1px solid black', padding: '4px' }}>순위</th>
-                        <th style={{ border: '1px solid black', padding: '4px' }}>팀</th>
-                        <th style={{ border: '1px solid black', padding: '4px' }}>성함</th>
+                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.rank}px`, minWidth: `${colWidths.rank}px`, maxWidth: `${colWidths.rank}px` }}>순위</th>
+                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.team}px`, minWidth: `${colWidths.team}px`, maxWidth: `${colWidths.team}px` }}>팀</th>
+                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.name}px`, minWidth: `${colWidths.name}px`, maxWidth: `${colWidths.name}px` }}>성함</th>
                         {Array.from({ length: gameCount }).map((_, i) => (
-                            <th key={i} style={{ border: '1px solid black', padding: '4px' }}>{i + 1}G</th>
+                            <th key={i} style={{ border: '1px solid black', padding: '4px', width: `${colWidths.game}px`, minWidth: `${colWidths.game}px`, maxWidth: `${colWidths.game}px` }}>{i + 1}G</th>
                         ))}
-                        <th style={{ border: '1px solid black', padding: '4px' }}>핸디</th>
-                        <th style={{ border: '1px solid black', padding: '4px' }}>H-L</th>
-                        <th style={{ border: '1px solid black', padding: '4px' }}>총점</th>
+                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.handy}px`, minWidth: `${colWidths.handy}px`, maxWidth: `${colWidths.handy}px` }}>핸디</th>
+                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.hl}px`, minWidth: `${colWidths.hl}px`, maxWidth: `${colWidths.hl}px` }}>H-L</th>
+                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.total}px`, minWidth: `${colWidths.total}px`, maxWidth: `${colWidths.total}px` }}>총점</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1473,15 +1474,15 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                         if (!res) {
                             return (
                                 <tr key={`empty-${rank}`} style={{ height: '26px' }}>
-                                    <td style={{ border: '1px solid black', textAlign: 'center' }}>&nbsp;{rank}</td>
-                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
-                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black', textAlign: 'center', width: `${colWidths.rank}px`, minWidth: `${colWidths.rank}px`, maxWidth: `${colWidths.rank}px` }}>&nbsp;{rank}</td>
+                                    <td style={{ border: '1px solid black', width: `${colWidths.team}px`, minWidth: `${colWidths.team}px`, maxWidth: `${colWidths.team}px` }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black', width: `${colWidths.name}px`, minWidth: `${colWidths.name}px`, maxWidth: `${colWidths.name}px` }}>&nbsp;</td>
                                     {Array.from({ length: gameCount }).map((_, i) => (
-                                        <td key={i} style={{ border: '1px solid black' }}>&nbsp;</td>
+                                        <td key={i} style={{ border: '1px solid black', width: `${colWidths.game}px`, minWidth: `${colWidths.game}px`, maxWidth: `${colWidths.game}px` }}>&nbsp;</td>
                                     ))}
-                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
-                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
-                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black', width: `${colWidths.handy}px`, minWidth: `${colWidths.handy}px`, maxWidth: `${colWidths.handy}px` }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black', width: `${colWidths.hl}px`, minWidth: `${colWidths.hl}px`, maxWidth: `${colWidths.hl}px` }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black', width: `${colWidths.total}px`, minWidth: `${colWidths.total}px`, maxWidth: `${colWidths.total}px` }}>&nbsp;</td>
                                 </tr>
                             );
                         }
@@ -1492,11 +1493,24 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                     border: '1px solid black',
                                     textAlign: 'center',
                                     fontWeight: 'bold',
-                                    backgroundColor: shouldHighlight ? '#FFFF00' : 'white'
+                                    backgroundColor: shouldHighlight ? '#FFFF00' : 'white',
+                                    width: `${colWidths.rank}px`,
+                                    minWidth: `${colWidths.rank}px`,
+                                    maxWidth: `${colWidths.rank}px`
                                 }}>
                                     {rank}
                                 </td>
-                                <td style={{ border: '1px solid black', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', padding: '0 2px', textOverflow: 'ellipsis' }}>{res.team}</td>
+                                <td style={{
+                                    border: '1px solid black',
+                                    textAlign: 'center',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    padding: '0 2px',
+                                    textOverflow: 'ellipsis',
+                                    width: `${colWidths.team}px`,
+                                    minWidth: `${colWidths.team}px`,
+                                    maxWidth: `${colWidths.team}px`
+                                }}>{res.team}</td>
                                 <td style={{
                                     border: '1px solid black',
                                     textAlign: 'center',
@@ -1504,13 +1518,22 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                     padding: '0 4px',
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
-                                    textOverflow: 'ellipsis'
+                                    textOverflow: 'ellipsis',
+                                    width: `${colWidths.name}px`,
+                                    minWidth: `${colWidths.name}px`,
+                                    maxWidth: `${colWidths.name}px`
                                 }}>
                                     {res.name}
                                     {isFemaleChamp && <span style={{ color: '#E91E63', fontSize: '9px', marginLeft: '2px' }}>(여챔)</span>}
                                 </td>
                                 {res.scores.map((s: number, i: number) => (
-                                    <td key={i} style={{ border: '1px solid black', textAlign: 'center' }}>
+                                    <td key={i} style={{
+                                        border: '1px solid black',
+                                        textAlign: 'center',
+                                        width: `${colWidths.game}px`,
+                                        minWidth: `${colWidths.game}px`,
+                                        maxWidth: `${colWidths.game}px`
+                                    }}>
                                         {s > 0 ? s + res.handicapEach : ''}
                                     </td>
                                 ))}
@@ -1518,14 +1541,33 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                     border: '1px solid black',
                                     textAlign: 'center',
                                     color: res.hasMinusHandicap ? '#ef4444' : 'inherit',
-                                    fontWeight: res.hasMinusHandicap ? 'bold' : 'normal'
+                                    fontWeight: res.hasMinusHandicap ? 'bold' : 'normal',
+                                    width: `${colWidths.handy}px`,
+                                    minWidth: `${colWidths.handy}px`,
+                                    maxWidth: `${colWidths.handy}px`
                                 }}>
                                     {res.totalHandicap === 0 ? '0' : res.totalHandicap}
                                 </td>
-                                <td style={{ border: '1px solid black', textAlign: 'center', fontSize: '11px', color: '#64748b' }}>
+                                <td style={{
+                                    border: '1px solid black',
+                                    textAlign: 'center',
+                                    fontSize: '11px',
+                                    color: '#64748b',
+                                    width: `${colWidths.hl}px`,
+                                    minWidth: `${colWidths.hl}px`,
+                                    maxWidth: `${colWidths.hl}px`
+                                }}>
                                     {res.hiLow}
                                 </td>
-                                <td style={{ border: '1px solid black', textAlign: 'center', fontWeight: '900', backgroundColor: shouldHighlight ? '#FFFF00' : 'inherit' }}>
+                                <td style={{
+                                    border: '1px solid black',
+                                    textAlign: 'center',
+                                    fontWeight: '900',
+                                    backgroundColor: shouldHighlight ? '#FFFF00' : 'inherit',
+                                    width: `${colWidths.total}px`,
+                                    minWidth: `${colWidths.total}px`,
+                                    maxWidth: `${colWidths.total}px`
+                                }}>
                                     {res.total}
                                 </td>
                             </tr>
