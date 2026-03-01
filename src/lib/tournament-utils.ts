@@ -10,14 +10,27 @@ export function getEffectiveRoundDate(roundDate: Date | null | string, leagueTim
     const yyyy = kst.getUTCFullYear();
     const mm = String(kst.getUTCMonth() + 1).padStart(2, '0');
     const dd = String(kst.getUTCDate()).padStart(2, '0');
+    const hoursInKST = kst.getUTCHours();
+    const minutesInKST = kst.getUTCMinutes();
 
-    if (!leagueTime) return new Date(`${yyyy}-${mm}-${dd}T00:00:00+09:00`);
+    // If leagueTime is provided, it always takes priority (for LEAGUE/CHAMP logic)
+    // IMPORTANT: Only apply leagueTime override if the hours/minutes are 0 (default/unknown) 
+    // OR if it's specifically a LEAGUE/CHAMP type where this is expected.
+    if (leagueTime && leagueTime.includes(':') && hoursInKST === 0 && minutesInKST === 0) {
+        const [hours, minutes] = leagueTime.split(':').map(Number);
+        const hh = String(isNaN(hours) ? 0 : hours).padStart(2, '0');
+        const min = String(isNaN(minutes) ? 0 : minutes).padStart(2, '0');
+        return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:00+09:00`);
+    }
 
-    const [hours, minutes] = leagueTime.split(':').map(Number);
-    const hh = String(isNaN(hours) ? 0 : hours).padStart(2, '0');
-    const min = String(isNaN(minutes) ? 0 : minutes).padStart(2, '0');
+    // If no leagueTime:
+    // If the input date already has a non-zero time, we respect it (important for EVENT types)
+    if (hoursInKST !== 0 || minutesInKST !== 0) {
+        return date;
+    }
 
-    return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:00+09:00`);
+    // Otherwise, default to 00:00 KST
+    return new Date(`${yyyy}-${mm}-${dd}T00:00:00+09:00`);
 }
 
 /**
@@ -64,35 +77,30 @@ export function calculateTournamentStatus(
     // 0. Manual Finish / Planning Priority
     if (dbStatus === 'FINISHED') return 'FINISHED';
 
-    // 1. Missing Start Date -> UPCOMING (but check if regStart exists)
-    const start = startDate ? new Date(startDate) : null;
-    const regStart = registrationStart ? new Date(registrationStart) : null;
+    const start = startDate ? (typeof startDate === 'string' ? new Date(startDate) : startDate) : null;
+    const regStart = registrationStart ? (typeof registrationStart === 'string' ? new Date(registrationStart) : registrationStart) : null;
 
-    if (!start || isNaN(start.getTime())) {
-        if (regStart && !isNaN(regStart.getTime()) && now >= regStart) return 'OPEN';
-        return 'UPCOMING';
+    // 1. FINISHED: After the day of the tournament (Next day 00:00 KST)
+    if (start && !isNaN(start.getTime())) {
+        const kstStart = new Date(start.getTime() + 9 * 60 * 60000);
+        const nextDayKST = new Date(Date.UTC(kstStart.getUTCFullYear(), kstStart.getUTCMonth(), kstStart.getUTCDate() + 1));
+        const nextDayUTC = new Date(nextDayKST.getTime() - 9 * 60 * 60000);
+        if (now >= nextDayUTC) return 'FINISHED';
     }
 
-    // 2. FINISHED: After the day of the tournament (Next day 00:00 KST)
-    // We use a safe comparison by shifting to KST then setting to midnight
-    const finishDate = endDate ? new Date(endDate) : start;
-    const kstFinish = new Date(finishDate.getTime() + 9 * 60 * 60000);
-    const nextDayKST = new Date(Date.UTC(kstFinish.getUTCFullYear(), kstFinish.getUTCMonth(), kstFinish.getUTCDate() + 1));
-    const nextDayUTC = new Date(nextDayKST.getTime() - 9 * 60 * 60000);
+    // 2. ONGOING: From scheduled time (effectiveDate) until end of the day (23:59:59 KST)
+    if (start && !isNaN(start.getTime()) && now >= start) return 'ONGOING';
 
-    if (now >= nextDayUTC) return 'FINISHED';
+    // 3. CLOSED: 30 minutes before startDate until startDate
+    if (start && !isNaN(start.getTime())) {
+        const closedThreshold = new Date(start.getTime() - 30 * 60000);
+        if (now >= closedThreshold) return 'CLOSED';
+    }
 
-    // 3. ONGOING: From scheduled time until FINISHED
-    if (now >= start) return 'ONGOING';
-
-    // 4. CLOSED: 30 minutes before startDate
-    const closedThreshold = new Date(start.getTime() - 30 * 60000);
-    if (now >= closedThreshold) return 'CLOSED';
-
-    // 5. OPEN: From registrationStart until CLOSED
+    // 4. OPEN: From registrationStart until CLOSED (30m before start)
     if (regStart && !isNaN(regStart.getTime()) && now >= regStart) return 'OPEN';
 
-    // 6. UPCOMING
+    // 5. UPCOMING: Before registrationStart
     return 'UPCOMING';
 }
 
@@ -135,14 +143,22 @@ export function formatDateForInput(dateInput: Date | string | null): string {
 export function parseKSTDate(dateString: string | null): Date | null {
     if (!dateString) return null;
 
-    // If it's only YYYY-MM-DD (10 chars), append T00:00
-    let formatted = dateString;
-    if (dateString.length === 10) {
-        formatted = `${dateString}T00:00`;
+    // Handle full ISO strings or strings with timezone already
+    if (dateString.includes('Z') || (dateString.includes('+') && dateString.length > 19)) {
+        return new Date(dateString);
     }
 
+    let formatted = dateString;
+    // If only YYYY-MM-DD
+    if (dateString.length === 10) {
+        formatted = `${dateString}T00:00`;
+    } else if (dateString.length === 16) { // YYYY-MM-DDTHH:mm
+        formatted = `${dateString}:00`; // Add seconds
+    }
+    // If it's already YYYY-MM-DDTHH:mm:ss, no change needed
+
     // Append +09:00 to ensure it's interpreted as KST
-    const date = new Date(`${formatted}:00+09:00`);
+    const date = new Date(`${formatted}+09:00`);
     return isNaN(date.getTime()) ? null : date;
 }
 

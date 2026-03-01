@@ -19,8 +19,8 @@ export async function createTournament(centerId: string, formData: FormData) {
     }
 
     const description = formData.get("description") as string;
-    const startDate = new Date(formData.get("startDate") as string);
-    const endDate = new Date(formData.get("endDate") as string);
+    const startDate = parseKSTDate(formData.get("startDate") as string) || new Date();
+    const endDate = parseKSTDate(formData.get("endDate") as string) || startDate;
     const maxParticipantsStr = formData.get("maxParticipants") as string;
     const maxParticipants = maxParticipantsStr ? parseInt(maxParticipantsStr) : 0;
 
@@ -107,7 +107,7 @@ export async function createTournament(centerId: string, formData: FormData) {
                 tournamentId: tournament.id,
                 roundNumber: 1,
                 date: startDate,
-                registrationStart: new Date(settingsObj.registrationStart),
+                registrationStart: parseKSTDate(settingsObj.registrationStart),
             }
         });
 
@@ -320,7 +320,7 @@ export async function updateTournamentBasicInfo(tournamentId: string, formData: 
                     where: { id: rounds[0].id },
                     data: {
                         date: startDate,
-                        registrationStart: new Date(newSettings.registrationStart),
+                        registrationStart: parseKSTDate(newSettings.registrationStart),
                     }
                 });
             }
