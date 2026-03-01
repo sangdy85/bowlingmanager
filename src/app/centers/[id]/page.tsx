@@ -227,7 +227,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
             ...t,
             status: currentStatus,
             startDate: formatKSTDate(t.startDate),
-            endDate: t.endDate.toLocaleDateString(),
+            endDate: formatKSTDate(t.endDate),
         };
     });
 

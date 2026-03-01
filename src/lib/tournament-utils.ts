@@ -23,14 +23,8 @@ export function getEffectiveRoundDate(roundDate: Date | null | string, leagueTim
         return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:00+09:00`);
     }
 
-    // If no leagueTime:
-    // If the input date already has a non-zero time, we respect it (important for EVENT types)
-    if (hoursInKST !== 0 || minutesInKST !== 0) {
-        return date;
-    }
-
-    // Otherwise, default to 00:00 KST
-    return new Date(`${yyyy}-${mm}-${dd}T00:00:00+09:00`);
+    // If it already has time OR no leagueTime is provided, return as is
+    return date;
 }
 
 /**

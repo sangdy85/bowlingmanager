@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { verifyCenterAdmin } from "@/lib/auth-utils";
 import { LEAGUE_TEMPLATES } from "@/lib/league-templates";
-import { getEffectiveRoundDate, getKSTDay, getKSTDateString } from "@/lib/tournament-utils";
+import { getEffectiveRoundDate, getKSTDay, getKSTDateString, parseKSTDate } from "@/lib/tournament-utils";
 
 /**
  * Fisher-Yates Shuffle Algorithm to randomize team assignments
@@ -270,17 +270,29 @@ export async function updateLeagueRoundDate(roundId: string, newDateStr: string)
     if (!round) throw new Error("Round not found");
     await verifyCenterAdmin(round.tournament.centerId);
 
-    const newDate = newDateStr ? new Date(newDateStr) : null;
+    // Use parseKSTDate to handle YYYY-MM-DD or YYYY-MM-DDTHH:mm
+    const newDate = parseKSTDate(newDateStr);
 
-    if (newDate && round.tournament.leagueTime) {
+    // If the input string was only a date (length 10) AND leagueTime exists, apply it
+    // If length >= 16, it means time was explicitly provided by the user (EVENT or manual edit)
+    if (newDate && newDateStr.length === 10 && round.tournament.leagueTime) {
         const [hours, minutes] = round.tournament.leagueTime.split(':').map(Number);
-        newDate.setHours(hours, minutes, 0, 0);
-    }
+        // Correctly set hours/minutes in KST
+        const kstOffset = 9 * 60 * 60000;
+        const kstDate = new Date(newDate.getTime() + kstOffset);
+        kstDate.setUTCHours(hours, minutes, 0, 0);
+        const finalDate = new Date(kstDate.getTime() - kstOffset);
 
-    await (prisma as any).leagueRound.update({
-        where: { id: roundId },
-        data: { date: newDate }
-    });
+        await (prisma as any).leagueRound.update({
+            where: { id: roundId },
+            data: { date: finalDate }
+        });
+    } else {
+        await (prisma as any).leagueRound.update({
+            where: { id: roundId },
+            data: { date: newDate }
+        });
+    }
 
     revalidatePath(`/centers/${round.tournament.centerId}/tournaments/${round.tournamentId}`);
 }
