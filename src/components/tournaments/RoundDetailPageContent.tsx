@@ -1590,7 +1590,6 @@ function TournamentEditModal({ tournament, onClose, onUpdate }: { tournament: an
         }
 
         setLoading(true);
-        const formData = new FormData(e.currentTarget);
         try {
             await updateTournamentBasicInfo(tournament.id, formData);
             alert("대회 정보가 수정되었습니다.");
