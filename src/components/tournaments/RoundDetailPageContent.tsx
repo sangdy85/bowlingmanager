@@ -38,7 +38,7 @@ function RoundOverviewTab({ round }: { round: any }) {
                 <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 shadow-sm">
                     <h4 className="text-gray-500 text-sm font-bold mb-2 uppercase tracking-wide">대회 일정</h4>
                     <p className="text-2xl font-black text-gray-800">
-                        {formatKSTDayLabel(round.date || round.tournament.startDate)}
+                        {formatKSTDate(round.date || round.tournament.startDate)}
                     </p>
                     <p className="text-sm text-gray-500 mt-2 font-medium">
                         접수: {(() => {
@@ -2503,7 +2503,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                             </div>
                         </h1>
                         <p className="text-gray-400 text-sm mt-1 flex items-center gap-2">
-                            <span>📅 {formatKSTDate(round.effectiveDateStr || round.date || round.tournament.startDate)}</span>
+                            <span>📅 {formatKSTDate(round.date || round.tournament.startDate)}</span>
                             <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
                             <span>👥 참가 {round.participants.length}명</span>
                         </p>

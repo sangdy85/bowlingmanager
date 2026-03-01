@@ -5,32 +5,27 @@ export function getEffectiveRoundDate(roundDate: Date | null | string, leagueTim
     const date = new Date(roundDate);
     if (isNaN(date.getTime())) return null;
 
-    // Shift to KST for extraction
-    const kst = new Date(date.getTime() + 9 * 60 * 60000);
-    const yyyy = kst.getUTCFullYear();
-    const mm = String(kst.getUTCMonth() + 1).padStart(2, '0');
-    const dd = String(kst.getUTCDate()).padStart(2, '0');
-    const hoursInKST = kst.getUTCHours();
-    const minutesInKST = kst.getUTCMinutes();
+    // Get hours and minutes in local time (which is KST in the server/browser environment for this app)
+    // IMPORTANT: In this app, we assume the environment is KST or the input already represents KST.
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
 
-    // If leagueTime is provided, it always takes priority (for LEAGUE/CHAMP logic)
-    // IMPORTANT: Only apply leagueTime override if the hours/minutes are 0 (default/unknown) 
-    // OR if it's specifically a LEAGUE/CHAMP type where this is expected.
-    if (leagueTime && leagueTime.includes(':') && hoursInKST === 0 && minutesInKST === 0) {
-        const [hours, minutes] = leagueTime.split(':').map(Number);
-        const hh = String(isNaN(hours) ? 0 : hours).padStart(2, '0');
-        const min = String(isNaN(minutes) ? 0 : minutes).padStart(2, '0');
-        return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:00+09:00`);
-    }
-
-    // If no leagueTime:
-    // If the input date already has a non-zero time, we respect it (important for EVENT types)
-    if (hoursInKST !== 0 || minutesInKST !== 0) {
+    // If the time is already set (not 00:00), it's highly likely a MANUALLY set time for an EVENT.
+    // We MUST respect this and not let leagueTime or default 00:00 override it.
+    if (hours !== 0 || minutes !== 0) {
         return date;
     }
 
-    // Otherwise, default to 00:00 KST
-    return new Date(`${yyyy}-${mm}-${dd}T00:00:00+09:00`);
+    // If leagueTime is provided and current time is exactly 00:00
+    if (leagueTime && leagueTime.includes(':')) {
+        const [h, m] = leagueTime.split(':').map(Number);
+        const newDate = new Date(date);
+        newDate.setHours(isNaN(h) ? 0 : h, isNaN(m) ? 0 : m, 0, 0);
+        return newDate;
+    }
+
+    // Otherwise, it stays at 00:00 (default)
+    return date;
 }
 
 /**
