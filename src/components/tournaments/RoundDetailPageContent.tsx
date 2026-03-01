@@ -1414,11 +1414,11 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     } : {
         rank: 35,
         team: 85,
-        name: 95,
+        name: 90,
         game: 60,
         handy: 60,
-        hl: 45,
-        total: 60
+        hl: 50,
+        total: 70
     };
 
     const singleTableWidth = colWidths.rank + colWidths.team + colWidths.name + (colWidths.game * gameCount) + colWidths.handy + colWidths.hl + colWidths.total;
@@ -1487,7 +1487,14 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
                         return (
                             <tr key={res.id} style={{ height: '26px', backgroundColor: shouldHighlight ? '#FFFF00' : 'white' }}>
-                                <td style={{ border: '1px solid black', textAlign: 'center', fontWeight: 'bold', backgroundColor: 'white' }}>{rank}</td>
+                                <td style={{
+                                    border: '1px solid black',
+                                    textAlign: 'center',
+                                    fontWeight: 'bold',
+                                    backgroundColor: shouldHighlight ? '#FFFF00' : 'white'
+                                }}>
+                                    {rank}
+                                </td>
                                 <td style={{ border: '1px solid black', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', padding: '0 2px', textOverflow: 'ellipsis' }}>{res.team}</td>
                                 <td style={{
                                     border: '1px solid black',
@@ -1530,7 +1537,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
     return (
         <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
-            <div style={{ width: '100%', maxWidth: `${totalContainerWidth}px`, padding: '0 0 20px 0', boxSizing: 'border-box' }}>
+            <div style={{ width: `${totalContainerWidth}px`, padding: '0 0 20px 0', boxSizing: 'border-box' }}>
                 <div style={{
                     backgroundColor: '#FFFF00',
                     border: '1px solid black',
