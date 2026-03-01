@@ -1414,13 +1414,14 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             total: '80px'
         } : {
             rank: '35px',
-            team: '95px',
+            team: '85px',
             name: '95px',
-            game: '55px',
+            game: '60px',
             handy: '60px',
-            hl: '50px',
-            total: '70px'
+            hl: '45px',
+            total: '60px'
         };
+        // Total = 35 + 85 + 95 + (60*3) + 60 + 45 + 60 = 560px
 
         return (
             <table style={{
@@ -1430,7 +1431,8 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 fontSize: '11px',
                 color: 'black',
                 backgroundColor: 'white',
-                tableLayout: 'fixed'
+                tableLayout: 'fixed',
+                borderLeft: isRight ? 'none' : '1px solid black'
             }}>
                 <colgroup>
                     <col style={{ width: colWidths.rank }} />
@@ -1525,7 +1527,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
     return (
         <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-            <div style={{ width: '100%', maxWidth: isTeam2To6 ? '1000px' : '1160px', padding: '0 0 20px 0' }}>
+            <div style={{ width: '100%', maxWidth: isTeam2To6 ? '1000px' : '1120px', padding: '0 0 20px 0' }}>
                 <div style={{ backgroundColor: '#FFFF00', border: '1px solid black', borderBottomWidth: '2px', padding: '12px 20px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
                     <h2 style={{ textAlign: 'center', fontSize: '20px', fontWeight: '900', color: 'black', margin: '0' }}>
                         {round.tournament.type === 'EVENT' ? round.tournament.name : `${round.tournament.name} ${round.roundNumber}회차`} 결과
@@ -1590,7 +1592,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     display: 'flex',
                     width: '100%',
                     borderTop: 'none',
-                    gap: isTeam2To6 ? '0' : '20px',
+                    gap: 0,
                     justifyContent: 'center'
                 }}>
                     <div style={{ flex: isTeam2To6 ? '1' : '0 0 560px', width: isTeam2To6 ? 'auto' : '560px' }}>
