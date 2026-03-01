@@ -41,7 +41,11 @@ function RoundOverviewTab({ round }: { round: any }) {
                         {formatKSTDayLabel(round.date || round.tournament.startDate)}
                     </p>
                     <p className="text-sm text-gray-500 mt-2 font-medium">
-                        접수: {formatKSTDate(round.registrationStart || round.tournament.registrationStart || round.tournament.startDate)}
+                        접수: {(() => {
+                            const settings = round.tournament.settings ? (typeof round.tournament.settings === 'string' ? JSON.parse(round.tournament.settings) : round.tournament.settings) : {};
+                            const regStart = round.registrationStart || round.tournament.registrationStart || settings.registrationStart || round.tournament.startDate;
+                            return formatKSTDate(regStart);
+                        })()}
                     </p>
                 </div>
                 <div className="bg-green-50 p-6 rounded-xl border border-green-100 shadow-sm">

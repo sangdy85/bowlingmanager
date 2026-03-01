@@ -202,9 +202,12 @@ export default async function RoundDetailPage({ params }: { params: { id: string
         const fWinner = rankings.find((r: any) => r.isFemaleChamp);
         if (fWinner) runningPrevWinners.femaleChamp = { name: fWinner.name, team: fWinner.team };
 
-        // Prepare for client serialization
-        const rEffectiveDate = getEffectiveRoundDate(r.date, roundData.tournament.leagueTime);
-        const rStatus = calculateTournamentStatus(rEffectiveDate, r.registrationStart, r.date, roundData.tournament.status, now);
+        // Prepare for client serialization with fallbacks for EVENT types
+        const roundDate = r.date || roundData.tournament.startDate;
+        const roundRegStart = r.registrationStart || tournamentSettings.registrationStart || roundData.tournament.startDate;
+
+        const rEffectiveDate = getEffectiveRoundDate(roundDate, roundData.tournament.leagueTime);
+        const rStatus = calculateTournamentStatus(rEffectiveDate, roundRegStart, roundDate, roundData.tournament.status, now);
 
         processedRounds.push({
             ...r,

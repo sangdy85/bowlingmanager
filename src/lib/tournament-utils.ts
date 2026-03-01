@@ -64,21 +64,25 @@ export function calculateTournamentStatus(
     // 0. Manual Finish / Planning Priority
     if (dbStatus === 'FINISHED') return 'FINISHED';
 
-    // 1. Missing Start Date -> Always Upcoming (or "일정 미정")
-    if (!startDate) return 'UPCOMING';
-    const start = new Date(startDate);
-    if (isNaN(start.getTime())) return 'UPCOMING';
+    // 1. Missing Start Date -> UPCOMING (but check if regStart exists)
+    const start = startDate ? new Date(startDate) : null;
+    const regStart = registrationStart ? new Date(registrationStart) : null;
 
-    // 2. FINISHED: After the day of the tournament (Next day 00:00)
-    // User requested: "대회일자가 딱 지났을 때" (Next day starts)
-    const finishDate = endDate ? new Date(endDate) : new Date(start);
-    const nextDayOfFinish = new Date(finishDate);
-    nextDayOfFinish.setHours(0, 0, 0, 0);
-    nextDayOfFinish.setDate(nextDayOfFinish.getDate() + 1);
-    if (now >= nextDayOfFinish) return 'FINISHED';
+    if (!start || isNaN(start.getTime())) {
+        if (regStart && !isNaN(regStart.getTime()) && now >= regStart) return 'OPEN';
+        return 'UPCOMING';
+    }
 
-    // 3. ONGOING: From scheduled time until FINISHED (midnight)
-    // User requested: "대회 예정 시각(now > start)이 지나고 대회일 오후 11시 59분 사이"
+    // 2. FINISHED: After the day of the tournament (Next day 00:00 KST)
+    // We use a safe comparison by shifting to KST then setting to midnight
+    const finishDate = endDate ? new Date(endDate) : start;
+    const kstFinish = new Date(finishDate.getTime() + 9 * 60 * 60000);
+    const nextDayKST = new Date(Date.UTC(kstFinish.getUTCFullYear(), kstFinish.getUTCMonth(), kstFinish.getUTCDate() + 1));
+    const nextDayUTC = new Date(nextDayKST.getTime() - 9 * 60 * 60000);
+
+    if (now >= nextDayUTC) return 'FINISHED';
+
+    // 3. ONGOING: From scheduled time until FINISHED
     if (now >= start) return 'ONGOING';
 
     // 4. CLOSED: 30 minutes before startDate
@@ -86,10 +90,9 @@ export function calculateTournamentStatus(
     if (now >= closedThreshold) return 'CLOSED';
 
     // 5. OPEN: From registrationStart until CLOSED
-    const regStart = registrationStart ? new Date(registrationStart) : null;
     if (regStart && !isNaN(regStart.getTime()) && now >= regStart) return 'OPEN';
 
-    // 6. UPCOMING: Before registrationStart or if regStart is missing
+    // 6. UPCOMING
     return 'UPCOMING';
 }
 
