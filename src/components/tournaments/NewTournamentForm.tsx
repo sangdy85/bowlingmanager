@@ -96,7 +96,7 @@ export default function NewTournamentForm({ centerId }: { centerId: string }) {
                         </div>
                         <div>
                             <label className="label">참가 인원 (최대 정원)</label>
-                            <input name="maxParticipants" type="number" className="input" placeholder="예: 48" required />
+                            <input name="maxParticipants" type="number" className="input" placeholder="예: 48" min="1" required />
                         </div>
                     </div>
 
@@ -231,7 +231,7 @@ export default function NewTournamentForm({ centerId }: { centerId: string }) {
                                 </div>
                                 <div>
                                     <label className="label">참가 인원 (최대 정원)</label>
-                                    <input name="maxParticipants" type="number" className="input" placeholder="예: 48" required />
+                                    <input name="maxParticipants" type="number" className="input" placeholder="예: 48" min="1" required />
                                 </div>
                             </div>
 
@@ -271,7 +271,7 @@ export default function NewTournamentForm({ centerId }: { centerId: string }) {
                         type !== 'LEAGUE' && type !== 'CHAMP' && (
                             <div>
                                 <label className="label">최대 참가 인원</label>
-                                <input name="maxParticipants" type="number" className="input" placeholder="예: 48" defaultValue={48} required />
+                                <input name="maxParticipants" type="number" className="input" placeholder="예: 48" defaultValue={48} min="1" required />
                             </div>
                         )
                     )}

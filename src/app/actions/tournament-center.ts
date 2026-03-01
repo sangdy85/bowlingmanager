@@ -24,6 +24,11 @@ export async function createTournament(centerId: string, formData: FormData) {
     const maxParticipantsStr = formData.get("maxParticipants") as string;
     const maxParticipants = maxParticipantsStr ? parseInt(maxParticipantsStr) : 0;
 
+    // Validation for CHAMP and EVENT types
+    if ((type === 'CHAMP' || type === 'EVENT') && maxParticipants <= 0) {
+        throw new Error("참가 정원(최대 인원)을 1명 이상 입력해 주세요.");
+    }
+
     const leagueDayStr = formData.get("leagueDay") as string;
     const leagueDay = leagueDayStr ? parseInt(leagueDayStr) : null;
     const leagueTime = formData.get("leagueTime") as string;
@@ -239,6 +244,11 @@ export async function updateTournamentBasicInfo(tournamentId: string, formData: 
     const name = formData.get("name") as string;
     const startDate = formData.get("startDate") ? parseKSTDate(formData.get("startDate") as string) : tournament.startDate;
     const maxParticipants = parseInt(formData.get("maxParticipants") as string);
+
+    // Validation for CHAMP and EVENT types
+    if ((tournament.type === 'CHAMP' || tournament.type === 'EVENT') && (isNaN(maxParticipants) || maxParticipants <= 0)) {
+        throw new Error("참가 정원(최대 인원)을 1명 이상 입력해 주세요.");
+    }
 
     const data: any = {
         name,

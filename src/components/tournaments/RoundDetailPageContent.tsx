@@ -1642,7 +1642,7 @@ function TournamentEditModal({ tournament, onClose, onUpdate }: { tournament: an
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-black text-slate-500 uppercase tracking-widest block ml-1">참가 정원 (명)</label>
-                                <input name="maxParticipants" type="number" defaultValue={tournament.maxParticipants} className="input input-bordered w-full h-14 bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm font-bold" required />
+                                <input name="maxParticipants" type="number" defaultValue={tournament.maxParticipants} className="input input-bordered w-full h-14 bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm font-bold" min="1" required />
                             </div>
                         </div>
 
