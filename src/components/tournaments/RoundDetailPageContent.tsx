@@ -1403,96 +1403,129 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     const leftColumn = sortedResults.slice(0, rowsPerColumn);
     const rightColumn = isTeam2To6 ? [] : sortedResults.slice(rowsPerColumn, rowsPerColumn * 2);
 
-    const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => (
-        <table style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            border: '1px solid black',
-            fontSize: '11px',
-            color: 'black',
-            backgroundColor: 'white',
-            borderLeft: isRight ? 'none' : '1px solid black',
-            tableLayout: 'fixed'
-        }}>
-            <thead>
-                <tr style={{ backgroundColor: '#E7E9EB', height: '32px' }}>
-                    <th style={{ border: '1px solid black', padding: '4px', width: '35px' }}>순위</th>
-                    <th style={{ border: '1px solid black', padding: '4px', width: '60px' }}>팀</th>
-                    <th style={{ border: '1px solid black', padding: '4px', width: isTeam2To6 ? '350px' : '100px' }}>성함</th>
-                    {Array.from({ length: gameCount }).map((_, i) => (
-                        <th key={i} style={{ border: '1px solid black', padding: '4px', width: '60px' }}>{i + 1}G</th>
-                    ))}
-                    <th style={{ border: '1px solid black', padding: '4px', width: '60px' }}>핸디</th>
-                    <th style={{ border: '1px solid black', padding: '4px', width: '40px' }}>H-L</th>
-                    <th style={{ border: '1px solid black', padding: '4px', width: '80px' }}>총점</th>
-                </tr>
-            </thead>
-            <tbody>
-                {Array.from({ length: rowsPerColumn }).map((_, idx) => {
-                    const res = data[idx];
-                    const rank = startRank + idx;
-                    const isTop3 = rank <= 3;
-                    const isFemaleChamp = res?.isFemaleChamp || false;
-                    const shouldHighlight = isTop3 || isFemaleChamp;
+    const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => {
+        const colWidths = isTeam2To6 ? {
+            rank: '40px',
+            team: '80px',
+            name: '400px',
+            game: '60px',
+            handy: '60px',
+            hl: '50px',
+            total: '80px'
+        } : {
+            rank: '35px',
+            team: '95px',
+            name: '130px',
+            game: '55px',
+            handy: '60px',
+            hl: '45px',
+            total: '70px'
+        };
 
-                    if (!res) {
+        return (
+            <table style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                border: '1px solid black',
+                fontSize: '11px',
+                color: 'black',
+                backgroundColor: 'white',
+                tableLayout: 'fixed'
+            }}>
+                <colgroup>
+                    <col style={{ width: colWidths.rank }} />
+                    <col style={{ width: colWidths.team }} />
+                    <col style={{ width: colWidths.name }} />
+                    {Array.from({ length: gameCount }).map((_, i) => (
+                        <col key={i} style={{ width: colWidths.game }} />
+                    ))}
+                    <col style={{ width: colWidths.handy }} />
+                    <col style={{ width: colWidths.hl }} />
+                    <col style={{ width: colWidths.total }} />
+                </colgroup>
+                <thead>
+                    <tr style={{ backgroundColor: '#E7E9EB', height: '32px' }}>
+                        <th style={{ border: '1px solid black', padding: '4px' }}>순위</th>
+                        <th style={{ border: '1px solid black', padding: '4px' }}>팀</th>
+                        <th style={{ border: '1px solid black', padding: '4px' }}>성함</th>
+                        {Array.from({ length: gameCount }).map((_, i) => (
+                            <th key={i} style={{ border: '1px solid black', padding: '4px' }}>{i + 1}G</th>
+                        ))}
+                        <th style={{ border: '1px solid black', padding: '4px' }}>핸디</th>
+                        <th style={{ border: '1px solid black', padding: '4px' }}>H-L</th>
+                        <th style={{ border: '1px solid black', padding: '4px' }}>총점</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {Array.from({ length: rowsPerColumn }).map((_, idx) => {
+                        const res = data[idx];
+                        const rank = startRank + idx;
+                        const isTop3 = rank <= 3;
+                        const isFemaleChamp = res?.isFemaleChamp || false;
+                        const shouldHighlight = isTop3 || isFemaleChamp;
+
+                        if (!res) {
+                            return (
+                                <tr key={`empty-${rank}`} style={{ height: '26px' }}>
+                                    <td style={{ border: '1px solid black', textAlign: 'center' }}>&nbsp;{rank}</td>
+                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
+                                    {Array.from({ length: gameCount }).map((_, i) => (
+                                        <td key={i} style={{ border: '1px solid black' }}>&nbsp;</td>
+                                    ))}
+                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black' }}>&nbsp;</td>
+                                </tr>
+                            );
+                        }
+
                         return (
-                            <tr key={`empty-${rank}`} style={{ height: '26px' }}>
-                                <td style={{ border: '1px solid black', textAlign: 'center' }}>&nbsp;{rank}</td>
-                                <td style={{ border: '1px solid black' }}>&nbsp;</td>
-                                <td style={{ border: '1px solid black' }}>&nbsp;</td>
-                                {Array.from({ length: gameCount }).map((_, i) => (
-                                    <td key={i} style={{ border: '1px solid black' }}>&nbsp;</td>
+                            <tr key={res.id} style={{ height: '26px', backgroundColor: shouldHighlight ? '#FFFF00' : 'white' }}>
+                                <td style={{ border: '1px solid black', textAlign: 'center', fontWeight: 'bold', backgroundColor: 'white' }}>{rank}</td>
+                                <td style={{ border: '1px solid black', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', padding: '0 2px', textOverflow: 'ellipsis' }}>{res.team}</td>
+                                <td style={{
+                                    border: '1px solid black',
+                                    textAlign: 'center',
+                                    fontWeight: 'bold',
+                                    padding: '0 4px',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis'
+                                }}>
+                                    {res.name}
+                                    {isFemaleChamp && <span style={{ color: '#E91E63', fontSize: '9px', marginLeft: '2px' }}>(여챔)</span>}
+                                </td>
+                                {res.scores.map((s: number, i: number) => (
+                                    <td key={i} style={{ border: '1px solid black', textAlign: 'center' }}>
+                                        {s > 0 ? s + res.handicapEach : ''}
+                                    </td>
                                 ))}
-                                <td style={{ border: '1px solid black' }}>&nbsp;</td>
-                                <td style={{ border: '1px solid black' }}>&nbsp;</td>
-                                <td style={{ border: '1px solid black' }}>&nbsp;</td>
+                                <td style={{
+                                    border: '1px solid black',
+                                    textAlign: 'center',
+                                    color: res.hasMinusHandicap ? '#ef4444' : 'inherit',
+                                    fontWeight: res.hasMinusHandicap ? 'bold' : 'normal'
+                                }}>
+                                    {res.totalHandicap === 0 ? '0' : res.totalHandicap}
+                                </td>
+                                <td style={{ border: '1px solid black', textAlign: 'center', fontSize: '11px', color: '#64748b' }}>
+                                    {res.hiLow}
+                                </td>
+                                <td style={{ border: '1px solid black', textAlign: 'center', fontWeight: '900', backgroundColor: shouldHighlight ? '#FFFF00' : 'inherit' }}>
+                                    {res.total}
+                                </td>
                             </tr>
                         );
-                    }
-
-                    return (
-                        <tr key={res.id} style={{ height: '26px', backgroundColor: shouldHighlight ? '#FFFF00' : 'white' }}>
-                            <td style={{ border: '1px solid black', textAlign: 'center', fontWeight: 'bold', backgroundColor: 'white' }}>{rank}</td>
-                            <td style={{ border: '1px solid black', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', padding: '0 2px', textOverflow: 'ellipsis' }}>{res.team}</td>
-                            <td style={{
-                                border: '1px solid black',
-                                textAlign: 'center',
-                                fontWeight: 'bold',
-                                padding: '0 4px'
-                            }}>
-                                {res.name}
-                                {isFemaleChamp && <span style={{ color: '#E91E63', fontSize: '9px', marginLeft: '2px' }}>(여챔)</span>}
-                            </td>
-                            {res.scores.map((s: number, i: number) => (
-                                <td key={i} style={{ border: '1px solid black', textAlign: 'center' }}>
-                                    {s > 0 ? s + res.handicapEach : ''}
-                                </td>
-                            ))}
-                            <td style={{
-                                border: '1px solid black',
-                                textAlign: 'center',
-                                color: res.hasMinusHandicap ? '#ef4444' : 'inherit',
-                                fontWeight: res.hasMinusHandicap ? 'bold' : 'normal'
-                            }}>
-                                {res.totalHandicap === 0 ? '0' : res.totalHandicap}
-                            </td>
-                            <td style={{ border: '1px solid black', textAlign: 'center', fontSize: '11px', color: '#64748b' }}>
-                                {res.hiLow}
-                            </td>
-                            <td style={{ border: '1px solid black', textAlign: 'center', fontWeight: '900', backgroundColor: shouldHighlight ? '#FFFF00' : 'inherit' }}>
-                                {res.total}
-                            </td>
-                        </tr>
-                    );
-                })}
-            </tbody>
-        </table>
-    );
+                    })}
+                </tbody>
+            </table>
+        );
+    };
 
     return (
         <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-            <div style={{ width: '100%', maxWidth: isTeam2To6 ? '1000px' : '1200px', padding: '0 0 20px 0' }}>
+            <div style={{ width: '100%', maxWidth: isTeam2To6 ? '1000px' : '1220px', padding: '0 0 20px 0' }}>
                 <div style={{ backgroundColor: '#FFFF00', border: '1px solid black', borderBottomWidth: '2px', padding: '12px 20px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
                     <h2 style={{ textAlign: 'center', fontSize: '20px', fontWeight: '900', color: 'black', margin: '0' }}>
                         {round.tournament.type === 'EVENT' ? round.tournament.name : `${round.tournament.name} ${round.roundNumber}회차`} 결과
@@ -1560,11 +1593,11 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     gap: isTeam2To6 ? '0' : '20px',
                     justifyContent: 'center'
                 }}>
-                    <div style={{ flex: 1, minWidth: isTeam2To6 ? '100%' : '520px' }}>
+                    <div style={{ flex: isTeam2To6 ? '1' : '0 0 600px', width: isTeam2To6 ? 'auto' : '600px' }}>
                         <TableComponent data={leftColumn} startRank={1} />
                     </div>
                     {!isTeam2To6 && (
-                        <div style={{ flex: 1, minWidth: '520px' }}>
+                        <div style={{ flex: '0 0 600px', width: '600px' }}>
                             <TableComponent data={rightColumn} startRank={28} isRight={true} />
                         </div>
                     )}
