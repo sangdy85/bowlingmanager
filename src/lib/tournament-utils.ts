@@ -80,15 +80,18 @@ export function calculateTournamentStatus(
     const start = startDate ? (typeof startDate === 'string' ? new Date(startDate) : startDate) : null;
     const regStart = registrationStart ? (typeof registrationStart === 'string' ? new Date(registrationStart) : registrationStart) : null;
 
-    // 1. FINISHED: After the day of the tournament (Next day 00:00 KST)
-    if (start && !isNaN(start.getTime())) {
-        const kstStart = new Date(start.getTime() + 9 * 60 * 60000);
-        const nextDayKST = new Date(Date.UTC(kstStart.getUTCFullYear(), kstStart.getUTCMonth(), kstStart.getUTCDate() + 1));
+    // 1. FINISHED: After the legal end of the tournament (Next day 00:00 KST)
+    const finishDate = endDate ? new Date(endDate) : start;
+    if (finishDate && !isNaN(finishDate.getTime())) {
+        const kstFinish = new Date(finishDate.getTime() + 9 * 60 * 60000);
+        // Set to 00:00:00 of the NEXT day in KST
+        const nextDayKST = new Date(Date.UTC(kstFinish.getUTCFullYear(), kstFinish.getUTCMonth(), kstFinish.getUTCDate() + 1));
         const nextDayUTC = new Date(nextDayKST.getTime() - 9 * 60 * 60000);
+
         if (now >= nextDayUTC) return 'FINISHED';
     }
 
-    // 2. ONGOING: From scheduled time (effectiveDate) until end of the day (23:59:59 KST)
+    // 2. ONGOING: From scheduled time until FINISHED
     if (start && !isNaN(start.getTime()) && now >= start) return 'ONGOING';
 
     // 3. CLOSED: 30 minutes before startDate until startDate
