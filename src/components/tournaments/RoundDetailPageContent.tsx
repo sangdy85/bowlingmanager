@@ -1415,10 +1415,10 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         } : {
             rank: '35px',
             team: '95px',
-            name: '130px',
+            name: '95px',
             game: '55px',
             handy: '60px',
-            hl: '45px',
+            hl: '50px',
             total: '70px'
         };
 
@@ -1525,7 +1525,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
     return (
         <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-            <div style={{ width: '100%', maxWidth: isTeam2To6 ? '1000px' : '1220px', padding: '0 0 20px 0' }}>
+            <div style={{ width: '100%', maxWidth: isTeam2To6 ? '1000px' : '1160px', padding: '0 0 20px 0' }}>
                 <div style={{ backgroundColor: '#FFFF00', border: '1px solid black', borderBottomWidth: '2px', padding: '12px 20px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
                     <h2 style={{ textAlign: 'center', fontSize: '20px', fontWeight: '900', color: 'black', margin: '0' }}>
                         {round.tournament.type === 'EVENT' ? round.tournament.name : `${round.tournament.name} ${round.roundNumber}회차`} 결과
@@ -1593,11 +1593,11 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     gap: isTeam2To6 ? '0' : '20px',
                     justifyContent: 'center'
                 }}>
-                    <div style={{ flex: isTeam2To6 ? '1' : '0 0 600px', width: isTeam2To6 ? 'auto' : '600px' }}>
+                    <div style={{ flex: isTeam2To6 ? '1' : '0 0 560px', width: isTeam2To6 ? 'auto' : '560px' }}>
                         <TableComponent data={leftColumn} startRank={1} />
                     </div>
                     {!isTeam2To6 && (
-                        <div style={{ flex: '0 0 600px', width: '600px' }}>
+                        <div style={{ flex: '0 0 560px', width: '560px' }}>
                             <TableComponent data={rightColumn} startRank={28} isRight={true} />
                         </div>
                     )}
