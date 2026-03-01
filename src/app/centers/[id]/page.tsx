@@ -195,9 +195,32 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
     const formattedTournamentsRaw = dedupedRaw.map((t: any) => {
         let currentStatus = t.status;
 
-        if (t.type === 'EVENT' || t.type === 'CHAMP') {
-            const startDate = t.type === 'CHAMP' && t.leagueRounds?.[0] ? getEffectiveRoundDate(t.leagueRounds[0].date, t.leagueTime) : t.startDate;
-            currentStatus = calculateTournamentStatus(startDate, t.registrationStart, t.endDate, t.status);
+        if (t.type === 'EVENT' || t.type === 'CHAMP' || t.type === 'LEAGUE') {
+            if ((t.type === 'CHAMP' || t.type === 'LEAGUE') && t.leagueRounds && t.leagueRounds.length > 0) {
+                // For long-term tournaments, status is FINISHED only if ALL rounds are FINISHED
+                // UNLESS the DB status is explicitly set to FINISHED
+                if (t.status === 'FINISHED') {
+                    currentStatus = 'FINISHED';
+                } else {
+                    const roundStatuses = t.leagueRounds.map((r: any) => {
+                        const effectiveDate = getEffectiveRoundDate(r.date, t.leagueTime);
+                        return calculateTournamentStatus(effectiveDate, r.registrationStart, null, t.status);
+                    });
+
+                    const allFinished = roundStatuses.every((s: string) => s === 'FINISHED');
+                    const anyOngoing = roundStatuses.some((s: string) => s === 'ONGOING' || s === 'OPEN' || s === 'CLOSED');
+
+                    if (allFinished) {
+                        currentStatus = 'FINISHED';
+                    } else if (anyOngoing) {
+                        currentStatus = 'ONGOING';
+                    } else {
+                        currentStatus = 'UPCOMING';
+                    }
+                }
+            } else {
+                currentStatus = calculateTournamentStatus(t.startDate, t.registrationStart, t.endDate, t.status);
+            }
         }
 
         return {
