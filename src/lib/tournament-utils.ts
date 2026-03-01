@@ -137,8 +137,11 @@ export function formatDateForInput(dateInput: Date | string | null): string {
 /**
  * Parses a datetime-local input string (YYYY-MM-DDTHH:mm) or date input string (YYYY-MM-DD) as a KST Date (+09:00).
  */
-export function parseKSTDate(dateString: string | null): Date | null {
+export function parseKSTDate(dateString: string | Date | null): Date | null {
     if (!dateString) return null;
+
+    // If it's already a Date object, return it (safety for double-parsing)
+    if (dateString instanceof Date) return dateString;
 
     // Handle full ISO strings or strings with timezone already
     if (dateString.includes('Z') || (dateString.includes('+') && dateString.length > 19)) {

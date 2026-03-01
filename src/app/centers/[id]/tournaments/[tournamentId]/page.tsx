@@ -309,9 +309,25 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                                             {(() => {
                                                 const s = tournamentSettings; // use the safe parsed settings
                                                 const items = [
-                                                    { label: '일시', value: safeTournament.type === 'EVENT' ? new Date(safeTournament.startDate).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : s.startDateText, icon: '📅' },
+                                                    {
+                                                        label: '일시',
+                                                        value: (() => {
+                                                            if (safeTournament.type !== 'EVENT') return s.startDateText;
+                                                            const d = new Date(safeTournament.startDate);
+                                                            return isNaN(d.getTime()) ? '일정 미정' : d.toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+                                                        })(),
+                                                        icon: '📅'
+                                                    },
                                                     { label: '대회 시간', value: safeTournament.type === 'EVENT' ? null : safeTournament.leagueTime, icon: '⏰' },
-                                                    { label: '접수 시작', value: s.registrationStart ? new Date(s.registrationStart).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : null, icon: '📝' },
+                                                    {
+                                                        label: '접수 시작',
+                                                        value: (() => {
+                                                            if (!s.registrationStart) return null;
+                                                            const d = new Date(s.registrationStart);
+                                                            return isNaN(d.getTime()) ? null : d.toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+                                                        })(),
+                                                        icon: '📝'
+                                                    },
                                                     {
                                                         label: '진행 모드',
                                                         value: s.gameMode === 'INDIVIDUAL' ? '개인전' :

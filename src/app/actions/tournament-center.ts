@@ -242,14 +242,20 @@ export async function updateGrandFinaleSettings(tournamentId: string, grandFinal
 export async function updateTournamentBasicInfo(tournamentId: string, formData: FormData) {
     const tournament = await prisma.tournament.findUnique({
         where: { id: tournamentId },
-        select: { centerId: true, type: true, settings: true }
+        select: { centerId: true, type: true, settings: true, startDate: true }
     });
 
     if (!tournament) throw new Error("Tournament not found");
     await verifyCenterAdmin(tournament.centerId);
 
     const name = formData.get("name") as string;
-    const startDate = formData.get("startDate") ? parseKSTDate(formData.get("startDate") as string) : tournament.startDate;
+    const startDateRaw = formData.get("startDate") as string;
+    const startDate = (startDateRaw && startDateRaw.trim()) ? parseKSTDate(startDateRaw) : tournament.startDate;
+
+    if (!startDate || isNaN(new Date(startDate).getTime())) {
+        throw new Error("올바른 대회 시작 날짜를 입력해주세요.");
+    }
+
     const maxParticipants = parseInt(formData.get("maxParticipants") as string);
 
     // Validation for CHAMP and EVENT types
@@ -320,7 +326,7 @@ export async function updateTournamentBasicInfo(tournamentId: string, formData: 
                     where: { id: rounds[0].id },
                     data: {
                         date: startDate,
-                        registrationStart: parseKSTDate(newSettings.registrationStart),
+                        registrationStart: newSettings.registrationStart,
                     }
                 });
             }
