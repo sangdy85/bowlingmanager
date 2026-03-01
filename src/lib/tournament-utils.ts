@@ -64,35 +64,30 @@ export function calculateTournamentStatus(
     // 0. Manual Finish / Planning Priority
     if (dbStatus === 'FINISHED') return 'FINISHED';
 
-    // 1. Missing Start Date -> UPCOMING (but check if regStart exists)
     const start = startDate ? new Date(startDate) : null;
     const regStart = registrationStart ? new Date(registrationStart) : null;
 
-    if (!start || isNaN(start.getTime())) {
-        if (regStart && !isNaN(regStart.getTime()) && now >= regStart) return 'OPEN';
-        return 'UPCOMING';
+    // 1. FINISHED: After the day of the tournament (Next day 00:00 KST)
+    if (start && !isNaN(start.getTime())) {
+        const kstStart = new Date(start.getTime() + 9 * 60 * 60000);
+        const nextDayKST = new Date(Date.UTC(kstStart.getUTCFullYear(), kstStart.getUTCMonth(), kstStart.getUTCDate() + 1));
+        const nextDayUTC = new Date(nextDayKST.getTime() - 9 * 60 * 60000);
+        if (now >= nextDayUTC) return 'FINISHED';
     }
 
-    // 2. FINISHED: After the day of the tournament (Next day 00:00 KST)
-    // We use a safe comparison by shifting to KST then setting to midnight
-    const finishDate = endDate ? new Date(endDate) : start;
-    const kstFinish = new Date(finishDate.getTime() + 9 * 60 * 60000);
-    const nextDayKST = new Date(Date.UTC(kstFinish.getUTCFullYear(), kstFinish.getUTCMonth(), kstFinish.getUTCDate() + 1));
-    const nextDayUTC = new Date(nextDayKST.getTime() - 9 * 60 * 60000);
+    // 2. ONGOING: From scheduled time (effectiveDate) until end of the day (23:59:59 KST)
+    if (start && !isNaN(start.getTime()) && now >= start) return 'ONGOING';
 
-    if (now >= nextDayUTC) return 'FINISHED';
+    // 3. CLOSED: 30 minutes before startDate until startDate
+    if (start && !isNaN(start.getTime())) {
+        const closedThreshold = new Date(start.getTime() - 30 * 60000);
+        if (now >= closedThreshold) return 'CLOSED';
+    }
 
-    // 3. ONGOING: From scheduled time until FINISHED
-    if (now >= start) return 'ONGOING';
-
-    // 4. CLOSED: 30 minutes before startDate
-    const closedThreshold = new Date(start.getTime() - 30 * 60000);
-    if (now >= closedThreshold) return 'CLOSED';
-
-    // 5. OPEN: From registrationStart until CLOSED
+    // 4. OPEN: From registrationStart until CLOSED (30m before start)
     if (regStart && !isNaN(regStart.getTime()) && now >= regStart) return 'OPEN';
 
-    // 6. UPCOMING
+    // 5. UPCOMING: Before registrationStart
     return 'UPCOMING';
 }
 
