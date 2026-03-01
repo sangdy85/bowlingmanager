@@ -1474,15 +1474,15 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                         if (!res) {
                             return (
                                 <tr key={`empty-${rank}`} style={{ height: '26px' }}>
-                                    <td style={{ border: '1px solid black', textAlign: 'center', width: `${colWidths.rank}px`, minWidth: `${colWidths.rank}px`, maxWidth: `${colWidths.rank}px` }}>&nbsp;{rank}</td>
-                                    <td style={{ border: '1px solid black', width: `${colWidths.team}px`, minWidth: `${colWidths.team}px`, maxWidth: `${colWidths.team}px` }}>&nbsp;</td>
-                                    <td style={{ border: '1px solid black', width: `${colWidths.name}px`, minWidth: `${colWidths.name}px`, maxWidth: `${colWidths.name}px` }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black', textAlign: 'center', width: `${colWidths.rank}px`, minWidth: `${colWidths.rank}px` }}>&nbsp;{rank}</td>
+                                    <td style={{ border: '1px solid black', width: `${colWidths.team}px`, minWidth: `${colWidths.team}px` }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black', width: `${colWidths.name}px`, minWidth: `${colWidths.name}px` }}>&nbsp;</td>
                                     {Array.from({ length: gameCount }).map((_, i) => (
-                                        <td key={i} style={{ border: '1px solid black', width: `${colWidths.game}px`, minWidth: `${colWidths.game}px`, maxWidth: `${colWidths.game}px` }}>&nbsp;</td>
+                                        <td key={i} style={{ border: '1px solid black', width: `${colWidths.game}px`, minWidth: `${colWidths.game}px` }}>&nbsp;</td>
                                     ))}
-                                    <td style={{ border: '1px solid black', width: `${colWidths.handy}px`, minWidth: `${colWidths.handy}px`, maxWidth: `${colWidths.handy}px` }}>&nbsp;</td>
-                                    <td style={{ border: '1px solid black', width: `${colWidths.hl}px`, minWidth: `${colWidths.hl}px`, maxWidth: `${colWidths.hl}px` }}>&nbsp;</td>
-                                    <td style={{ border: '1px solid black', width: `${colWidths.total}px`, minWidth: `${colWidths.total}px`, maxWidth: `${colWidths.total}px` }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black', width: `${colWidths.handy}px`, minWidth: `${colWidths.handy}px` }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black', width: `${colWidths.hl}px`, minWidth: `${colWidths.hl}px` }}>&nbsp;</td>
+                                    <td style={{ border: '1px solid black', width: `${colWidths.total}px`, minWidth: `${colWidths.total}px` }}>&nbsp;</td>
                                 </tr>
                             );
                         }
@@ -1580,12 +1580,13 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
     return (
         <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
-            <div style={{ width: `${totalContainerWidth}px`, maxWidth: '100%', padding: '0 0 20px 0', boxSizing: 'border-box' }}>
+            {/* Main Result Container - Fixed at 1120px for Individual/Champ */}
+            <div style={{ width: `${totalContainerWidth}px`, padding: '0 0 20px 0', boxSizing: 'border-box', overflow: 'hidden' }}>
                 <div style={{
                     backgroundColor: '#FFFF00',
                     border: '1px solid black',
                     borderBottomWidth: '2px',
-                    padding: '12px 20px',
+                    padding: '12px 10px', // Reduced horizontal padding to maximize space
                     width: '100%',
                     display: 'flex',
                     justifyContent: 'center',
@@ -1598,7 +1599,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     </h2>
                     <div style={{
                         position: 'absolute',
-                        right: '20px',
+                        right: '10px', // Adjusted to match new padding
                         display: 'flex',
                         gap: '8px',
                         zIndex: 10
@@ -1607,6 +1608,27 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                             <>
                                 <button
                                     onClick={handleExcelDownload}
+                                    style={{
+                                        backgroundColor: 'white',
+                                        color: 'black',
+                                        border: '1px solid black',
+                                        borderRadius: '4px',
+                                        padding: '6px 10px',
+                                        fontSize: '11px',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                    }}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    엑셀 다운로드
+                                </button>
+                                <button
+                                    onClick={() => window.print()}
                                     style={{
                                         backgroundColor: 'white',
                                         color: 'black',
@@ -1621,28 +1643,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                         gap: '4px'
                                     }}
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                    </svg>
-                                    엑셀 다운로드
-                                </button>
-                                <button
-                                    onClick={() => window.print()}
-                                    style={{
-                                        backgroundColor: 'white',
-                                        color: 'black',
-                                        border: '1px solid black',
-                                        borderRadius: '4px',
-                                        padding: '6px 14px',
-                                        fontSize: '11px',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '4px'
-                                    }}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                                     </svg>
                                     출력
@@ -1660,11 +1661,11 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     justifyContent: 'center',
                     boxSizing: 'border-box'
                 }}>
-                    <div style={{ width: isTeam2To6 ? '100%' : '50%', boxSizing: 'border-box' }}>
+                    <div style={{ flex: isTeam2To6 ? '1' : `0 0 ${singleTableWidth}px`, width: isTeam2To6 ? 'auto' : `${singleTableWidth}px`, boxSizing: 'border-box' }}>
                         <TableComponent data={leftColumn} startRank={1} />
                     </div>
                     {!isTeam2To6 && (
-                        <div style={{ width: '50%', boxSizing: 'border-box' }}>
+                        <div style={{ flex: `0 0 ${singleTableWidth}px`, width: `${singleTableWidth}px`, boxSizing: 'border-box' }}>
                             <TableComponent data={rightColumn} startRank={28} isRight={true} />
                         </div>
                     )}
