@@ -10,14 +10,25 @@ export function getEffectiveRoundDate(roundDate: Date | null | string, leagueTim
     const yyyy = kst.getUTCFullYear();
     const mm = String(kst.getUTCMonth() + 1).padStart(2, '0');
     const dd = String(kst.getUTCDate()).padStart(2, '0');
+    const hoursInKST = kst.getUTCHours();
+    const minutesInKST = kst.getUTCMinutes();
 
-    if (!leagueTime) return new Date(`${yyyy}-${mm}-${dd}T00:00:00+09:00`);
+    // If leagueTime is provided, it always takes priority (for LEAGUE/CHAMP logic)
+    if (leagueTime && leagueTime.includes(':')) {
+        const [hours, minutes] = leagueTime.split(':').map(Number);
+        const hh = String(isNaN(hours) ? 0 : hours).padStart(2, '0');
+        const min = String(isNaN(minutes) ? 0 : minutes).padStart(2, '0');
+        return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:00+09:00`);
+    }
 
-    const [hours, minutes] = leagueTime.split(':').map(Number);
-    const hh = String(isNaN(hours) ? 0 : hours).padStart(2, '0');
-    const min = String(isNaN(minutes) ? 0 : minutes).padStart(2, '0');
+    // If no leagueTime:
+    // If the input date already has a non-zero time, we respect it (important for EVENT types)
+    if (hoursInKST !== 0 || minutesInKST !== 0) {
+        return date;
+    }
 
-    return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:00+09:00`);
+    // Otherwise, default to 00:00 KST
+    return new Date(`${yyyy}-${mm}-${dd}T00:00:00+09:00`);
 }
 
 /**
@@ -64,8 +75,8 @@ export function calculateTournamentStatus(
     // 0. Manual Finish / Planning Priority
     if (dbStatus === 'FINISHED') return 'FINISHED';
 
-    const start = startDate ? new Date(startDate) : null;
-    const regStart = registrationStart ? new Date(registrationStart) : null;
+    const start = startDate ? (typeof startDate === 'string' ? new Date(startDate) : startDate) : null;
+    const regStart = registrationStart ? (typeof registrationStart === 'string' ? new Date(registrationStart) : registrationStart) : null;
 
     // 1. FINISHED: After the day of the tournament (Next day 00:00 KST)
     if (start && !isNaN(start.getTime())) {
@@ -130,14 +141,22 @@ export function formatDateForInput(dateInput: Date | string | null): string {
 export function parseKSTDate(dateString: string | null): Date | null {
     if (!dateString) return null;
 
-    // If it's only YYYY-MM-DD (10 chars), append T00:00
-    let formatted = dateString;
-    if (dateString.length === 10) {
-        formatted = `${dateString}T00:00`;
+    // Handle full ISO strings or strings with timezone already
+    if (dateString.includes('Z') || (dateString.includes('+') && dateString.length > 19)) {
+        return new Date(dateString);
     }
 
+    let formatted = dateString;
+    // If only YYYY-MM-DD
+    if (dateString.length === 10) {
+        formatted = `${dateString}T00:00`;
+    } else if (dateString.length === 16) { // YYYY-MM-DDTHH:mm
+        formatted = `${dateString}:00`; // Add seconds
+    }
+    // If it's already YYYY-MM-DDTHH:mm:ss, no change needed
+
     // Append +09:00 to ensure it's interpreted as KST
-    const date = new Date(`${formatted}:00+09:00`);
+    const date = new Date(`${formatted}+09:00`);
     return isNaN(date.getTime()) ? null : date;
 }
 

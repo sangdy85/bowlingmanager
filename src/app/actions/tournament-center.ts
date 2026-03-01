@@ -320,7 +320,7 @@ export async function updateTournamentBasicInfo(tournamentId: string, formData: 
                     where: { id: rounds[0].id },
                     data: {
                         date: startDate,
-                        registrationStart: new Date(newSettings.registrationStart),
+                        registrationStart: parseKSTDate(newSettings.registrationStart),
                     }
                 });
             }

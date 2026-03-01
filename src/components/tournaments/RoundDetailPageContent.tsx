@@ -125,36 +125,27 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
 
     return (
         <form action={handleSubmit} className="space-y-6 max-w-lg">
-            {round.tournament.type !== 'EVENT' ? (
-                <>
-                    <div>
-                        <label className="block text-sm font-bold mb-2 text-gray-700">대회 날짜 (시간 제외)</label>
-                        <input
-                            type="date"
-                            name="date"
-                            defaultValue={round.date ? new Date(round.date).toISOString().slice(0, 10) : ''}
-                            className="input w-full border-2 focus:border-blue-500 transition-colors"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold mb-2 text-gray-700">접수 시작 일시</label>
-                        <input
-                            type="datetime-local"
-                            name="regStart"
-                            defaultValue={formatDateForInput(round.registrationStart)}
-                            className="input w-full border-2 focus:border-blue-500 transition-colors"
-                        />
-                        <p className="text-xs text-gray-500 mt-2 font-medium bg-gray-100 p-2 rounded">
-                            ℹ️ 접수 종료 시간은 별도로 설정하지 않아도 됩니다. (상시 접수 또는 경기 시작 전까지)
-                        </p>
-                    </div>
-                </>
-            ) : (
-                <>
-                    <input type="hidden" name="date" value={round.date ? new Date(round.date).toISOString().slice(0, 10) : ''} />
-                    <input type="hidden" name="regStart" value={round.registrationStart ? new Date(round.registrationStart).toISOString() : ''} />
-                </>
-            )}
+            <div>
+                <label className="block text-sm font-bold mb-2 text-gray-700">대회 일시</label>
+                <input
+                    type="datetime-local"
+                    name="date"
+                    defaultValue={formatDateForInput(round.date || round.tournament.startDate)}
+                    className="input w-full border-2 focus:border-blue-500 transition-colors"
+                />
+            </div>
+            <div>
+                <label className="block text-sm font-bold mb-2 text-gray-700">접수 시작 일시</label>
+                <input
+                    type="datetime-local"
+                    name="regStart"
+                    defaultValue={formatDateForInput(round.registrationStart)}
+                    className="input w-full border-2 focus:border-blue-500 transition-colors"
+                />
+                <p className="text-xs text-gray-500 mt-2 font-medium bg-gray-100 p-2 rounded">
+                    ℹ️ 접수 종료 시간은 별도로 설정하지 않아도 됩니다. (상시 접수 또는 경기 시작 전까지)
+                </p>
+            </div>
 
             <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
