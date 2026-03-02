@@ -261,14 +261,23 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
 
 // 3. Lanes Tab
 function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: () => void, isManager?: boolean }) {
-    const isIndividualMode = (() => {
+    const settings = (() => {
         try {
-            const settings = round.tournament?.settings ? (typeof round.tournament.settings === 'string' ? JSON.parse(round.tournament.settings) : round.tournament.settings) : {};
-            return (settings.gameMode || 'INDIVIDUAL') === 'INDIVIDUAL';
+            return round.tournament?.settings ? (typeof round.tournament.settings === 'string' ? JSON.parse(round.tournament.settings) : round.tournament.settings) : {};
         } catch (e) {
-            return true;
+            return {};
         }
     })();
+
+    const maxParticipants = settings.maxParticipants || 0;
+    const waitlistedRegIds = new Set(
+        [...round.participants]
+            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+            .filter((_, idx) => maxParticipants > 0 && idx + 1 > maxParticipants)
+            .map(p => p.registrationId)
+    );
+
+    const isIndividualMode = (settings.gameMode || 'INDIVIDUAL') === 'INDIVIDUAL';
     const [loading, setLoading] = useState(false);
     const [startLane, setStartLane] = useState(round.startLane || 1);
     const [endLane, setEndLane] = useState(round.endLane || 10);
@@ -276,18 +285,9 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
     // Parse existing config or default to empty
     const [laneConfig, setLaneConfig] = useState<Record<string, number[]>>(() => {
         try {
-            try {
-                try {
-                    return round.laneConfig ? JSON.parse(round.laneConfig) : {};
-                } catch (e) {
-                    console.error("Failed to parse laneConfig", e);
-                    return {};
-                }
-            } catch (e) {
-                console.error("Failed to parse laneConfig", e);
-                return {};
-            }
-        } catch {
+            return round.laneConfig ? JSON.parse(round.laneConfig) : {};
+        } catch (e) {
+            console.error("Failed to parse laneConfig", e);
             return {};
         }
     });
@@ -353,7 +353,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
     async function handleLaneSettings() {
         setLoading(true);
         try {
-            // 0. Validation: Capacity must match participant count and be explicitly saved
+            // 0. Validation: Capacity must match participant count (excluding waitlisted)
             const cleanConfig: Record<string, number[]> = {};
             for (let i = parseInt(startLane); i <= parseInt(endLane); i++) {
                 const laneKey = i.toString();
@@ -361,10 +361,14 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                 cleanConfig[laneKey] = laneConfig[laneKey] ?? [1, 2, 3];
             }
             const totalSlots = Object.values(cleanConfig).reduce((sum, slots) => sum + slots.length, 0);
-            const participantCount = round.participants.length;
 
-            if (totalSlots !== participantCount) {
-                alert(`설정된 총 레인 슬롯 수(${totalSlots})와 참가자 수(${participantCount})가 일치해야 합니다.\n\n현재 설정: ${totalSlots}개\n필요 인원: ${participantCount}명`);
+            // Filter out waitlisted participants for validation
+            const effectiveParticipantsCount = round.participants.filter(
+                (p: any) => !waitlistedRegIds.has(p.registrationId)
+            ).length;
+
+            if (totalSlots !== effectiveParticipantsCount) {
+                alert(`설정된 총 레인 슬롯 수(${totalSlots})와 참가자 수(${effectiveParticipantsCount})가 일치해야 합니다.\n(대기 인원 ${round.participants.length - effectiveParticipantsCount}명 제외)\n\n현재 설정: ${totalSlots}개\n필요 인원: ${effectiveParticipantsCount}명`);
                 setLoading(false);
                 return;
             }
@@ -387,19 +391,21 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
     async function handleAutoAssign() {
         // Validation: Check if team sizes match game mode
         try {
-            const settings = round.tournament.settings ? JSON.parse(round.tournament.settings) : {};
             const gameMode = settings.gameMode || 'INDIVIDUAL';
             const isTeamEvent = gameMode && gameMode.startsWith('TEAM_');
 
             if (isTeamEvent) {
                 const teamSize = parseInt(gameMode.split('_')[1]);
-                const participants = round.participants || [];
+                // Filter out waitlisted participants for auto-assignment validation
+                const matchableParticipants = round.participants.filter(
+                    (p: any) => !waitlistedRegIds.has(p.registrationId)
+                );
 
                 // Group by entryGroupId
                 const groups: Record<string, any[]> = {};
                 const unassigned: any[] = [];
 
-                participants.forEach((p: any) => {
+                matchableParticipants.forEach((p: any) => {
                     const groupId = p.registration?.entryGroupId;
                     if (groupId) {
                         if (!groups[groupId]) groups[groupId] = [];
@@ -428,7 +434,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
             console.error("Validation error", e);
         }
 
-        if (!confirm('현재 참가자들을 대상으로 레인을 랜덤 추첨하시겠습니까?\n기존 배정 내역은 덮어씌워집니다.')) return;
+        if (!confirm('현재 참가자들을 대상으로 레인을 랜덤 추첨하시겠습니까?\n(대기 인원은 제외됩니다)\n기존 배정 내역은 덮어씌워집니다.')) return;
 
         setLoading(true);
         try {
@@ -461,7 +467,8 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
     Object.keys(laneMap).forEach(key => {
         laneMap[Number(key)].sort((a, b) => (a.lane % 10) - (b.lane % 10));
     });
-    const unassigned = round.participants.filter((p: any) => !p.lane);
+    const matchableUnassigned = round.participants.filter((p: any) => !p.lane && !waitlistedRegIds.has(p.registrationId));
+    const waitlistedParticipants = round.participants.filter((p: any) => waitlistedRegIds.has(p.registrationId));
 
     return (
         <div className="space-y-8">
@@ -631,15 +638,31 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                             );
                         })}
 
-                        {unassigned.length > 0 && (
+                        {matchableUnassigned.length > 0 && (
                             <div className="mt-6 border-t pt-6">
                                 <h4 className="font-bold text-sm text-red-500 mb-3 flex items-center gap-2">
-                                    ⚠️ 미배정 참가자 ({unassigned.length})
+                                    ⚠️ 미배정 참가자 ({matchableUnassigned.length})
                                 </h4>
                                 <div className="flex flex-wrap gap-2">
-                                    {unassigned.map((p: any) => (
+                                    {matchableUnassigned.map((p: any) => (
                                         <div key={p.id} className="px-3 py-1.5 bg-gray-100 rounded-lg text-xs font-bold text-gray-500 border border-gray-200">
                                             {p.registration.guestTeamName ? `[${p.registration.guestTeamName}] ` : (p.registration.team ? `[${p.registration.team.name}] ` : '')}
+                                            {p.registration.user ? p.registration.user.name : p.registration.guestName}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {waitlistedParticipants.length > 0 && (
+                            <div className="mt-6 border-t pt-6 bg-amber-50/30 p-4 rounded-xl">
+                                <h4 className="font-bold text-sm text-amber-600 mb-3 flex items-center gap-2">
+                                    ⏳ 대기 참가자 ({waitlistedParticipants.length})
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {waitlistedParticipants.map((p: any, idx: number) => (
+                                        <div key={p.id} className="px-3 py-1.5 bg-white rounded-lg text-xs font-bold text-amber-600 border border-amber-200 shadow-sm">
+                                            <span className="mr-1 text-[10px] opacity-70">대기 {idx + 1}</span>
                                             {p.registration.user ? p.registration.user.name : p.registration.guestName}
                                         </div>
                                     ))}
