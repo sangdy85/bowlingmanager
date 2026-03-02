@@ -1161,13 +1161,19 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     }
     const settings = round.tournament?.settings ? JSON.parse(round.tournament.settings) : {};
     const gameCount = settings.gameCount || 3;
+    const isEvent = round.tournament?.type === 'EVENT';
     const maxParticipants = round.tournament?.maxParticipants || settings.maxParticipants || 0;
 
     // Identify waitlisted participants to exclude from results
+    // We strictly apply this only for EVENT tournaments to prevent missing data in CHAMP rounds
     const waitlistedRegIds = new Set(
-        maxParticipants > 0
+        (isEvent && maxParticipants > 0)
             ? [...round.participants]
-                .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                .sort((a, b) => {
+                    const dateA = new Date(a.createdAt || 0).getTime();
+                    const dateB = new Date(b.createdAt || 0).getTime();
+                    return dateA - dateB;
+                })
                 .slice(maxParticipants)
                 .map(p => p.registrationId)
             : []
