@@ -437,16 +437,35 @@ export default function RoundParticipantManager({
     };
 
     const downloadTemplate = () => {
-        const data = [
-            { '조': 1, '순번': 1, '팀명': '볼링팀A', '이름': '홍길동', '핸디': 0, '현황': '입금대기', '레인': '1-1' },
-            { '조': 1, '순번': 2, '팀명': '볼링팀A', '이름': '김철수', '핸디': 10, '현황': '입금완료', '레인': '1-2' },
-        ];
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Template");
-        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        const finalData = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
-        saveAs(finalData, `참가자등록_양식.xlsx`);
+        const templateRow: any = {
+            '순번': 1,
+            '팀명': '볼링팀A',
+            '이름': '홍길동',
+            '핸디': 0,
+            '현황': '입금대기',
+            '레인': '1-1'
+        };
+
+        // 팀전(2인조 이상)일 경우에만 '조' 컬럼 추가
+        if (!isIndividualMode) {
+            const newRow: any = { '조': 1 };
+            Object.assign(newRow, templateRow);
+            const data = [newRow, { ...newRow, '순번': 2, '이름': '김철수', '핸디': 10, '현황': '입금완료', '레인': '1-2' }];
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Template");
+            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const finalData = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+            saveAs(finalData, `참가자등록_양식.xlsx`);
+        } else {
+            const data = [templateRow, { ...templateRow, '순번': 2, '이름': '김철수', '핸디': 10, '현황': '입금완료', '레인': '1-2' }];
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Template");
+            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const finalData = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+            saveAs(finalData, `참가자등록_양식.xlsx`);
+        }
     };
 
 
