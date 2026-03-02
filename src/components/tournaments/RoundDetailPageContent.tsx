@@ -668,6 +668,15 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
 
     const [loading, setLoading] = useState(false);
 
+    // 1. Identify waitlisted participants based on registration order (createdAt)
+    const maxParticipants = settings.maxParticipants || 0;
+    const waitlistedRegIds = new Set(
+        [...round.participants]
+            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+            .filter((_, idx) => maxParticipants > 0 && idx + 1 > maxParticipants)
+            .map(p => p.registrationId)
+    );
+
     // Initialize scores state
     const [scoreMap, setScoreMap] = useState<Record<string, { [key: number]: string }>>(() => {
         const initial: Record<string, { [key: number]: string }> = {};
@@ -703,6 +712,10 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
             console.error("rawApiData is not an array:", rawApiData);
             return;
         }
+
+        // Filter out waitlisted from Excel matching
+        const matchableParticipants = round.participants.filter((p: any) => !waitlistedRegIds.has(p.registrationId));
+
         let matchCount = 0;
         const newScoreMap = { ...scoreMap };
 
@@ -711,7 +724,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
         const moveCount = (round.moveLaneCount || 0);
         const offset = moveCount * 2;
 
-        const allLanesFromParticipants = round.participants.map((p: any) => p.lane ? Math.floor(p.lane / 10) : null).filter((l: any) => l !== null);
+        const allLanesFromParticipants = matchableParticipants.map((p: any) => p.lane ? Math.floor(p.lane / 10) : null).filter((l: any) => l !== null);
         const detectedFirstLane = allLanesFromParticipants.length > 0 ? Math.min(...allLanesFromParticipants) : 1;
         const detectedLastLane = allLanesFromParticipants.length > 0 ? Math.max(...allLanesFromParticipants) : 20;
 
@@ -736,8 +749,8 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
             return curr;
         };
 
-        // For each participant, match scores based on Lane & Slot
-        round.participants.forEach((p: any) => {
+        // For each matchable participant, match scores based on Lane & Slot
+        matchableParticipants.forEach((p: any) => {
             if (!p.lane) return;
             const startLane = Math.floor(p.lane / 10);
             const slot = p.lane % 10;
@@ -780,6 +793,9 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
             const updates: { regId: string, game: number, score: number }[] = [];
 
             round.participants.forEach((p: any) => {
+                // Skip waitlisted from save updates just in case, though they should be disabled in UI
+                if (waitlistedRegIds.has(p.registrationId)) return;
+
                 const scores = scoreMap[p.registrationId] || {};
 
                 for (let g = 1; g <= gameCount; g++) {
@@ -811,8 +827,12 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
     const gameMode = round.tournament?.settings ? JSON.parse(round.tournament.settings).gameMode : 'INDIVIDUAL';
     const isTeamEvent = gameMode && gameMode.startsWith('TEAM_');
 
-    // Sort participants first (by lane)
+    // Sort participants first (by waitlist status, then lane)
     const sortedParticipants = [...round.participants].sort((a, b) => {
+        const aWait = waitlistedRegIds.has(a.registrationId);
+        const bWait = waitlistedRegIds.has(b.registrationId);
+        if (aWait !== bWait) return aWait ? 1 : -1; // Waitlisted at the end
+
         if (a.lane && b.lane) return a.lane - b.lane;
         if (a.lane) return -1;
         if (b.lane) return 1;
@@ -872,6 +892,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                             const currentScores = scoreMap[p.registrationId] || {};
                             let totalWithHandicap = 0;
                             const handicap = p.registration.handicap || 0;
+                            const isWaitlisted = waitlistedRegIds.has(p.registrationId);
 
                             for (let g = 1; g <= gameCount; g++) {
                                 const val = parseInt(currentScores[g] || '0');
@@ -893,19 +914,21 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                             const groupIndex = groupId ? Array.from(new Set(sortedParticipants.map(sp => sp.registration.entryGroupId))).indexOf(groupId) : -1;
                             const groupBg = isTeamEvent && groupId
                                 ? (groupIndex % 2 === 0 ? 'bg-blue-50/20' : 'bg-indigo-50/20')
-                                : '';
+                                : (isWaitlisted ? 'bg-amber-50/50' : '');
 
                             return (
                                 <tr key={p.id} className={`hover:bg-blue-50/50 transition-colors ${groupBg} ${isFirstInGroup ? 'border-t-2 border-slate-300' : ''}`}>
-                                    <td className="p-2 text-center font-mono font-bold text-blue-600 bg-gray-50/30" style={{ width: '60px', whiteSpace: 'nowrap' }}>
-                                        {formatLane(p.lane, p.isManual)}
+                                    <td className={`p-2 text-center font-mono font-bold text-blue-600 ${isWaitlisted ? 'bg-amber-50' : 'bg-gray-50/30'}`} style={{ width: '60px', whiteSpace: 'nowrap' }}>
+                                        {isWaitlisted ? (
+                                            <span className="text-[10px] text-amber-600 block">대기</span>
+                                        ) : formatLane(p.lane, p.isManual)}
                                     </td>
                                     <td className="p-2 text-center text-gray-600 truncate" style={{ width: '90px', whiteSpace: 'nowrap' }}>
                                         {(p.registration.guestTeamName ?? p.registration.team?.name) || '-'}
                                     </td>
                                     <td className="p-2 text-center font-bold text-gray-800 truncate" style={{ width: '130px', whiteSpace: 'nowrap' }}>
                                         <div className="flex flex-col items-center">
-                                            <span>{p.registration.user?.name || p.registration.guestName}</span>
+                                            <span className={isWaitlisted ? 'text-gray-400' : ''}>{p.registration.user?.name || p.registration.guestName}</span>
                                             {isTeamEvent && groupId && (
                                                 <span className="text-[9px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded leading-none mt-0.5">
                                                     조: {groupId.replace('group_', '').includes('_name_') ? groupId.split('_name_')[1] : groupId.replace('group_', '')}
@@ -922,6 +945,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                                             type="number"
                                                             value={currentScores[g] || ''}
                                                             max={300}
+                                                            disabled={isWaitlisted}
                                                             onInput={(e) => {
                                                                 const target = e.target as HTMLInputElement;
                                                                 if (parseInt(target.value) > 300) {
@@ -930,7 +954,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                                                 }
                                                             }}
                                                             onChange={(e) => handleScoreChange(p.registrationId, g, e.target.value)}
-                                                            className="h-11 text-center font-black bg-white text-gray-900 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 z-0 focus:z-10 p-0 transition-all shadow-inner"
+                                                            className={`h-11 text-center font-black ${isWaitlisted ? 'bg-gray-50 text-gray-300' : 'bg-white text-gray-900'} border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 z-0 focus:z-10 p-0 transition-all shadow-inner`}
                                                             style={{
                                                                 width: `${pxWidth}px`,
                                                                 fontSize: fontSize,
@@ -957,6 +981,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                             <input
                                                 type="checkbox"
                                                 checked={femaleChampIds.includes(p.id)}
+                                                disabled={isWaitlisted}
                                                 onChange={(e) => {
                                                     if (e.target.checked) {
                                                         setFemaleChampIds(prev => [...prev, p.id]);
@@ -977,6 +1002,10 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
         </div>
     );
 }
+
+// Separate logic fix for duplicate loading state
+// (This will be done in the same call by including more context if possible, 
+// but replace_file_content is for contiguous blocks. Let's do the tags first.)
 
 
 // 5. Side Game Tab

@@ -575,8 +575,15 @@ export async function autoAssignRemaining(roundId: string) {
         const teamSize = gameMode.startsWith('TEAM_') ? parseInt(gameMode.split('_')[1]) : 1;
 
         // 2. Fetch all participants of this round, sorted by registration date to establish "sequence"
+        const maxParticipants = settings.maxParticipants || 0;
         const allParticipants = [...round.participants].sort((a: any, b: any) =>
-            new Date(a.registration.createdAt).getTime() - new Date(b.registration.createdAt).getTime()
+            new Date(a.createdAt).valueOf() - new Date(b.createdAt).valueOf()
+        );
+
+        const waitlistedRegIds = new Set(
+            allParticipants
+                .filter((_, idx) => maxParticipants > 0 && idx + 1 > maxParticipants)
+                .map(p => p.registrationId)
         );
 
         const laneConfig = round.laneConfig ? JSON.parse(round.laneConfig) : {};
@@ -609,12 +616,12 @@ export async function autoAssignRemaining(roundId: string) {
             }
         }
 
-        // Unassigned participants
-        const unassigned = round.participants.filter((p: any) => !p.lane);
+        // Unassigned participants (Excluding waitlisted)
+        const unassigned = round.participants.filter((p: any) => !p.lane && !waitlistedRegIds.has(p.registrationId));
         const totalAvailableCount = Array.from(laneToSlots.values()).reduce((acc, curr) => acc + curr.length, 0);
 
         if (totalAvailableCount < unassigned.length) {
-            throw new Error(`자리가 부족합니다. (남은 자리: ${totalAvailableCount}, 대기 인원: ${unassigned.length})`);
+            throw new Error(`자리가 부족합니다. (남은 자리: ${totalAvailableCount}, 배정 필요한 인원: ${unassigned.length})`);
         }
 
         // Explicit Groups Check: Ensure they match the team size
@@ -783,6 +790,19 @@ export async function drawLane(roundId: string, registrationId: string) {
         }
 
         if (!participant) throw new Error("참가자가 아니거나 권한이 없습니다.");
+
+        // --- Waitlist Check ---
+        const settings = round.tournament.settings ? JSON.parse(round.tournament.settings) : {};
+        const maxParticipants = settings.maxParticipants || 0;
+        const allParticipantsSorted = [...round.participants].sort((a: any, b: any) =>
+            new Date(a.createdAt).valueOf() - new Date(b.createdAt).valueOf()
+        );
+        const waitlistRank = allParticipantsSorted.findIndex((p: any) => p.registrationId === participant.registrationId) + 1;
+
+        if (maxParticipants > 0 && waitlistRank > maxParticipants) {
+            throw new Error(`현재 대기 ${waitlistRank - maxParticipants}번입니다. 자리가 나야 레인을 배정받을 수 있습니다.`);
+        }
+
         if (participant.lane) throw new Error(`이미 ${formatLane(participant.lane)}번 레인을 배정받았습니다.`);
 
         // 3. Find available slots (Encoded as Lane * 10 + Slot)
@@ -817,7 +837,6 @@ export async function drawLane(roundId: string, registrationId: string) {
 
         // --- Team Set Assignment Logic (Sequence Based) ---
         // 1. Determine team size from settings
-        const settings = round.tournament.settings ? JSON.parse(round.tournament.settings) : {};
         const gameMode = settings.gameMode || 'INDIVIDUAL';
         const teamSize = gameMode.startsWith('TEAM_') ? parseInt(gameMode.split('_')[1]) : 1;
 

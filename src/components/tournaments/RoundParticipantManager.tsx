@@ -855,7 +855,7 @@ export default function RoundParticipantManager({
                                                                     );
                                                                 })()
                                                             )}
-                                                            {isManager && participant && (
+                                                            {isManager && participant && !isWaitlisted && (
                                                                 <button
                                                                     onClick={() => {
                                                                         setEditingLaneId(participant.id);
