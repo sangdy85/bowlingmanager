@@ -99,25 +99,32 @@ export default function RoundParticipantManager({
 
     // Filter registrations to ONLY show those participating in the selected round
     const roundParticipants = useMemo(() => {
-        const registrations = allRegistrations || [];
-        if (!selectedRound) return [];
+        if (!selectedRound || !selectedRound.participants) return [];
 
-        // Match registration to RoundParticipant entry to get current round's entry order
-        const participantMap = new Map();
-        selectedRound.participants?.forEach((p: any) => {
-            participantMap.set(p.registrationId, p.createdAt);
-        });
-
-        // Always sort by the time they were added to this Round (RoundParticipant.createdAt)
-        // This ensures manual additions always go to the end of the list (waitlist)
-        return registrations
-            .filter(reg => participantMap.has(reg.id))
+        // Use selectedRound.participants as the Source of Truth for order
+        // and merge with registration data for UI needs
+        return [...selectedRound.participants]
             .sort((a, b) => {
-                const dateA = new Date(participantMap.get(a.id) || 0).getTime();
-                const dateB = new Date(participantMap.get(b.id) || 0).getTime();
+                const dateA = new Date(a.createdAt || 0).getTime();
+                const dateB = new Date(b.createdAt || 0).getTime();
                 return dateA - dateB;
+            })
+            .map(p => {
+                // Return an object that mimics the TournamentRegistration structure
+                // but is rooted in the RoundParticipant data
+                return {
+                    ...p.registration,
+                    // Ensure the ID used for actions is the Registration ID
+                    id: p.registrationId,
+                    // Keep track of the RoundParticipant ID for lane updates, etc.
+                    participantId: p.id,
+                    // Merge any fields from RoundParticipant that might be needed
+                    lane: p.lane,
+                    isFemaleChamp: p.isFemaleChamp,
+                    isManual: p.isManual
+                };
             });
-    }, [allRegistrations, selectedRound]);
+    }, [selectedRound]);
 
     const openRegisterModal = () => {
         setIsEditMode(false);
@@ -359,10 +366,7 @@ export default function RoundParticipantManager({
             row['성함'] = reg.guestName ?? reg.user?.name;
             row['핸디캡'] = reg.handicap ?? reg.user?.handicap ?? 0;
             row['입금현황'] = reg.paymentStatus === 'PAID' ? '입금완료' : '입금대기';
-            row['레인'] = (() => {
-                const p = selectedRound.participants?.find((p: any) => p.registrationId === reg.id);
-                return formatLane(p?.lane, p?.isManual);
-            })();
+            row['레인'] = formatLane(reg.lane, reg.isManual);
             return row;
         });
 
@@ -706,8 +710,6 @@ export default function RoundParticipantManager({
                             </thead>
                             <tbody className="font-bold">
                                 {roundParticipants.map((reg: any, idx: number) => {
-                                    const participant = selectedRound.participants?.find((p: any) => p.registrationId === reg.id);
-
                                     const isWaitlisted = maxParticipants > 0 && idx + 1 > maxParticipants;
                                     const waitNumber = isWaitlisted ? idx + 1 - maxParticipants : 0;
                                     const isCurrentUser = currentUserId && reg.userId === currentUserId;
@@ -749,7 +751,10 @@ export default function RoundParticipantManager({
                                             </td>
                                             <td className="border-2 border-slate-900 p-1 truncate px-4 font-black">
                                                 <div className="flex flex-col items-center gap-0.5">
-                                                    <span>{reg.guestName ?? reg.user?.name}</span>
+                                                    <div className="flex items-center gap-1">
+                                                        <span>{reg.guestName ?? reg.user?.name}</span>
+                                                        {reg.isFemaleChamp && <span className="text-[9px] text-pink-500 font-black">(여챔)</span>}
+                                                    </div>
                                                     {!isIndividualMode && reg.entryGroupId && (
                                                         <span className="text-[9px] bg-slate-800 text-white px-1.5 py-0.5 rounded leading-none">
                                                             조: {reg.entryGroupId.replace('group_', '')}
@@ -781,9 +786,9 @@ export default function RoundParticipantManager({
                                                     </div>
                                                 )}
                                             </td>
-                                            <td className="border-2 border-slate-900 p-1 font-black whitespace-nowrap">
+                                            <td className="border-2 border-slate-900 p-1 font-black whitespace-nowrap text-[11px]">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    {editingLaneId === participant?.id ? (
+                                                    {editingLaneId === reg.participantId ? (
                                                         <div className="flex items-center gap-1">
                                                             <select
                                                                 value={tempLaneValue}
@@ -793,31 +798,21 @@ export default function RoundParticipantManager({
                                                                 <option value="">레인 선택</option>
                                                                 {(() => {
                                                                     const options = [];
-                                                                    try {
-                                                                        const config = selectedRound.laneConfig ? JSON.parse(selectedRound.laneConfig) : {};
-                                                                        if (Object.keys(config).length > 0) {
-                                                                            Object.entries(config).forEach(([lane, slots]: any) => {
-                                                                                slots.forEach((slot: number) => {
-                                                                                    const val = parseInt(lane) * 10 + slot;
-                                                                                    options.push({ val, label: `${lane}-${slot}` });
-                                                                                });
-                                                                            });
-                                                                        } else if (selectedRound.startLane && selectedRound.endLane) {
-                                                                            for (let l = selectedRound.startLane; l <= selectedRound.endLane; l++) {
-                                                                                for (let s = 1; s <= 3; s++) {
-                                                                                    const val = l * 10 + s;
-                                                                                    options.push({ val, label: `${l}-${s}` });
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    } catch (e) { }
-                                                                    return options.sort((a, b) => a.val - b.val).map(opt => (
-                                                                        <option key={opt.val} value={opt.label}>{opt.label}</option>
-                                                                    ));
+                                                                    for (let l = selectedRound.startLane || 1; l <= (selectedRound.endLane || 40); l += 2) {
+                                                                        options.push(
+                                                                            <optgroup key={`lane-${l}`} label={`${l}-${l + 1} 라인`}>
+                                                                                <option value={`${l}-1`}>{l}-1</option>
+                                                                                <option value={`${l}-2`}>{l}-2</option>
+                                                                                <option value={`${l + 1}-1`}>{l + 1}-1</option>
+                                                                                <option value={`${l + 1}-2`}>{l + 1}-2</option>
+                                                                            </optgroup>
+                                                                        );
+                                                                    }
+                                                                    return options;
                                                                 })()}
                                                             </select>
                                                             <button
-                                                                onClick={() => handleManualLaneSave(participant.id)}
+                                                                onClick={() => handleManualLaneSave(reg.participantId)}
                                                                 className="w-8 h-8 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700 transition-colors"
                                                             >
                                                                 💾
@@ -830,9 +825,9 @@ export default function RoundParticipantManager({
                                                             </button>
                                                         </div>
                                                     ) : (
-                                                        <>
-                                                            {participant?.lane ? (
-                                                                <span className="text-primary">{formatLane(participant.lane, participant?.isManual)}</span>
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            {reg?.lane ? (
+                                                                <span className="text-primary">{formatLane(reg.lane, reg?.isManual)}</span>
                                                             ) : (
                                                                 (() => {
                                                                     let canDraw = false;
@@ -854,11 +849,11 @@ export default function RoundParticipantManager({
                                                                     );
                                                                 })()
                                                             )}
-                                                            {isManager && participant && !isWaitlisted && (
+                                                            {isManager && reg.participantId && !isWaitlisted && (
                                                                 <button
                                                                     onClick={() => {
-                                                                        setEditingLaneId(participant.id);
-                                                                        setTempLaneValue(participant.lane ? formatLane(participant.lane).replace('(수동)', '') : '');
+                                                                        setEditingLaneId(reg.participantId);
+                                                                        setTempLaneValue(reg.lane ? formatLane(reg.lane).replace('(수동)', '').trim() : '');
                                                                     }}
                                                                     className="w-6 h-6 flex items-center justify-center bg-slate-100 text-slate-400 rounded-md hover:bg-blue-50 hover:text-blue-500 transition-colors"
                                                                     title="레인 수동 변경"
@@ -866,7 +861,7 @@ export default function RoundParticipantManager({
                                                                     ✏️
                                                                 </button>
                                                             )}
-                                                        </>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </td>
