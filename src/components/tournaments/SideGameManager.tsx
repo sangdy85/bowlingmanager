@@ -146,6 +146,17 @@ export default function SideGameManager({
         return players;
     }, [tournamentType, matchups, participants, allIndividualScores, tournamentRegistrations, gameCount]);
 
+    // Participation Counts
+    const participationCounts = useMemo(() => {
+        const counts = { STANDARD: 0, BALL: 0, EXTRA: 0 };
+        Object.values(participation).forEach(s => {
+            if (s.has('STANDARD')) counts.STANDARD++;
+            if (s.has('BALL')) counts.BALL++;
+            if (s.has('EXTRA')) counts.EXTRA++;
+        });
+        return counts;
+    }, [participation]);
+
     // Players list to display based on view permissions
     const visiblePlayers = useMemo(() => {
         if (isManager) return allPlayers;
@@ -318,6 +329,31 @@ export default function SideGameManager({
                                 </label>
                             </>
                         )}
+                    </div>
+                </div>
+
+                {/* Participation Summary Board */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <div className="bg-blue-50 border-2 border-blue-600 p-4 rounded-xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] flex items-center justify-between">
+                        <div>
+                            <span className="text-xs font-black text-blue-600 uppercase tracking-widest block mb-1">기본 사이드</span>
+                            <span className="text-3xl font-black text-blue-900">{participationCounts.STANDARD} <span className="text-sm font-bold text-blue-400">명</span></span>
+                        </div>
+                        <div className="text-3xl opacity-40">🎯</div>
+                    </div>
+                    <div className="bg-orange-50 border-2 border-orange-500 p-4 rounded-xl shadow-[4px_4px_0px_0px_rgba(249,115,22,1)] flex items-center justify-between">
+                        <div>
+                            <span className="text-xs font-black text-orange-500 uppercase tracking-widest block mb-1">볼사이드 (2G)</span>
+                            <span className="text-3xl font-black text-orange-900">{participationCounts.BALL} <span className="text-sm font-bold text-orange-400">명</span></span>
+                        </div>
+                        <div className="text-3xl opacity-40">🔮</div>
+                    </div>
+                    <div className="bg-purple-50 border-2 border-purple-600 p-4 rounded-xl shadow-[4px_4px_0px_0px_rgba(147,51,234,1)] flex items-center justify-between">
+                        <div>
+                            <span className="text-xs font-black text-purple-600 uppercase tracking-widest block mb-1">번외 ({gameCount}G)</span>
+                            <span className="text-3xl font-black text-purple-900">{participationCounts.EXTRA} <span className="text-sm font-bold text-purple-400">명</span></span>
+                        </div>
+                        <div className="text-3xl opacity-40">🎲</div>
                     </div>
                 </div>
 
