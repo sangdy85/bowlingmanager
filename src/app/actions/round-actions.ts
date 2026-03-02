@@ -1249,7 +1249,7 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
         const shouldResetAll = info.type === 'CHAMP' || info.type === 'LEAGUE' || info.type === 'EVENT';
 
         await prisma.$transaction(async (tx: any) => {
-            // 1. [STRICT SYNC] Clear the total slate for this round and cleanup artifacts.
+            // 1. [STRICT SYNC] Clear the total slate for THIS ROUND ONLY.
             if (shouldResetAll) {
                 // Delete all round-specific data records first to avoid any leftovers
                 await tx.tournamentScore.deleteMany({ where: { roundId } });
@@ -1257,17 +1257,17 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                 await tx.leagueMatchup.deleteMany({ where: { roundId } }); // Cascades to IndividualScores
                 await tx.roundParticipant.deleteMany({ where: { roundId } });
 
-                // [ORPHAN CLEANUP / FULL RESET for EVENT] 
-                // For Event/Champ/League, we want a fresh start.
-                // We delete all registrations for this tournament to ensure the excel is the absolute source of truth.
-                await tx.tournamentRegistration.deleteMany({
-                    where: { tournamentId: info.tournamentId }
-                });
+                // [CRITICAL CHANGE] Do NOT delete all tournament registrations.
+                // We only want to manage participants for this specific round.
             }
-
 
             let index = 0;
             const baseTime = new Date();
+
+            // Pre-fetch all registrations for this tournament to match by name/team
+            const existingRegistrations = await tx.tournamentRegistration.findMany({
+                where: { tournamentId: info.tournamentId }
+            });
 
             for (const pData of participants) {
                 try {
@@ -1277,24 +1277,43 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                     const handicapVal = pData.handicap !== undefined ? pData.handicap : null;
                     const status = (pData.paymentStatus === '입금완료' || pData.paymentStatus === 'PAID') ? 'PAID' : 'PENDING';
 
-                    let registrationId = randomUUID();
+                    // [REFINED LOGIC] Find if this person is already registered in the tournament
+                    // by matching name and team name (case-insensitive-ish split)
+                    let reg = existingRegistrations.find((r: any) =>
+                        (r.guestName && r.guestName.trim() === trimmedName && (r.guestTeamName || '') === trimmedTeamName) ||
+                        (r.user && r.user.name.trim() === trimmedName && (r.guestTeamName || '') === trimmedTeamName)
+                    );
 
-                    // [REFINED LOGIC] For both event-style (EVENT) and major (CHAMP/LEAGUE),
-                    // prioritize fresh data. Treat every row as a new registration for this specific round's context.
-                    // This avoids conflicts with old/incomplete registration data from previous attempts.
-                    await tx.tournamentRegistration.create({
-                        data: {
-                            id: registrationId,
-                            tournamentId: info.tournamentId,
-                            guestName: trimmedName,
-                            guestTeamName: trimmedTeamName || null,
-                            entryGroupId: pData.entryGroupId || null,
-                            handicap: handicapVal,
-                            paymentStatus: status,
-                            createdAt: seqTime
-                        }
-                    });
-                    results.createdTitle++;
+                    let registrationId;
+
+                    if (reg) {
+                        registrationId = reg.id;
+                        // Update existing registration info (handicap, status, etc.)
+                        await tx.tournamentRegistration.update({
+                            where: { id: registrationId },
+                            data: {
+                                entryGroupId: pData.entryGroupId || reg.entryGroupId,
+                                handicap: handicapVal ?? reg.handicap,
+                                paymentStatus: status
+                            }
+                        });
+                        results.updatedTitle++;
+                    } else {
+                        registrationId = randomUUID();
+                        await tx.tournamentRegistration.create({
+                            data: {
+                                id: registrationId,
+                                tournamentId: info.tournamentId,
+                                guestName: trimmedName,
+                                guestTeamName: trimmedTeamName || null,
+                                entryGroupId: pData.entryGroupId || null,
+                                handicap: handicapVal,
+                                paymentStatus: status,
+                                createdAt: seqTime
+                            }
+                        });
+                        results.createdTitle++;
+                    }
 
                     // 3. Create RoundParticipant entry linked to the registration
                     const rp = await tx.roundParticipant.create({
