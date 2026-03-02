@@ -624,9 +624,11 @@ export async function autoAssignRemaining(roundId: string) {
             throw new Error(`자리가 부족합니다. (남은 자리: ${totalAvailableCount}, 배정 필요한 인원: ${unassigned.length})`);
         }
 
-        // Explicit Groups Check: Ensure they match the team size
+        // Explicit Groups Check: Ensure they match the team size (Excluding waitlisted)
+        const matchableParticipants = allParticipants.filter(p => !waitlistedRegIds.has(p.registrationId));
         const explicitGroups = new Map<string, any[]>();
-        allParticipants.forEach(p => {
+
+        matchableParticipants.forEach(p => {
             if (p.registration.entryGroupId) {
                 if (!explicitGroups.has(p.registration.entryGroupId)) explicitGroups.set(p.registration.entryGroupId, []);
                 explicitGroups.get(p.registration.entryGroupId)!.push(p);
@@ -657,8 +659,8 @@ export async function autoAssignRemaining(roundId: string) {
             members.forEach(m => groupedParticipantIds.add(m.id));
         });
 
-        // 3b. Group remaining by sequence
-        const remainingParticipants = allParticipants.filter(p => !groupedParticipantIds.has(p.id));
+        // 3b. Group remaining by sequence (Excluding waitlisted)
+        const remainingParticipants = matchableParticipants.filter(p => !groupedParticipantIds.has(p.id));
         for (let i = 0; i < remainingParticipants.length; i += teamSize) {
             groups.push(remainingParticipants.slice(i, i + teamSize));
         }
