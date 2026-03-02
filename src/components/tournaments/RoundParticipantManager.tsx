@@ -100,9 +100,6 @@ export default function RoundParticipantManager({
     // Filter registrations to ONLY show those participating in the selected round
     const roundParticipants = useMemo(() => {
         const registrations = allRegistrations || [];
-        if (isEvent) {
-            return [...registrations].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        }
         if (!selectedRound) return [];
 
         // Match registration to RoundParticipant entry to get current round's entry order
@@ -111,6 +108,8 @@ export default function RoundParticipantManager({
             participantMap.set(p.registrationId, p.createdAt);
         });
 
+        // Always sort by the time they were added to this Round (RoundParticipant.createdAt)
+        // This ensures manual additions always go to the end of the list (waitlist)
         return registrations
             .filter(reg => participantMap.has(reg.id))
             .sort((a, b) => {
@@ -118,7 +117,7 @@ export default function RoundParticipantManager({
                 const dateB = new Date(participantMap.get(b.id) || 0).getTime();
                 return dateA - dateB;
             });
-    }, [allRegistrations, selectedRound, isEvent]);
+    }, [allRegistrations, selectedRound]);
 
     const openRegisterModal = () => {
         setIsEditMode(false);

@@ -691,7 +691,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
 
     const [loading, setLoading] = useState(false);
 
-    // 1. Identify waitlisted participants based on registration order (createdAt)
+    // 1. Identify waitlisted participants based on current round's entry order (createdAt)
     const maxParticipants = settings.maxParticipants || 0;
     const waitlistedRegIds = new Set(
         [...round.participants]
@@ -850,7 +850,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
     const gameMode = round.tournament?.settings ? JSON.parse(round.tournament.settings).gameMode : 'INDIVIDUAL';
     const isTeamEvent = gameMode && gameMode.startsWith('TEAM_');
 
-    // Sort participants first (by waitlist status, then lane)
+    // Sort participants first (by waitlist status, then lane, then round entry order)
     const sortedParticipants = [...round.participants].sort((a, b) => {
         const aWait = waitlistedRegIds.has(a.registrationId);
         const bWait = waitlistedRegIds.has(b.registrationId);
@@ -859,9 +859,11 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
         if (a.lane && b.lane) return a.lane - b.lane;
         if (a.lane) return -1;
         if (b.lane) return 1;
-        const nameA = a.registration.guestName ?? a.registration.user?.name ?? '';
-        const nameB = b.registration.guestName ?? b.registration.user?.name ?? '';
-        return nameA.localeCompare(nameB);
+
+        // If neither have lanes (unassigned or waitlisted), sort by round entry time
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateA - dateB;
     });
 
     return (
