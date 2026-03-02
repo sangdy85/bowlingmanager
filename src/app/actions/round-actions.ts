@@ -283,7 +283,7 @@ export async function updateRoundLanes(roundId: string, laneData: { participantI
 export async function updateRoundScores(
     roundId: string,
     scores: { regId: string, game: number, score: number }[],
-    sideGameData?: { regId: string, basic: boolean, ball: boolean, extra: boolean, handicap?: number }[]
+    sideGameData?: { regId: string, basic: boolean, ball: boolean, extra: boolean }[]
 ) {
     try {
         // 1. Update Scores
@@ -314,16 +314,14 @@ export async function updateRoundScores(
             }
         }
 
-        // 2. Update Participant Metadata (Handicap, Side Game Flags)
+        // 2. Update Side Game Flags
         if (sideGameData && sideGameData.length > 0) {
             for (const data of sideGameData) {
-                // Update RoundParticipant with round-specific data
                 await prisma.$executeRaw`
                     UPDATE "RoundParticipant"
                     SET "sideBasic" = ${data.basic ? 1 : 0},
                         "sideBall" = ${data.ball ? 1 : 0},
-                        "sideExtra" = ${data.extra ? 1 : 0},
-                        "handicap" = ${data.handicap !== undefined ? data.handicap : null}
+                        "sideExtra" = ${data.extra ? 1 : 0}
                     WHERE "roundId" = ${roundId} AND "registrationId" = ${data.regId}
                 `;
             }
@@ -433,18 +431,11 @@ export async function manualRegister(roundId: string, input: {
             SELECT id FROM "RoundParticipant" WHERE "roundId" = ${roundId} AND "registrationId" = ${registrationId}
         `;
 
-        const handicapVal = input.handicap !== undefined ? input.handicap : null;
-
         if (inRound.length === 0) {
             const rpId = randomUUID();
             await prisma.$executeRaw`
-                INSERT INTO "RoundParticipant" ("id", "roundId", "registrationId", "createdAt", "lane", "handicap")
-                VALUES (${rpId}, ${roundId}, ${registrationId}, ${new Date()}, null, ${handicapVal})
-            `;
-        } else {
-            // Updated: If already in round, update the round-specific handicap
-            await prisma.$executeRaw`
-                UPDATE "RoundParticipant" SET "handicap" = ${handicapVal} WHERE "id" = ${inRound[0].id}
+                INSERT INTO "RoundParticipant" ("id", "roundId", "registrationId", "createdAt", "lane")
+                VALUES (${rpId}, ${roundId}, ${registrationId}, ${new Date()}, null)
             `;
         }
 
@@ -1273,11 +1264,6 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
             let index = 0;
             const baseTime = new Date();
 
-            // Pre-fetch all registrations for this tournament to match by name/team
-            const existingRegistrations = await tx.tournamentRegistration.findMany({
-                where: { tournamentId: info.tournamentId }
-            });
-
             for (const pData of participants) {
                 try {
                     const trimmedName = pData.name.trim();
@@ -1286,52 +1272,30 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                     const handicapVal = pData.handicap !== undefined ? pData.handicap : null;
                     const status = (pData.paymentStatus === '입금완료' || pData.paymentStatus === 'PAID') ? 'PAID' : 'PENDING';
 
-                    // [REFINED LOGIC] Find if this person is already registered in the tournament
-                    // by matching name and team name (case-insensitive-ish split)
-                    let reg = existingRegistrations.find((r: any) =>
-                        (r.guestName && r.guestName.trim() === trimmedName && (r.guestTeamName || '') === trimmedTeamName) ||
-                        (r.user && r.user.name.trim() === trimmedName && (r.guestTeamName || '') === trimmedTeamName)
-                    );
+                    const registrationId = randomUUID();
 
-                    let registrationId;
-
-                    if (reg) {
-                        registrationId = reg.id;
-                        // Update existing registration info (handicap, status, etc.)
-                        await tx.tournamentRegistration.update({
-                            where: { id: registrationId },
-                            data: {
-                                entryGroupId: pData.entryGroupId || reg.entryGroupId,
-                                handicap: handicapVal ?? reg.handicap,
-                                paymentStatus: status
-                            }
-                        });
-                        results.updatedTitle++;
-                    } else {
-                        registrationId = randomUUID();
-                        await tx.tournamentRegistration.create({
-                            data: {
-                                id: registrationId,
-                                tournamentId: info.tournamentId,
-                                guestName: trimmedName,
-                                guestTeamName: trimmedTeamName || null,
-                                entryGroupId: pData.entryGroupId || null,
-                                handicap: handicapVal,
-                                paymentStatus: status,
-                                createdAt: seqTime
-                            }
-                        });
-                        results.createdTitle++;
-                    }
+                    // Always create a new registration record for this specific upload entry
+                    // This ensures independence between rounds as requested by the user.
+                    await tx.tournamentRegistration.create({
+                        data: {
+                            id: registrationId,
+                            tournamentId: info.tournamentId,
+                            guestName: trimmedName,
+                            guestTeamName: trimmedTeamName || null,
+                            entryGroupId: pData.entryGroupId || null,
+                            handicap: handicapVal,
+                            paymentStatus: status,
+                            createdAt: seqTime
+                        }
+                    });
+                    results.createdTitle++;
 
                     // 3. Create RoundParticipant entry linked to the registration
-                    // [IMPORTANT] Store round-specific handicap here
                     const rp = await tx.roundParticipant.create({
                         data: {
                             id: randomUUID(),
                             roundId,
                             registrationId,
-                            handicap: handicapVal,
                             createdAt: seqTime
                         }
                     });
