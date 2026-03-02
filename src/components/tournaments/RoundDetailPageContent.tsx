@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { calculateTournamentStatus, STATUS_LABELS, formatDateForInput, formatKSTDate, formatKSTDayLabel } from '@/lib/tournament-utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { updateRoundSettings, updateRoundParticipants, updateRoundLanes, updateRoundScores, manualRegister, updateLaneSettings, autoAssignRemaining, updatePaymentStatus, deleteRegistration, updateRegistration, updateLaneConfig, updateFemaleChampParticipants, updateLuckyDrawResult } from '@/app/actions/round-actions';
@@ -101,6 +101,7 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
             const minusHandicapRank2 = formData.get('minusHandicapRank2') ? parseInt(formData.get('minusHandicapRank2') as string) : undefined;
             const minusHandicapRank3 = formData.get('minusHandicapRank3') ? parseInt(formData.get('minusHandicapRank3') as string) : undefined;
             const minusHandicapFemale = formData.get('minusHandicapFemale') ? parseInt(formData.get('minusHandicapFemale') as string) : undefined;
+            const maxParticipants = formData.get('maxParticipants') ? parseInt(formData.get('maxParticipants') as string) : undefined;
 
             await updateRoundSettings(round.id, {
                 date,
@@ -109,6 +110,7 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
                 moveLaneType,
                 moveLaneCount,
                 hasFemaleChamp,
+                maxParticipants,
                 minusHandicapRank1,
                 minusHandicapRank2,
                 minusHandicapRank3,
@@ -144,6 +146,27 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
                 />
                 <p className="text-xs text-gray-500 mt-2 font-medium bg-gray-100 p-2 rounded">
                     ℹ️ 접수 종료 시간은 별도로 설정하지 않아도 됩니다. (상시 접수 또는 경기 시작 전까지)
+                </p>
+            </div>
+
+            <div>
+                <label className="block text-sm font-bold mb-2 text-gray-700">회차 참가 정원 (Max Participants)</label>
+                <input
+                    type="number"
+                    name="maxParticipants"
+                    defaultValue={(() => {
+                        try {
+                            const settings = round.tournament?.settings ? (typeof round.tournament.settings === 'string' ? JSON.parse(round.tournament.settings) : round.tournament.settings) : {};
+                            return settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament.maxParticipants ?? 0;
+                        } catch (e) {
+                            return round.tournament.maxParticipants || 0;
+                        }
+                    })()}
+                    placeholder="대회 기본값 사용 (0이면 무제한)"
+                    className="input w-full border-2 focus:border-blue-500 transition-colors"
+                />
+                <p className="text-xs text-gray-500 mt-2 font-medium">
+                    대회 전체 정원과 무관하게 **이 회차에만 적용될 최대 인원**을 설정합니다.
                 </p>
             </div>
 
@@ -269,7 +292,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
         }
     })();
 
-    const maxParticipants = round.tournament?.maxParticipants || settings.maxParticipants || 0;
+    const maxParticipants = settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament?.maxParticipants ?? settings.maxParticipants ?? 0;
     const waitlistedRegIds = new Set(
         [...round.participants]
             .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
@@ -692,7 +715,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
     const [loading, setLoading] = useState(false);
 
     // 1. Identify waitlisted participants based on current round's entry order (createdAt)
-    const maxParticipants = round.tournament?.maxParticipants || settings.maxParticipants || 0;
+    const maxParticipants = settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament?.maxParticipants ?? settings.maxParticipants ?? 0;
     const waitlistedRegIds = new Set(
         [...round.participants]
             .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
@@ -1162,12 +1185,12 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     const settings = round.tournament?.settings ? JSON.parse(round.tournament.settings) : {};
     const gameCount = settings.gameCount || 3;
     const isEvent = round.tournament?.type === 'EVENT';
-    const maxParticipants = round.tournament?.maxParticipants || settings.maxParticipants || 0;
+    const maxParticipants = settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament?.maxParticipants ?? settings.maxParticipants ?? 0;
 
     // Identify waitlisted participants to exclude from results
     // We strictly apply this only for EVENT tournaments to prevent missing data in CHAMP rounds
     const waitlistedRegIds = new Set(
-        (isEvent && maxParticipants > 0)
+        ((isEvent || round.tournament?.type === 'CHAMP') && maxParticipants > 0)
             ? [...round.participants]
                 .sort((a, b) => {
                     const dateA = new Date(a.createdAt || 0).getTime();
@@ -1972,6 +1995,14 @@ function RoundPointsTab({ round }: { round: any }) {
         female: settings.minusHandicapFemale || 0
     };
 
+    const maxParticipants = settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament?.maxParticipants ?? settings.maxParticipants ?? 0;
+    const waitlistedRegIds = new Set(
+        [...round.participants]
+            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+            .filter((_, idx) => maxParticipants > 0 && idx + 1 > maxParticipants)
+            .map(p => p.registrationId)
+    );
+
     // Logic to calculate rankings (same as in FinalResultsTab)
     const results = round.participants.map((p: any) => {
         const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
@@ -2032,7 +2063,7 @@ function RoundPointsTab({ round }: { round: any }) {
             hasScore: totalRaw > 0
         };
     })
-        .filter((r: any) => r.hasScore)
+        .filter((r: any) => r.hasScore && !waitlistedRegIds.has(r.id))
         .sort((a: any, b: any) => {
             if (b.totalWithHandicap !== a.totalWithHandicap) return b.totalWithHandicap - a.totalWithHandicap;
             const handicapA = a.handicapEach || 0;
@@ -2154,19 +2185,30 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
         }
     }, [round.luckyDrawResult]);
 
+    const settings = round.tournament?.settings ? (typeof round.tournament.settings === 'string' ? JSON.parse(round.tournament.settings) : round.tournament.settings) : {};
+    const maxParticipants = settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament?.maxParticipants ?? settings.maxParticipants ?? 0;
+    const waitlistedRegIds = new Set(
+        [...round.participants]
+            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+            .filter((_, idx) => maxParticipants > 0 && idx + 1 > maxParticipants)
+            .map(p => p.registrationId)
+    );
+
     // 1. Calculate Ranks once to handle exclusion
-    const sortedResults = [...round.participants].map((p: any) => {
-        const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
-        const total = pScores.reduce((sum: number, s: any) => sum + s.score, 0) + (p.registration.handicap || 0) * pScores.length;
-        return { ...p, total };
-    }).sort((a: any, b: any) => b.total - a.total);
+    const sortedResults = [...round.participants]
+        .filter((p: any) => !waitlistedRegIds.has(p.registrationId))
+        .map((p: any) => {
+            const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
+            const total = pScores.reduce((sum: number, s: any) => sum + s.score, 0) + (p.registration.handicap || 0) * pScores.length;
+            return { ...p, total };
+        }).sort((a: any, b: any) => b.total - a.total);
 
     const topRankerIds = sortedResults.slice(0, 3).map((p: any) => p.registrationId);
     const femaleChampIds = round.participants.filter((p: any) => p.isFemaleChamp).map((p: any) => p.registrationId);
     const excludedIds = [...new Set([...topRankerIds, ...femaleChampIds])];
 
     const getEligibleList = () => {
-        let list = round.participants.filter((p: any) => !winners.find(w => w.registrationId === p.registrationId));
+        let list = round.participants.filter((p: any) => !winners.find(w => w.registrationId === p.registrationId) && !waitlistedRegIds.has(p.registrationId));
         if (excludeRankers) {
             list = list.filter((p: any) => !excludedIds.includes(p.registrationId));
         }
@@ -2472,6 +2514,14 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
         }
     }, [searchParams]);
 
+    const settings = useMemo(() => {
+        try {
+            return round.tournament?.settings ? (typeof round.tournament.settings === 'string' ? JSON.parse(round.tournament.settings) : round.tournament.settings) : {};
+        } catch (e) {
+            return {};
+        }
+    }, [round.tournament?.settings]);
+
     useEffect(() => {
         const effectiveDateStr = round.effectiveDateStr;
         if (!effectiveDateStr) return;
@@ -2725,32 +2775,24 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                                 tournamentType={round.tournament.type}
                                 hideRoundTabs={true}
                                 tournament={round.tournament}
-                                maxParticipants={round.tournament.maxParticipants}
+                                maxParticipants={settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament.maxParticipants}
                             />
                         )}
                         {activeTab === 'lanes' && <RoundLanesTab round={round} onUpdate={refresh} isManager={isManager} />}
                         {activeTab === 'scoring' && <RoundScoringTab round={round} onUpdate={refresh} />}
                         {activeTab === 'sideGame' && (
                             <div className="p-8 bg-slate-100/50">
-                                {(() => {
-                                    let settings: any = {};
-                                    try {
-                                        if (round.tournament?.settings) settings = JSON.parse(round.tournament.settings);
-                                    } catch (e) { }
-                                    const gCount = settings.gameCount || 3;
-                                    return (
-                                        <SideGameManager
-                                            matchups={round.matchups}
-                                            participants={round.participants}
-                                            allIndividualScores={round.individualScores}
-                                            roundId={round.id}
-                                            isManager={isManager}
-                                            tournamentType={round.tournament.type}
-                                            gameCount={gCount}
-                                            tournamentRegistrations={round.tournament.registrations}
-                                        />
-                                    );
-                                })()}
+                                <SideGameManager
+                                    matchups={round.matchups}
+                                    participants={round.participants}
+                                    allIndividualScores={round.individualScores}
+                                    roundId={round.id}
+                                    isManager={isManager}
+                                    tournamentType={round.tournament.type}
+                                    gameCount={settings.gameCount || 3}
+                                    tournamentRegistrations={round.tournament.registrations}
+                                    maxParticipants={settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament.maxParticipants ?? 0}
+                                />
                             </div>
                         )}
                         {activeTab === 'finalResults' && <RoundFinalResultsTab round={round} isManager={isManager || false} />}

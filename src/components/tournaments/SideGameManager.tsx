@@ -26,6 +26,7 @@ interface SideGameManagerProps {
     tournamentType?: string;
     gameCount?: number;
     tournamentRegistrations?: any[];
+    maxParticipants?: number;
 }
 
 type SideCategory = 'STANDARD' | 'BALL' | 'EXTRA';
@@ -38,7 +39,8 @@ export default function SideGameManager({
     isManager,
     tournamentType,
     gameCount = 3,
-    tournamentRegistrations
+    tournamentRegistrations,
+    maxParticipants = 0
 }: SideGameManagerProps) {
     const isChamp = tournamentType === 'CHAMP';
 

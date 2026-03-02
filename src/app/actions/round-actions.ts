@@ -36,6 +36,7 @@ export async function updateRoundSettings(
         minusHandicapRank2?: number;
         minusHandicapRank3?: number;
         minusHandicapFemale?: number;
+        maxParticipants?: number;
     }
 ) {
     try {
@@ -90,6 +91,14 @@ export async function updateRoundSettings(
                         rank3: data.minusHandicapRank3,
                         female: data.minusHandicapFemale
                     };
+
+                    // Store round-specific max participants
+                    if (data.maxParticipants !== undefined) {
+                        if (!settings.roundMaxParticipants) {
+                            settings.roundMaxParticipants = {};
+                        }
+                        settings.roundMaxParticipants[round.roundNumber] = data.maxParticipants;
+                    }
 
                     await prisma.tournament.update({
                         where: { id: round.tournamentId },
