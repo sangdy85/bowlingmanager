@@ -736,6 +736,14 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
         return initial;
     });
 
+    const [handicapMap, setHandicapMap] = useState<Record<string, string>>(() => {
+        const initial: Record<string, string> = {};
+        round.participants.forEach((p: any) => {
+            initial[p.registrationId] = (p.handicap ?? p.registration.handicap ?? 0).toString();
+        });
+        return initial;
+    });
+
     const [femaleChampIds, setFemaleChampIds] = useState<string[]>(() =>
         round.participants.filter((p: any) => p.isFemaleChamp).map((p: any) => p.id)
     );
@@ -750,6 +758,13 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                 ...prev[regId],
                 [game]: val
             }
+        }));
+    };
+
+    const handleHandicapChange = (regId: string, val: string) => {
+        setHandicapMap(prev => ({
+            ...prev,
+            [regId]: val
         }));
     };
 
@@ -838,19 +853,30 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
         try {
             const updates: { regId: string, game: number, score: number }[] = [];
 
+            const sideGameUpdates: { regId: string, basic: boolean, ball: boolean, extra: boolean, handicap: number }[] = [];
+
             round.participants.forEach((p: any) => {
                 // Skip waitlisted from save updates just in case, though they should be disabled in UI
                 if (waitlistedRegIds.has(p.registrationId)) return;
 
                 const scores = scoreMap[p.registrationId] || {};
+                const handicap = parseInt(handicapMap[p.registrationId] || '0');
 
                 for (let g = 1; g <= gameCount; g++) {
                     const score = parseInt(scores[g] || '0');
                     updates.push({ regId: p.registrationId, game: g, score });
                 }
+
+                sideGameUpdates.push({
+                    regId: p.registrationId,
+                    basic: p.sideBasic || false,
+                    ball: p.sideBall || false,
+                    extra: p.sideExtra || false,
+                    handicap: handicap
+                });
             });
 
-            await updateRoundScores(round.id, updates);
+            await updateRoundScores(round.id, updates, sideGameUpdates);
 
             if (round.hasFemaleChamp) {
                 await updateFemaleChampParticipants(round.id, femaleChampIds);
@@ -939,7 +965,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                         {sortedParticipants.map((p: any) => {
                             const currentScores = scoreMap[p.registrationId] || {};
                             let totalWithHandicap = 0;
-                            const handicap = p.registration.handicap || 0;
+                            const handicap = parseInt(handicapMap[p.registrationId] || '0');
                             const isWaitlisted = waitlistedRegIds.has(p.registrationId);
 
                             for (let g = 1; g <= gameCount; g++) {
@@ -1018,8 +1044,15 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="p-2 text-center text-xs text-gray-500" style={{ width: '60px' }}>
-                                        {handicap > 0 ? `+${handicap}` : '-'}
+                                    <td className="p-2 text-center" style={{ width: '60px' }}>
+                                        <input
+                                            type="number"
+                                            value={handicapMap[p.registrationId] || ''}
+                                            disabled={isWaitlisted}
+                                            onChange={(e) => handleHandicapChange(p.registrationId, e.target.value)}
+                                            className={`w-full h-11 text-center font-black rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all shadow-inner ${isWaitlisted ? 'bg-gray-50 text-gray-300' : 'bg-white text-gray-900'}`}
+                                            style={{ fontSize: '16px' }}
+                                        />
                                     </td>
                                     <td className="p-2 text-center font-black text-lg text-blue-700" style={{ width: '80px' }}>
                                         {totalWithHandicap > 0 ? totalWithHandicap : '-'}
@@ -1066,7 +1099,7 @@ function RoundSideGameTab({ round }: { round: any }) {
     const getRankings = (filterFn: (p: any) => boolean, gameNum: number) => {
         const pool = participants.filter(filterFn).map((p: any) => {
             const pScore = scores.find((s: any) => s.registrationId === p.registrationId && s.gameNumber === gameNum)?.score || 0;
-            const handicap = p.registration.handicap || 0;
+            const handicap = p.handicap ?? p.registration.handicap ?? 0;
             return {
                 id: p.registrationId,
                 name: p.registration.guestName ?? p.registration.user?.name,
@@ -1238,7 +1271,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     pTotalRaw += s;
                     if (s > 0) pGamesPlayed++;
                 }
-                const handicap = p.registration.handicap || 0;
+                const handicap = p.handicap ?? p.registration.handicap ?? 0;
                 groups[groupId].totalRaw += pTotalRaw;
                 groups[groupId].totalHandicap += (handicap * pGamesPlayed);
                 groups[groupId].handicapSum += handicap;
@@ -1290,7 +1323,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     if (sRecord) gamesPlayed++;
                 }
 
-                const handicap = p.registration.handicap || 0;
+                const handicap = p.handicap ?? p.registration.handicap ?? 0;
                 const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
                 const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인회원';
 
@@ -2017,7 +2050,7 @@ function RoundPointsTab({ round }: { round: any }) {
             if (sRecord && score > 0) gamesPlayed++;
         }
 
-        const handicap = p.registration.handicap || 0;
+        const handicap = p.handicap ?? p.registration.handicap ?? 0;
         const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
         const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인';
 

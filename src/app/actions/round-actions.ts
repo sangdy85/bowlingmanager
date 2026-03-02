@@ -283,7 +283,7 @@ export async function updateRoundLanes(roundId: string, laneData: { participantI
 export async function updateRoundScores(
     roundId: string,
     scores: { regId: string, game: number, score: number }[],
-    sideGameData?: { regId: string, basic: boolean, ball: boolean, extra: boolean }[]
+    sideGameData?: { regId: string, basic: boolean, ball: boolean, extra: boolean, handicap?: number }[]
 ) {
     try {
         // 1. Update Scores
@@ -314,14 +314,16 @@ export async function updateRoundScores(
             }
         }
 
-        // 2. Update Side Game Flags
+        // 2. Update Participant Metadata (Handicap, Side Game Flags)
         if (sideGameData && sideGameData.length > 0) {
             for (const data of sideGameData) {
+                // Update RoundParticipant with round-specific data
                 await prisma.$executeRaw`
                     UPDATE "RoundParticipant"
                     SET "sideBasic" = ${data.basic ? 1 : 0},
                         "sideBall" = ${data.ball ? 1 : 0},
-                        "sideExtra" = ${data.extra ? 1 : 0}
+                        "sideExtra" = ${data.extra ? 1 : 0},
+                        "handicap" = ${data.handicap !== undefined ? data.handicap : null}
                     WHERE "roundId" = ${roundId} AND "registrationId" = ${data.regId}
                 `;
             }
@@ -431,11 +433,18 @@ export async function manualRegister(roundId: string, input: {
             SELECT id FROM "RoundParticipant" WHERE "roundId" = ${roundId} AND "registrationId" = ${registrationId}
         `;
 
+        const handicapVal = input.handicap !== undefined ? input.handicap : null;
+
         if (inRound.length === 0) {
             const rpId = randomUUID();
             await prisma.$executeRaw`
-                INSERT INTO "RoundParticipant" ("id", "roundId", "registrationId", "createdAt", "lane")
-                VALUES (${rpId}, ${roundId}, ${registrationId}, ${new Date()}, null)
+                INSERT INTO "RoundParticipant" ("id", "roundId", "registrationId", "createdAt", "lane", "handicap")
+                VALUES (${rpId}, ${roundId}, ${registrationId}, ${new Date()}, null, ${handicapVal})
+            `;
+        } else {
+            // Updated: If already in round, update the round-specific handicap
+            await prisma.$executeRaw`
+                UPDATE "RoundParticipant" SET "handicap" = ${handicapVal} WHERE "id" = ${inRound[0].id}
             `;
         }
 
@@ -1316,11 +1325,13 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                     }
 
                     // 3. Create RoundParticipant entry linked to the registration
+                    // [IMPORTANT] Store round-specific handicap here
                     const rp = await tx.roundParticipant.create({
                         data: {
                             id: randomUUID(),
                             roundId,
                             registrationId,
+                            handicap: handicapVal,
                             createdAt: seqTime
                         }
                     });
