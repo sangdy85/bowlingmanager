@@ -110,7 +110,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
     // - NOT finished (Next day of startDate hasn't arrived)
     // - For EVENT: Current status is OPEN, CLOSED, or ONGOING
     // - For CHAMP: Current status of any round is OPEN, CLOSED, or ONGOING
-    const activeTournamentsRawUnfiltered = center.tournaments.flatMap((t: any) => {
+    const activeTournamentsRawUnfiltered = tournamentsWithRegDate.flatMap((t: any) => {
         if (t.type === 'LEAGUE' || t.status === 'FINISHED') return [];
 
         if (t.type === 'CHAMP') {
@@ -145,7 +145,9 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
         }
 
         const status = calculateTournamentStatus(t.startDate, t.registrationStart, t.endDate, t.status, now);
-        if (status === 'OPEN' || status === 'CLOSED' || status === 'ONGOING') {
+
+        // EVENT의 경우 ONGOING(경기 시작됨)은 '모집 중' 섹션에서 제외
+        if (status === 'OPEN' || status === 'CLOSED') {
             return [{
                 ...t,
                 participantCount: (t as any)._count.registrations,
