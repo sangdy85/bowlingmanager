@@ -21,8 +21,8 @@ export default function TournamentRegButton({ tournament, isRegistered, canJoin 
     const gameMode = settings.gameMode || 'INDIVIDUAL';
 
     // Determine how many extra team members are needed
-    const teamSize = gameMode.startsWith('TEAM_') ? parseInt(gameMode.split('_')[1]) : 1;
-    const extraMemberCount = teamSize - 1;
+    const teamSize = gameMode.startsWith('TEAM_') ? (parseInt(gameMode.split('_')[1] || '1') || 1) : 1;
+    const extraMemberCount = Math.max(0, teamSize - 1);
 
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -57,9 +57,7 @@ export default function TournamentRegButton({ tournament, isRegistered, canJoin 
 
             const result = await registerForTournament(tournamentId, participants);
 
-            if (result && result.isWaitlisted) {
-                alert(`대기 ${result.waitlistNo}번으로 접수되었습니다.`);
-            } else {
+            if (result && result.success) {
                 alert("참가 신청이 완료되었습니다!");
             }
             setIsModalOpen(false);
