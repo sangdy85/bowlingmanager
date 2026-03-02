@@ -1161,9 +1161,20 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     }
     const settings = round.tournament?.settings ? JSON.parse(round.tournament.settings) : {};
     const gameCount = settings.gameCount || 3;
+    const maxParticipants = round.tournament?.maxParticipants || settings.maxParticipants || 0;
+
+    // Identify waitlisted participants to exclude from results
+    const waitlistedRegIds = new Set(
+        maxParticipants > 0
+            ? [...round.participants]
+                .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                .slice(maxParticipants)
+                .map(p => p.registrationId)
+            : []
+    );
 
     // 1. Prepare and Sort Data
-    const gameMode = round.tournament?.settings ? JSON.parse(round.tournament.settings).gameMode : 'INDIVIDUAL';
+    const gameMode = settings.gameMode || 'INDIVIDUAL';
     const isTeamEvent = gameMode && gameMode.startsWith('TEAM_');
 
     let results = [];
@@ -1171,37 +1182,39 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     if (isTeamEvent) {
         // Aggregate by entryGroupId
         const groups: Record<string, any> = {};
-        round.participants.forEach((p: any) => {
-            const groupId = p.registration.entryGroupId || p.id; // Fallback to p.id if no group
-            if (!groups[groupId]) {
-                const groupNamePart = p.registration.entryGroupId?.includes('_name_') ? p.registration.entryGroupId.split('_name_')[1] : null;
-                const groupNumPart = p.registration.entryGroupId?.startsWith('group_') ? p.registration.entryGroupId.replace('group_', '') : null;
+        round.participants
+            .filter((p: any) => !waitlistedRegIds.has(p.registrationId))
+            .forEach((p: any) => {
+                const groupId = p.registration.entryGroupId || p.id; // Fallback to p.id if no group
+                if (!groups[groupId]) {
+                    const groupNamePart = p.registration.entryGroupId?.includes('_name_') ? p.registration.entryGroupId.split('_name_')[1] : null;
+                    const groupNumPart = p.registration.entryGroupId?.startsWith('group_') ? p.registration.entryGroupId.replace('group_', '') : null;
 
-                groups[groupId] = {
-                    id: groupId,
-                    members: [],
-                    totalRaw: 0,
-                    totalHandicap: 0,
-                    gameScores: new Array(gameCount).fill(0),
-                    teamName: groupNamePart || (groupNumPart ? `조: ${groupNumPart}` : (p.registration.guestTeamName ?? p.registration.team?.name) || '팀'),
-                    handicapSum: 0
-                };
-            }
-            const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
-            let pTotalRaw = 0;
-            let pGamesPlayed = 0;
-            for (let g = 1; g <= gameCount; g++) {
-                const s = pScores.find((sc: any) => sc.gameNumber === g)?.score || 0;
-                groups[groupId].gameScores[g - 1] += s;
-                pTotalRaw += s;
-                if (s > 0) pGamesPlayed++;
-            }
-            const handicap = p.registration.handicap || 0;
-            groups[groupId].totalRaw += pTotalRaw;
-            groups[groupId].totalHandicap += (handicap * pGamesPlayed);
-            groups[groupId].handicapSum += handicap;
-            groups[groupId].members.push(p.registration.guestName ?? p.registration.user?.name ?? 'Unknown');
-        });
+                    groups[groupId] = {
+                        id: groupId,
+                        members: [],
+                        totalRaw: 0,
+                        totalHandicap: 0,
+                        gameScores: new Array(gameCount).fill(0),
+                        teamName: groupNamePart || (groupNumPart ? `조: ${groupNumPart}` : (p.registration.guestTeamName ?? p.registration.team?.name) || '팀'),
+                        handicapSum: 0
+                    };
+                }
+                const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
+                let pTotalRaw = 0;
+                let pGamesPlayed = 0;
+                for (let g = 1; g <= gameCount; g++) {
+                    const s = pScores.find((sc: any) => sc.gameNumber === g)?.score || 0;
+                    groups[groupId].gameScores[g - 1] += s;
+                    pTotalRaw += s;
+                    if (s > 0) pGamesPlayed++;
+                }
+                const handicap = p.registration.handicap || 0;
+                groups[groupId].totalRaw += pTotalRaw;
+                groups[groupId].totalHandicap += (handicap * pGamesPlayed);
+                groups[groupId].handicapSum += handicap;
+                groups[groupId].members.push(p.registration.guestName ?? p.registration.user?.name ?? 'Unknown');
+            });
 
         results = Object.values(groups).map((g: any) => {
             const validScores = g.gameScores.filter((s: number) => s > 0);
@@ -1231,87 +1244,89 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         const mRank3 = roundHandicaps.rank3;
         const mRankFemale = roundHandicaps.female;
 
-        results = round.participants.map((p: any) => {
-            const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
+        results = round.participants
+            .filter((p: any) => !waitlistedRegIds.has(p.registrationId))
+            .map((p: any) => {
+                const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
 
-            const scores: number[] = [];
-            let totalRaw = 0;
-            let gamesPlayed = 0;
+                const scores: number[] = [];
+                let totalRaw = 0;
+                let gamesPlayed = 0;
 
-            for (let g = 1; g <= gameCount; g++) {
-                const sRecord = pScores.find((s: any) => s.gameNumber === g);
-                const score = sRecord?.score || 0;
-                scores.push(score);
-                totalRaw += score;
-                if (sRecord) gamesPlayed++;
-            }
-
-            const handicap = p.registration.handicap || 0;
-            const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
-            const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인회원';
-
-            // 1. Calculate system penalty from previous round (minusApplied)
-            let minusApplied = 0;
-            let rankCap = 0; // The limit/cap based on the rank setting
-
-            if (gamesPlayed === gameCount) {
-                const matchWinner = (winner: any) => winner && winner.name === pName && winner.team === pTeam;
-
-                if (matchWinner(prevWinners.rank1)) {
-                    minusApplied += Math.abs(mRank1);
-                    rankCap = Math.abs(mRank1);
-                } else if (matchWinner(prevWinners.rank2)) {
-                    minusApplied += Math.abs(mRank2);
-                    rankCap = Math.abs(mRank2);
-                } else if (matchWinner(prevWinners.rank3)) {
-                    minusApplied += Math.abs(mRank3);
-                    rankCap = Math.abs(mRank3);
+                for (let g = 1; g <= gameCount; g++) {
+                    const sRecord = pScores.find((s: any) => s.gameNumber === g);
+                    const score = sRecord?.score || 0;
+                    scores.push(score);
+                    totalRaw += score;
+                    if (sRecord) gamesPlayed++;
                 }
 
-                if (matchWinner(prevWinners.femaleChamp)) {
-                    minusApplied += Math.abs(mRankFemale);
-                    // If no rankCap was set (not a top 3 winner but female champ), cap by female champ setting itself
-                    if (rankCap === 0) rankCap = Math.abs(mRankFemale);
+                const handicap = p.registration.handicap || 0;
+                const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
+                const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인회원';
+
+                // 1. Calculate system penalty from previous round (minusApplied)
+                let minusApplied = 0;
+                let rankCap = 0; // The limit/cap based on the rank setting
+
+                if (gamesPlayed === gameCount) {
+                    const matchWinner = (winner: any) => winner && winner.name === pName && winner.team === pTeam;
+
+                    if (matchWinner(prevWinners.rank1)) {
+                        minusApplied += Math.abs(mRank1);
+                        rankCap = Math.abs(mRank1);
+                    } else if (matchWinner(prevWinners.rank2)) {
+                        minusApplied += Math.abs(mRank2);
+                        rankCap = Math.abs(mRank2);
+                    } else if (matchWinner(prevWinners.rank3)) {
+                        minusApplied += Math.abs(mRank3);
+                        rankCap = Math.abs(mRank3);
+                    }
+
+                    if (matchWinner(prevWinners.femaleChamp)) {
+                        minusApplied += Math.abs(mRankFemale);
+                        // If no rankCap was set (not a top 3 winner but female champ), cap by female champ setting itself
+                        if (rankCap === 0) rankCap = Math.abs(mRankFemale);
+                    }
+
+                    // [AUTO CAP] Limit the total system penalty by the rankCap (or highest of applied penalties)
+                    // This ensures if rank1 is -20, the total minus won't exceed 20 even with female champ bonus.
+                    if (minusApplied > rankCap && rankCap > 0) {
+                        minusApplied = rankCap;
+                    }
                 }
 
-                // [AUTO CAP] Limit the total system penalty by the rankCap (or highest of applied penalties)
-                // This ensures if rank1 is -20, the total minus won't exceed 20 even with female champ bonus.
-                if (minusApplied > rankCap && rankCap > 0) {
-                    minusApplied = rankCap;
-                }
-            }
+                const validScores = scores.filter(s => s > 0);
+                const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
 
-            const validScores = scores.filter(s => s > 0);
-            const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
+                // Penalty Calculation (Non-cumulative vs Manual)
+                // 1. Manual Penalty: From registration.handicap (if negative)
+                // 2. System Penalty: From previous round result (minusApplied - now capped)
+                const manualPenaltyTotal = handicap < 0 ? Math.abs(handicap) : 0;
+                const systemPenaltyTotal = minusApplied;
 
-            // Penalty Calculation (Non-cumulative vs Manual)
-            // 1. Manual Penalty: From registration.handicap (if negative)
-            // 2. System Penalty: From previous round result (minusApplied - now capped)
-            const manualPenaltyTotal = handicap < 0 ? Math.abs(handicap) : 0;
-            const systemPenaltyTotal = minusApplied;
+                // Use the LARGER of the two penalties (Don't sum them up)
+                const finalPenaltyTotal = Math.max(manualPenaltyTotal, systemPenaltyTotal);
 
-            // Use the LARGER of the two penalties (Don't sum them up)
-            const finalPenaltyTotal = Math.max(manualPenaltyTotal, systemPenaltyTotal);
+                // Positive handicap is multiplied by games played, 
+                // while Negative handicap is a fixed total subtraction from the final sum.
+                const positiveHandicapTotal = (handicap > 0 ? handicap : 0) * gamesPlayed;
+                const finalHandicapValue = positiveHandicapTotal - finalPenaltyTotal;
 
-            // Positive handicap is multiplied by games played, 
-            // while Negative handicap is a fixed total subtraction from the final sum.
-            const positiveHandicapTotal = (handicap > 0 ? handicap : 0) * gamesPlayed;
-            const finalHandicapValue = positiveHandicapTotal - finalPenaltyTotal;
+                const total = totalRaw + finalHandicapValue;
 
-            const total = totalRaw + finalHandicapValue;
-
-            return {
-                id: p.registrationId,
-                name: pName,
-                team: pTeam,
-                scores: scores,
-                handicapEach: handicap,
-                totalHandicap: finalHandicapValue, // Display adjusted handicap
-                total,
-                hiLow,
-                hasMinusHandicap: minusApplied > 0
-            };
-        });
+                return {
+                    id: p.registrationId,
+                    name: pName,
+                    team: pTeam,
+                    scores: scores,
+                    handicapEach: handicap,
+                    totalHandicap: finalHandicapValue, // Display adjusted handicap
+                    total,
+                    hiLow,
+                    hasMinusHandicap: minusApplied > 0
+                };
+            });
     }
 
     const sortedResults = results.map((r: any) => {
