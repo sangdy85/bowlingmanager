@@ -269,7 +269,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
         }
     })();
 
-    const maxParticipants = settings.maxParticipants || 0;
+    const maxParticipants = round.tournament?.maxParticipants || settings.maxParticipants || 0;
     const waitlistedRegIds = new Set(
         [...round.participants]
             .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
@@ -692,7 +692,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
     const [loading, setLoading] = useState(false);
 
     // 1. Identify waitlisted participants based on current round's entry order (createdAt)
-    const maxParticipants = settings.maxParticipants || 0;
+    const maxParticipants = round.tournament?.maxParticipants || settings.maxParticipants || 0;
     const waitlistedRegIds = new Set(
         [...round.participants]
             .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())

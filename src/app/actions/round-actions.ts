@@ -575,7 +575,7 @@ export async function autoAssignRemaining(roundId: string) {
         const teamSize = gameMode.startsWith('TEAM_') ? parseInt(gameMode.split('_')[1]) : 1;
 
         // 2. Fetch all participants of this round, sorted by registration date to establish "sequence"
-        const maxParticipants = settings.maxParticipants || 0;
+        const maxParticipants = round.tournament.maxParticipants || settings.maxParticipants || 0;
         const allParticipants = [...round.participants].sort((a: any, b: any) =>
             new Date(a.createdAt).valueOf() - new Date(b.createdAt).valueOf()
         );
@@ -793,7 +793,7 @@ export async function drawLane(roundId: string, registrationId: string) {
 
         // --- Waitlist Check ---
         const settings = round.tournament.settings ? JSON.parse(round.tournament.settings) : {};
-        const maxParticipants = settings.maxParticipants || 0;
+        const maxParticipants = round.tournament.maxParticipants || settings.maxParticipants || 0;
         const allParticipantsSorted = [...round.participants].sort((a: any, b: any) =>
             new Date(a.createdAt).valueOf() - new Date(b.createdAt).valueOf()
         );
