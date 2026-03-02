@@ -140,13 +140,10 @@ export async function registerForTournament(tournamentId: string, participants: 
 
             // Join rounds
             if (tournament.type === 'CHAMP' && targetRoundId) {
-                // Get the handicap we just saved to the registration
-                const regHandicap = p.handicap || 0;
                 await (tx as any).roundParticipant.create({
                     data: {
                         roundId: targetRoundId,
                         registrationId,
-                        handicap: regHandicap
                     }
                 });
             } else if (tournament.type === 'EVENT' && tournament.leagueRounds.length > 0) {

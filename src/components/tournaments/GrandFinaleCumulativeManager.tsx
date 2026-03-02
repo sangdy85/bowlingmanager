@@ -94,8 +94,7 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                     const scoreList: number[] = [];
                     let totalWithPlusHandicap = 0;
                     let gamesPlayed = 0;
-                    const currentHandicap = p.handicap ?? p.registration?.handicap ?? 0;
-                    const plusHandicap = currentHandicap > 0 ? currentHandicap : 0;
+                    const plusHandicap = (p.registration?.handicap || 0) > 0 ? p.registration.handicap : 0;
 
                     for (let g = 1; g <= gameCount; g++) {
                         const s = scores.find(sc => sc.gameNumber === g)?.score || 0;
@@ -106,7 +105,7 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                         }
                     }
 
-                    const handicap = currentHandicap;
+                    const handicap = p.registration?.handicap || 0;
                     const pName = p.registration?.guestName ?? p.registration?.user?.name ?? 'Unknown';
                     const pTeam = (p.registration?.guestTeamName ?? p.registration?.team?.name) || '개인';
 

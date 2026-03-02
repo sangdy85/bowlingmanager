@@ -186,7 +186,6 @@ model RoundParticipant {
   sideBasic      Boolean                @default(false)
   sideBall       Boolean                @default(false)
   sideExtra      Boolean                @default(false)
-  handicap       Int?
   createdAt      DateTime               @default(now())
   registration   TournamentRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
   round          LeagueRound            @relation(fields: [roundId], references: [id], onDelete: Cascade)
