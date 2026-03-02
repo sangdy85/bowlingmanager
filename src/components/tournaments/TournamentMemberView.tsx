@@ -261,6 +261,7 @@ export default function TournamentMemberView({
                                                 hideRoundTabs={true}
                                                 currentUserId={currentUserId}
                                                 centerId={centerId}
+                                                tournament={tournament}
                                             />
                                         );
                                     })()}
@@ -457,19 +458,18 @@ export default function TournamentMemberView({
                                             const rounds = tournament.leagueRounds || [];
                                             if (rounds.length === 0) return <p className="text-center text-secondary-foreground py-10 border-2 border-dashed rounded-xl font-medium">아직 신청한 참가자가 없습니다.</p>;
 
-                                            return (
-                                                <RoundParticipantManager
-                                                    rounds={rounds}
-                                                    initialRoundId={initialRoundId}
-                                                    allRegistrations={tournament.registrations}
-                                                    isManager={false}
-                                                    maxParticipants={tournament.maxParticipants}
-                                                    isEvent={tournament.type === 'EVENT'}
-                                                    hideRoundTabs={true}
-                                                    centerId={centerId}
-                                                    currentUserId={currentUserId}
-                                                />
-                                            );
+                                            return <RoundParticipantManager
+                                                rounds={rounds}
+                                                initialRoundId={initialRoundId}
+                                                allRegistrations={tournament.registrations}
+                                                isManager={false}
+                                                maxParticipants={tournament.maxParticipants}
+                                                isEvent={tournament.type === 'EVENT'}
+                                                hideRoundTabs={true}
+                                                centerId={centerId}
+                                                currentUserId={currentUserId}
+                                                tournament={tournament}
+                                            />;
                                         })()}
                                     </section>
                                 </div>

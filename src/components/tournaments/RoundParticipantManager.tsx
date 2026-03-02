@@ -1,44 +1,41 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { updatePaymentStatus, deleteRegistration, removeFromRound, manualRegister, updateRegistration, updateRoundLanes, searchPlayers, bulkRegisterParticipants, updateEntryGroupId, autoAssignEntryGroups, updateSingleRegistrationGroup } from '@/app/actions/round-actions';
+import { updatePaymentStatus, deleteRegistration, removeFromRound, manualRegister, updateRegistration, updateRoundLanes, searchPlayers, bulkRegisterParticipants, updateEntryGroupId, autoAssignEntryGroups, updateSingleRegistrationGroup, checkAndCancelUnpaidRegistrations } from '@/app/actions/round-actions';
 import { formatLane } from '@/lib/tournament-utils';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
-import { toPng } from 'html-to-image';
 
 interface RoundParticipantManagerProps {
     rounds: any[];
     initialRoundId?: string;
     allRegistrations: any[];
+    isManager: boolean;
     onUpdate?: () => void;
-    isManager?: boolean;
-    hideRoundTabs?: boolean;
-    maxParticipants?: number;
+    maxParticipants: number;
     isEvent?: boolean;
-    currentUserId?: string;
+    hideRoundTabs?: boolean;
+    currentUserId?: string | null;
     centerId: string;
     tournamentType?: string;
+    tournament?: any;
 }
-
-import { checkAndCancelUnpaidRegistrations } from '@/app/actions/round-actions';
-import { useEffect } from 'react';
 
 export default function RoundParticipantManager({
     rounds,
     initialRoundId,
     allRegistrations,
+    isManager,
     onUpdate,
-    isManager = false,
-    hideRoundTabs = false,
-    maxParticipants = 0,
-    isEvent = false,
+    maxParticipants,
+    isEvent,
+    hideRoundTabs,
     currentUserId,
     centerId,
-    tournamentType
+    tournamentType,
+    tournament
 }: RoundParticipantManagerProps) {
     const router = useRouter();
     const tableRef = useRef<HTMLDivElement>(null);
@@ -87,12 +84,18 @@ export default function RoundParticipantManager({
 
     const isIndividualMode = useMemo(() => {
         try {
+            // Priority 1: Use the tournament object passed from props (most reliable)
+            if (tournament?.settings) {
+                const settings = typeof tournament.settings === 'string' ? JSON.parse(tournament.settings) : tournament.settings;
+                return (settings.gameMode || 'INDIVIDUAL') === 'INDIVIDUAL';
+            }
+            // Priority 2: Use settings from the selected round
             const settings = selectedRound?.tournament?.settings ? (typeof selectedRound.tournament.settings === 'string' ? JSON.parse(selectedRound.tournament.settings) : selectedRound.tournament.settings) : {};
             return (settings.gameMode || 'INDIVIDUAL') === 'INDIVIDUAL';
         } catch (e) {
             return true;
         }
-    }, [selectedRound]);
+    }, [selectedRound, tournament]);
 
     // Filter registrations to ONLY show those participating in the selected round
     const roundParticipants = useMemo(() => {

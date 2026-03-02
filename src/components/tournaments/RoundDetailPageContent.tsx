@@ -2649,6 +2649,8 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
                                 isEvent={round.tournament.type === 'EVENT'}
                                 tournamentType={round.tournament.type}
                                 hideRoundTabs={true}
+                                tournament={round.tournament}
+                                maxParticipants={round.tournament.maxParticipants}
                             />
                         )}
                         {activeTab === 'lanes' && <RoundLanesTab round={round} onUpdate={refresh} isManager={isManager} />}
