@@ -138,12 +138,17 @@ export async function updateRoundParticipants(roundId: string, registrationIds: 
         }
 
         if (toAdd.length > 0) {
-            const data = toAdd.map((regId: string) => ({
+            const regs = await prisma.tournamentRegistration.findMany({
+                where: { id: { in: toAdd } },
+                select: { id: true, handicap: true }
+            });
+            const data = regs.map((r: any) => ({
                 roundId,
-                registrationId: regId,
+                registrationId: r.id,
+                handicap: r.handicap ?? 0,
                 createdAt: new Date(),
                 lane: null,
-                isManual: false // Default to false, will be updated below if in manualRegIds
+                isManual: false
             }));
             await prisma.roundParticipant.createMany({ data });
         }
@@ -433,9 +438,16 @@ export async function manualRegister(roundId: string, input: {
 
         if (inRound.length === 0) {
             const rpId = randomUUID();
+            // Use input handicap if provided, otherwise fallback to registration's handicap
+            let finalHandicap = input.handicap;
+            if (finalHandicap === undefined) {
+                const reg: any[] = await prisma.$queryRaw`SELECT handicap FROM "TournamentRegistration" WHERE id = ${registrationId}`;
+                finalHandicap = reg.length > 0 ? (reg[0].handicap ?? 0) : 0;
+            }
+
             await prisma.$executeRaw`
-                INSERT INTO "RoundParticipant" ("id", "roundId", "registrationId", "createdAt", "lane")
-                VALUES (${rpId}, ${roundId}, ${registrationId}, ${new Date()}, null)
+                INSERT INTO "RoundParticipant" ("id", "roundId", "registrationId", "createdAt", "lane", "handicap")
+                VALUES (${rpId}, ${roundId}, ${registrationId}, ${new Date()}, null, ${finalHandicap})
             `;
         }
 
@@ -508,9 +520,13 @@ export async function joinRound(roundId: string, userId: string) {
 
         if (inRound.length === 0) {
             const rpId = randomUUID();
+            // Fetch registration's handicap as the default for this round
+            const regData: any[] = await prisma.$queryRaw`SELECT handicap FROM "TournamentRegistration" WHERE id = ${registrationId}`;
+            const finalHandicap = regData.length > 0 ? (regData[0].handicap ?? 0) : 0;
+
             await prisma.$executeRaw`
-                INSERT INTO "RoundParticipant" ("id", "roundId", "registrationId", "createdAt", "lane")
-                VALUES (${rpId}, ${roundId}, ${registrationId}, ${new Date()}, null)
+                INSERT INTO "RoundParticipant" ("id", "roundId", "registrationId", "createdAt", "lane", "handicap")
+                VALUES (${rpId}, ${roundId}, ${registrationId}, ${new Date()}, null, ${finalHandicap})
             `;
         } else {
             return { success: false, message: "이미 신청했습니다." };
@@ -1033,11 +1049,25 @@ export async function updateRegistration(
 
         if (!reg) throw new Error("Registration not found");
 
-        const hasChanges = (data.guestName !== undefined && data.guestName !== reg.guestName) ||
-            (data.guestTeamName !== undefined && data.guestTeamName !== reg.guestTeamName) ||
-            (data.handicap !== undefined && data.handicap !== reg.handicap);
+        if (data.handicap !== undefined) {
+            await prisma.roundParticipant.update({
+                where: {
+                    roundId_registrationId: {
+                        roundId,
+                        registrationId
+                    }
+                },
+                data: { handicap: data.handicap }
+            });
+        }
 
-        if (!hasChanges) return { success: true };
+        const hasChanges = (data.guestName !== undefined && data.guestName !== reg.guestName) ||
+            (data.guestTeamName !== undefined && data.guestTeamName !== reg.guestTeamName);
+
+        if (!hasChanges) {
+            revalidatePath(`/centers/${reg.tournament.centerId}/tournaments/${reg.tournamentId}/rounds/${roundId}`);
+            return { success: true };
+        }
 
         // Check if shared with other rounds
         const sharedRounds = reg.roundParticipations.filter((rp: any) => rp.roundId !== roundId);
@@ -1316,22 +1346,24 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                     }
 
                     // 3. Create RoundParticipant entry linked to the registration
-                    const rp = await tx.roundParticipant.create({
+                    await tx.roundParticipant.create({
                         data: {
                             id: randomUUID(),
                             roundId,
                             registrationId,
+                            handicap: handicapVal, // Store round-specific handicap
                             createdAt: seqTime
                         }
                     });
 
-                    // 4. Lane Assignment
+                    // 4. Lane Assignment (Merged with update if possible, but keeping it simple)
                     if (pData.laneDisplay && pData.laneDisplay.includes('-')) {
                         const [lane, slot] = pData.laneDisplay.split('-').map(Number);
                         if (!isNaN(lane) && !isNaN(slot)) {
                             const encodedLane = lane * 10 + slot;
+                            // Update the entry we just created
                             await tx.roundParticipant.update({
-                                where: { id: rp.id },
+                                where: { roundId_registrationId: { roundId, registrationId } },
                                 data: { lane: encodedLane, isManual: true }
                             });
                         }

@@ -121,7 +121,8 @@ export default function RoundParticipantManager({
                     // Merge any fields from RoundParticipant that might be needed
                     lane: p.lane,
                     isFemaleChamp: p.isFemaleChamp,
-                    isManual: p.isManual
+                    isManual: p.isManual,
+                    handicap: p.handicap ?? p.registration?.handicap ?? 0
                 };
             });
     }, [selectedRound]);

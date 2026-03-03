@@ -939,7 +939,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                         {sortedParticipants.map((p: any) => {
                             const currentScores = scoreMap[p.registrationId] || {};
                             let totalWithHandicap = 0;
-                            const handicap = p.registration.handicap || 0;
+                            const handicap = p.handicap ?? p.registration.handicap ?? 0;
                             const isWaitlisted = waitlistedRegIds.has(p.registrationId);
 
                             for (let g = 1; g <= gameCount; g++) {
@@ -1066,7 +1066,7 @@ function RoundSideGameTab({ round }: { round: any }) {
     const getRankings = (filterFn: (p: any) => boolean, gameNum: number) => {
         const pool = participants.filter(filterFn).map((p: any) => {
             const pScore = scores.find((s: any) => s.registrationId === p.registrationId && s.gameNumber === gameNum)?.score || 0;
-            const handicap = p.registration.handicap || 0;
+            const handicap = p.handicap ?? p.registration.handicap ?? 0;
             return {
                 id: p.registrationId,
                 name: p.registration.guestName ?? p.registration.user?.name,
@@ -1238,7 +1238,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     pTotalRaw += s;
                     if (s > 0) pGamesPlayed++;
                 }
-                const handicap = p.registration.handicap || 0;
+                const handicap = p.handicap ?? p.registration.handicap ?? 0;
                 groups[groupId].totalRaw += pTotalRaw;
                 groups[groupId].totalHandicap += (handicap * pGamesPlayed);
                 groups[groupId].handicapSum += handicap;
@@ -1290,7 +1290,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     if (sRecord) gamesPlayed++;
                 }
 
-                const handicap = p.registration.handicap || 0;
+                const handicap = p.handicap ?? p.registration.handicap ?? 0;
                 const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
                 const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인회원';
 
@@ -2017,7 +2017,7 @@ function RoundPointsTab({ round }: { round: any }) {
             if (sRecord && score > 0) gamesPlayed++;
         }
 
-        const handicap = p.registration.handicap || 0;
+        const handicap = p.handicap ?? p.registration.handicap ?? 0;
         const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
         const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인';
 
@@ -2199,7 +2199,8 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
         .filter((p: any) => !waitlistedRegIds.has(p.registrationId))
         .map((p: any) => {
             const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
-            const total = pScores.reduce((sum: number, s: any) => sum + s.score, 0) + (p.registration.handicap || 0) * pScores.length;
+            const pHandicap = p.handicap ?? p.registration.handicap ?? 0;
+            const total = pScores.reduce((sum: number, s: any) => sum + s.score, 0) + (pHandicap * pScores.length);
             return { ...p, total };
         }).sort((a: any, b: any) => b.total - a.total);
 
