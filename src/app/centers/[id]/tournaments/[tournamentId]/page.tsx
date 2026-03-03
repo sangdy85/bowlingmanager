@@ -48,7 +48,17 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                             }
                         }
                     },
-                    individualScores: true
+                    individualScores: true,
+                    participants: {
+                        include: {
+                            registration: {
+                                include: {
+                                    user: true,
+                                    team: true
+                                }
+                            }
+                        }
+                    }
                 },
                 orderBy: { roundNumber: 'asc' }
             }
@@ -56,21 +66,6 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
     })) as any;
 
     if (!tournament) notFound();
-
-    // Raw fetch for round participants to check user join status (Prisma Client issue workaround)
-    for (const round of tournament.leagueRounds) {
-        const parts: any[] = await prisma.$queryRaw`
-            SELECT rp.*, tr."userId"
-            FROM "RoundParticipant" rp
-            JOIN "TournamentRegistration" tr ON rp."registrationId" = tr.id
-            WHERE rp."roundId" = ${round.id}
-        `;
-        // Transform to match structure expected by UI: participants[].registration.userId
-        round.participants = parts.map(p => ({
-            ...p,
-            registration: { userId: p.userId }
-        }));
-    }
 
     const now = new Date();
 

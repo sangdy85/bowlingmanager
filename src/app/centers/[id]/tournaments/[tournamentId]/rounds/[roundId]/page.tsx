@@ -57,24 +57,14 @@ export default async function RoundDetailPage({ params }: { params: { id: string
         console.error("Failed to parse settings", e);
     }
 
-    // Augment current round participants with isManual
-    const manualStatus: any[] = await prisma.$queryRaw`
-        SELECT id, isManual FROM RoundParticipant WHERE roundId = ${roundId}
-    `;
-
-    // Merge manual status into participants
-    const augmentedParticipants = roundData.participants.map((p: any) => {
-        const registration = p.registration || {};
-        return {
-            ...p,
-            isManual: manualStatus.find(m => m.id === p.id)?.isManual === 1 || manualStatus.find(m => m.id === p.id)?.isManual === true,
-            // Serialize Dates inside participants
-            registration: {
-                ...registration,
-                createdAt: registration.createdAt?.toISOString() || null
-            }
-        };
-    });
+    // Serialize Dates inside participants
+    const augmentedParticipants = roundData.participants.map((p: any) => ({
+        ...p,
+        registration: {
+            ...p.registration,
+            createdAt: p.registration?.createdAt?.toISOString() || null
+        }
+    }));
 
     // Calculate current round status with fallbacks for EVENT types
     // 1. Effective Date: Round Date -> Tournament Start Date
@@ -219,12 +209,6 @@ export default async function RoundDetailPage({ params }: { params: { id: string
             prevRoundWinners: currentRoundPrevWinners, // History attached to each round
             participants: r.participants.map((p: any) => ({
                 ...p,
-                registration: p.registration ? {
-                    ...p.registration,
-                    user: p.registration.user,
-                    team: p.registration.team,
-                    createdAt: p.registration.createdAt?.toISOString() || null
-                } : null,
                 isManual: p.isManual === 1 || p.isManual === true
             }))
         });
@@ -243,8 +227,6 @@ export default async function RoundDetailPage({ params }: { params: { id: string
             isManual: currentProcessedParticipants.find((rp: any) => rp.id === p.id)?.isManual || false,
             registration: {
                 ...registration,
-                user: registration.user,
-                team: registration.team,
                 createdAt: registration.createdAt?.toISOString() || null
             }
         };
