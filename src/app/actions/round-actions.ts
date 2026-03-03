@@ -393,13 +393,9 @@ export async function manualRegister(roundId: string, input: {
 
             if (existing.length > 0) {
                 registrationId = existing[0].id;
-                // Update handicap if provided OR use from input/user
-                const handicapVal = input.handicap !== undefined ? input.handicap : null;
-                if (handicapVal !== null) {
-                    await prisma.$executeRaw`
-                        UPDATE "TournamentRegistration" SET "handicap" = ${handicapVal} WHERE "id" = ${registrationId}
-                    `;
-                }
+                // [DEPRECATED] We no longer auto-update the tournament-wide handicap here
+                // to support round-specific handicaps. 
+                // Only RoundParticipant will hold the specific handicap for this round.
             } else {
                 registrationId = randomUUID();
                 // Fetch User name and Team name for snapshotting
@@ -1319,12 +1315,12 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
 
                     if (reg) {
                         registrationId = reg.id;
-                        // Update existing registration info (handicap, status, etc.)
+                        // [CRITICAL] Update payment status and group, but DO NOT overwrite handicap 
+                        // as it might be different across rounds.
                         await tx.tournamentRegistration.update({
                             where: { id: registrationId },
                             data: {
                                 entryGroupId: pData.entryGroupId || reg.entryGroupId,
-                                handicap: handicapVal ?? reg.handicap,
                                 paymentStatus: status
                             }
                         });
