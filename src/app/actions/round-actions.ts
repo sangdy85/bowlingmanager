@@ -421,32 +421,33 @@ export async function manualRegister(roundId: string, input: {
             const trimmedName = input.guestName.trim();
             const trimmedTeam = input.guestTeam?.trim() || '';
 
-            const memberMatch: any[] = await prisma.$queryRaw`
-                SELECT u.id as "userId", cm."teamId"
-                FROM "User" u
-                JOIN "CenterMember" cm ON u.id = cm."userId"
-                LEFT JOIN "Team" t ON cm."teamId" = t.id
-                WHERE cm."centerId" = ${info.centerId}
-                AND u.name = ${trimmedName}
-                AND (t.name = ${trimmedTeam} OR (t.name IS NULL AND ${trimmedTeam} = ''))
-            `;
+            const memberMatch = await prisma.centerMember.findFirst({
+                where: {
+                    centerId: info.centerId,
+                    OR: [
+                        { User: { name: trimmedName } },
+                        { alias: trimmedName }
+                    ],
+                    Team: trimmedTeam ? { name: trimmedTeam } : { name: null }
+                },
+                include: { Team: true, User: true }
+            });
 
             registrationId = randomUUID();
             const handicapVal = input.handicap !== undefined ? input.handicap : null;
 
-            if (memberMatch.length > 0) {
-                // Auto-link to member
-                await prisma.$executeRaw`
-                    INSERT INTO "TournamentRegistration" ("id", "tournamentId", "userId", "createdAt", "teamId", "guestName", "guestTeamName", "handicap")
-                    VALUES (${registrationId}, ${info.tournamentId}, ${memberMatch[0].userId}, ${new Date()}, ${memberMatch[0].teamId}, ${trimmedName}, ${trimmedTeam || null}, ${handicapVal})
-                `;
-            } else {
-                // Register as pure guest
-                await prisma.$executeRaw`
-                    INSERT INTO "TournamentRegistration" ("id", "tournamentId", "userId", "createdAt", "teamId", "guestName", "guestTeamName", "handicap")
-                    VALUES (${registrationId}, ${info.tournamentId}, null, ${new Date()}, null, ${trimmedName}, ${trimmedTeam || null}, ${handicapVal})
-                `;
-            }
+            await prisma.tournamentRegistration.create({
+                data: {
+                    id: registrationId,
+                    tournamentId: info.tournamentId,
+                    userId: memberMatch?.userId || null,
+                    teamId: memberMatch?.teamId || null,
+                    guestName: trimmedName,
+                    guestTeamName: trimmedTeam || null,
+                    handicap: handicapVal,
+                    paymentStatus: 'PENDING'
+                }
+            });
         } else {
             throw new Error("Invalid input");
         }
@@ -516,44 +517,47 @@ export async function joinRound(roundId: string, userId: string) {
             `;
 
         if (existing.length > 0) {
-            registrationId = existing[0].id;
+            registrationId = (existing[0] as any).id;
         } else {
             // [LINKING LOGIC] Check if there's a manual GUEST registration with matching Name + Team
-            const userAndMember: any[] = await prisma.$queryRaw`
-                SELECT u.name, cm."teamId", t.name as "teamName"
-                FROM "User" u
-                JOIN "CenterMember" cm ON u.id = cm."userId"
-                LEFT JOIN "Team" t ON cm."teamId" = t.id
-                WHERE u.id = ${userId} AND cm."centerId" = ${info.centerId}
-            `;
-            const userName = userAndMember.length > 0 ? userAndMember[0].name : null;
-            const userTeamName = userAndMember.length > 0 ? userAndMember[0].teamName || '' : '';
+            const userMember = await prisma.centerMember.findUnique({
+                where: { userId_centerId: { userId, centerId: info.centerId } },
+                include: { User: true, Team: true }
+            });
 
-            const manualMatch: any[] = await prisma.$queryRaw`
-                SELECT id FROM "TournamentRegistration"
-                WHERE "tournamentId" = ${info.tournamentId}
-                AND "userId" IS NULL
-                AND "guestName" = ${userName}
-                AND ("guestTeamName" = ${userTeamName} OR ("guestTeamName" IS NULL AND ${userTeamName} = ''))
-            `;
+            const userName = userMember?.User?.name || null;
+            const userTeamName = userMember?.Team?.name || '';
 
-            if (manualMatch.length > 0) {
-                registrationId = manualMatch[0].id;
+            const manualMatch = await prisma.tournamentRegistration.findFirst({
+                where: {
+                    tournamentId: info.tournamentId,
+                    userId: null,
+                    guestName: userName,
+                    guestTeamName: userTeamName || null
+                }
+            });
+
+            if (manualMatch) {
+                registrationId = manualMatch.id;
                 // Link this manual registration to the user
-                const teamId = userAndMember.length > 0 ? userAndMember[0].teamId : null;
-                await prisma.$executeRaw`
-                    UPDATE "TournamentRegistration" 
-                    SET "userId" = ${userId}, "teamId" = ${teamId}
-                    WHERE "id" = ${registrationId}
-                `;
+                await prisma.tournamentRegistration.update({
+                    where: { id: registrationId },
+                    data: {
+                        userId: userId,
+                        teamId: userMember?.teamId || null
+                    }
+                });
             } else {
                 registrationId = randomUUID();
-                const teamId = userAndMember.length > 0 ? userAndMember[0].teamId : null;
-
-                await prisma.$executeRaw`
-                    INSERT INTO "TournamentRegistration" ("id", "tournamentId", "userId", "createdAt", "teamId", "guestName", "guestTeamName")
-                    VALUES (${registrationId}, ${info.tournamentId}, ${userId}, ${new Date()}, ${teamId}, null, null)
-                `;
+                await prisma.tournamentRegistration.create({
+                    data: {
+                        id: registrationId,
+                        tournamentId: info.tournamentId,
+                        userId: userId,
+                        teamId: userMember?.teamId || null,
+                        paymentStatus: 'PENDING'
+                    }
+                });
             }
         }
 
@@ -1384,41 +1388,24 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
 
                         // [LINKING LOGIC] Check if this person is a member of this center
                         const memberMatch = centerMembers.find((m: any) =>
-                            m.user?.name?.trim() === trimmedName &&
+                            (m.user?.name?.trim() === trimmedName || m.alias?.trim() === trimmedName) &&
                             (m.team?.name?.trim() || '') === trimmedTeamName
                         );
 
-                        if (memberMatch) {
-                            // Link to existing member
-                            await tx.tournamentRegistration.create({
-                                data: {
-                                    id: registrationId,
-                                    tournamentId: info.tournamentId,
-                                    userId: memberMatch.user.id,
-                                    teamId: memberMatch.team?.id || null,
-                                    guestName: trimmedName,
-                                    guestTeamName: trimmedTeamName || null,
-                                    entryGroupId: pData.entryGroupId || null,
-                                    handicap: handicapVal,
-                                    paymentStatus: status,
-                                    createdAt: seqTime
-                                }
-                            });
-                        } else {
-                            // Pure guest entry
-                            await tx.tournamentRegistration.create({
-                                data: {
-                                    id: registrationId,
-                                    tournamentId: info.tournamentId,
-                                    guestName: trimmedName,
-                                    guestTeamName: trimmedTeamName || null,
-                                    entryGroupId: pData.entryGroupId || null,
-                                    handicap: handicapVal,
-                                    paymentStatus: status,
-                                    createdAt: seqTime
-                                }
-                            });
-                        }
+                        await tx.tournamentRegistration.create({
+                            data: {
+                                id: registrationId,
+                                tournamentId: info.tournamentId,
+                                userId: memberMatch?.user?.id || null,
+                                teamId: memberMatch?.team?.id || null,
+                                guestName: trimmedName,
+                                guestTeamName: trimmedTeamName || null,
+                                entryGroupId: pData.entryGroupId || null,
+                                handicap: handicapVal,
+                                paymentStatus: status,
+                                createdAt: seqTime
+                            }
+                        });
                         results.createdTitle++;
                     }
 

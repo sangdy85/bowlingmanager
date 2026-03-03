@@ -2566,11 +2566,16 @@ export default function RoundDetailPageContent({
         if (userId && p.registration.userId === userId) return true;
 
         // 2. Check by Name + Team matching (for manual entries)
-        if (userProfile?.name && userProfile?.teamName) {
-            const pName = p.registration.guestName ?? p.registration.user?.name;
-            const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인';
+        if (userProfile?.name) {
+            const reg = p.registration;
+            if (!reg) return false;
 
-            if (pName === userProfile.name && pTeam === userProfile.teamName) {
+            const pName = reg.guestName || reg.user?.name;
+            const pTeam = (reg.guestTeamName || reg.team?.name || '개인').trim();
+            const myName = userProfile.name.trim();
+            const myTeam = (userProfile.teamName || '개인').trim();
+
+            if (pName?.trim() === myName && pTeam === myTeam) {
                 return true;
             }
         }
