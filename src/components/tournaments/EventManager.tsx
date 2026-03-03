@@ -27,7 +27,7 @@ export default function EventManager({ tournament, centerId, isManager }: EventM
         console.error("Failed to parse settings in EventManager", e);
     }
 
-    const menuItems = [
+    const menuItems = isManager ? [
         {
             label: '대회 설정',
             href: `/centers/${centerId}/tournaments/${tournament.id}/rounds/${round.id}?tab=settings`,
@@ -68,6 +68,21 @@ export default function EventManager({ tournament, centerId, isManager }: EventM
             href: `/centers/${centerId}/tournaments/${tournament.id}/rounds/${round.id}?tab=luckyDraw`,
             icon: '🍀',
             desc: '참가자를 대상으로 행운권을 추첨합니다.',
+            color: 'bg-pink-600'
+        },
+    ] : [
+        {
+            label: '최종 경기 결과',
+            href: `/centers/${centerId}/tournaments/${tournament.id}/rounds/${round.id}?tab=finalResults`,
+            icon: '🏆',
+            desc: '대회 최종 순위와 성적을 확인합니다.',
+            color: 'bg-green-600'
+        },
+        {
+            label: '행운권 추첨 결과',
+            href: `/centers/${centerId}/tournaments/${tournament.id}/rounds/${round.id}?tab=luckyDraw`,
+            icon: '🍀',
+            desc: '당첨된 행운의 주인공을 확인하세요!',
             color: 'bg-pink-600'
         },
     ];

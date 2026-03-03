@@ -2568,7 +2568,7 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
 
     const hasResults = round.individualScores && round.individualScores.some((s: any) => s.score > 0);
     const shouldShowSimplifiedResults = !isManager &&
-        round.tournament.type === 'CHAMP' &&
+        (round.tournament.type === 'CHAMP' || round.tournament.type === 'EVENT') &&
         (hasResults || (round.date && new Date() > new Date(round.date)));
 
     const handleTabChange = (tabId: string) => {

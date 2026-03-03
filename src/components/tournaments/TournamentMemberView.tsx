@@ -61,7 +61,7 @@ export default function TournamentMemberView({
     })();
 
     const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SCHEDULE' | 'RANKING' | 'RESULTS'>(
-        (tournament.type === 'CHAMP' && (tournament.status === 'ONGOING' || tournament.status === 'FINISHED'))
+        (tournament.status === 'FINISHED' || (tournament.type === 'CHAMP' && tournament.status === 'ONGOING'))
             ? 'RESULTS'
             : 'OVERVIEW'
     );
@@ -71,7 +71,7 @@ export default function TournamentMemberView({
         { id: 'OVERVIEW', label: '🏟️ 대회 요강/개요', icon: '📝', types: ['LEAGUE', 'CHAMP', 'EVENT'] },
         { id: 'SCHEDULE', label: '📅 대진표 확인', icon: '🗓️', types: ['LEAGUE'] },
         { id: 'RANKING', label: '🏆 순위 및 기록', icon: '📊', types: ['LEAGUE'] },
-        { id: 'RESULTS', label: tournament.type === 'LEAGUE' ? 'Bowling 경기 결과' : '🎳 회차별 경기/신청', icon: '🎳', types: ['LEAGUE', 'CHAMP', 'EVENT'] },
+        { id: 'RESULTS', label: tournament.type === 'LEAGUE' ? 'Bowling 경기 결과' : (tournament.status === 'FINISHED' ? '🎳 최종 결과/행운권' : '🎳 회차별 경기/신청'), icon: '🎳', types: ['LEAGUE', 'CHAMP', 'EVENT'] },
     ];
 
     const tabs = allTabs.filter(tab => tab.types.includes(tournament.type));
@@ -83,8 +83,8 @@ export default function TournamentMemberView({
 
     return (
         <div className="space-y-8">
-            {/* Custom Tab Navigation - Hidden for EVENT, CHAMP or if only 1 tab */}
-            {tournament.type !== 'EVENT' && tournament.type !== 'CHAMP' && tabs.length > 1 && (
+            {/* Custom Tab Navigation - Hidden for EVENT (only when NOT FINISHED), CHAMP or if only 1 tab */}
+            {((tournament.type !== 'EVENT' && tournament.type !== 'CHAMP') || (tournament.type === 'EVENT' && tournament.status === 'FINISHED')) && tabs.length > 1 && (
                 <div className="flex flex-wrap gap-2 p-1 bg-slate-100 rounded-2xl border-2 border-slate-200">
                     {tabs.map((tab) => (
                         <button
@@ -99,7 +99,7 @@ export default function TournamentMemberView({
                         </button>
                     ))}
                 </div>
-            )
+            )}
             }
 
             {/* Tab Content */}
