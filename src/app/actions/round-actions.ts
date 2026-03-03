@@ -495,19 +495,43 @@ export async function joinRound(roundId: string, userId: string) {
         if (existing.length > 0) {
             registrationId = existing[0].id;
         } else {
-            registrationId = randomUUID();
-            // Look up user's team preference for this center
-            const centerMembers: any[] = await prisma.$queryRaw`
-                SELECT "teamId" FROM "CenterMember" 
-                WHERE "userId" = ${userId} AND "centerId" = ${info.centerId}
+            // [LINKING LOGIC] Check if there's a manual GUEST registration with matching Name + Team
+            const userAndMember: any[] = await prisma.$queryRaw`
+                SELECT u.name, cm."teamId", t.name as "teamName"
+                FROM "User" u
+                JOIN "CenterMember" cm ON u.id = cm."userId"
+                LEFT JOIN "Team" t ON cm."teamId" = t.id
+                WHERE u.id = ${userId} AND cm."centerId" = ${info.centerId}
             `;
-            const teamId = centerMembers.length > 0 ? centerMembers[0].teamId : null;
+            const userName = userAndMember.length > 0 ? userAndMember[0].name : null;
+            const userTeamName = userAndMember.length > 0 ? userAndMember[0].teamName || '' : '';
 
-            // Fixed: Removed createdAt, updatedAt. Used joinedAt.
-            await prisma.$executeRaw`
-                INSERT INTO "TournamentRegistration" ("id", "tournamentId", "userId", "createdAt", "teamId", "guestName", "guestTeamName")
-                VALUES (${registrationId}, ${info.tournamentId}, ${userId}, ${new Date()}, ${teamId}, null, null)
+            const manualMatch: any[] = await prisma.$queryRaw`
+                SELECT id FROM "TournamentRegistration"
+                WHERE "tournamentId" = ${info.tournamentId}
+                AND "userId" IS NULL
+                AND "guestName" = ${userName}
+                AND ("guestTeamName" = ${userTeamName} OR ("guestTeamName" IS NULL AND ${userTeamName} = ''))
             `;
+
+            if (manualMatch.length > 0) {
+                registrationId = manualMatch[0].id;
+                // Link this manual registration to the user
+                const teamId = userAndMember.length > 0 ? userAndMember[0].teamId : null;
+                await prisma.$executeRaw`
+                    UPDATE "TournamentRegistration" 
+                    SET "userId" = ${userId}, "teamId" = ${teamId}
+                    WHERE "id" = ${registrationId}
+                `;
+            } else {
+                registrationId = randomUUID();
+                const teamId = userAndMember.length > 0 ? userAndMember[0].teamId : null;
+
+                await prisma.$executeRaw`
+                    INSERT INTO "TournamentRegistration" ("id", "tournamentId", "userId", "createdAt", "teamId", "guestName", "guestTeamName")
+                    VALUES (${registrationId}, ${info.tournamentId}, ${userId}, ${new Date()}, ${teamId}, null, null)
+                `;
+            }
         }
 
         const inRound: any[] = await prisma.$queryRaw`

@@ -114,12 +114,35 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
     // For Member-only view (Non-managers in League tournaments)
     let leaderboardData = null;
     let individualData = null;
+    let userProfile = null;
 
     if (!isManager) {
         try {
             if (tournament.type === 'LEAGUE') {
                 leaderboardData = await getLeagueLeaderboard(tournamentId);
                 individualData = await getIndividualLeaderboard(tournamentId);
+            }
+
+            // Fetch user profile for matching (name/team)
+            if (session?.user?.id) {
+                const member = await prisma.centerMember.findUnique({
+                    where: {
+                        userId_centerId: {
+                            userId: session.user.id,
+                            centerId: centerId
+                        }
+                    },
+                    include: {
+                        user: { select: { name: true } },
+                        team: { select: { name: true } }
+                    }
+                });
+                if (member) {
+                    userProfile = {
+                        name: member.user.name,
+                        teamName: member.team?.name || null
+                    };
+                }
             }
         } catch (e) {
             console.error("Failed to fetch member view data", e);
@@ -277,6 +300,7 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                     isRegistered={isRegisteredInRound}
                     hasStarted={hasStarted}
                     initialRoundId={initialRound?.id}
+                    userProfile={userProfile}
                 />
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

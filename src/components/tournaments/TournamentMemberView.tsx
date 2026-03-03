@@ -27,6 +27,7 @@ interface TournamentMemberViewProps {
     isRegistered?: boolean;
     hasStarted?: boolean;
     initialRoundId?: string;
+    userProfile?: { name: string; teamName: string | null } | null;
 }
 
 import { useSearchParams } from 'next/navigation';
@@ -41,7 +42,8 @@ export default function TournamentMemberView({
     currentUserId,
     isRegistered,
     hasStarted,
-    initialRoundId
+    initialRoundId,
+    userProfile
 }: TournamentMemberViewProps) {
     const searchParams = useSearchParams();
     const mode = searchParams.get('mode'); // 'recruit' or 'results'
@@ -77,6 +79,23 @@ export default function TournamentMemberView({
     const tabs = allTabs.filter(tab => tab.types.includes(tournament.type));
 
     // Ensure activeTab is valid for the current tournament type
+    // Multi-layered participation check (ID OR Name+Team)
+    const effectiveIsRegistered = isRegistered || (() => {
+        if (!userProfile || !initialRoundId) return false;
+        const currentRound = tournament.leagueRounds?.find((r: any) => r.id === initialRoundId);
+        if (!currentRound?.participants) return false;
+
+        return currentRound.participants.some((p: any) => {
+            const reg = p.registration;
+            if (!reg) return false;
+            const regName = reg.guestName || reg.user?.name;
+            const regTeam = reg.guestTeamName || reg.team?.name || '';
+
+            return regName?.trim() === userProfile.name?.trim() &&
+                (regTeam?.trim() || '') === (userProfile.teamName?.trim() || '');
+        });
+    })();
+
     if (!tabs.find(t => t.id === activeTab)) {
         setActiveTab('OVERVIEW');
     }
@@ -253,7 +272,7 @@ export default function TournamentMemberView({
                                             <div className="w-full">
                                                 <TournamentRegButton
                                                     tournament={tournament}
-                                                    isRegistered={isRegistered || false}
+                                                    isRegistered={effectiveIsRegistered || false}
                                                     canJoin={tournament.status !== 'FINISHED'}
                                                 />
                                             </div>
