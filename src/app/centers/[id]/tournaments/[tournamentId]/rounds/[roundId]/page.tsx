@@ -219,6 +219,12 @@ export default async function RoundDetailPage({ params }: { params: { id: string
             prevRoundWinners: currentRoundPrevWinners, // History attached to each round
             participants: r.participants.map((p: any) => ({
                 ...p,
+                registration: p.registration ? {
+                    ...p.registration,
+                    user: p.registration.user,
+                    team: p.registration.team,
+                    createdAt: p.registration.createdAt?.toISOString() || null
+                } : null,
                 isManual: p.isManual === 1 || p.isManual === true
             }))
         });
@@ -237,6 +243,8 @@ export default async function RoundDetailPage({ params }: { params: { id: string
             isManual: currentProcessedParticipants.find((rp: any) => rp.id === p.id)?.isManual || false,
             registration: {
                 ...registration,
+                user: registration.user,
+                team: registration.team,
                 createdAt: registration.createdAt?.toISOString() || null
             }
         };
