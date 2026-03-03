@@ -386,35 +386,40 @@ export async function manualRegister(roundId: string, input: {
 
         if (input.type === 'MEMBER' && input.userId) {
             // Check for existing registration in this tournament
-            const existing: any[] = await prisma.$queryRaw`
-                SELECT id, "guestName", "guestTeamName", "handicap" FROM "TournamentRegistration" 
-                WHERE "tournamentId" = ${info.tournamentId} AND "userId" = ${input.userId}
-            `;
+            const existing = await prisma.tournamentRegistration.findFirst({
+                where: {
+                    tournamentId: info.tournamentId,
+                    userId: input.userId
+                }
+            });
 
-            if (existing.length > 0) {
-                registrationId = existing[0].id;
-                // [DEPRECATED] We no longer auto-update the tournament-wide handicap here
-                // to support round-specific handicaps. 
-                // Only RoundParticipant will hold the specific handicap for this round.
+            if (existing) {
+                registrationId = existing.id;
             } else {
                 registrationId = randomUUID();
                 // Fetch User name and Team name for snapshotting
-                const userAndMember: any[] = await prisma.$queryRaw`
-                    SELECT u.name, u.handicap, cm."teamId", t.name as "teamName"
-                    FROM "User" u
-                    JOIN "CenterMember" cm ON u.id = cm."userId"
-                    LEFT JOIN "Team" t ON cm."teamId" = t.id
-                    WHERE u.id = ${input.userId} AND cm."centerId" = ${info.centerId}
-                `;
-                const teamId = userAndMember.length > 0 ? userAndMember[0].teamId : null;
-                const snapName = userAndMember.length > 0 ? userAndMember[0].name : null;
-                const snapTeamName = userAndMember.length > 0 ? userAndMember[0].teamName : null;
-                const handicapVal = input.handicap !== undefined ? input.handicap : (userAndMember.length > 0 ? userAndMember[0].handicap : 0);
+                const userMember = await prisma.centerMember.findUnique({
+                    where: { userId_centerId: { userId: input.userId, centerId: info.centerId } },
+                    include: { User: true, Team: true }
+                });
 
-                await prisma.$executeRaw`
-                    INSERT INTO "TournamentRegistration" ("id", "tournamentId", "userId", "createdAt", "teamId", "guestName", "guestTeamName", "handicap")
-                    VALUES (${registrationId}, ${info.tournamentId}, ${input.userId}, ${new Date()}, ${teamId}, ${snapName}, ${snapTeamName}, ${handicapVal})
-                `;
+                const teamId = userMember?.teamId || null;
+                const snapName = userMember?.User?.name || null;
+                const snapTeamName = userMember?.Team?.name || null;
+                const handicapVal = input.handicap !== undefined ? input.handicap : (userMember?.User?.handicap || 0);
+
+                await prisma.tournamentRegistration.create({
+                    data: {
+                        id: registrationId,
+                        tournamentId: info.tournamentId,
+                        userId: input.userId,
+                        teamId: teamId,
+                        guestName: snapName,
+                        guestTeamName: snapTeamName,
+                        handicap: handicapVal,
+                        paymentStatus: 'PENDING'
+                    }
+                });
             }
         } else if (input.type === 'GUEST' && input.guestName) {
             // [LINKING LOGIC] Check if this guest is actually a member of this center
@@ -428,47 +433,85 @@ export async function manualRegister(roundId: string, input: {
                         { User: { name: trimmedName } },
                         { alias: trimmedName }
                     ],
-                    Team: trimmedTeam ? { name: trimmedTeam } : { name: null }
+                    ...(trimmedTeam
+                        ? { Team: { name: trimmedTeam } }
+                        : { teamId: null }
+                    )
                 },
                 include: { Team: true, User: true }
             });
 
-            registrationId = randomUUID();
-            const handicapVal = input.handicap !== undefined ? input.handicap : null;
+            // [CRITICAL] Check if this member is already registered in the tournament
+            let existing: any = null;
+            if (memberMatch?.userId) {
+                existing = await prisma.tournamentRegistration.findFirst({
+                    where: { tournamentId: info.tournamentId, userId: memberMatch.userId }
+                });
+            } else {
+                // If pure guest, check by name+team
+                existing = await prisma.tournamentRegistration.findFirst({
+                    where: {
+                        tournamentId: info.tournamentId,
+                        userId: null,
+                        guestName: trimmedName,
+                        guestTeamName: trimmedTeam || null
+                    }
+                });
+            }
 
-            await prisma.tournamentRegistration.create({
-                data: {
-                    id: registrationId,
-                    tournamentId: info.tournamentId,
-                    userId: memberMatch?.userId || null,
-                    teamId: memberMatch?.teamId || null,
-                    guestName: trimmedName,
-                    guestTeamName: trimmedTeam || null,
-                    handicap: handicapVal,
-                    paymentStatus: 'PENDING'
-                }
-            });
+            if (existing) {
+                registrationId = existing.id;
+            } else {
+                registrationId = randomUUID();
+                const handicapVal = input.handicap !== undefined ? input.handicap : null;
+
+                await prisma.tournamentRegistration.create({
+                    data: {
+                        id: registrationId,
+                        tournamentId: info.tournamentId,
+                        userId: memberMatch?.userId || null,
+                        teamId: memberMatch?.teamId || null,
+                        guestName: trimmedName,
+                        guestTeamName: trimmedTeam || null,
+                        handicap: handicapVal,
+                        paymentStatus: 'PENDING'
+                    }
+                });
+            }
         } else {
             throw new Error("Invalid input");
         }
 
-        const inRound: any[] = await prisma.$queryRaw`
-            SELECT id FROM "RoundParticipant" WHERE "roundId" = ${roundId} AND "registrationId" = ${registrationId}
-        `;
+        const inRound = await prisma.roundParticipant.findUnique({
+            where: {
+                roundId_registrationId: {
+                    roundId,
+                    registrationId
+                }
+            }
+        });
 
-        if (inRound.length === 0) {
+        if (!inRound) {
             const rpId = randomUUID();
             // Use input handicap if provided, otherwise fallback to registration's handicap
             let finalHandicap = input.handicap;
             if (finalHandicap === undefined) {
-                const reg: any[] = await prisma.$queryRaw`SELECT handicap FROM "TournamentRegistration" WHERE id = ${registrationId}`;
-                finalHandicap = reg.length > 0 ? (reg[0].handicap ?? 0) : 0;
+                const reg = await prisma.tournamentRegistration.findUnique({
+                    where: { id: registrationId },
+                    select: { handicap: true }
+                });
+                finalHandicap = reg?.handicap ?? 0;
             }
 
-            await prisma.$executeRaw`
-                INSERT INTO "RoundParticipant" ("id", "roundId", "registrationId", "createdAt", "lane", "handicap")
-                VALUES (${rpId}, ${roundId}, ${registrationId}, ${new Date()}, null, ${finalHandicap})
-            `;
+            await prisma.roundParticipant.create({
+                data: {
+                    id: rpId,
+                    roundId,
+                    registrationId,
+                    lane: null,
+                    handicap: finalHandicap
+                }
+            });
         }
 
         if (info) revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
@@ -486,21 +529,20 @@ export async function joinRound(roundId: string, userId: string) {
         const info = await getTournamentInfo(roundId);
         if (!info) throw new Error("라운드 정보를 찾을 수 없습니다.");
 
-        const round: any[] = await prisma.$queryRaw`
-            SELECT lr."date", lr."registrationStart", lr."registrationEnd", t."leagueTime"
-            FROM "LeagueRound" lr
-            JOIN "Tournament" t ON lr."tournamentId" = t."id"
-            WHERE lr."id" = ${roundId}
-        `;
-        if (round.length === 0) throw new Error("라운드 없음");
+        const round = await prisma.leagueRound.findUnique({
+            where: { id: roundId },
+            include: { tournament: true }
+        });
 
-        const leagueTime = round[0].leagueTime;
+        if (!round) throw new Error("라운드 없음");
+
+        const leagueTime = round.tournament.leagueTime;
         const now = new Date();
-        const start = round[0].registrationStart ? new Date(round[0].registrationStart) : null;
+        const start = round.registrationStart ? new Date(round.registrationStart) : null;
 
-        let end = round[0].registrationEnd ? new Date(round[0].registrationEnd) : null;
-        if (!end && round[0].date) {
-            end = new Date(round[0].date);
+        let end = round.registrationEnd ? new Date(round.registrationEnd) : null;
+        if (!end && round.date) {
+            end = new Date(round.date);
             if (leagueTime) {
                 const [h, m] = leagueTime.split(':').map(Number);
                 if (!isNaN(h) && !isNaN(m)) end.setHours(h, m, 0, 0);
@@ -511,10 +553,12 @@ export async function joinRound(roundId: string, userId: string) {
         if (end && now > end) throw new Error("접수가 마감되었습니다.");
 
         let registrationId = '';
-        const existing: any[] = await prisma.$queryRaw`
-                SELECT id FROM "TournamentRegistration" 
-                WHERE "tournamentId" = ${info.tournamentId} AND "userId" = ${userId}
-            `;
+        const existing = await prisma.tournamentRegistration.findFirst({
+            where: {
+                tournamentId: info.tournamentId,
+                userId: userId
+            }
+        });
 
         if (existing.length > 0) {
             registrationId = (existing[0] as any).id;
@@ -561,20 +605,33 @@ export async function joinRound(roundId: string, userId: string) {
             }
         }
 
-        const inRound: any[] = await prisma.$queryRaw`
-            SELECT id FROM "RoundParticipant" WHERE "roundId" = ${roundId} AND "registrationId" = ${registrationId}
-        `;
+        const inRound = await prisma.roundParticipant.findUnique({
+            where: {
+                roundId_registrationId: {
+                    roundId,
+                    registrationId
+                }
+            }
+        });
 
-        if (inRound.length === 0) {
+        if (!inRound) {
             const rpId = randomUUID();
             // Fetch registration's handicap as the default for this round
-            const regData: any[] = await prisma.$queryRaw`SELECT handicap FROM "TournamentRegistration" WHERE id = ${registrationId}`;
-            const finalHandicap = regData.length > 0 ? (regData[0].handicap ?? 0) : 0;
+            const regData = await prisma.tournamentRegistration.findUnique({
+                where: { id: registrationId },
+                select: { handicap: true }
+            });
+            const finalHandicap = regData?.handicap ?? 0;
 
-            await prisma.$executeRaw`
-                INSERT INTO "RoundParticipant" ("id", "roundId", "registrationId", "createdAt", "lane", "handicap")
-                VALUES (${rpId}, ${roundId}, ${registrationId}, ${new Date()}, null, ${finalHandicap})
-            `;
+            await prisma.roundParticipant.create({
+                data: {
+                    id: rpId,
+                    roundId,
+                    registrationId,
+                    lane: null,
+                    handicap: finalHandicap
+                }
+            });
         } else {
             return { success: false, message: "이미 신청했습니다." };
         }
@@ -1363,10 +1420,16 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                     const status = (pData.paymentStatus === '입금완료' || pData.paymentStatus === 'PAID') ? 'PAID' : 'PENDING';
 
                     // [REFINED LOGIC] Find if this person is already registered in the tournament
-                    // by matching name and team name (case-insensitive-ish split)
+                    // 1. First, find if they are a center member
+                    const memberMatch = centerMembers.find((m: any) =>
+                        (m.user?.name?.trim() === trimmedName || m.alias?.trim() === trimmedName) &&
+                        (m.team?.name?.trim() || '') === trimmedTeamName
+                    );
+
+                    // 2. Then match against existing registrations by userId OR guestName+Team
                     let reg = existingRegistrations.find((r: any) =>
-                        (r.guestName && r.guestName.trim() === trimmedName && (r.guestTeamName || '') === trimmedTeamName) ||
-                        (r.user && r.user.name.trim() === trimmedName && (r.guestTeamName || '') === trimmedTeamName)
+                        (memberMatch?.user?.id && r.userId === memberMatch.user.id) ||
+                        (r.guestName && r.guestName.trim() === trimmedName && (r.guestTeamName || '') === trimmedTeamName)
                     );
 
                     let registrationId;
