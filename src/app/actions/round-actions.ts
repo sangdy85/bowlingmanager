@@ -1411,12 +1411,15 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                 include: { user: { select: { id: true, name: true } }, team: { select: { id: true, name: true } } }
             });
 
+            // Keep a local list of registrations to avoid stale cached lookups during the loop
+            const localRegistrations = [...existingRegistrations];
+
             for (const pData of participants) {
                 try {
-                    const trimmedName = pData.name.trim();
-                    const trimmedTeamName = pData.teamName?.trim() || '';
+                    const trimmedName = pData.name.toString().trim();
+                    const trimmedTeamName = (pData.teamName?.toString() || '').trim();
                     const seqTime = new Date(baseTime.getTime() + (index++ * 1000));
-                    const handicapVal = pData.handicap !== undefined ? pData.handicap : null;
+                    const handicapVal = pData.handicap !== undefined ? Number(pData.handicap) : null;
                     const status = (pData.paymentStatus === '입금완료' || pData.paymentStatus === 'PAID') ? 'PAID' : 'PENDING';
 
                     // [REFINED LOGIC] Find if this person is already registered in the tournament
@@ -1426,9 +1429,9 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                         (m.team?.name?.trim() || '') === trimmedTeamName
                     );
 
-                    // 2. Then match against existing registrations by userId OR guestName+Team
-                    let reg = existingRegistrations.find((r: any) =>
-                        (memberMatch?.user?.id && r.userId === memberMatch.user.id) ||
+                    // 2. Match against local list (to catch duplicates within the same Excel file)
+                    let reg = localRegistrations.find((r: any) =>
+                        (memberMatch?.userId && r.userId === memberMatch.userId) ||
                         (r.guestName && r.guestName.trim() === trimmedName && (r.guestTeamName || '') === trimmedTeamName)
                     );
 
@@ -1436,8 +1439,7 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
 
                     if (reg) {
                         registrationId = reg.id;
-                        // [CRITICAL] Update payment status and group, but DO NOT overwrite handicap 
-                        // as it might be different across rounds.
+                        // Update existing registration only if some fields have changed
                         await tx.tournamentRegistration.update({
                             where: { id: registrationId },
                             data: {
@@ -1448,40 +1450,45 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                         results.updatedTitle++;
                     } else {
                         registrationId = randomUUID();
-
-                        // [LINKING LOGIC] Check if this person is a member of this center
-                        const memberMatch = centerMembers.find((m: any) =>
-                            (m.user?.name?.trim() === trimmedName || m.alias?.trim() === trimmedName) &&
-                            (m.team?.name?.trim() || '') === trimmedTeamName
-                        );
+                        const newReg = {
+                            id: registrationId,
+                            tournamentId: info.tournamentId,
+                            userId: memberMatch?.userId || null,
+                            teamId: memberMatch?.teamId || null,
+                            guestName: trimmedName,
+                            guestTeamName: trimmedTeamName || null,
+                            entryGroupId: pData.entryGroupId || null,
+                            handicap: handicapVal,
+                            paymentStatus: status,
+                            createdAt: seqTime
+                        };
 
                         await tx.tournamentRegistration.create({
-                            data: {
-                                id: registrationId,
-                                tournamentId: info.tournamentId,
-                                userId: memberMatch?.user?.id || null,
-                                teamId: memberMatch?.team?.id || null,
-                                guestName: trimmedName,
-                                guestTeamName: trimmedTeamName || null,
-                                entryGroupId: pData.entryGroupId || null,
-                                handicap: handicapVal,
-                                paymentStatus: status,
-                                createdAt: seqTime
-                            }
+                            data: newReg
                         });
+
+                        // Add to local list to prevent duplicate creation in subsequent iterations
+                        localRegistrations.push(newReg as any);
                         results.createdTitle++;
                     }
 
                     // 3. Create RoundParticipant entry linked to the registration
-                    await tx.roundParticipant.create({
-                        data: {
-                            id: randomUUID(),
-                            roundId,
-                            registrationId,
-                            handicap: handicapVal, // Store round-specific handicap
-                            createdAt: seqTime
-                        }
+                    // [CRITICAL] Check if this person is already in the round to prevent P2002
+                    const existingRP = await tx.roundParticipant.findUnique({
+                        where: { roundId_registrationId: { roundId, registrationId } }
                     });
+
+                    if (!existingRP) {
+                        await tx.roundParticipant.create({
+                            data: {
+                                id: randomUUID(),
+                                roundId,
+                                registrationId,
+                                handicap: handicapVal, // Store round-specific handicap
+                                createdAt: seqTime
+                            }
+                        });
+                    }
 
                     // 4. Lane Assignment (Merged with update if possible, but keeping it simple)
                     if (pData.laneDisplay && pData.laneDisplay.includes('-')) {
