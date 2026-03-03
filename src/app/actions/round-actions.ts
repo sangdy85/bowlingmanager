@@ -417,13 +417,36 @@ export async function manualRegister(roundId: string, input: {
                 `;
             }
         } else if (input.type === 'GUEST' && input.guestName) {
-            registrationId = randomUUID();
-            // Fixed: Removed createdAt, updatedAt. Used joinedAt.
-            const handicapVal = input.handicap !== undefined ? input.handicap : null;
-            await prisma.$executeRaw`
-                INSERT INTO "TournamentRegistration" ("id", "tournamentId", "userId", "createdAt", "teamId", "guestName", "guestTeamName", "handicap")
-                VALUES (${registrationId}, ${info.tournamentId}, null, ${new Date()}, null, ${input.guestName}, ${input.guestTeam || null}, ${handicapVal})
+            // [LINKING LOGIC] Check if this guest is actually a member of this center
+            const trimmedName = input.guestName.trim();
+            const trimmedTeam = input.guestTeam?.trim() || '';
+
+            const memberMatch: any[] = await prisma.$queryRaw`
+                SELECT u.id as "userId", cm."teamId"
+                FROM "User" u
+                JOIN "CenterMember" cm ON u.id = cm."userId"
+                LEFT JOIN "Team" t ON cm."teamId" = t.id
+                WHERE cm."centerId" = ${info.centerId}
+                AND u.name = ${trimmedName}
+                AND (t.name = ${trimmedTeam} OR (t.name IS NULL AND ${trimmedTeam} = ''))
             `;
+
+            registrationId = randomUUID();
+            const handicapVal = input.handicap !== undefined ? input.handicap : null;
+
+            if (memberMatch.length > 0) {
+                // Auto-link to member
+                await prisma.$executeRaw`
+                    INSERT INTO "TournamentRegistration" ("id", "tournamentId", "userId", "createdAt", "teamId", "guestName", "guestTeamName", "handicap")
+                    VALUES (${registrationId}, ${info.tournamentId}, ${memberMatch[0].userId}, ${new Date()}, ${memberMatch[0].teamId}, ${trimmedName}, ${trimmedTeam || null}, ${handicapVal})
+                `;
+            } else {
+                // Register as pure guest
+                await prisma.$executeRaw`
+                    INSERT INTO "TournamentRegistration" ("id", "tournamentId", "userId", "createdAt", "teamId", "guestName", "guestTeamName", "handicap")
+                    VALUES (${registrationId}, ${info.tournamentId}, null, ${new Date()}, null, ${trimmedName}, ${trimmedTeam || null}, ${handicapVal})
+                `;
+            }
         } else {
             throw new Error("Invalid input");
         }
@@ -1317,7 +1340,14 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
 
             // Pre-fetch all registrations for this tournament to match by name/team
             const existingRegistrations = await tx.tournamentRegistration.findMany({
-                where: { tournamentId: info.tournamentId }
+                where: { tournamentId: info.tournamentId },
+                include: { user: true, team: true }
+            });
+
+            // Pre-fetch all center members to match by name/team if not already registered
+            const centerMembers = await tx.centerMember.findMany({
+                where: { centerId: info.centerId },
+                include: { user: { select: { id: true, name: true } }, team: { select: { id: true, name: true } } }
             });
 
             for (const pData of participants) {
@@ -1351,18 +1381,44 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                         results.updatedTitle++;
                     } else {
                         registrationId = randomUUID();
-                        await tx.tournamentRegistration.create({
-                            data: {
-                                id: registrationId,
-                                tournamentId: info.tournamentId,
-                                guestName: trimmedName,
-                                guestTeamName: trimmedTeamName || null,
-                                entryGroupId: pData.entryGroupId || null,
-                                handicap: handicapVal,
-                                paymentStatus: status,
-                                createdAt: seqTime
-                            }
-                        });
+
+                        // [LINKING LOGIC] Check if this person is a member of this center
+                        const memberMatch = centerMembers.find((m: any) =>
+                            m.user?.name?.trim() === trimmedName &&
+                            (m.team?.name?.trim() || '') === trimmedTeamName
+                        );
+
+                        if (memberMatch) {
+                            // Link to existing member
+                            await tx.tournamentRegistration.create({
+                                data: {
+                                    id: registrationId,
+                                    tournamentId: info.tournamentId,
+                                    userId: memberMatch.user.id,
+                                    teamId: memberMatch.team?.id || null,
+                                    guestName: trimmedName,
+                                    guestTeamName: trimmedTeamName || null,
+                                    entryGroupId: pData.entryGroupId || null,
+                                    handicap: handicapVal,
+                                    paymentStatus: status,
+                                    createdAt: seqTime
+                                }
+                            });
+                        } else {
+                            // Pure guest entry
+                            await tx.tournamentRegistration.create({
+                                data: {
+                                    id: registrationId,
+                                    tournamentId: info.tournamentId,
+                                    guestName: trimmedName,
+                                    guestTeamName: trimmedTeamName || null,
+                                    entryGroupId: pData.entryGroupId || null,
+                                    handicap: handicapVal,
+                                    paymentStatus: status,
+                                    createdAt: seqTime
+                                }
+                            });
+                        }
                         results.createdTitle++;
                     }
 
