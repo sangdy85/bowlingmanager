@@ -75,10 +75,12 @@ async function main() {
 
         if (!reg) {
             console.log(`  -> 토너먼트에 "${teamName}" 등록 정보를 생성합니다.`);
-            reg = await prisma.tournamentRegistration.create({
+            await prisma.tournamentRegistration.create({
                 data: {
                     tournamentId: targetId,
                     teamId: globalTeam!.id,
+                    guestName: teamName,
+                    guestTeamName: teamName,
                     paymentStatus: 'PAID'
                 }
             });

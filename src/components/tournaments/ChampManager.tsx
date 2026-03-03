@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { joinRound } from '@/app/actions/round-actions';
-import { calculateTournamentStatus, STATUS_LABELS } from '@/lib/tournament-utils';
+import { STATUS_LABELS, TStatus } from '@/lib/tournament-utils';
 
 interface ChampManagerProps {
     tournament: any;
@@ -15,6 +16,7 @@ interface ChampManagerProps {
 }
 
 export default function ChampManager({ tournament, centerId, isManager, currentUserId, isMemberView = false, isArchiveView = false }: ChampManagerProps) {
+    const router = useRouter();
     const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
 
     if (!tournament.leagueRounds || tournament.leagueRounds.length === 0) {
@@ -30,7 +32,7 @@ export default function ChampManager({ tournament, centerId, isManager, currentU
             const res = await joinRound(roundId, currentUserId);
             if (res.success) {
                 alert('참가 신청이 완료되었습니다.');
-                window.location.reload();
+                router.refresh();
             } else {
                 alert(res.message || '신청 실패');
             }
@@ -62,7 +64,7 @@ export default function ChampManager({ tournament, centerId, isManager, currentU
                                     </Link>
                                 );
                             }
-                        } catch (e) {
+                        } catch (e: any) {
                             console.error("Failed to parse tournament settings in ChampManager", e);
                         }
                         return null;
@@ -78,20 +80,18 @@ export default function ChampManager({ tournament, centerId, isManager, currentU
                 {tournament.leagueRounds
                     .filter((round: any) => {
                         if (!isArchiveView) return true;
-                        // For Archive view, show if round is CLOSED or has results/scores
-                        const hasResults = round.results && round.results.length > 0;
+                        // For Archive view, show if round is CLOSED or has scores
                         const hasIndividualScores = round.individualScores && round.individualScores.length > 0;
-                        const hasParticipantsWithScores = round.participants?.some((p: any) => p.scores && p.scores.length > 0);
-                        return round.status === 'CLOSED' || hasResults || hasIndividualScores || hasParticipantsWithScores;
+                        const hasParticipantsWithScores = round.participants?.some((p: any) => p.registration?.scores && p.registration.scores.length > 0);
+                        return round.status === 'CLOSED' || hasIndividualScores || hasParticipantsWithScores;
                     })
                     .map((round: any) => {
                         const effectiveDate = round.effectiveDateStr ? new Date(round.effectiveDateStr) : (round.date ? new Date(round.date) : null);
-                        const status = round.calculatedStatus || 'UPCOMING';
+                        const status = (round.calculatedStatus || 'UPCOMING') as TStatus;
 
                         const isJoined = round.participants?.some((p: any) => p.registration?.userId === currentUserId);
                         const hasScores = (round.individualScores && round.individualScores.length > 0) ||
-                            (round.results && round.results.length > 0) ||
-                            (round.participants?.some((p: any) => p.scores && p.scores.length > 0));
+                            (round.participants?.some((p: any) => p.registration?.scores && p.registration.scores.length > 0));
 
                         const dateStr = effectiveDate ? effectiveDate.toLocaleString('ko-KR', {
                             year: 'numeric',
@@ -102,7 +102,7 @@ export default function ChampManager({ tournament, centerId, isManager, currentU
                             minute: '2-digit',
                             hourCycle: 'h23'
                         }) : '일정 미정';
-                        const statusText = STATUS_LABELS[status as any];
+                        const statusText = STATUS_LABELS[status];
 
                         return (
                             <div key={round.id} className="card" style={{
@@ -158,7 +158,7 @@ export default function ChampManager({ tournament, centerId, isManager, currentU
                                                     </div>
                                                 );
                                             }
-                                        } catch (e) { return null; }
+                                        } catch (e: any) { return null; }
                                         return null;
                                     })()}
                                 </div>
