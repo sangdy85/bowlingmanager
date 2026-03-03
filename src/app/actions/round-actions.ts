@@ -1043,7 +1043,8 @@ export async function updateRegistration(
             where: { id: registrationId },
             include: {
                 roundParticipations: true,
-                scores: true
+                scores: true,
+                tournament: true
             }
         });
 
