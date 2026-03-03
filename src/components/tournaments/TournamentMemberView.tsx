@@ -100,10 +100,24 @@ export default function TournamentMemberView({
                     ))}
                 </div>
             )}
-            }
 
             {/* Tab Content */}
             <div className="min-h-[500px]">
+                {activeTab === 'RESULTS' && tournament.type === 'EVENT' && tournament.status === 'FINISHED' && (
+                    <div className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="bg-slate-50 p-8 rounded-[3rem] border-2 border-slate-200 shadow-inner">
+                            <div className="flex items-center gap-3 mb-6 px-2">
+                                <span className="text-2xl">📝</span>
+                                <h3 className="text-xl font-black italic">대회 요강 및 안내</h3>
+                            </div>
+                            <TournamentDescriptionEditor
+                                tournamentId={tournament.id}
+                                initialDescription={tournament.description}
+                                isManager={false}
+                            />
+                        </div>
+                    </div>
+                )}
                 {/* Unified CHAMP Dashboard Layout */}
                 {tournament.type === 'CHAMP' && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-12">
