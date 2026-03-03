@@ -146,8 +146,8 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
 
         const status = calculateTournamentStatus(t.startDate, t.registrationStart, t.endDate, t.status, now);
 
-        // EVENT의 경우 ONGOING(경기 시작됨)은 '모집 중' 섹션에서 제외
-        if (status === 'OPEN' || status === 'CLOSED') {
+        // EVENT의 경우 OPEN, CLOSED 상태 외에도 ONGOING(경기 시작됨)까지 '모집 중' 섹션에 표시
+        if (status === 'OPEN' || status === 'CLOSED' || status === 'ONGOING') {
             return [{
                 ...t,
                 participantCount: (t as any)._count.registrations,
