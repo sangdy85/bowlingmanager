@@ -2492,7 +2492,19 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
     );
 }
 
-export default function RoundDetailPageContent({ round, userId, isManager = false, centerId }: { round: any, userId?: string, isManager?: boolean, centerId?: string }) {
+export default function RoundDetailPageContent({
+    round,
+    userId,
+    isManager = false,
+    centerId,
+    userProfile
+}: {
+    round: any,
+    userId?: string,
+    isManager?: boolean,
+    centerId?: string,
+    userProfile?: { name: string | null, teamName: string | null }
+}) {
     const searchParams = useSearchParams();
     const router = useRouter();
     const initialTab = searchParams.get('tab') || 'overview';
@@ -2548,7 +2560,22 @@ export default function RoundDetailPageContent({ round, userId, isManager = fals
 
     if (!round) return <div>Data not found</div>;
 
-    const participation = round.participants.find((p: any) => p.registration.userId === userId);
+    // Enhanced participation check: User ID or (Name + Team matching for manual entries)
+    const participation = round.participants.find((p: any) => {
+        // 1. Check by User ID
+        if (userId && p.registration.userId === userId) return true;
+
+        // 2. Check by Name + Team matching (for manual entries)
+        if (userProfile?.name && userProfile?.teamName) {
+            const pName = p.registration.guestName ?? p.registration.user?.name;
+            const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인';
+
+            if (pName === userProfile.name && pTeam === userProfile.teamName) {
+                return true;
+            }
+        }
+        return false;
+    });
 
     const tabs = [
         { id: 'overview', label: '대시보드' },

@@ -250,13 +250,36 @@ export default async function RoundDetailPage({ params }: { params: { id: string
     // 5. Final deep serialization
     const finalRound = JSON.parse(JSON.stringify(finalRoundRaw));
 
-    // 6. Check Manager status
+    // 6. Check Manager status and User Profile for manual matching
     const center = await prisma.bowlingCenter.findUnique({
         where: { id: centerId },
-        select: { ownerId: true, managers: { select: { id: true } } }
+        select: {
+            ownerId: true,
+            managers: { select: { id: true } },
+            CenterMember: {
+                where: { userId: session?.user?.id },
+                include: { Team: true, User: true }
+            }
+        }
     });
+
     const isManager = center?.ownerId === session?.user?.id ||
         center?.managers.some((m: any) => m.id === session?.user?.id);
 
-    return <RoundDetailPageContent round={finalRound} userId={session?.user?.id} isManager={isManager} centerId={centerId} />;
+    // Get current user's profile info for manual matching (Name + Team)
+    const currentMember = center?.CenterMember?.[0];
+    const userProfile = {
+        name: currentMember?.alias || currentMember?.User?.name || session?.user?.name || null,
+        teamName: currentMember?.Team?.name || null
+    };
+
+    return (
+        <RoundDetailPageContent
+            round={finalRound}
+            userId={session?.user?.id}
+            isManager={isManager}
+            centerId={centerId}
+            userProfile={userProfile}
+        />
+    );
 }
