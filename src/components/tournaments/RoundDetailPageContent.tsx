@@ -1783,11 +1783,11 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                         justifyContent: 'center',
                         boxSizing: 'border-box'
                     }}>
-                        <div style={{ flex: isTeam2To6 || isMobile ? '1' : `0 0 ${singleTableWidth}px`, width: isTeam2To6 || isMobile ? '100%' : `${singleTableWidth}px`, boxSizing: 'border-box', overflowX: 'auto' }}>
+                        <div style={{ flex: isTeam2To6 || isMobile ? '1' : `0 0 ${singleTableWidth}px`, width: isTeam2To6 || isMobile ? '100%' : `${singleTableWidth}px`, boxSizing: 'border-box', overflowX: isMobile ? 'auto' : 'hidden' }}>
                             <TableComponent data={leftColumn} startRank={1} />
                         </div>
                         {!isTeam2To6 && (
-                            <div style={{ flex: isMobile ? '1' : `0 0 ${singleTableWidth}px`, width: isMobile ? '100%' : `${singleTableWidth}px`, boxSizing: 'border-box', overflowX: 'auto', borderTop: isMobile ? '1px solid #ccc' : 'none', paddingTop: isMobile ? '10px' : 0 }}>
+                            <div style={{ flex: isMobile ? '1' : `0 0 ${singleTableWidth}px`, width: isMobile ? '100%' : `${singleTableWidth}px`, boxSizing: 'border-box', overflowX: isMobile ? 'auto' : 'hidden', borderTop: isMobile ? '1px solid #ccc' : 'none', paddingTop: isMobile ? '10px' : 0 }}>
                                 <TableComponent data={rightColumn} startRank={rowsPerColumn + 1} isRight={true} />
                             </div>
                         )}
