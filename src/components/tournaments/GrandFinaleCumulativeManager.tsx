@@ -325,10 +325,10 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                                     <th style={{ width: '60px', minWidth: '60px' }}>순위</th>
                                     <th style={{ width: 'auto', minWidth: '90px' }}>팀명</th>
                                     <th style={{ width: 'auto', minWidth: '70px' }}>성함</th>
-                                    <th style={{ width: 'auto', minWidth: '50px' }}>포인트</th>
-                                    <th style={{ width: '45px', minWidth: '45px' }}>참여</th>
-                                    <th style={{ width: 'auto', minWidth: '70px' }}>누적</th>
-                                    <th style={{ width: 'auto', minWidth: '70px' }}>입상</th>
+                                    <th style={{ width: 'auto', minWidth: '45px' }}>포인트</th>
+                                    <th style={{ width: '60px', minWidth: '60px' }}>참여</th>
+                                    <th style={{ width: 'auto', minWidth: '65px' }}>누적</th>
+                                    <th style={{ width: 'auto', minWidth: '65px' }}>입상</th>
                                 </tr>
                             </thead>
                             <tbody>
