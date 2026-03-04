@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface Player {
     userId: string | null;
@@ -29,6 +29,16 @@ interface IndividualLeaderboardData {
 
 export default function IndividualLeaderboard({ data, title }: { data: IndividualLeaderboardData, title: string }) {
     const { teams, metadata } = data;
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Common Styles (Matching the report style)
     const containerStyle: React.CSSProperties = {
@@ -41,31 +51,31 @@ export default function IndividualLeaderboard({ data, title }: { data: Individua
 
     const headerBoxStyle: React.CSSProperties = {
         border: '2px solid #374151',
-        padding: '0.5rem 0.5rem',
+        padding: isMobile ? '0.3rem 0.5rem' : '0.5rem 0.5rem',
         fontWeight: 900,
-        fontSize: '1.5rem',
-        letterSpacing: '0.1em',
+        fontSize: isMobile ? '1.1rem' : '1.5rem',
+        letterSpacing: isMobile ? '0.05em' : '0.1em',
         backgroundColor: '#ffffff',
         textTransform: 'uppercase',
         textAlign: 'center',
-        marginBottom: '2rem',
-        boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)'
+        marginBottom: isMobile ? '1rem' : '2rem',
+        boxShadow: isMobile ? '2px 2px 0px 0px rgba(0,0,0,1)' : '4px 4px 0px 0px rgba(0,0,0,1)'
     };
 
     const tableStyle: React.CSSProperties = {
         width: '100%',
         borderCollapse: 'collapse',
         border: '2px solid #374151',
-        fontSize: '12px',
+        fontSize: isMobile ? '10px' : '12px',
         fontWeight: 700,
         textAlign: 'center',
-        marginBottom: '1rem',
+        marginBottom: isMobile ? '0.5rem' : '1rem',
         tableLayout: 'fixed'
     };
 
     const thStyle: React.CSSProperties = {
         border: '1px solid #374151',
-        padding: '6px 2px',
+        padding: isMobile ? '4px 1px' : '6px 2px',
         backgroundColor: '#e5e7eb', // gray-200
         fontWeight: 900,
         whiteSpace: 'nowrap'
@@ -73,9 +83,9 @@ export default function IndividualLeaderboard({ data, title }: { data: Individua
 
     const tdStyle: React.CSSProperties = {
         border: '1px solid #374151',
-        padding: '4px 2px',
+        padding: isMobile ? '2px 1px' : '4px 2px',
         verticalAlign: 'middle',
-        height: '28px',
+        height: isMobile ? '24px' : '28px',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap'
@@ -84,9 +94,9 @@ export default function IndividualLeaderboard({ data, title }: { data: Individua
     const teamHeaderStyle: React.CSSProperties = {
         backgroundColor: '#374151', // gray-700
         color: '#ffffff',
-        padding: '8px 16px',
+        padding: isMobile ? '6px 10px' : '8px 16px',
         fontWeight: 900,
-        fontSize: '14px',
+        fontSize: isMobile ? '12px' : '14px',
         border: '2px solid #374151',
         borderBottom: 'none'
     };
@@ -123,7 +133,7 @@ export default function IndividualLeaderboard({ data, title }: { data: Individua
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(500px, 1fr))', gap: isMobile ? '1rem' : '2rem' }}>
                 {teams.map((team) => (
                     <div key={team.teamId}>
                         <div style={teamHeaderStyle}>
@@ -131,16 +141,16 @@ export default function IndividualLeaderboard({ data, title }: { data: Individua
                         </div>
                         <table style={tableStyle}>
                             <colgroup>
-                                <col style={{ width: '40px' }} />
-                                <col style={{ width: '80px' }} />
-                                <col style={{ width: '50px' }} />
-                                <col style={{ width: '50px' }} />
-                                <col style={{ width: '60px' }} />
-                                <col style={{ width: '50px' }} />
-                                <col style={{ width: '60px' }} />
-                                <col style={{ width: '50px' }} />
-                                <col style={{ width: '60px' }} />
-                                <col style={{ width: '70px' }} />
+                                <col style={{ width: isMobile ? '25px' : '40px' }} />
+                                <col style={{ width: isMobile ? '45px' : '80px' }} />
+                                <col style={{ width: isMobile ? '35px' : '50px' }} />
+                                <col style={{ width: isMobile ? '30px' : '50px' }} />
+                                <col style={{ width: isMobile ? '50px' : '60px' }} />
+                                <col style={{ width: isMobile ? '40px' : '50px' }} />
+                                <col style={{ width: isMobile ? '45px' : '60px' }} />
+                                <col style={{ width: isMobile ? '35px' : '50px' }} />
+                                <col style={{ width: isMobile ? '45px' : '60px' }} />
+                                <col style={{ width: isMobile ? '55px' : '70px' }} />
                             </colgroup>
                             <thead>
                                 <tr>

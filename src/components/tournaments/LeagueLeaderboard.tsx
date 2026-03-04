@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface LeaderboardData {
     teamStandings: {
@@ -35,6 +35,16 @@ interface LeaderboardData {
 
 export default function LeagueLeaderboard({ data, title }: { data: LeaderboardData, title: string }) {
     const { teamStandings, awards, metadata } = data;
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Common Styles
     const containerStyle: React.CSSProperties = {
@@ -47,32 +57,32 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
 
     const headerBoxStyle: React.CSSProperties = {
         border: '2px solid #000000',
-        padding: '0.5rem 1rem',
+        padding: isMobile ? '0.3rem 0.5rem' : '0.5rem 1rem',
         fontWeight: 900,
-        fontSize: 'clamp(1rem, 4vw, 1.5rem)',
-        letterSpacing: '0.05em',
+        fontSize: isMobile ? '1.1rem' : 'clamp(1rem, 4vw, 1.5rem)',
+        letterSpacing: isMobile ? '0.05em' : '0.05em',
         backgroundColor: '#ffffff',
         textTransform: 'uppercase',
         textAlign: 'center',
-        marginBottom: '1.5rem',
-        boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)',
+        marginBottom: isMobile ? '1rem' : '1.5rem',
+        boxShadow: isMobile ? '2px 2px 0px 0px rgba(0,0,0,1)' : '4px 4px 0px 0px rgba(0,0,0,1)',
         width: 'fit-content',
-        margin: '0 auto 1.5rem auto'
+        margin: isMobile ? '0 auto 1rem auto' : '0 auto 1.5rem auto'
     };
 
     const tableStyle: React.CSSProperties = {
         width: '100%',
         borderCollapse: 'collapse',
         border: '2px solid #000000',
-        fontSize: '13px',
+        fontSize: isMobile ? '10px' : '13px',
         fontWeight: 700,
         textAlign: 'center',
-        marginBottom: '2rem'
+        marginBottom: isMobile ? '1rem' : '2rem'
     };
 
     const thStyle: React.CSSProperties = {
         border: '1px solid #000000',
-        padding: '8px 4px',
+        padding: isMobile ? '4px 1px' : '8px 4px',
         backgroundColor: '#e5e7eb', // gray-200
         fontWeight: 900,
         whiteSpace: 'nowrap'
@@ -80,9 +90,9 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
 
     const tdStyle: React.CSSProperties = {
         border: '1px solid #000000',
-        padding: '6px 4px',
+        padding: isMobile ? '2px 1px' : '6px 4px',
         verticalAlign: 'middle',
-        height: '32px'
+        height: isMobile ? '24px' : '32px'
     };
 
     const rankStyle: React.CSSProperties = {
@@ -95,7 +105,8 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
         backgroundColor: '#d1d5db', // gray-300
         fontWeight: 900,
         textAlign: 'center',
-        padding: '8px',
+        padding: isMobile ? '6px' : '8px',
+        fontSize: isMobile ? '12px' : 'inherit',
         border: '1px solid #000000',
         borderBottom: '2px solid #000000'
     };
@@ -114,35 +125,35 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                 <table style={tableStyle}>
                     <thead>
                         <tr style={{ backgroundColor: '#d1d5db', borderBottom: '2px solid #000000' }}>
-                            <th style={{ ...thStyle, width: '50px' }}>순위</th>
-                            <th style={{ ...thStyle, minWidth: '150px' }}>팀명</th>
-                            <th style={{ ...thStyle, width: '50px' }}>승</th>
-                            <th style={{ ...thStyle, width: '50px' }}>패</th>
-                            <th style={{ ...thStyle, width: '50px' }}>핸디</th>
-                            <th style={{ ...thStyle, width: '60px' }}>점수</th>
-                            <th style={thStyle}>총핀합계</th>
-                            <th style={thStyle}>평균</th>
-                            <th style={thStyle}>팀단게임</th>
-                            <th style={thStyle}>팀하이게임</th>
-                            <th style={thStyle}>{metadata.currentRound}주차</th>
-                            <th style={thStyle}>전주총합</th>
+                            <th style={{ ...thStyle, width: isMobile ? '30px' : '50px' }}>순위</th>
+                            <th style={{ ...thStyle, minWidth: isMobile ? '60px' : '150px' }}>팀명</th>
+                            <th style={{ ...thStyle, width: isMobile ? '25px' : '50px' }}>승</th>
+                            <th style={{ ...thStyle, width: isMobile ? '25px' : '50px' }}>패</th>
+                            <th style={{ ...thStyle, width: isMobile ? '25px' : '50px' }}>핸디</th>
+                            <th style={{ ...thStyle, width: isMobile ? '30px' : '60px' }}>점수</th>
+                            <th style={{ ...thStyle, width: isMobile ? '50px' : 'auto' }}>총핀합계</th>
+                            <th style={{ ...thStyle, width: isMobile ? '40px' : 'auto' }}>평균</th>
+                            {!isMobile && <th style={thStyle}>팀단게임</th>}
+                            {!isMobile && <th style={thStyle}>팀하이게임</th>}
+                            {!isMobile && <th style={thStyle}>{metadata.currentRound}주차</th>}
+                            {!isMobile && <th style={thStyle}>전주총합</th>}
                         </tr>
                     </thead>
                     <tbody>
                         {teamStandings.map((team, index) => (
                             <tr key={team.id} style={{ backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9fafb' }}>
                                 <td style={rankStyle}>{index + 1}</td>
-                                <td style={{ ...tdStyle, fontWeight: 900, textAlign: 'left', paddingLeft: '12px' }}>{team.name}</td>
+                                <td style={{ ...tdStyle, fontWeight: 900, textAlign: 'left', paddingLeft: isMobile ? '4px' : '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{team.name}</td>
                                 <td style={tdStyle}>{team.wins}</td>
                                 <td style={tdStyle}>{team.losses}</td>
                                 <td style={{ ...tdStyle, color: '#6b7280' }}>0</td>
                                 <td style={{ ...tdStyle, backgroundColor: '#f3f4f6', fontWeight: 900 }}>{team.wins * 3}</td>
                                 <td style={tdStyle}>{team.totalPinfall.toLocaleString()}</td>
                                 <td style={tdStyle}>{(team.totalPinfall / team.gamesPlayed || 0).toFixed(1)}</td>
-                                <td style={tdStyle}>{team.highGame}</td>
-                                <td style={tdStyle}>{team.highSeries}</td>
-                                <td style={tdStyle}>{team.lastRoundScore}</td>
-                                <td style={tdStyle}>{team.previousTotal.toLocaleString()}</td>
+                                {!isMobile && <td style={tdStyle}>{team.highGame}</td>}
+                                {!isMobile && <td style={tdStyle}>{team.highSeries}</td>}
+                                {!isMobile && <td style={tdStyle}>{team.lastRoundScore}</td>}
+                                {!isMobile && <td style={tdStyle}>{team.previousTotal.toLocaleString()}</td>}
                             </tr>
                         ))}
                     </tbody>
@@ -151,7 +162,7 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                             <td colSpan={2} style={{ ...tdStyle, textAlign: 'center' }}>합계</td>
                             <td style={{ ...tdStyle, color: '#2563eb' }}>{teamStandings.reduce((a, b) => a + b.wins, 0)}</td>
                             <td style={{ ...tdStyle, color: '#dc2626' }}>{teamStandings.reduce((a, b) => a + b.losses, 0)}</td>
-                            <td colSpan={8} style={tdStyle}></td>
+                            <td colSpan={isMobile ? 4 : 8} style={tdStyle}></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -160,21 +171,21 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
             {/* 2. Awards Grid */}
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))',
                 gap: '0',
                 border: '2px solid #000000'
             }}>
                 {/* Left Column: Team Awards */}
-                <div style={{ borderRight: '2px solid #000000' }}>
+                <div style={{ borderRight: isMobile ? 'none' : '2px solid #000000' }}>
                     {/* Team Average */}
                     <div style={awardHeaderStyle}>팀 에버</div>
                     <div className="table-responsive" style={{ marginBottom: 0 }}>
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: '40px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '30px' : '40px' }}>순위</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: '70px' }}>평균</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '50px' : '70px' }}>평균</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -198,9 +209,9 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: '40px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '30px' : '40px' }}>순위</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: '70px' }}>점수</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '50px' : '70px' }}>점수</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -224,9 +235,9 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: '40px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '30px' : '40px' }}>순위</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: '70px' }}>점수</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '50px' : '70px' }}>점수</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -253,10 +264,10 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: '40px' }}>순위</th>
-                                    <th style={thStyle}>선수명</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '30px' : '40px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '60px' : 'auto' }}>선수명</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: '70px' }}>평균</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '50px' : '70px' }}>평균</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -281,10 +292,10 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: '40px' }}>순위</th>
-                                    <th style={thStyle}>선수명</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '30px' : '40px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '60px' : 'auto' }}>선수명</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: '70px' }}>총점</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '50px' : '70px' }}>총점</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -309,10 +320,10 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: '40px' }}>순위</th>
-                                    <th style={thStyle}>선수명</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '30px' : '40px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '60px' : 'auto' }}>선수명</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: '70px' }}>점수</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '50px' : '70px' }}>점수</th>
                                 </tr>
                             </thead>
                             <tbody>
