@@ -268,8 +268,12 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
             >
                 <style dangerouslySetInnerHTML={{
                     __html: `
-                    .excel-table { border-collapse: collapse !important; width: 100% !important; background-color: white !important; color: black !important; table-layout: fixed !important; }
-                    .excel-table th, .excel-table td { border: 2px solid black !important; padding: 14px 8px !important; text-align: center !important; color: black !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; font-size: 18px !important; font-weight: 900 !important; }
+                    .excel-table { border-collapse: collapse !important; width: 100% !important; background-color: white !important; color: black !important; table-layout: auto !important; }
+                    .excel-table th, .excel-table td { border: 2px solid black !important; padding: 10px 4px !important; text-align: center !important; color: black !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; font-size: 14px !important; font-weight: 900 !important; }
+                    @media (min-width: 768px) {
+                        .excel-table { table-layout: fixed !important; }
+                        .excel-table th, .excel-table td { font-size: 18px !important; padding: 14px 8px !important; }
+                    }
                     .excel-table th { background-color: #d9ead3 !important; }
                     .excel-table td { background-color: white !important; }
                     .excel-table .rank-cell { background-color: #f0f0f0 !important; }
@@ -279,13 +283,14 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
+                    flexWrap: 'wrap',
                     gap: '16px',
                     padding: '16px',
                     backgroundColor: '#ffffff',
                     border: '3px solid #000000',
                     color: '#000000',
                     fontWeight: 'bold'
-                }} className="md:flex-row items-center">
+                }} className="items-center">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '14px' }}>
                         <span style={{ backgroundColor: '#000000', color: '#ffffff', padding: '4px 12px', fontWeight: '900', textTransform: 'uppercase', fontSize: '12px', letterSpacing: '0.1em' }}>Ranking Policy</span>
                         <div style={{ fontStyle: 'italic' }}>
@@ -317,13 +322,13 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                         <table className="excel-table">
                             <thead>
                                 <tr>
-                                    <th style={{ width: '80px' }}>순위</th>
-                                    <th style={{ width: '15.33%' }}>팀명</th>
-                                    <th style={{ width: '15.33%' }}>성함</th>
-                                    <th style={{ width: '15.33%' }}>종합 포인트</th>
-                                    <th style={{ width: '15.33%' }}>참여횟수</th>
-                                    <th style={{ width: '15.33%' }}>누적 점수</th>
-                                    <th style={{ width: '15.33%' }}>입상</th>
+                                    <th style={{ width: '45px', minWidth: '45px' }}>순위</th>
+                                    <th style={{ width: 'auto', minWidth: '80px' }}>팀명</th>
+                                    <th style={{ width: 'auto', minWidth: '80px' }}>성함</th>
+                                    <th style={{ width: 'auto', minWidth: '60px' }}>포인트</th>
+                                    <th style={{ width: 'auto', minWidth: '45px' }}>참여</th>
+                                    <th style={{ width: 'auto', minWidth: '70px' }}>누적</th>
+                                    <th style={{ width: 'auto', minWidth: '70px' }}>입상</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -350,7 +355,7 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                                                 {p.cumulativeScore.toLocaleString()}
                                             </td>
                                             <td>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px', scale: '1.25' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
                                                     {getAwardStars(p.awardCount)}
                                                 </div>
                                             </td>
