@@ -1,8 +1,30 @@
 'use client';
 
 import { useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import Link from 'next/link';
 import { createTournament } from '@/app/actions/tournament-center';
+
+function SubmitButton() {
+    const { pending } = useFormStatus();
+
+    return (
+        <button
+            type="submit"
+            disabled={pending}
+            className="btn btn-primary flex-1 flex items-center justify-center gap-2"
+        >
+            {pending ? (
+                <>
+                    <span className="loading loading-spinner loading-xs"></span>
+                    <span>생성 중...</span>
+                </>
+            ) : (
+                '대회 생성하기'
+            )}
+        </button>
+    );
+}
 
 export default function NewTournamentForm({ centerId }: { centerId: string }) {
     const [type, setType] = useState('LEAGUE');
@@ -330,7 +352,7 @@ export default function NewTournamentForm({ centerId }: { centerId: string }) {
 
             <div className="flex gap-4 mt-4">
                 <Link href={`/centers/${centerId}`} className="btn btn-secondary flex-1 flex items-center justify-center">취소</Link>
-                <button type="submit" className="btn btn-primary flex-1">대회 생성하기</button>
+                <SubmitButton />
             </div>
         </form >
     );

@@ -139,20 +139,27 @@ export async function updateTournamentStatus(tournamentId: string, status: strin
 }
 
 export async function deleteTournament(tournamentId: string) {
-    const tournament = await prisma.tournament.findUnique({
-        where: { id: tournamentId },
-        select: { centerId: true }
-    });
+    try {
+        const tournament = await prisma.tournament.findUnique({
+            where: { id: tournamentId },
+            select: { centerId: true, name: true }
+        });
 
-    if (!tournament) throw new Error("Tournament not found");
-    await verifyCenterAdmin(tournament.centerId);
+        if (!tournament) throw new Error("Tournament not found");
+        await verifyCenterAdmin(tournament.centerId);
 
-    await prisma.tournament.delete({
-        where: { id: tournamentId },
-    });
+        console.log(`[DeleteTournament] Deleting tournament: ${tournament.name} (${tournamentId})`);
 
-    revalidatePath(`/centers/${tournament.centerId}`);
-    redirect(`/centers/${tournament.centerId}`);
+        await prisma.tournament.delete({
+            where: { id: tournamentId },
+        });
+
+        revalidatePath(`/centers/${tournament.centerId}`);
+        redirect(`/centers/${tournament.centerId}`);
+    } catch (error: any) {
+        console.error(`[DeleteTournament] Failed to delete tournament ${tournamentId}:`, error);
+        throw error;
+    }
 }
 
 export async function updateTournamentDescription(tournamentId: string, description: string) {

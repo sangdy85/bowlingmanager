@@ -246,7 +246,7 @@ model TournamentScore {
   score          Int
   roundId        String?
   createdAt      DateTime               @default(now())
-  round          LeagueRound?           @relation(fields: [roundId], references: [id])
+  round          LeagueRound?           @relation(fields: [roundId], references: [id], onDelete: Cascade)
   registration   TournamentRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
 }
 
