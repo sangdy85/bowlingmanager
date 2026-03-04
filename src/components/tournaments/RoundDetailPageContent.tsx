@@ -2510,7 +2510,18 @@ export default function RoundDetailPageContent({
     const initialTab = searchParams.get('tab') || 'overview';
     const [activeTab, setActiveTab] = useState(initialTab);
     const [showEditModal, setShowEditModal] = useState(false);
-    const [lotteryStatus, setLotteryStatus] = useState<'PENDING' | 'OPEN' | 'CLOSED'>('CLOSED');
+    const lotteryStatus = useMemo(() => {
+        if (round.tournament?.status === 'FINISHED') return 'CLOSED';
+        const config = round.laneConfig;
+        if (!config) return 'PENDING';
+        try {
+            const parsed = typeof config === 'string' ? JSON.parse(config) : config;
+            if (Object.keys(parsed).length === 0) return 'PENDING';
+            return 'OPEN';
+        } catch (e) {
+            return 'PENDING';
+        }
+    }, [round.laneConfig, round.tournament?.status]);
 
     const statusMap: Record<string, { label: string, color: string }> = {
         UPCOMING: { label: STATUS_LABELS.UPCOMING, color: "bg-slate-500" },
@@ -2535,28 +2546,6 @@ export default function RoundDetailPageContent({
         }
     }, [round.tournament?.settings]);
 
-    useEffect(() => {
-        const effectiveDateStr = round.effectiveDateStr;
-        if (!effectiveDateStr) return;
-
-        const checkTime = () => {
-            const now = new Date();
-            const start = new Date(effectiveDateStr);
-            const twoHoursBefore = new Date(start.getTime() - 2 * 60 * 60 * 1000);
-            const oneHourBefore = new Date(start.getTime() - 1 * 60 * 60 * 1000);
-
-            if (now >= twoHoursBefore && now < oneHourBefore) {
-                setLotteryStatus('OPEN');
-            } else if (now < twoHoursBefore) {
-                setLotteryStatus('PENDING');
-            } else {
-                setLotteryStatus('CLOSED');
-            }
-        };
-        checkTime();
-        const interval = setInterval(checkTime, 60000);
-        return () => clearInterval(interval);
-    }, [round.effectiveDateStr]);
 
     if (!round) return <div>Data not found</div>;
 
@@ -2694,28 +2683,12 @@ export default function RoundDetailPageContent({
                                         className="btn bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-black shadow-lg border-0 hover:scale-105 transition-transform flex items-center gap-2 animate-pulse-slow"
                                     >
                                         <span className="text-xl">🎲</span>
-                                        <span>내 레인 뽑기 (~{(() => {
-                                            const effective = getEffectiveRoundDate(round.date, round.tournament.leagueTime);
-                                            return effective ? new Date(effective.getTime() - 1 * 60 * 60 * 1000).toLocaleTimeString('ko-KR', {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                                hour12: false,
-                                                hourCycle: 'h23'
-                                            }) : '';
-                                        })()})</span>
+                                        <span>내 레인 뽑기</span>
                                     </Link>
                                 ) : lotteryStatus === 'PENDING' ? (
                                     <button disabled className="btn bg-gray-700 text-gray-400 border-gray-600 cursor-not-allowed flex items-center gap-2">
                                         <span className="text-xl">⏳</span>
-                                        <span>레인 추첨 대기중 ({(() => {
-                                            const effective = getEffectiveRoundDate(round.date, round.tournament.leagueTime);
-                                            return effective ? new Date(effective.getTime() - 2 * 60 * 60 * 1000).toLocaleTimeString('ko-KR', {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                                hour12: false,
-                                                hourCycle: 'h23'
-                                            }) : '';
-                                        })()} 오픈)</span>
+                                        <span>레인 배정 대기중</span>
                                     </button>
                                 ) : null}
                             </div>
