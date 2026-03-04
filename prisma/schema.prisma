@@ -27,6 +27,7 @@ model User {
   UserApiUsage                 UserApiUsage[]
   managedCenters               BowlingCenter[]                @relation("CenterManagers")
   Team                         Team[]                         @relation("TeamManagers")
+  inquiries                    Inquiry[]
 }
 
 model VerificationToken {
@@ -325,4 +326,16 @@ model UserApiUsage {
   User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
+}
+
+model Inquiry {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  status    String   @default("PENDING") // PENDING, ANSWERED
+  answer    String?
 }
