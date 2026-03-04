@@ -1402,37 +1402,33 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
             // Pre-fetch all registrations for this tournament to match by name/team
             const existingRegistrations = await tx.tournamentRegistration.findMany({
                 where: { tournamentId: info.tournamentId },
-                include: { user: true, team: true }
+                include: { team: true } // Removed user include as we won't link by userId
             });
 
-            // Pre-fetch all center members to match by name/team if not already registered
-            const centerMembers = await tx.centerMember.findMany({
-                where: { centerId: info.centerId },
-                include: { user: { select: { id: true, name: true } }, team: { select: { id: true, name: true } } }
-            });
+            // [SIMPLIFIED] Removed centerMembers pre-fetch to avoid complex linking errors
 
             // Keep a local list of registrations to avoid stale cached lookups during the loop
             const localRegistrations = [...existingRegistrations];
 
             for (const pData of participants) {
                 try {
-                    const trimmedName = pData.name.toString().trim();
-                    const trimmedTeamName = (pData.teamName?.toString() || '').trim();
+                    const trimmedName = (pData.name ?? '').toString().trim();
+                    const trimmedTeamName = (pData.teamName ?? '').toString().trim();
+
+                    if (!trimmedName) {
+                        results.errors.push("이름이 없는 행은 건너뜁니다.");
+                        continue;
+                    }
+
                     const seqTime = new Date(baseTime.getTime() + (index++ * 1000));
-                    const handicapVal = pData.handicap !== undefined ? Number(pData.handicap) : null;
+                    const rawHandicap = pData.handicap !== undefined ? Number(pData.handicap) : null;
+                    const handicapVal = isNaN(rawHandicap as number) ? 0 : rawHandicap;
                     const status = (pData.paymentStatus === '입금완료' || pData.paymentStatus === 'PAID') ? 'PAID' : 'PENDING';
 
-                    // [REFINED LOGIC] Find if this person is already registered in the tournament
-                    // 1. First, find if they are a center member
-                    const memberMatch = centerMembers.find((m: any) =>
-                        (m.user?.name?.trim() === trimmedName || m.alias?.trim() === trimmedName) &&
-                        (m.team?.name?.trim() || '') === trimmedTeamName
-                    );
-
-                    // 2. Match against local list (to catch duplicates within the same Excel file)
+                    // [SIMPLIFIED LOGIC] Match only by guestName and guestTeamName 
+                    // We DO NOT link to center members or existing User IDs here to avoid render errors
                     let reg = localRegistrations.find((r: any) =>
-                        (memberMatch?.userId && r.userId === memberMatch.userId) ||
-                        (r.guestName && r.guestName.trim() === trimmedName && (r.guestTeamName || '') === trimmedTeamName)
+                        r.guestName && r.guestName.trim() === trimmedName && (r.guestTeamName || '') === trimmedTeamName
                     );
 
                     let registrationId;
@@ -1453,8 +1449,8 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
                         const newReg = {
                             id: registrationId,
                             tournamentId: info.tournamentId,
-                            userId: memberMatch?.userId || null,
-                            teamId: memberMatch?.teamId || null,
+                            userId: null, // Force null for Excel uploads
+                            teamId: null, // Force null for Excel uploads (matching by string only)
                             guestName: trimmedName,
                             guestTeamName: trimmedTeamName || null,
                             entryGroupId: pData.entryGroupId || null,
