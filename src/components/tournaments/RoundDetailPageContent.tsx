@@ -1511,23 +1511,24 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
     // Fixed widths for non-name columns in team mode to ensure total is exactly 992px
     const teamColWidths = {
-        rank: 40,
+        rank: 35,
         team: 80,
-        game: 70,
-        handy: 60,
-        hl: 62,
-        total: 80
+        name: 120,
+        game: 50,
+        handy: 50,
+        hl: 50,
+        total: 70
     };
 
-    // Calculate widths for PC individual mode (More generous widths for PC)
+    // Calculate widths for PC individual mode (Tightened to fit ~1000px total for 2 tables)
     const pcIndividualColWidths = {
-        rank: 45,
-        team: 110,
-        name: 110,
-        game: 65,
-        handy: 65,
-        hl: 65,
-        total: 80
+        rank: 30,
+        team: 80,
+        name: 85,
+        game: 48,
+        handy: 48,
+        hl: 48,
+        total: 62
     };
 
     const pcIndividualSingleWidth = pcIndividualColWidths.rank + pcIndividualColWidths.team + pcIndividualColWidths.name + (pcIndividualColWidths.game * gameCount) + pcIndividualColWidths.handy + pcIndividualColWidths.hl + pcIndividualColWidths.total;
@@ -1566,7 +1567,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 minWidth: isMobile ? 'auto' : `${singleTableWidth}px`,
                 borderCollapse: 'collapse',
                 border: '1.5px solid black',
-                fontSize: isMobile ? '11px' : 'clamp(11px, 1.2vw, 13px)',
+                fontSize: isMobile ? '11px' : 'clamp(10px, 1.1vw, 12px)',
                 color: 'black',
                 backgroundColor: 'white',
                 tableLayout: 'fixed',
