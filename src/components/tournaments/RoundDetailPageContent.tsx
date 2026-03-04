@@ -1552,13 +1552,13 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     } : pcIndividualColWidths);
 
     const singleTableWidth = isTeam2To6 ? pcTeamSingleWidth : (isMobile ? 400 : pcIndividualSingleWidth);
-    const totalContainerWidth = isMobile ? '100%' : (isTeam2To6 ? `${singleTableWidth}px` : `${singleTableWidth * 2}px`);
+    const totalContainerWidth = isMobile ? '100%' : '100%'; // Always 100% to fill PC screen
 
     const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => {
         return (
             <table style={{
-                width: isMobile ? '100%' : `${singleTableWidth}px`,
-                minWidth: isMobile ? 'auto' : `${singleTableWidth}px`,
+                width: '100%',
+                minWidth: isMobile ? 'auto' : (isTeam2To6 ? '100%' : '50%'),
                 borderCollapse: 'collapse',
                 border: '1.5px solid black',
                 fontSize: isMobile ? '11px' : 'clamp(10px, 1.1vw, 12px)',
@@ -1697,9 +1697,45 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
     return (
         <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box', overflowX: isMobile ? 'auto' : 'hidden' }}>
-            <div className="table-responsive !p-0 w-full" style={{ display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'stretch' : 'center', minWidth: isMobile ? 'auto' : totalContainerWidth }}>
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                @media print {
+                    @page {
+                        margin: 1cm;
+                        size: auto;
+                    }
+                    body * {
+                        visibility: hidden !important;
+                    }
+                    #print-area, #print-area * {
+                        visibility: visible !important;
+                    }
+                    #print-area {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+                    .no-print {
+                        display: none !important;
+                    }
+                    /* Force background colors in print */
+                    * {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    table {
+                        width: 100% !important;
+                        table-layout: fixed !important;
+                        border-collapse: collapse !important;
+                    }
+                }
+            `}} />
+            <div id="print-area" className="table-responsive !p-0 w-full" style={{ display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'stretch' : 'center', minWidth: '100%' }}>
                 {/* Main Result Container - Scrollable on mobile/PC via parent wrapper */}
-                <div style={{ width: totalContainerWidth, margin: '0 auto', padding: '0 0 20px 0', boxSizing: 'border-box', overflow: 'visible' }}>
+                <div style={{ width: '100%', maxWidth: isTeam2To6 ? '1000px' : '1200px', margin: '0 auto', padding: '0 0 20px 0', boxSizing: 'border-box', overflow: 'visible' }}>
                     <div style={{
                         backgroundColor: '#FFFF00',
                         border: '1.5px solid black',
