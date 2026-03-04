@@ -68,3 +68,27 @@ export async function answerInquiry(inquiryId: string, answer: string) {
         return { success: false, error: '답변 등록 중 오류가 발생했습니다.' };
     }
 }
+
+export async function deleteInquiry(inquiryId: string) {
+    const session = await auth();
+    const isAdmin = session?.user?.role === 'SUPER_ADMIN';
+
+    try {
+        const inq = await prisma.inquiry.findUnique({ where: { id: inquiryId } });
+        if (!inq) throw new Error('Inquiry not found');
+
+        // Only author or admin can delete
+        if (!isAdmin && inq.authorId !== session?.user?.id) {
+            throw new Error('Unauthorized');
+        }
+
+        await prisma.inquiry.delete({
+            where: { id: inquiryId },
+        });
+        revalidatePath('/about');
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to delete inquiry:', error);
+        return { success: false, error: '문의 삭제 중 오류가 발생했습니다.' };
+    }
+}
