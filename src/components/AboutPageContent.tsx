@@ -194,22 +194,21 @@ export default function AboutPageContent({
                             <section className="bg-gray-50 p-8 rounded-2xl border border-gray-100">
                                 <div className="flex items-center gap-4 mb-6">
                                     <div className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-bold text-lg">02</div>
-                                    <h3 className="text-2xl font-bold text-gray-800 m-0">팀 및 동호회 마스터하기</h3>
+                                    <h3 className="text-2xl font-bold text-gray-800 m-0">연도별 점수 기록 및 분석</h3>
                                 </div>
                                 <div className="space-y-6">
                                     <div className="bg-white p-6 rounded-xl border border-gray-200">
-                                        <h4 className="font-bold text-lg mb-3">팀 생성 및 팀원 모집</h4>
-                                        <p className="text-gray-700 leading-relaxed mb-4">
-                                            '팀 관리' 메뉴에서 [팀 생성] 버튼을 클릭해 새로운 팀을 만드세요.
-                                            생성 후 발급되는 6자리의 <strong>팀 코드</strong>를 팀원들에게 공유하면, 팀원들이 코드를 입력해 가입 신청을 할 수 있습니다.
-                                            관리자는 신청 목록에서 승인/거절을 선택할 수 있습니다.
+                                        <h4 className="font-bold text-lg mb-3">체계적인 연도별 데이터 관리</h4>
+                                        <p className="text-gray-700 leading-relaxed">
+                                            매일 기록한 점수들이 자동으로 연도별로 분류됩니다.
+                                            과거부터 지금까지 쌓인 수천 게임의 기록을 연도별 탭을 통해 언제든지 원클릭으로 찾아볼 수 있습니다.
                                         </p>
                                     </div>
                                     <div className="bg-white p-6 rounded-xl border border-gray-200">
-                                        <h4 className="font-bold text-lg mb-3">팀 게시판 & 소통</h4>
+                                        <h4 className="font-bold text-lg mb-3">데이터 기반의 성장 대조</h4>
                                         <p className="text-gray-700 leading-relaxed">
-                                            우리 팀만의 전용 게시판을 활용하세요.
-                                            이미지 업로드 기능을 통해 정기전 단체 사진이나 공지사항을 공유하고, 댓글로 소통할 수 있습니다.
+                                            '통계' 메뉴에서는 작년과 올해의 기록을 비교 분석해 줍니다.
+                                            내가 어느 달에 가장 강했는지, 에버리지가 어떻게 변했는지 그래프를 통해 직관적으로 확인하세요.
                                         </p>
                                     </div>
                                 </div>
@@ -365,4 +364,3 @@ export default function AboutPageContent({
         </div>
     );
 }
-```
