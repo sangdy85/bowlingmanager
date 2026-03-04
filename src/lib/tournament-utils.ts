@@ -71,11 +71,11 @@ export function calculateTournamentStatus(
     // 0. Manual Finish / Planning Priority
     if (dbStatus === 'FINISHED') return 'FINISHED';
 
-    const start = startDate ? (typeof startDate === 'string' ? new Date(startDate) : startDate) : null;
-    const regStart = registrationStart ? (typeof registrationStart === 'string' ? new Date(registrationStart) : registrationStart) : null;
+    const start = parseKSTDate(startDate);
+    const regStart = parseKSTDate(registrationStart);
 
     // 1. FINISHED: After the legal end of the tournament (Next day 00:00 KST)
-    const finishDate = endDate ? new Date(endDate) : start;
+    const finishDate = parseKSTDate(endDate || startDate);
     if (finishDate && !isNaN(finishDate.getTime())) {
         const kstFinish = new Date(finishDate.getTime() + 9 * 60 * 60000);
         // Set to 00:00:00 of the NEXT day in KST

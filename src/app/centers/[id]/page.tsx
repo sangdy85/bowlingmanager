@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getEffectiveRoundDate, calculateTournamentStatus, formatKSTDate } from "@/lib/tournament-utils";
+import { getEffectiveRoundDate, calculateTournamentStatus, formatKSTDate, parseKSTDate } from "@/lib/tournament-utils";
 import TournamentListManager from "@/components/tournaments/TournamentListManager";
 import JoinCenterSection from "@/components/centers/JoinCenterSection";
 
@@ -95,7 +95,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
             try {
                 const parsed = JSON.parse(t.settings);
                 if (parsed.registrationStart) {
-                    registrationStart = new Date(parsed.registrationStart);
+                    registrationStart = parseKSTDate(parsed.registrationStart);
                 }
             } catch (e) {
                 // ignore json error
