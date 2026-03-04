@@ -1702,7 +1702,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 @media print {
                     @page {
                         margin: 0.5cm;
-                        size: A4 portrait;
+                        size: A4 landscape;
                     }
                     /* Hide EVERYTHING by default */
                     body * {
@@ -1739,9 +1739,9 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                         border-collapse: collapse !important;
                         break-inside: avoid;
                     }
-                    /* Avoid 2nd page by shrinking slightly if needed */
+                    /* Avoid 2nd page by shrinking slightly if needed. Landscape has less height. */
                     #print-area {
-                        zoom: 94%;
+                        zoom: 90%;
                     }
                 }
             `}} />
