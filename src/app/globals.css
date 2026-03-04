@@ -71,8 +71,8 @@ a:hover {
 }
 
 .table-responsive table {
-  min-width: 600px;
-  /* Ensure table doesn't squish too much */
+  min-width: auto;
+  /* Table will take its natural width or 100% */
 }
 
 @media (max-width: 640px) {

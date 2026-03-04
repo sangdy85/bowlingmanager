@@ -172,9 +172,9 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: '50px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: '40px' }}>순위</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: '80px' }}>평균</th>
+                                    <th style={{ ...thStyle, width: '70px' }}>평균</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -198,9 +198,9 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: '50px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: '40px' }}>순위</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: '80px' }}>점수</th>
+                                    <th style={{ ...thStyle, width: '70px' }}>점수</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -224,9 +224,9 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: '50px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: '40px' }}>순위</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: '80px' }}>점수</th>
+                                    <th style={{ ...thStyle, width: '70px' }}>점수</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -253,10 +253,10 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: '50px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: '40px' }}>순위</th>
                                     <th style={thStyle}>선수명</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: '80px' }}>평균</th>
+                                    <th style={{ ...thStyle, width: '70px' }}>평균</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -281,10 +281,10 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: '50px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: '40px' }}>순위</th>
                                     <th style={thStyle}>선수명</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: '80px' }}>총점</th>
+                                    <th style={{ ...thStyle, width: '70px' }}>총점</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -309,10 +309,10 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: '50px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: '40px' }}>순위</th>
                                     <th style={thStyle}>선수명</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: '80px' }}>점수</th>
+                                    <th style={{ ...thStyle, width: '70px' }}>점수</th>
                                 </tr>
                             </thead>
                             <tbody>
