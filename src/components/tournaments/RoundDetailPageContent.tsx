@@ -1519,15 +1519,15 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         total: 80
     };
 
-    // Calculate widths for PC individual mode (was 496 fixed, now dynamic)
+    // Calculate widths for PC individual mode (More generous widths for PC)
     const pcIndividualColWidths = {
-        rank: 35,
-        team: 90,
-        name: 90,
-        game: 55,
-        handy: 50,
-        hl: 55,
-        total: 70
+        rank: 45,
+        team: 110,
+        name: 110,
+        game: 65,
+        handy: 65,
+        hl: 65,
+        total: 80
     };
 
     const pcIndividualSingleWidth = pcIndividualColWidths.rank + pcIndividualColWidths.team + pcIndividualColWidths.name + (pcIndividualColWidths.game * gameCount) + pcIndividualColWidths.handy + pcIndividualColWidths.hl + pcIndividualColWidths.total;
@@ -1565,12 +1565,12 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 width: isMobile ? 'max-content' : `${singleTableWidth}px`,
                 minWidth: isMobile ? 'auto' : `${singleTableWidth}px`,
                 borderCollapse: 'collapse',
-                border: '1px solid black',
-                fontSize: isMobile ? '11px' : 'clamp(9px, 1.1vw, 11px)',
+                border: '1.5px solid black',
+                fontSize: isMobile ? '11px' : 'clamp(11px, 1.2vw, 13px)',
                 color: 'black',
                 backgroundColor: 'white',
                 tableLayout: 'fixed',
-                borderLeft: isRight && !isMobile ? 'none' : '1px solid black',
+                borderLeft: isRight && !isMobile ? 'none' : '1.5px solid black',
                 boxSizing: 'border-box',
                 margin: 0,
                 padding: 0
@@ -1715,20 +1715,18 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     };
 
     return (
-        <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'stretch' : 'center', width: '100%', boxSizing: 'border-box' }}>
-            <div className="table-responsive !p-0 w-full" style={{ display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'stretch' : 'center' }}>
-                {/* Main Result Container - Fixed for Individual/Champ, but scrollable on mobile via wrapper */}
-                <div style={{ width: totalContainerWidth, padding: '0 0 20px 0', boxSizing: 'border-box', overflow: isMobile ? 'visible' : 'hidden' }}>
+        <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box', overflowX: 'auto' }}>
+            <div className="table-responsive !p-0 w-full" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: isMobile ? 'auto' : totalContainerWidth }}>
+                {/* Main Result Container - Scrollable on mobile/PC via parent wrapper */}
+                <div style={{ width: totalContainerWidth, margin: '0 auto', padding: '0 0 20px 0', boxSizing: 'border-box', overflow: 'visible' }}>
                     <div style={{
                         backgroundColor: '#FFFF00',
-                        border: '1px solid black',
-                        borderBottomWidth: '2px',
-                        padding: '12px 10px',
-                        width: '100%',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
+                        border: '1.5px solid black',
+                        borderBottom: 'none',
+                        padding: '12px',
+                        textAlign: 'center',
                         position: 'relative',
+                        width: '100%',
                         boxSizing: 'border-box'
                     }}>
                         <h2 style={{ textAlign: 'center', fontSize: '20px', fontWeight: '900', color: 'black', margin: '0' }}>
