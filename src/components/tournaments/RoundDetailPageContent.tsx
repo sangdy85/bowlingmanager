@@ -1417,7 +1417,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         // 2. Add Headers
         const headerRowValues = ['순위', '팀', '성함'];
         for (let i = 1; i <= gameCount; i++) headerRowValues.push(`${i}G`);
-        headerRowValues.push('핸디', 'H-L', '총점');
+        headerRowValues.push('핸디', '총점');
 
         const headerRow = worksheet.addRow(headerRowValues);
 
@@ -1447,7 +1447,6 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 rowData.push(s > 0 ? (s + res.handicapEach) : '');
             });
             rowData.push(res.totalHandicap);
-            rowData.push(res.hiLow || 0);
             rowData.push(res.total);
 
             const row = worksheet.addRow(rowData);
@@ -1489,8 +1488,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             worksheet.getColumn(4 + i).width = 8;
         }
         worksheet.getColumn(4 + gameCount).width = 10;
-        worksheet.getColumn(5 + gameCount).width = 8; // H-L column
-        worksheet.getColumn(6 + gameCount).width = 12; // Total column
+        worksheet.getColumn(5 + gameCount).width = 12; // Total column
 
         // 5. Generate and Save
         const buffer = await workbook.xlsx.writeBuffer();
@@ -1584,7 +1582,6 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                         <col key={i} style={{ width: `${colWidths.game}px` }} />
                     ))}
                     <col style={{ width: `${colWidths.handy}px` }} />
-                    <col style={{ width: `${colWidths.hl}px` }} />
                     <col style={{ width: `${colWidths.total}px` }} />
                 </colgroup>
                 <thead>
@@ -1596,7 +1593,6 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                             <th key={i} style={{ border: '1px solid black', padding: isMobile ? '2px' : '4px', width: `${colWidths.game}px`, minWidth: `${colWidths.game}px`, maxWidth: `${colWidths.game}px` }}>{i + 1}G</th>
                         ))}
                         <th style={{ border: '1px solid black', padding: isMobile ? '2px' : '4px', width: `${colWidths.handy}px`, minWidth: `${colWidths.handy}px`, maxWidth: `${colWidths.handy}px` }}>핸디</th>
-                        <th style={{ border: '1px solid black', padding: isMobile ? '2px' : '4px', width: `${colWidths.hl}px`, minWidth: `${colWidths.hl}px`, maxWidth: `${colWidths.hl}px` }}>H-L</th>
                         <th style={{ border: '1px solid black', padding: isMobile ? '2px' : '4px', width: `${colWidths.total}px`, minWidth: `${colWidths.total}px`, maxWidth: `${colWidths.total}px` }}>총점</th>
                     </tr>
                 </thead>
@@ -1618,7 +1614,6 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                         <td key={i} style={{ border: '1px solid black', width: `${colWidths.game}px`, minWidth: `${colWidths.game}px` }}>&nbsp;</td>
                                     ))}
                                     <td style={{ border: '1px solid black', width: `${colWidths.handy}px`, minWidth: `${colWidths.handy}px` }}>&nbsp;</td>
-                                    <td style={{ border: '1px solid black', width: `${colWidths.hl}px`, minWidth: `${colWidths.hl}px` }}>&nbsp;</td>
                                     <td style={{ border: '1px solid black', width: `${colWidths.total}px`, minWidth: `${colWidths.total}px` }}>&nbsp;</td>
                                 </tr>
                             );
@@ -1688,17 +1683,6 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                 <td style={{
                                     border: '1px solid black',
                                     textAlign: 'center',
-                                    fontSize: '11px',
-                                    color: '#64748b',
-                                    width: `${colWidths.hl}px`,
-                                    minWidth: `${colWidths.hl}px`,
-                                    maxWidth: `${colWidths.hl}px`
-                                }}>
-                                    {res.hiLow}
-                                </td>
-                                <td style={{
-                                    border: '1px solid black',
-                                    textAlign: 'center',
                                     fontWeight: '900',
                                     backgroundColor: shouldHighlight ? '#FFFF00' : 'inherit',
                                     width: `${colWidths.total}px`,
@@ -1716,7 +1700,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     };
 
     return (
-        <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box', overflowX: 'auto' }}>
+        <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box', overflowX: isMobile ? 'auto' : 'hidden' }}>
             <div className="table-responsive !p-0 w-full" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: isMobile ? 'auto' : totalContainerWidth }}>
                 {/* Main Result Container - Scrollable on mobile/PC via parent wrapper */}
                 <div style={{ width: totalContainerWidth, margin: '0 auto', padding: '0 0 20px 0', boxSizing: 'border-box', overflow: 'visible' }}>
@@ -1736,6 +1720,8 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                         <div style={{
                             position: 'absolute',
                             right: '10px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
                             display: 'flex',
                             gap: '8px',
                             zIndex: 10
@@ -1755,7 +1741,9 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                             cursor: 'pointer',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '4px'
+                                            gap: '4px',
+                                            height: '28px',
+                                            boxSizing: 'border-box'
                                         }}
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -1768,15 +1756,17 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                         style={{
                                             backgroundColor: 'white',
                                             color: 'black',
-                                            border: '1px solid black',
+                                            border: '1.5px solid black',
                                             borderRadius: '4px',
-                                            padding: '6px 12px',
+                                            padding: '4px 12px',
                                             fontSize: '11px',
                                             fontWeight: 'bold',
                                             cursor: 'pointer',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '4px'
+                                            gap: '4px',
+                                            height: '28px',
+                                            boxSizing: 'border-box'
                                         }}
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
