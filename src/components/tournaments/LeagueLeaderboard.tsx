@@ -47,15 +47,17 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
 
     const headerBoxStyle: React.CSSProperties = {
         border: '2px solid #000000',
-        padding: '0.5rem 0',
+        padding: '0.5rem 1rem',
         fontWeight: 900,
-        fontSize: '1.5rem',
-        letterSpacing: '0.1em',
+        fontSize: 'clamp(1rem, 4vw, 1.5rem)',
+        letterSpacing: '0.05em',
         backgroundColor: '#ffffff',
         textTransform: 'uppercase',
         textAlign: 'center',
-        marginBottom: '2rem',
-        boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)'
+        marginBottom: '1.5rem',
+        boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)',
+        width: 'fit-content',
+        margin: '0 auto 1.5rem auto'
     };
 
     const tableStyle: React.CSSProperties = {
@@ -108,7 +110,7 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
             </div>
 
             {/* 1. Team Standings Table */}
-            <div style={{ overflowX: 'auto' }}>
+            <div className="table-responsive">
                 <table style={tableStyle}>
                     <thead>
                         <tr style={{ backgroundColor: '#d1d5db', borderBottom: '2px solid #000000' }}>
@@ -158,166 +160,176 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
             {/* 2. Awards Grid */}
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-                gap: '0', // No gap to simulate shared border if strictly grid, but separate tables are cleaner
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))',
+                gap: '0',
                 border: '2px solid #000000'
             }}>
                 {/* Left Column: Team Awards */}
                 <div style={{ borderRight: '2px solid #000000' }}>
                     {/* Team Average */}
                     <div style={awardHeaderStyle}>팀 에버</div>
-                    <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
-                        <thead>
-                            <tr>
-                                <th style={{ ...thStyle, width: '50px' }}>순위</th>
-                                <th style={thStyle}>팀명</th>
-                                <th style={{ ...thStyle, width: '80px' }}>평균</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {awards.team.average?.map((t: any, i: number) => (
-                                <tr key={i} style={{ borderBottom: '1px solid #000000' }}>
-                                    <td style={tdStyle}>{i + 1}</td>
-                                    <td style={{ ...tdStyle, fontWeight: 900 }}>{t.name}</td>
-                                    <td style={tdStyle}>{(t.totalPinfall / t.gamesPlayed || 0).toFixed(1)}</td>
+                    <div className="table-responsive" style={{ marginBottom: 0 }}>
+                        <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
+                            <thead>
+                                <tr>
+                                    <th style={{ ...thStyle, width: '50px' }}>순위</th>
+                                    <th style={thStyle}>팀명</th>
+                                    <th style={{ ...thStyle, width: '80px' }}>평균</th>
                                 </tr>
-                            ))}
-                            {/* Fill empty rows if less than 3 */}
-                            {Array.from({ length: Math.max(0, 3 - (awards.team.average?.length || 0)) }).map((_, i) => (
-                                <tr key={`empty-avg-${i}`} style={{ borderBottom: '1px solid #000000' }}><td style={tdStyle}>&nbsp;</td><td style={tdStyle}></td><td style={tdStyle}></td></tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {awards.team.average?.map((t: any, i: number) => (
+                                    <tr key={i} style={{ borderBottom: '1px solid #000000' }}>
+                                        <td style={tdStyle}>{i + 1}</td>
+                                        <td style={{ ...tdStyle, fontWeight: 900 }}>{t.name}</td>
+                                        <td style={tdStyle}>{(t.totalPinfall / t.gamesPlayed || 0).toFixed(1)}</td>
+                                    </tr>
+                                ))}
+                                {Array.from({ length: Math.max(0, 3 - (awards.team.average?.length || 0)) }).map((_, i) => (
+                                    <tr key={`empty-avg-${i}`} style={{ borderBottom: '1px solid #000000' }}><td style={tdStyle}>&nbsp;</td><td style={tdStyle}></td><td style={tdStyle}></td></tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
 
                     {/* Team High Series */}
                     <div style={{ ...awardHeaderStyle, borderTop: '2px solid #000000' }}>팀 하이게임 (3명 x 3게임)</div>
-                    <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
-                        <thead>
-                            <tr>
-                                <th style={{ ...thStyle, width: '50px' }}>순위</th>
-                                <th style={thStyle}>팀명</th>
-                                <th style={{ ...thStyle, width: '80px' }}>점수</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {awards.team.highSeries.map((t, i) => (
-                                <tr key={i} style={{ borderBottom: '1px solid #000000' }}>
-                                    <td style={tdStyle}>{i + 1}</td>
-                                    <td style={{ ...tdStyle, fontWeight: 900 }}>{t.name}</td>
-                                    <td style={tdStyle}>{t.highSeries}</td>
+                    <div className="table-responsive" style={{ marginBottom: 0 }}>
+                        <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
+                            <thead>
+                                <tr>
+                                    <th style={{ ...thStyle, width: '50px' }}>순위</th>
+                                    <th style={thStyle}>팀명</th>
+                                    <th style={{ ...thStyle, width: '80px' }}>점수</th>
                                 </tr>
-                            ))}
-                            {/* Fill empty rows if less than 3 */}
-                            {Array.from({ length: Math.max(0, 3 - awards.team.highSeries.length) }).map((_, i) => (
-                                <tr key={`empty-${i}`} style={{ borderBottom: '1px solid #000000' }}><td style={tdStyle}>&nbsp;</td><td style={tdStyle}></td><td style={tdStyle}></td></tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {awards.team.highSeries.map((t, i) => (
+                                    <tr key={i} style={{ borderBottom: '1px solid #000000' }}>
+                                        <td style={tdStyle}>{i + 1}</td>
+                                        <td style={{ ...tdStyle, fontWeight: 900 }}>{t.name}</td>
+                                        <td style={tdStyle}>{t.highSeries}</td>
+                                    </tr>
+                                ))}
+                                {Array.from({ length: Math.max(0, 3 - awards.team.highSeries.length) }).map((_, i) => (
+                                    <tr key={`empty-${i}`} style={{ borderBottom: '1px solid #000000' }}><td style={tdStyle}>&nbsp;</td><td style={tdStyle}></td><td style={tdStyle}></td></tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
 
                     {/* Team Single Game */}
                     <div style={{ ...awardHeaderStyle, borderTop: '2px solid #000000' }}>팀 단게임 (3명 x 1게임)</div>
-                    <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
-                        <thead>
-                            <tr>
-                                <th style={{ ...thStyle, width: '50px' }}>순위</th>
-                                <th style={thStyle}>팀명</th>
-                                <th style={{ ...thStyle, width: '80px' }}>점수</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {awards.team.highGame.map((t, i) => (
-                                <tr key={i} style={{ borderBottom: '1px solid #000000' }}>
-                                    <td style={tdStyle}>{i + 1}</td>
-                                    <td style={{ ...tdStyle, fontWeight: 900 }}>{t.name}</td>
-                                    <td style={tdStyle}>{t.highGame}</td>
+                    <div className="table-responsive" style={{ marginBottom: 0 }}>
+                        <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
+                            <thead>
+                                <tr>
+                                    <th style={{ ...thStyle, width: '50px' }}>순위</th>
+                                    <th style={thStyle}>팀명</th>
+                                    <th style={{ ...thStyle, width: '80px' }}>점수</th>
                                 </tr>
-                            ))}
-                            {Array.from({ length: Math.max(0, 3 - awards.team.highGame.length) }).map((_, i) => (
-                                <tr key={`empty-${i}`} style={{ borderBottom: '1px solid #000000' }}><td style={tdStyle}>&nbsp;</td><td style={tdStyle}></td><td style={tdStyle}></td></tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {awards.team.highGame.map((t, i) => (
+                                    <tr key={i} style={{ borderBottom: '1px solid #000000' }}>
+                                        <td style={tdStyle}>{i + 1}</td>
+                                        <td style={{ ...tdStyle, fontWeight: 900 }}>{t.name}</td>
+                                        <td style={tdStyle}>{t.highGame}</td>
+                                    </tr>
+                                ))}
+                                {Array.from({ length: Math.max(0, 3 - awards.team.highGame.length) }).map((_, i) => (
+                                    <tr key={`empty-${i}`} style={{ borderBottom: '1px solid #000000' }}><td style={tdStyle}>&nbsp;</td><td style={tdStyle}></td><td style={tdStyle}></td></tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 {/* Right Column: Individual Awards */}
-                <div>
+                <div style={{ borderTop: '2px solid #000000' }}>
                     {/* Individual Average */}
                     <div style={awardHeaderStyle}>개인 에버</div>
-                    <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
-                        <thead>
-                            <tr>
-                                <th style={{ ...thStyle, width: '50px' }}>순위</th>
-                                <th style={thStyle}>선수명</th>
-                                <th style={thStyle}>팀명</th>
-                                <th style={{ ...thStyle, width: '80px' }}>평균</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {awards.individual.average.map((p, i) => (
-                                <tr key={i} style={{ borderBottom: '1px solid #000000' }}>
-                                    <td style={tdStyle}>{i + 1}</td>
-                                    <td style={{ ...tdStyle, fontWeight: 900 }}>{p.playerName}</td>
-                                    <td style={{ ...tdStyle, color: '#4b5563', fontSize: '11px' }}>{p.teamName}</td>
-                                    <td style={tdStyle}>{(p.totalPinfall / p.totalGames || 0).toFixed(2)}</td>
+                    <div className="table-responsive" style={{ marginBottom: 0 }}>
+                        <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
+                            <thead>
+                                <tr>
+                                    <th style={{ ...thStyle, width: '50px' }}>순위</th>
+                                    <th style={thStyle}>선수명</th>
+                                    <th style={thStyle}>팀명</th>
+                                    <th style={{ ...thStyle, width: '80px' }}>평균</th>
                                 </tr>
-                            ))}
-                            {Array.from({ length: Math.max(0, 3 - awards.individual.average.length) }).map((_, i) => (
-                                <tr key={`empty-${i}`} style={{ borderBottom: '1px solid #000000' }}><td style={tdStyle}>&nbsp;</td><td style={tdStyle}></td><td style={tdStyle}></td><td style={tdStyle}></td></tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {awards.individual.average.map((p, i) => (
+                                    <tr key={i} style={{ borderBottom: '1px solid #000000' }}>
+                                        <td style={tdStyle}>{i + 1}</td>
+                                        <td style={{ ...tdStyle, fontWeight: 900 }}>{p.playerName}</td>
+                                        <td style={{ ...tdStyle, color: '#4b5563', fontSize: '11px' }}>{p.teamName}</td>
+                                        <td style={tdStyle}>{(p.totalPinfall / p.totalGames || 0).toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                                {Array.from({ length: Math.max(0, 3 - awards.individual.average.length) }).map((_, i) => (
+                                    <tr key={`empty-${i}`} style={{ borderBottom: '1px solid #000000' }}><td style={tdStyle}>&nbsp;</td><td style={tdStyle}></td><td style={tdStyle}></td><td style={tdStyle}></td></tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
 
                     {/* Individual Series */}
                     <div style={{ ...awardHeaderStyle, borderTop: '2px solid #000000' }}>개인 시리즈</div>
-                    <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
-                        <thead>
-                            <tr>
-                                <th style={{ ...thStyle, width: '50px' }}>순위</th>
-                                <th style={thStyle}>선수명</th>
-                                <th style={thStyle}>팀명</th>
-                                <th style={{ ...thStyle, width: '80px' }}>총점</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {awards.individual.highSeries.map((p, i) => (
-                                <tr key={i} style={{ borderBottom: '1px solid #000000' }}>
-                                    <td style={tdStyle}>{i + 1}</td>
-                                    <td style={{ ...tdStyle, fontWeight: 900 }}>{p.playerName}</td>
-                                    <td style={{ ...tdStyle, color: '#4b5563', fontSize: '11px' }}>{p.teamName}</td>
-                                    <td style={tdStyle}>{p.highSeries}</td>
+                    <div className="table-responsive" style={{ marginBottom: 0 }}>
+                        <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
+                            <thead>
+                                <tr>
+                                    <th style={{ ...thStyle, width: '50px' }}>순위</th>
+                                    <th style={thStyle}>선수명</th>
+                                    <th style={thStyle}>팀명</th>
+                                    <th style={{ ...thStyle, width: '80px' }}>총점</th>
                                 </tr>
-                            ))}
-                            {Array.from({ length: Math.max(0, 3 - awards.individual.highSeries.length) }).map((_, i) => (
-                                <tr key={`empty-${i}`} style={{ borderBottom: '1px solid #000000' }}><td style={tdStyle}>&nbsp;</td><td style={tdStyle}></td><td style={tdStyle}></td><td style={tdStyle}></td></tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {awards.individual.highSeries.map((p, i) => (
+                                    <tr key={i} style={{ borderBottom: '1px solid #000000' }}>
+                                        <td style={tdStyle}>{i + 1}</td>
+                                        <td style={{ ...tdStyle, fontWeight: 900 }}>{p.playerName}</td>
+                                        <td style={{ ...tdStyle, color: '#4b5563', fontSize: '11px' }}>{p.teamName}</td>
+                                        <td style={tdStyle}>{p.highSeries}</td>
+                                    </tr>
+                                ))}
+                                {Array.from({ length: Math.max(0, 3 - awards.individual.highSeries.length) }).map((_, i) => (
+                                    <tr key={`empty-${i}`} style={{ borderBottom: '1px solid #000000' }}><td style={tdStyle}>&nbsp;</td><td style={tdStyle}></td><td style={tdStyle}></td><td style={tdStyle}></td></tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
 
                     {/* Individual Single */}
                     <div style={{ ...awardHeaderStyle, borderTop: '2px solid #000000' }}>개인 단게임</div>
-                    <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
-                        <thead>
-                            <tr>
-                                <th style={{ ...thStyle, width: '50px' }}>순위</th>
-                                <th style={thStyle}>선수명</th>
-                                <th style={thStyle}>팀명</th>
-                                <th style={{ ...thStyle, width: '80px' }}>점수</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {awards.individual.highGame.map((p, i) => (
-                                <tr key={i} style={{ borderBottom: '1px solid #000000' }}>
-                                    <td style={tdStyle}>{i + 1}</td>
-                                    <td style={{ ...tdStyle, fontWeight: 900 }}>{p.playerName}</td>
-                                    <td style={{ ...tdStyle, color: '#4b5563', fontSize: '11px' }}>{p.teamName}</td>
-                                    <td style={tdStyle}>{p.highGame}</td>
+                    <div className="table-responsive" style={{ marginBottom: 0 }}>
+                        <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
+                            <thead>
+                                <tr>
+                                    <th style={{ ...thStyle, width: '50px' }}>순위</th>
+                                    <th style={thStyle}>선수명</th>
+                                    <th style={thStyle}>팀명</th>
+                                    <th style={{ ...thStyle, width: '80px' }}>점수</th>
                                 </tr>
-                            ))}
-                            {Array.from({ length: Math.max(0, 3 - awards.individual.highGame.length) }).map((_, i) => (
-                                <tr key={`empty-${i}`} style={{ borderBottom: '1px solid #000000' }}><td style={tdStyle}>&nbsp;</td><td style={tdStyle}></td><td style={tdStyle}></td><td style={tdStyle}></td></tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {awards.individual.highGame.map((p, i) => (
+                                    <tr key={i} style={{ borderBottom: '1px solid #000000' }}>
+                                        <td style={tdStyle}>{i + 1}</td>
+                                        <td style={{ ...tdStyle, fontWeight: 900 }}>{p.playerName}</td>
+                                        <td style={{ ...tdStyle, color: '#4b5563', fontSize: '11px' }}>{p.teamName}</td>
+                                        <td style={tdStyle}>{p.highGame}</td>
+                                    </tr>
+                                ))}
+                                {Array.from({ length: Math.max(0, 3 - awards.individual.highGame.length) }).map((_, i) => (
+                                    <tr key={`empty-${i}`} style={{ borderBottom: '1px solid #000000' }}><td style={tdStyle}>&nbsp;</td><td style={tdStyle}></td><td style={tdStyle}></td><td style={tdStyle}></td></tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -335,4 +347,3 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
         </div>
     );
 }
-
