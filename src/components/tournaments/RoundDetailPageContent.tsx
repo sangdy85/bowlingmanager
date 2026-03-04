@@ -1021,7 +1021,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                     <td className="p-2 text-center text-xs text-gray-500" style={{ width: '60px' }}>
                                         {handicap > 0 ? `+${handicap}` : '-'}
                                     </td>
-                                    <td className="p-2 text-center font-black text-lg text-blue-700" style={{ width: '80px' }}>
+                                    <td className="p-2 text-center font-black text-lg text-blue-700" style={{ width: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {totalWithHandicap > 0 ? totalWithHandicap : '-'}
                                     </td>
                                     {round.hasFemaleChamp && (
@@ -1530,6 +1530,14 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         handy: teamColWidths.handy,
         hl: teamColWidths.hl,
         total: teamColWidths.total
+    } : (isMobile ? {
+        rank: 25,
+        team: 50,
+        name: 55,
+        game: 35,
+        handy: 35,
+        hl: 40,
+        total: 50
     } : {
         rank: 30,
         team: 70,
@@ -1538,22 +1546,22 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         handy: 50,
         hl: 56,
         total: 70
-    };
+    });
 
     const singleTableWidth = isTeam2To6 ? 992 : 496;
-    const totalContainerWidth = 992;
+    const totalContainerWidth = isMobile ? '100%' : '992px';
 
     const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => {
         return (
             <table style={{
-                width: isMobile ? 'max-content' : `${singleTableWidth}px`,
-                minWidth: isMobile ? 'auto' : `${singleTableWidth}px`,
+                width: isMobile ? 'max-content' : (typeof totalContainerWidth === 'string' ? totalContainerWidth : `${singleTableWidth}px`),
+                minWidth: isMobile ? 'auto' : (typeof totalContainerWidth === 'string' ? totalContainerWidth : `${singleTableWidth}px`),
                 borderCollapse: 'collapse',
                 border: '1px solid black',
                 fontSize: isMobile ? '11px' : 'clamp(9px, 1.1vw, 11px)',
                 color: 'black',
                 backgroundColor: 'white',
-                tableLayout: isMobile ? 'auto' : 'fixed',
+                tableLayout: 'fixed',
                 borderLeft: isRight && !isMobile ? 'none' : '1px solid black',
                 boxSizing: 'border-box',
                 margin: 0,
@@ -1571,16 +1579,16 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     <col style={{ width: `${colWidths.total}px` }} />
                 </colgroup>
                 <thead>
-                    <tr style={{ backgroundColor: '#E7E9EB', height: '32px' }}>
-                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.rank}px`, minWidth: `${colWidths.rank}px`, maxWidth: `${colWidths.rank}px` }}>순위</th>
-                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.team}px`, minWidth: `${colWidths.team}px`, maxWidth: `${colWidths.team}px` }}>팀</th>
-                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.name}px`, minWidth: `${colWidths.name}px`, maxWidth: `${colWidths.name}px` }}>성함</th>
+                    <tr style={{ backgroundColor: '#E7E9EB', height: isMobile ? '28px' : '32px' }}>
+                        <th style={{ border: '1px solid black', padding: isMobile ? '2px' : '4px', width: `${colWidths.rank}px`, minWidth: `${colWidths.rank}px`, maxWidth: `${colWidths.rank}px` }}>순위</th>
+                        <th style={{ border: '1px solid black', padding: isMobile ? '2px' : '4px', width: `${colWidths.team}px`, minWidth: `${colWidths.team}px`, maxWidth: `${colWidths.team}px` }}>팀</th>
+                        <th style={{ border: '1px solid black', padding: isMobile ? '2px' : '4px', width: `${colWidths.name}px`, minWidth: `${colWidths.name}px`, maxWidth: `${colWidths.name}px` }}>성함</th>
                         {Array.from({ length: gameCount }).map((_, i) => (
-                            <th key={i} style={{ border: '1px solid black', padding: '4px', width: `${colWidths.game}px`, minWidth: `${colWidths.game}px`, maxWidth: `${colWidths.game}px` }}>{i + 1}G</th>
+                            <th key={i} style={{ border: '1px solid black', padding: isMobile ? '2px' : '4px', width: `${colWidths.game}px`, minWidth: `${colWidths.game}px`, maxWidth: `${colWidths.game}px` }}>{i + 1}G</th>
                         ))}
-                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.handy}px`, minWidth: `${colWidths.handy}px`, maxWidth: `${colWidths.handy}px` }}>핸디</th>
-                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.hl}px`, minWidth: `${colWidths.hl}px`, maxWidth: `${colWidths.hl}px` }}>H-L</th>
-                        <th style={{ border: '1px solid black', padding: '4px', width: `${colWidths.total}px`, minWidth: `${colWidths.total}px`, maxWidth: `${colWidths.total}px` }}>총점</th>
+                        <th style={{ border: '1px solid black', padding: isMobile ? '2px' : '4px', width: `${colWidths.handy}px`, minWidth: `${colWidths.handy}px`, maxWidth: `${colWidths.handy}px` }}>핸디</th>
+                        <th style={{ border: '1px solid black', padding: isMobile ? '2px' : '4px', width: `${colWidths.hl}px`, minWidth: `${colWidths.hl}px`, maxWidth: `${colWidths.hl}px` }}>H-L</th>
+                        <th style={{ border: '1px solid black', padding: isMobile ? '2px' : '4px', width: `${colWidths.total}px`, minWidth: `${colWidths.total}px`, maxWidth: `${colWidths.total}px` }}>총점</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1699,10 +1707,10 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     };
 
     return (
-        <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
-            <div className="table-responsive !p-0 w-full" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'stretch' : 'center', width: '100%', boxSizing: 'border-box' }}>
+            <div className="table-responsive !p-0 w-full" style={{ display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'stretch' : 'center' }}>
                 {/* Main Result Container - Fixed for Individual/Champ, but scrollable on mobile via wrapper */}
-                <div style={{ width: `${totalContainerWidth}px`, padding: '0 0 20px 0', boxSizing: 'border-box', overflow: 'hidden' }}>
+                <div style={{ width: totalContainerWidth, padding: '0 0 20px 0', boxSizing: 'border-box', overflow: isMobile ? 'visible' : 'hidden' }}>
                     <div style={{
                         backgroundColor: '#FFFF00',
                         border: '1px solid black',
