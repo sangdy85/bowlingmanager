@@ -42,6 +42,13 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
     const startOfYear = new Date(`${currentYear}-01-01T00:00:00.000Z`);
     const endOfYear = new Date(`${currentYear}-12-31T23:59:59.999Z`);
 
+    // Fetch available years for the team
+    const allTeamScores = await prisma.score.findMany({
+        where: { teamId: currentTeam.id },
+        select: { gameDate: true }
+    });
+    const activeYears = Array.from<number>(new Set(allTeamScores.map((s: { gameDate: Date }) => s.gameDate.getFullYear()))).sort((a, b) => b - a);
+
     const scores = await prisma.score.findMany({
         where: {
             teamId: currentTeam.id,
@@ -68,7 +75,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
     let yearlyTotal = 0;
     let yearlyGames = 0;
 
-    scores.forEach(score => {
+    scores.forEach((score: any) => {
         const scoreDate = new Date(score.gameDate.getTime() + kstOffset);
         const dateStr = scoreDate.toISOString().split('T')[0];
 
@@ -131,7 +138,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
                 </Link>
             </div>
 
-            <YearSelector currentYear={currentYear} />
+            <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             <div className="card mb-8 bg-muted/30">
                 <h3 className="text-center mb-4 font-semibold text-lg">{currentYear}년 팀 전체 통계</h3>

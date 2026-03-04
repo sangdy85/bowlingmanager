@@ -40,6 +40,13 @@ export default async function StatsPage({ searchParams }: StatsPageProps) {
     const startOfYear = new Date(`${currentYear}-01-01T00:00:00.000Z`);
     const endOfYear = new Date(`${currentYear}-12-31T23:59:59.999Z`);
 
+    // Fetch available years for the team
+    const allTeamScores = await prisma.score.findMany({
+        where: { teamId: currentTeam.id },
+        select: { gameDate: true }
+    });
+    const activeYears = Array.from<number>(new Set(allTeamScores.map((s: { gameDate: Date }) => s.gameDate.getFullYear()))).sort((a, b) => b - a);
+
     // Fetch all scores for the team in this year
     const scores = await prisma.score.findMany({
         where: {
@@ -55,7 +62,7 @@ export default async function StatsPage({ searchParams }: StatsPageProps) {
     // Calculate Member Stats
     const memberStats: { [userId: string]: { name: string, total: number, count: number, high: number } } = {};
 
-    scores.forEach(score => {
+    scores.forEach((score: any) => {
         if (!score.userId) return; // Skip guest scores without userId in member stats
 
         if (!memberStats[score.userId]) {
@@ -89,7 +96,7 @@ export default async function StatsPage({ searchParams }: StatsPageProps) {
                 </Link>
             </div>
 
-            <YearSelector currentYear={currentYear} />
+            <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             <div className="card mb-8">
                 <h2 className="text-xl font-bold mb-4 border-b pb-2">팀원 랭킹 ({currentYear}년)</h2>
