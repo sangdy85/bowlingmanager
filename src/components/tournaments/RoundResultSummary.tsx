@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface User {
     id: string;
@@ -56,6 +56,17 @@ interface RoundResultSummaryProps {
 }
 
 export default function RoundResultSummary({ round, tournamentName, teamHandicapLimit }: RoundResultSummaryProps) {
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
     const getRecord = (pts: number | null) => {
         if (pts === null) return '-';
         const wins = Math.floor(pts);
@@ -72,16 +83,16 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
     });
 
     return (
-        <div style={{ backgroundColor: '#ffffff', color: '#000000', padding: '1rem', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+        <div style={{ backgroundColor: '#ffffff', color: '#000000', padding: isMobile ? '0.5rem' : '1rem', minHeight: '100vh', fontFamily: 'sans-serif' }}>
             {/* Report Title */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem', paddingTop: '1rem' }}>
-                <div style={{ border: '2px solid #000000', padding: '0.5rem 3rem', fontWeight: 900, fontSize: '1.5rem', letterSpacing: '0.2em', backgroundColor: '#ffffff', textTransform: 'uppercase' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: isMobile ? '1rem' : '2rem', paddingTop: isMobile ? '0px' : '1rem' }}>
+                <div style={{ border: '2px solid #000000', padding: isMobile ? '0.4rem 0.5rem' : '0.5rem 3rem', fontWeight: 900, fontSize: isMobile ? '1.1rem' : '1.5rem', letterSpacing: isMobile ? '0.05em' : '0.2em', backgroundColor: '#ffffff', textTransform: 'uppercase', textAlign: 'center' }}>
                     {tournamentName || '상주리그'} {round.roundNumber}주차 (팀 기록표)
                 </div>
             </div>
 
             {/* Matchups Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(500px, 1fr))', gap: isMobile ? '1rem' : '2rem' }}>
                 {sortedMatchups.map((m) => {
                     const laneA = m.lanes?.split('-')[0] || '??';
                     const laneB = m.lanes?.split('-')[1] || '??';
@@ -124,9 +135,12 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
 
                         const baseCell: React.CSSProperties = {
                             border: '1px solid #000000',
-                            padding: '6px 4px',
+                            padding: isMobile ? '2px 1px' : '6px 4px',
                             textAlign: 'center',
                             verticalAlign: 'middle',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
                         };
 
                         const winStyle: React.CSSProperties = {
@@ -135,7 +149,7 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                         };
 
                         return (
-                            <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #000000', fontSize: '13px', fontWeight: 700, backgroundColor: '#ffffff', color: '#000000', tableLayout: 'fixed' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #000000', fontSize: isMobile ? '9px' : '13px', fontWeight: 700, backgroundColor: '#ffffff', color: '#000000', tableLayout: 'fixed' }}>
                                 <colgroup>
                                     <col style={{ width: '20%' }} />
                                     <col style={{ width: '12%' }} />
@@ -147,17 +161,17 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                                 <thead>
                                     {/* Lane & Team & Record Header Row */}
                                     <tr style={{ backgroundColor: '#e2e8f0', borderBottom: '2px solid #000000' }}>
-                                        <th style={baseCell}>{laneNum.padStart(2, '0')}레인</th>
-                                        <th style={{ ...baseCell, fontSize: '14px' }} colSpan={4}>
+                                        <th style={{ ...baseCell, fontSize: isMobile ? '10px' : '12px' }}>{laneNum.padStart(2, '0')}레인</th>
+                                        <th style={{ ...baseCell, fontSize: isMobile ? '11px' : '14px' }} colSpan={4}>
                                             {team?.name || '부전승'}
                                             {(isRight ? m.teamBSquad : m.teamASquad) ? ` (${isRight ? m.teamBSquad : m.teamASquad})` : ''}
                                         </th>
-                                        <th style={{ ...baseCell, color: isWinner ? '#e11d48' : '#000000' }}>
+                                        <th style={{ ...baseCell, fontSize: isMobile ? '10px' : 'inherit', color: isWinner ? '#e11d48' : '#000000' }}>
                                             {getRecord(points)}
                                         </th>
                                     </tr>
                                     {/* Column Labels */}
-                                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #000000', fontSize: '11px' }}>
+                                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #000000', fontSize: isMobile ? '8px' : '11px' }}>
                                         <th style={baseCell}>이름</th>
                                         <th style={baseCell}>핸디</th>
                                         <th style={baseCell}>1G</th>
@@ -170,7 +184,7 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                                     {Array.from({ length: 3 }).map((_, idx) => {
                                         const s = teamScores[idx];
                                         return (
-                                            <tr key={idx} style={{ borderBottom: '1px solid #000000', height: '32px' }}>
+                                            <tr key={idx} style={{ borderBottom: '1px solid #000000', height: isMobile ? '24px' : '32px' }}>
                                                 <td style={{ ...baseCell }}>{s?.playerName || ''}</td>
                                                 <td style={{ ...baseCell, fontWeight: 400, color: '#64748b' }}>{s?.handicap || ''}</td>
                                                 <td style={baseCell}>{s ? Math.min(s.score1 + s.handicap, 300) : ''}</td>
@@ -181,7 +195,7 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                                         );
                                     })}
                                     {/* Team Total Row */}
-                                    <tr style={{ backgroundColor: '#d9ead3', borderBottom: '2px solid #000000', height: '32px' }}>
+                                    <tr style={{ backgroundColor: '#d9ead3', borderBottom: '2px solid #000000', height: isMobile ? '24px' : '32px' }}>
                                         <td style={baseCell}>종합</td>
                                         <td style={{ ...baseCell, fontWeight: 400 }}>{hSum || '0'}</td>
                                         <td style={{ ...baseCell, ...(marks[0] === 'O' ? winStyle : {}) }}>{g1}</td>
@@ -190,13 +204,13 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                                         <td style={{ ...baseCell, backgroundColor: 'rgba(226, 232, 240, 0.5)', ...(isWinner ? winStyle : { fontWeight: 900 }) }}>{g1 + g2 + g3}</td>
                                     </tr>
                                     {/* Win/Loss Record */}
-                                    <tr style={{ height: '36px' }}>
+                                    <tr style={{ height: isMobile ? '28px' : '36px' }}>
                                         <td style={baseCell}>승패</td>
                                         <td style={baseCell}></td>
-                                        <td style={{ ...baseCell, fontSize: '18px', ...(marks[0] === 'O' ? winStyle : {}) }}>{marks[0]}</td>
-                                        <td style={{ ...baseCell, fontSize: '18px', ...(marks[1] === 'O' ? winStyle : {}) }}>{marks[1]}</td>
-                                        <td style={{ ...baseCell, fontSize: '18px', ...(marks[2] === 'O' ? winStyle : {}) }}>{marks[2]}</td>
-                                        <td style={{ ...baseCell, fontSize: '18px', fontStyle: 'italic', backgroundColor: '#f1f5f9', ...(isWinner ? winStyle : {}) }}>{getMarker(points || 0, 2)}</td>
+                                        <td style={{ ...baseCell, fontSize: isMobile ? '12px' : '18px', ...(marks[0] === 'O' ? winStyle : {}) }}>{marks[0]}</td>
+                                        <td style={{ ...baseCell, fontSize: isMobile ? '12px' : '18px', ...(marks[1] === 'O' ? winStyle : {}) }}>{marks[1]}</td>
+                                        <td style={{ ...baseCell, fontSize: isMobile ? '12px' : '18px', ...(marks[2] === 'O' ? winStyle : {}) }}>{marks[2]}</td>
+                                        <td style={{ ...baseCell, fontSize: isMobile ? '12px' : '18px', fontStyle: 'italic', backgroundColor: '#f1f5f9', ...(isWinner ? winStyle : {}) }}>{getMarker(points || 0, 2)}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -204,7 +218,7 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                     };
 
                     return (
-                        <div key={m.id} style={{ display: 'flex', gap: '1rem', padding: '0.5rem', marginBottom: '1rem', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+                        <div key={m.id} style={{ display: 'flex', gap: isMobile ? '0.25rem' : '1rem', padding: '0.2rem', marginBottom: isMobile ? '0.5rem' : '1rem', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
                             {renderTeamTable(m.teamA, m.teamAId, m.teamASquad, laneA, m.pointsA, false)}
                             {renderTeamTable(m.teamB, m.teamBId, m.teamBSquad, laneB, m.pointsB, true)}
                         </div>
