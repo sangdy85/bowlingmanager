@@ -1519,8 +1519,24 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         total: 80
     };
 
-    // Calculate name column width for team mode: 992 - (other fixed columns)
-    const teamNameWidth = 992 - (teamColWidths.rank + teamColWidths.team + (teamColWidths.game * gameCount) + teamColWidths.handy + teamColWidths.hl + teamColWidths.total);
+    // Calculate widths for PC individual mode (was 496 fixed, now dynamic)
+    const pcIndividualColWidths = {
+        rank: 35,
+        team: 90,
+        name: 90,
+        game: 55,
+        handy: 50,
+        hl: 55,
+        total: 70
+    };
+
+    const pcIndividualSingleWidth = pcIndividualColWidths.rank + pcIndividualColWidths.team + pcIndividualColWidths.name + (pcIndividualColWidths.game * gameCount) + pcIndividualColWidths.handy + pcIndividualColWidths.hl + pcIndividualColWidths.total;
+
+    // Calculate name column width for team mode: Try to fit in 992 if possible, or expand
+    const baseTeamWidth = 992;
+    const teamOtherColsWidth = teamColWidths.rank + teamColWidths.team + (teamColWidths.game * gameCount) + teamColWidths.handy + teamColWidths.hl + teamColWidths.total;
+    const teamNameWidth = Math.max(120, baseTeamWidth - teamOtherColsWidth);
+    const pcTeamSingleWidth = teamOtherColsWidth + teamNameWidth;
 
     const colWidths = isTeam2To6 ? {
         rank: teamColWidths.rank,
@@ -1538,24 +1554,16 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         handy: 35,
         hl: 40,
         total: 50
-    } : {
-        rank: 30,
-        team: 70,
-        name: 70,
-        game: 50,
-        handy: 50,
-        hl: 56,
-        total: 70
-    });
+    } : pcIndividualColWidths);
 
-    const singleTableWidth = isTeam2To6 ? 992 : 496;
-    const totalContainerWidth = isMobile ? '100%' : '992px';
+    const singleTableWidth = isTeam2To6 ? pcTeamSingleWidth : (isMobile ? 496 : pcIndividualSingleWidth);
+    const totalContainerWidth = isMobile ? '100%' : (isTeam2To6 ? `${singleTableWidth}px` : `${singleTableWidth * 2}px`);
 
     const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => {
         return (
             <table style={{
-                width: isMobile ? 'max-content' : (typeof totalContainerWidth === 'string' ? totalContainerWidth : `${singleTableWidth}px`),
-                minWidth: isMobile ? 'auto' : (typeof totalContainerWidth === 'string' ? totalContainerWidth : `${singleTableWidth}px`),
+                width: isMobile ? 'max-content' : `${singleTableWidth}px`,
+                minWidth: isMobile ? 'auto' : `${singleTableWidth}px`,
                 borderCollapse: 'collapse',
                 border: '1px solid black',
                 fontSize: isMobile ? '11px' : 'clamp(9px, 1.1vw, 11px)',
@@ -1791,11 +1799,11 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                         justifyContent: 'center',
                         boxSizing: 'border-box'
                     }}>
-                        <div style={{ flex: isTeam2To6 || isMobile ? '1' : `0 0 ${singleTableWidth}px`, width: isTeam2To6 || isMobile ? '100%' : `${singleTableWidth}px`, boxSizing: 'border-box', overflowX: isMobile ? 'auto' : 'hidden' }}>
+                        <div style={{ flex: isTeam2To6 || isMobile ? '1' : `0 0 ${singleTableWidth}px`, width: isTeam2To6 || isMobile ? '100%' : `${singleTableWidth}px`, boxSizing: 'border-box', overflowX: isMobile ? 'auto' : 'visible' }}>
                             <TableComponent data={leftColumn} startRank={1} />
                         </div>
                         {!isTeam2To6 && (
-                            <div style={{ flex: isMobile ? '1' : `0 0 ${singleTableWidth}px`, width: isMobile ? '100%' : `${singleTableWidth}px`, boxSizing: 'border-box', overflowX: isMobile ? 'auto' : 'hidden', borderTop: isMobile ? '1px solid #ccc' : 'none', paddingTop: isMobile ? '10px' : 0 }}>
+                            <div style={{ flex: isMobile ? '1' : `0 0 ${singleTableWidth}px`, width: isMobile ? '100%' : `${singleTableWidth}px`, boxSizing: 'border-box', overflowX: isMobile ? 'auto' : 'visible', borderTop: isMobile ? '1px solid #ccc' : 'none', paddingTop: isMobile ? '10px' : 0 }}>
                                 <TableComponent data={rightColumn} startRank={rowsPerColumn + 1} isRight={true} />
                             </div>
                         )}
