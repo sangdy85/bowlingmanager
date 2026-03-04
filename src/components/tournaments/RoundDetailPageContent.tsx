@@ -629,7 +629,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                             const ps = laneMap[lane] || [];
                             return (
                                 <div key={lane} className="flex items-stretch border rounded-xl overflow-hidden bg-white shadow-sm hover:border-blue-300 transition-all">
-                                    <div className={`w-20 flex flex-col items-center justify-center py-2 ${ps.length > 0 ? 'bg-slate-900 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                                    <div className={`w-16 sm:w-20 flex flex-col items-center justify-center py-2 ${ps.length > 0 ? 'bg-slate-900 text-white' : 'bg-gray-100 text-gray-400'}`}>
                                         <span className="text-[10px] font-bold opacity-60">LANE</span>
                                         <span className="text-xl font-black">{lane}</span>
                                     </div>
@@ -918,8 +918,8 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                 </div>
             </div>
 
-            <div className="overflow-x-auto -mx-4 md:mx-0 pb-4">
-                <table className="min-w-[700px] md:w-full text-sm border-collapse bg-white shadow-md rounded-xl overflow-hidden border border-gray-200" style={{ tableLayout: 'fixed' }}>
+            <div className="table-responsive !p-0">
+                <table className="w-full text-sm border-collapse bg-white shadow-md rounded-xl overflow-hidden border border-gray-200" style={{ tableLayout: 'fixed', minWidth: '700px' }}>
                     <thead>
                         <tr className="bg-gray-100 text-gray-600 uppercase text-[11px] font-bold tracking-tight">
                             <th className="py-3 px-2 border-b text-center" style={{ width: '60px', whiteSpace: 'nowrap' }}>레인</th>
@@ -949,10 +949,9 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                 }
                             }
 
-                            // Optimized widths for 1-5 games - Responsive adjustment
-                            const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-                            const pxWidth = isMobile ? (gameCount === 5 ? 55 : 65) : (gameCount === 5 ? 85 : 100);
-                            const fontSize = isMobile ? '14px' : '18px';
+                            // Optimized widths for 1-5 games
+                            const pxWidth = gameCount === 5 ? 85 : 100;
+                            const fontSize = 'clamp(14px, 1.5vw, 18px)';
 
                             // Grouping logic for background
                             const groupId = p.registration.entryGroupId;
@@ -1112,48 +1111,50 @@ function RoundSideGameTab({ round }: { round: any }) {
                                     </h4>
                                     <div className="space-y-2">
                                         {rankings.length > 0 ? (
-                                            <table className="w-full text-xs">
-                                                <thead>
-                                                    <tr className="text-gray-400 border-b">
-                                                        <th className="pb-2 font-medium w-8">순위</th>
-                                                        <th className="pb-2 text-left px-2 font-medium">이름(팀)</th>
-                                                        <th className="pb-2 text-right font-medium">총점</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-gray-50">
-                                                    {rankings.map((r: any, idx: number) => {
-                                                        const isTie = idx > 0 && r.total === rankings[idx - 1].total && r.handicap === rankings[idx - 1].handicap;
-                                                        // Simplified tie-display: just show same rank number if logic dictates
-                                                        let displayRank = idx + 1;
-                                                        if (isTie) {
-                                                            // Find first occurrence of this score+handicap combo
-                                                            const firstIdx = rankings.findIndex((x: any) => x.total === r.total && x.handicap === r.handicap);
-                                                            displayRank = firstIdx + 1;
-                                                        }
+                                            <div className="table-responsive !p-0">
+                                                <table className="w-full text-xs">
+                                                    <thead>
+                                                        <tr className="text-gray-400 border-b">
+                                                            <th className="pb-2 font-medium w-8">순위</th>
+                                                            <th className="pb-2 text-left px-2 font-medium">이름(팀)</th>
+                                                            <th className="pb-2 text-right font-medium">총점</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-50">
+                                                        {rankings.map((r: any, idx: number) => {
+                                                            const isTie = idx > 0 && r.total === rankings[idx - 1].total && r.handicap === rankings[idx - 1].handicap;
+                                                            // Simplified tie-display: just show same rank number if logic dictates
+                                                            let displayRank = idx + 1;
+                                                            if (isTie) {
+                                                                // Find first occurrence of this score+handicap combo
+                                                                const firstIdx = rankings.findIndex((x: any) => x.total === r.total && x.handicap === r.handicap);
+                                                                displayRank = firstIdx + 1;
+                                                            }
 
-                                                        return (
-                                                            <tr key={r.id} className="hover:bg-gray-50">
-                                                                <td className="py-2 text-center">
-                                                                    <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full font-bold
+                                                            return (
+                                                                <tr key={r.id} className="hover:bg-gray-50">
+                                                                    <td className="py-2 text-center">
+                                                                        <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full font-bold
                                                                         ${displayRank === 1 ? 'bg-yellow-100 text-yellow-700' :
-                                                                            displayRank === 2 ? 'bg-slate-100 text-slate-700' :
-                                                                                displayRank === 3 ? 'bg-orange-100 text-orange-700' : 'text-gray-400'}`}>
-                                                                        {displayRank}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="py-2 px-2">
-                                                                    <div className="font-black text-gray-800">{r.name}</div>
-                                                                    <div className="text-[10px] text-gray-400 truncate w-24">{r.team}</div>
-                                                                </td>
-                                                                <td className="py-2 text-right">
-                                                                    <div className="font-black text-gray-900">{r.total}</div>
-                                                                    <div className="text-[10px] text-gray-400">({r.score}+{r.handicap})</div>
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
+                                                                                displayRank === 2 ? 'bg-slate-100 text-slate-700' :
+                                                                                    displayRank === 3 ? 'bg-orange-100 text-orange-700' : 'text-gray-400'}`}>
+                                                                            {displayRank}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="py-2 px-2">
+                                                                        <div className="font-black text-gray-800">{r.name}</div>
+                                                                        <div className="text-[10px] text-gray-400 truncate w-24">{r.team}</div>
+                                                                    </td>
+                                                                    <td className="py-2 text-right">
+                                                                        <div className="font-black text-gray-900">{r.total}</div>
+                                                                        <div className="text-[10px] text-gray-400">({r.score}+{r.handicap})</div>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         ) : (
                                             <div className="py-10 text-center text-gray-300 text-xs italic">데이터 없음</div>
                                         )}
@@ -1513,41 +1514,38 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     // Calculate name column width for team mode: 992 - (other fixed columns)
     const teamNameWidth = 992 - (teamColWidths.rank + teamColWidths.team + (teamColWidths.game * gameCount) + teamColWidths.handy + teamColWidths.hl + teamColWidths.total);
 
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
     const colWidths = isTeam2To6 ? {
-        rank: isMobile ? 35 : teamColWidths.rank,
-        team: isMobile ? 60 : teamColWidths.team,
-        name: isMobile ? 80 : teamNameWidth,
-        game: isMobile ? 45 : teamColWidths.game,
-        handy: isMobile ? 40 : teamColWidths.handy,
-        hl: isMobile ? 45 : teamColWidths.hl,
-        total: isMobile ? 60 : teamColWidths.total
+        rank: teamColWidths.rank,
+        team: teamColWidths.team,
+        name: teamNameWidth,
+        game: teamColWidths.game,
+        handy: teamColWidths.handy,
+        hl: teamColWidths.hl,
+        total: teamColWidths.total
     } : {
-        rank: isMobile ? 25 : 30,
-        team: isMobile ? 55 : 70,
-        name: isMobile ? 65 : 70,
-        game: isMobile ? 35 : 50,
-        handy: isMobile ? 40 : 50,
-        hl: isMobile ? 45 : 56,
-        total: isMobile ? 55 : 70
+        rank: 30,
+        team: 70,
+        name: 70,
+        game: 50,
+        handy: 50,
+        hl: 56,
+        total: 70
     };
 
-    const singleTableWidth = isTeam2To6 ? '100%' : '100%'; // Always use full width on mobile
-    // const totalContainerWidth = 992; // Remove fixed width
+    const singleTableWidth = isTeam2To6 ? 992 : 496;
+    const totalContainerWidth = 992;
 
     const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => {
         return (
             <table style={{
-                width: '100%',
-                minWidth: isTeam2To6 ? '800px' : '480px', // Allow some minimum width for readability
+                width: `${singleTableWidth}px`,
                 borderCollapse: 'collapse',
                 border: '1px solid black',
-                fontSize: '11px',
+                fontSize: 'clamp(9px, 1.1vw, 11px)',
                 color: 'black',
                 backgroundColor: 'white',
                 tableLayout: 'fixed',
-                borderLeft: isRight ? (typeof window !== 'undefined' && window.innerWidth < 1024 ? '1px solid black' : 'none') : '1px solid black',
+                borderLeft: isRight ? 'none' : '1px solid black',
                 boxSizing: 'border-box',
                 margin: 0,
                 padding: 0
@@ -1692,93 +1690,98 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     };
 
     return (
-        <div className="bg-white p-0 flex flex-col items-center w-full box-border">
-            {/* Main Result Container - Responsive adaptation */}
-            <div className="w-full max-w-[992px] p-0 pb-6 box-border overflow-hidden">
-                <div style={{
-                    backgroundColor: '#FFFF00',
-                    border: '1px solid black',
-                    borderBottomWidth: '2px',
-                    padding: '12px 10px',
-                    width: '100%',
-                    display: 'flex',
-                    flexDirection: isMobile ? 'column' : 'row',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    position: 'relative',
-                    boxSizing: 'border-box'
-                }}>
-                    <h2 style={{ textAlign: 'center', fontSize: '20px', fontWeight: '900', color: 'black', margin: '0' }}>
-                        {round.tournament.type === 'EVENT' ? round.tournament.name : `${round.tournament.name} ${round.roundNumber}회차`} 결과
-                    </h2>
+        <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+            <div className="table-responsive !p-0 w-full" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {/* Main Result Container - Fixed for Individual/Champ, but scrollable on mobile via wrapper */}
+                <div style={{ width: `${totalContainerWidth}px`, padding: '0 0 20px 0', boxSizing: 'border-box', overflow: 'hidden' }}>
                     <div style={{
-                        position: isMobile ? 'static' : 'absolute',
-                        right: isMobile ? 'auto' : '10px',
-                        marginTop: isMobile ? '8px' : '0',
+                        backgroundColor: '#FFFF00',
+                        border: '1px solid black',
+                        borderBottomWidth: '2px',
+                        padding: '12px 10px',
+                        width: '100%',
                         display: 'flex',
-                        flexWrap: 'wrap',
                         justifyContent: 'center',
-                        gap: '8px',
-                        zIndex: 10
-                    }} className="no-print">
-                        {isManager && (
-                            <>
-                                <button
-                                    onClick={handleExcelDownload}
-                                    style={{
-                                        backgroundColor: 'white',
-                                        color: 'black',
-                                        border: '1px solid black',
-                                        borderRadius: '4px',
-                                        padding: '6px 10px',
-                                        fontSize: '11px',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '4px'
-                                    }}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                    </svg>
-                                    엑셀 다운로드
-                                </button>
-                                <button
-                                    onClick={() => window.print()}
-                                    style={{
-                                        backgroundColor: 'white',
-                                        color: 'black',
-                                        border: '1px solid black',
-                                        borderRadius: '4px',
-                                        padding: '6px 12px',
-                                        fontSize: '11px',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '4px'
-                                    }}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                                    </svg>
-                                    출력
-                                </button>
-                            </>
+                        alignItems: 'center',
+                        position: 'relative',
+                        boxSizing: 'border-box'
+                    }}>
+                        <h2 style={{ textAlign: 'center', fontSize: '20px', fontWeight: '900', color: 'black', margin: '0' }}>
+                            {round.tournament.type === 'EVENT' ? round.tournament.name : `${round.tournament.name} ${round.roundNumber}회차`} 결과
+                        </h2>
+                        <div style={{
+                            position: 'absolute',
+                            right: '10px',
+                            display: 'flex',
+                            gap: '8px',
+                            zIndex: 10
+                        }} className="no-print">
+                            {isManager && (
+                                <>
+                                    <button
+                                        onClick={handleExcelDownload}
+                                        style={{
+                                            backgroundColor: 'white',
+                                            color: 'black',
+                                            border: '1px solid black',
+                                            borderRadius: '4px',
+                                            padding: '6px 10px',
+                                            fontSize: '11px',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
+                                        }}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                        엑셀 다운로드
+                                    </button>
+                                    <button
+                                        onClick={() => window.print()}
+                                        style={{
+                                            backgroundColor: 'white',
+                                            color: 'black',
+                                            border: '1px solid black',
+                                            borderRadius: '4px',
+                                            padding: '6px 12px',
+                                            fontSize: '11px',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
+                                        }}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                        </svg>
+                                        출력
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    <div style={{
+                        display: 'flex',
+                        width: '100%',
+                        borderTop: 'none',
+                        gap: 0,
+                        justifyContent: 'center',
+                        boxSizing: 'border-box'
+                    }}>
+                        <div style={{ flex: isTeam2To6 ? '1' : `0 0 ${singleTableWidth}px`, width: isTeam2To6 ? 'auto' : `${singleTableWidth}px`, boxSizing: 'border-box' }}>
+                            <TableComponent data={leftColumn} startRank={1} />
+                        </div>
+                        {!isTeam2To6 && (
+                            <div style={{ flex: `0 0 ${singleTableWidth}px`, width: `${singleTableWidth}px`, boxSizing: 'border-box' }}>
+                                <TableComponent data={rightColumn} startRank={28} isRight={true} />
+                            </div>
                         )}
                     </div>
-                </div>
-
-                <div className="flex flex-col lg:flex-row w-full gap-0 justify-center box-border overflow-x-auto px-1 md:px-0">
-                    <div className={`${isTeam2To6 ? 'w-full' : 'w-full lg:w-1/2'} box-border min-w-max`}>
-                        <TableComponent data={leftColumn} startRank={1} />
-                    </div>
-                    {!isTeam2To6 && (
-                        <div className="w-full lg:w-1/2 box-border min-w-max">
-                            <TableComponent data={rightColumn} startRank={28} isRight={true} />
-                        </div>
-                    )}
                 </div>
             </div>
         </div>
@@ -2399,54 +2402,54 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
 
             {/* Winner List - ROBUST INLINE STYLE REDESIGN */}
             {winners.length > 0 && (
-                <div style={{ maxWidth: '900px', margin: '6rem auto 12rem', position: 'relative' }}>
+                <div className="w-full mx-auto mt-24 mb-32 relative max-w-[900px]">
                     {/* Header Section */}
-                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '3rem', padding: '0 1rem', borderBottom: '4px solid #0f172a', paddingBottom: '1.5rem' }}>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-8 sm:mb-12 px-4 border-b-4 border-[#0f172a] pb-6 gap-4">
                         <div>
-                            <h4 style={{ margin: 0, fontWeight: 900, color: '#0f172a', fontSize: 'clamp(1.5rem, 5vw, 3.5rem)', letterSpacing: '-0.05em', lineHeight: 1 }}>
+                            <h4 style={{ margin: 0, fontWeight: 900, color: '#0f172a', fontSize: 'clamp(2rem, 8vw, 3.5rem)', letterSpacing: '-0.05em', lineHeight: 1 }}>
                                 당첨자 명단
                             </h4>
-                            <p style={{ margin: '0.5rem 0 0', color: '#94a3b8', fontWeight: 700, fontSize: '1.25rem', textTransform: 'uppercase', letterSpacing: '0.2em' }}>WINNERS LIST</p>
+                            <p style={{ margin: '0.5rem 0 0', color: '#94a3b8', fontWeight: 700, fontSize: 'clamp(0.875rem, 3vw, 1.25rem)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>WINNERS LIST</p>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                            <div style={{ display: 'inline-flex', backgroundColor: '#ffffff', border: '2px solid #f1f5f9', borderRadius: '1.25rem', padding: '0.75rem 1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', alignItems: 'center', gap: '1rem' }}>
-                                <span style={{ color: '#2563eb', fontWeight: 900, fontSize: '2rem' }}>{winners.length}</span>
-                                <span style={{ color: '#e2e8f0', fontSize: '1.5rem', fontWeight: 300 }}>/</span>
-                                <span style={{ color: '#64748b', fontWeight: 900, fontSize: '1.5rem' }}>{winnerCount}</span>
+                        <div className="w-full sm:w-auto text-right">
+                            <div className="inline-flex bg-white border border-slate-100 rounded-2xl px-6 py-3 shadow-sm items-center gap-4">
+                                <span style={{ color: '#2563eb', fontWeight: 900, fontSize: 'clamp(1.25rem, 5vw, 2rem)' }}>{winners.length}</span>
+                                <span style={{ color: '#e2e8f0', fontSize: 'clamp(1rem, 4vw, 1.5rem)', fontWeight: 300 }}>/</span>
+                                <span style={{ color: '#64748b', fontWeight: 900, fontSize: 'clamp(1rem, 4vw, 1.5rem)' }}>{winnerCount}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Table Section */}
-                    <div style={{ backgroundColor: '#ffffff', borderRadius: '2.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)', border: '1px solid #f1f5f9', overflow: 'hidden' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                            <thead style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #f1f5f9' }}>
+                    <div className="table-responsive !p-0 bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '500px' }}>
+                            <thead className="bg-slate-50 border-b-2 border-slate-100">
                                 <tr>
-                                    <th style={{ padding: '2rem', color: '#64748b', fontWeight: 800, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.1em', width: '120px', textAlign: 'center' }}>순번</th>
-                                    <th style={{ padding: '2rem', color: '#64748b', fontWeight: 800, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.1em', width: '40%' }}>소속 / 팀</th>
-                                    <th style={{ padding: '2rem', color: '#64748b', fontWeight: 800, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>당첨자 성함</th>
+                                    <th style={{ padding: 'clamp(1rem, 2vw, 2rem)', color: '#64748b', fontWeight: 800, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.1em', width: '80px', textAlign: 'center' }}>순번</th>
+                                    <th style={{ padding: 'clamp(1rem, 2vw, 2rem)', color: '#64748b', fontWeight: 800, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.1em', width: '40%' }}>소속 / 팀</th>
+                                    <th style={{ padding: 'clamp(1rem, 2vw, 2rem)', color: '#64748b', fontWeight: 800, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>당첨자 성함</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {winners.map((winner, idx) => (
-                                    <tr key={idx} style={{ borderBottom: '1px solid #f8fafc', transition: 'background-color 0.2s' }}>
-                                        <td style={{ padding: '2.5rem 2rem', textAlign: 'center' }}>
-                                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '4.5rem', height: '4.5rem', backgroundColor: '#0f172a', color: '#ffffff', borderRadius: '1.25rem', fontWeight: 900, fontSize: '1.75rem', fontStyle: 'italic', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
+                                    <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                        <td style={{ padding: 'clamp(1.5rem, 3vw, 2.5rem) 1rem', textAlign: 'center' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 'clamp(3rem, 6vw, 4.5rem)', height: 'clamp(3rem, 6vw, 4.5rem)', backgroundColor: '#0f172a', color: '#ffffff', borderRadius: '1rem', fontWeight: 900, fontSize: 'clamp(1.25rem, 3vw, 1.75rem)', fontStyle: 'italic', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
                                                 #{idx + 1}
                                             </div>
                                         </td>
-                                        <td style={{ padding: '2.5rem 2rem' }}>
-                                            <span style={{ fontWeight: 700, color: '#64748b', fontSize: 'clamp(0.875rem, 2vw, 1.75rem)', letterSpacing: '-0.025em' }}>
+                                        <td style={{ padding: 'clamp(1.5rem, 3vw, 2.5rem) 1rem' }}>
+                                            <span style={{ fontWeight: 700, color: '#64748b', fontSize: 'clamp(1.125rem, 3vw, 1.75rem)', letterSpacing: '-0.025em' }}>
                                                 {(winner.registration.guestTeamName ?? winner.registration.team?.name) || '개인'}
                                             </span>
                                         </td>
-                                        <td style={{ padding: '2.5rem 2rem' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                                                <span style={{ fontWeight: 900, color: '#0f172a', fontSize: 'clamp(1.25rem, 4vw, 3.5rem)', letterSpacing: '-0.05em' }}>
+                                        <td style={{ padding: 'clamp(1.5rem, 3vw, 2.5rem) 1rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                <span style={{ fontWeight: 900, color: '#0f172a', fontSize: 'clamp(1.75rem, 5vw, 3.5rem)', letterSpacing: '-0.05em' }}>
                                                     {winner.registration.guestName ?? winner.registration.user?.name}
                                                 </span>
                                                 {idx === winners.length - 1 && !isRunning && (
-                                                    <span style={{ backgroundColor: '#2563eb', color: '#ffffff', padding: '0.375rem 1rem', borderRadius: '1rem', fontWeight: 900, fontSize: '0.875rem', verticalAlign: 'middle' }}>
+                                                    <span className="bg-blue-600 text-white px-2 py-0.5 rounded-lg font-black text-[10px] hidden sm:inline-block">
                                                         NEW!
                                                     </span>
                                                 )}
@@ -2458,33 +2461,15 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
                         </table>
                     </div>
 
-                    {/* Reset Button Section - EXTREME SPACING & ROBUST DESIGN */}
+                    {/* Reset Button Section */}
                     {!isFinalized && winners.length > 0 && !isRunning && (
-                        <div style={{ marginTop: '500px', marginBottom: '10rem', textAlign: 'center' }}>
-                            <div style={{ display: 'inline-block', padding: '4rem', borderRadius: '3.5rem', backgroundColor: '#f8fafc', border: '4px dashed #e2e8f0' }}>
-                                <div style={{ marginBottom: '2.5rem' }}>
-                                    <h5 style={{ margin: 0, fontWeight: 900, color: '#94a3b8', fontSize: '2rem', marginBottom: '0.5rem' }}>RESTORE SESSION?</h5>
-                                    <p style={{ margin: 0, color: '#cbd5e1', fontWeight: 700, fontSize: '1.125rem' }}>모든 추첨 데이터를 초기화하고 처음부터 다시 시작합니다.</p>
-                                </div>
-                                <button
-                                    onClick={resetDraw}
-                                    style={{
-                                        backgroundColor: 'transparent',
-                                        border: '2px solid transparent',
-                                        color: '#cbd5e1',
-                                        fontWeight: 900,
-                                        fontSize: '1.75rem',
-                                        padding: '1.5rem 3rem',
-                                        borderRadius: '1.5rem',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseOver={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.backgroundColor = '#fef2f2'; e.currentTarget.style.borderColor = '#fee2e2'; }}
-                                    onMouseOut={(e) => { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
-                                >
-                                    🔄 전체 추첨 데이터 초기화
-                                </button>
-                            </div>
+                        <div className="mt-12 sm:mt-24 text-center">
+                            <button
+                                onClick={resetDraw}
+                                className="text-slate-400 hover:text-red-500 font-bold text-sm transition-colors border-b border-dashed border-slate-300 hover:border-red-300"
+                            >
+                                🔄 추첨 데이터 초기화
+                            </button>
                         </div>
                     )}
                 </div>
