@@ -269,10 +269,10 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                 <style dangerouslySetInnerHTML={{
                     __html: `
                     .excel-table { border-collapse: collapse !important; width: 100% !important; background-color: white !important; color: black !important; table-layout: auto !important; }
-                    .excel-table th, .excel-table td { border: 2px solid black !important; padding: 10px 4px !important; text-align: center !important; color: black !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; font-size: 14px !important; font-weight: 900 !important; }
+                    .excel-table th, .excel-table td { border: 1.5px solid black !important; padding: 6px 2px !important; text-align: center !important; color: black !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; font-size: 11px !important; font-weight: 900 !important; }
                     @media (min-width: 768px) {
                         .excel-table { table-layout: fixed !important; }
-                        .excel-table th, .excel-table td { font-size: 18px !important; padding: 14px 8px !important; }
+                        .excel-table th, .excel-table td { border-width: 2px !important; font-size: 18px !important; padding: 14px 8px !important; }
                     }
                     .excel-table th { background-color: #d9ead3 !important; }
                     .excel-table td { background-color: white !important; }
@@ -322,13 +322,13 @@ const GrandFinaleCumulativeManager = forwardRef<GrandFinaleCumulativeRef, GrandF
                         <table className="excel-table">
                             <thead>
                                 <tr>
-                                    <th style={{ width: '45px', minWidth: '45px' }}>순위</th>
-                                    <th style={{ width: 'auto', minWidth: '80px' }}>팀명</th>
-                                    <th style={{ width: 'auto', minWidth: '80px' }}>성함</th>
-                                    <th style={{ width: 'auto', minWidth: '60px' }}>포인트</th>
-                                    <th style={{ width: 'auto', minWidth: '45px' }}>참여</th>
-                                    <th style={{ width: 'auto', minWidth: '70px' }}>누적</th>
-                                    <th style={{ width: 'auto', minWidth: '70px' }}>입상</th>
+                                    <th style={{ width: '35px', minWidth: '35px' }}>순위</th>
+                                    <th style={{ width: 'auto', minWidth: '65px' }}>팀명</th>
+                                    <th style={{ width: 'auto', minWidth: '60px' }}>성함</th>
+                                    <th style={{ width: 'auto', minWidth: '45px' }}>포인트</th>
+                                    <th style={{ width: 'auto', minWidth: '35px' }}>참여</th>
+                                    <th style={{ width: 'auto', minWidth: '60px' }}>누적</th>
+                                    <th style={{ width: 'auto', minWidth: '60px' }}>입상</th>
                                 </tr>
                             </thead>
                             <tbody>
