@@ -109,8 +109,8 @@ export default function TeamStatsContainer({ scores, currentYear, teamName, isOw
         Object.entries(userStats).forEach(([userId, stat]) => {
             const attendanceRate = stat.attendedDates.size / totalRegularDays;
 
-            // Criteria: Attendance >= 75%
-            if (attendanceRate >= 0.75) {
+            // Criteria: Attendance >= 80%
+            if (attendanceRate >= 0.80) {
                 // Calculate Average based on total score / count of scores (not days, unless intended otherwise)
                 // Need total count of games played by user.
                 // Re-calculating game count for this user
