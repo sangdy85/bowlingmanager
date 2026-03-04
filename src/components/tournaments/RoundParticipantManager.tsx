@@ -535,6 +535,12 @@ export default function RoundParticipantManager({
                         >
                             📊 엑셀 업로드
                         </button>
+                        <button
+                            onClick={downloadExcel}
+                            className="btn bg-white border-2 border-slate-900 text-slate-900 h-12 px-5 font-black hover:bg-slate-50 transition-all text-xs flex items-center gap-1"
+                        >
+                            📥 엑셀 다운로드
+                        </button>
                         {!isIndividualMode && (
                             <button
                                 onClick={handleAutoGroup}
