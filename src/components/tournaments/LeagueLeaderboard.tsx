@@ -184,9 +184,9 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: isMobile ? '35px' : '50px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '45px' : '70px' }}>순위</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: isMobile ? '55px' : '80px' }}>평균</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '70px' : '110px' }}>평균</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -210,9 +210,9 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: isMobile ? '35px' : '50px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '45px' : '70px' }}>순위</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: isMobile ? '55px' : '80px' }}>점수</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '70px' : '110px' }}>점수</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -236,9 +236,9 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: isMobile ? '35px' : '50px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '45px' : '70px' }}>순위</th>
                                     <th style={thStyle}>팀명</th>
-                                    <th style={{ ...thStyle, width: isMobile ? '55px' : '80px' }}>점수</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '70px' : '110px' }}>점수</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -265,10 +265,10 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: isMobile ? '35px' : '50px' }}>순위</th>
-                                    <th style={{ ...thStyle, width: isMobile ? '65px' : '90px' }}>선수명</th>
-                                    <th style={{ ...thStyle, width: isMobile ? '80px' : '110px' }}>팀명</th>
-                                    <th style={{ ...thStyle, width: isMobile ? '55px' : '80px' }}>평균</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '45px' : '70px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '65px' : '95px' }}>선수명</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '75px' : '95px' }}>팀명</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '70px' : '110px' }}>평균</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -293,10 +293,10 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: isMobile ? '35px' : '50px' }}>순위</th>
-                                    <th style={{ ...thStyle, width: isMobile ? '65px' : '90px' }}>선수명</th>
-                                    <th style={{ ...thStyle, width: isMobile ? '80px' : '110px' }}>팀명</th>
-                                    <th style={{ ...thStyle, width: isMobile ? '55px' : '80px' }}>총점</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '45px' : '70px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '65px' : '95px' }}>선수명</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '75px' : '95px' }}>팀명</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '70px' : '110px' }}>총점</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -321,10 +321,10 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                         <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ ...thStyle, width: isMobile ? '35px' : '50px' }}>순위</th>
-                                    <th style={{ ...thStyle, width: isMobile ? '65px' : '90px' }}>선수명</th>
-                                    <th style={{ ...thStyle, width: isMobile ? '80px' : '110px' }}>팀명</th>
-                                    <th style={{ ...thStyle, width: isMobile ? '55px' : '80px' }}>점수</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '45px' : '70px' }}>순위</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '65px' : '95px' }}>선수명</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '75px' : '95px' }}>팀명</th>
+                                    <th style={{ ...thStyle, width: isMobile ? '70px' : '110px' }}>점수</th>
                                 </tr>
                             </thead>
                             <tbody>
