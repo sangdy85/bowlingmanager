@@ -81,233 +81,210 @@ export default function AboutPageContent({
     };
 
     return (
-        <div className="max-w-7xl mx-auto px-4 py-16 relative overflow-hidden">
-            {/* Custom Premium Styles & Animations */}
+        <div className="max-w-7xl mx-auto px-4 py-16">
             <style dangerouslySetInnerHTML={{
                 __html: `
-                @keyframes float {
-                    0% { transform: translateY(0px); }
-                    50% { transform: translateY(-15px); }
-                    100% { transform: translateY(0px); }
+                .content-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 1rem;
+                    padding: 2.5rem;
+                    height: 100%;
                 }
-                @keyframes pulse-glow {
-                    0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
-                    50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.4); }
+                .guide-step {
+                    display: flex;
+                    gap: 1.5rem;
+                    padding-bottom: 2.5rem;
+                    border-left: 2px solid #f1f5f9;
+                    margin-left: 1rem;
+                    padding-left: 2rem;
+                    position: relative;
                 }
-                @keyframes move {
-                    0% { transform: translateX(-100%); }
-                    100% { transform: translateX(200%); }
+                .guide-step::before {
+                    content: '';
+                    position: absolute;
+                    left: -6px;
+                    top: 0;
+                    width: 10px;
+                    height: 10px;
+                    background: #3b82f6;
+                    border-radius: 50%;
                 }
-                .premium-card {
-                    background: rgba(255, 255, 255, 0.8);
-                    backdrop-filter: blur(12px);
-                    border: 1px solid rgba(255, 255, 255, 0.3);
-                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                .guide-step:last-child {
+                    border-left: none;
                 }
-                .premium-card:hover {
-                    transform: translateY(-8px) scale(1.01);
-                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+                .detail-box {
+                    background: #f8fafc;
+                    border: 1px solid #f1f5f9;
+                    border-radius: 0.75rem;
+                    padding: 1.5rem;
+                    margin-top: 1rem;
                 }
-                .animate-float { animation: float 6s ease-in-out infinite; }
             `}} />
 
-            {/* Mesh Background Decorations */}
-            <div className="absolute top-0 right-0 -mr-24 -mt-24 w-96 h-96 bg-blue-100 rounded-full blur-[120px] opacity-50 pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 -ml-24 -mb-24 w-96 h-96 bg-indigo-100 rounded-full blur-[120px] opacity-50 pointer-events-none"></div>
-
-            <header className="text-center relative z-10 mb-20">
-                <div className="inline-block px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-xs font-black tracking-widest uppercase mb-6 border border-blue-100 shadow-sm animate-in fade-in duration-1000">
-                    The Next Generation Bowling Suite
-                </div>
-                <h1 className="text-5xl md:text-7xl font-black mb-6 text-slate-950 tracking-tighter leading-none animate-in fade-in slide-in-from-top-6 duration-1000">
-                    Bowling<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Manager</span>
+            <header className="text-center mb-16">
+                <h1 className="text-4xl md:text-5xl font-black mb-4 text-slate-900 tracking-tight">
+                    BowlingManager <span className="text-blue-600">Guide</span>
                 </h1>
-                <p className="text-xl text-slate-500 font-medium max-w-2xl mx-auto leading-relaxed animate-in fade-in duration-1000 delay-300">
-                    데이터는 거짓말을 하지 않습니다. 당신의 모든 투구가 가치 있는 기록이 되는 곳,
-                    <span className="text-slate-900 font-bold"> BowlingManager</span>에서 압도적인 성장을 경험하세요.
+                <p className="text-lg text-slate-500 font-medium max-w-2xl mx-auto leading-relaxed">
+                    단순한 기록을 넘어, 당신의 볼링 실력을 데이터로 증명하고 성장시키는
+                    전문 매니지먼트 플랫폼 BowlingManager의 모든 것을 소개합니다.
                 </p>
             </header>
 
-            {/* Ultra-Premium Tabs */}
-            <div className="flex justify-center mb-16 relative z-10">
-                <div className="bg-white/50 backdrop-blur-md p-2 rounded-[2rem] border border-slate-200 shadow-xl flex gap-1">
+            <div className="flex justify-center mb-16">
+                <div className="inline-flex bg-slate-100 p-1 rounded-xl shadow-inner border border-slate-200">
                     {[
-                        { id: 'intro', label: '브랜드 철학', icon: '✨' },
-                        { id: 'guide', label: 'AI 스마트 가이드', icon: '🧠' },
-                        { id: 'inquiry', label: '프라이빗 문의', icon: '💎' },
+                        { id: 'intro', label: '서비스 소개', icon: '📝' },
+                        { id: 'guide', label: '상세 사용법', icon: '💡' },
+                        { id: 'inquiry', label: '1:1 문의', icon: '📞' },
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-3 px-8 py-3.5 rounded-[1.5rem] font-black transition-all duration-500 ${activeTab === tab.id
-                                    ? 'bg-slate-900 text-white shadow-2xl shadow-slate-900/30 scale-105'
-                                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                            className={`flex items-center gap-2 px-8 py-3 rounded-lg font-bold transition-all ${activeTab === tab.id
+                                    ? 'bg-white text-blue-600 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700'
                                 }`}
                         >
-                            <span className="text-xl">{tab.icon}</span>
-                            <span className="hidden md:inline">{tab.label}</span>
+                            <span>{tab.icon}</span>
+                            {tab.label}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* Dynamic Content Section */}
-            <div className="relative z-10">
+            <div>
                 {activeTab === 'intro' && (
-                    <div className="space-y-24 animate-in fade-in slide-in-from-bottom-12 duration-1000">
-                        {/* High-Concept Hero */}
-                        <div className="premium-card rounded-[3rem] p-8 md:p-20 flex flex-col md:flex-row items-center gap-12 overflow-hidden relative shadow-2xl">
-                            <div className="flex-1 space-y-8 relative z-10">
-                                <h2 className="text-4xl md:text-5xl font-black text-slate-950 leading-tight">
-                                    Bowling is Science. <br />
-                                    <span className="text-blue-600">We Provide the Lab.</span>
-                                </h2>
-                                <div className="space-y-6 text-lg text-slate-600 font-medium leading-relaxed">
-                                    <p>
-                                        우리는 볼링을 단순한 '스포츠'를 넘어 데이터가 지배하는 '과학'으로 정의합니다.
-                                        수동적인 기록 시스템에서 벗어나, 데이터가 당신에게 말을 거는 지능형 생태계를 구축했습니다.
-                                    </p>
-                                    <p className="p-6 bg-slate-50 rounded-3xl border-l-8 border-slate-900 italic">
-                                        "어제보다 나은 오늘의 나를 만나는 유일한 방법은 검증된 데이터뿐입니다."
+                    <div className="space-y-12 animate-in fade-in duration-500">
+                        <div className="content-card shadow-sm border-t-4 border-t-blue-600">
+                            <h2 className="text-2xl font-black text-slate-900 mb-6">BowlingManager의 철학</h2>
+                            <div className="grid md:grid-cols-2 gap-10">
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-bold text-blue-600">성장을 위한 정밀한 기록</h3>
+                                    <p className="text-slate-600 leading-relaxed font-medium">
+                                        우리는 '감'이 아닌 '데이터'로 볼링을 칠 때 가장 확실한 실력 변화가 일어난다고 믿습니다.
+                                        개인의 모든 게임 기록을 영구적으로 아카이브하고, 이를 입체적인 통계로 변환하여
+                                        자신의 약점을 객관적으로 파악할 수 있는 환경을 제공합니다.
                                     </p>
                                 </div>
-                            </div>
-                            <div className="flex-1 w-full max-w-md relative animate-float">
-                                <div className="aspect-square bg-gradient-to-br from-blue-600 to-indigo-800 rounded-[3rem] shadow-2xl flex items-center justify-center overflow-hidden relative group">
-                                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
-                                    <div className="text-white text-9xl font-black tracking-tighter group-hover:scale-110 transition-transform duration-700">BM</div>
-                                    <div className="absolute bottom-0 left-0 right-0 p-8 bg-black/40 backdrop-blur-sm border-t border-white/10">
-                                        <div className="text-blue-300 font-black text-sm mb-1 uppercase tracking-widest">Real-time Analytics</div>
-                                        <div className="text-white font-bold">100% Data Integrity Guaranteed</div>
-                                    </div>
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-bold text-blue-600">투명하고 공정한 운영</h3>
+                                    <p className="text-slate-600 leading-relaxed font-medium">
+                                        BowlingManager는 대회와 리그 운영의 공정성을 심혈을 기울여 관리합니다.
+                                        데이터 무결성을 위해 조작 불가능한 시스템 로직을 적용하고 있으며,
+                                        누구에게나 공정한 핸디캡 산출 방식을 통해 깨끗한 경쟁 문화를 지향합니다.
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Core Pillars */}
-                        <div className="grid md:grid-cols-2 gap-10">
-                            <div className="premium-card p-12 rounded-[2.5rem] border-t-4 border-t-blue-600">
-                                <div className="text-4xl mb-6">🛡️</div>
-                                <h3 className="text-2xl font-black mb-6 text-slate-950">공정하고 투명한 생태계</h3>
-                                <p className="text-slate-600 leading-relaxed font-semibold">
-                                    BowlingManager는 기록의 신뢰성을 최우선으로 합니다.
-                                    모든 대회 결과와 개인 통계는 조작이 불가능한 시스템 로직에 의해 관리되며,
-                                    자체 검증 알고리즘을 통해 핸디캡 산정의 공정성을 확보합니다.
-                                    모두가 믿고 즐길 수 있는 깨끗한 볼링 문화를 만듭니다.
-                                </p>
-                            </div>
-                            <div className="premium-card p-12 rounded-[2.5rem] border-t-4 border-t-indigo-600">
-                                <div className="text-4xl mb-6">🤝</div>
-                                <h3 className="text-2xl font-black mb-6 text-slate-950">볼링장과 상생하는 네트워크</h3>
-                                <p className="text-slate-600 leading-relaxed font-semibold">
-                                    개인과 팀, 그리고 볼링장 센터를 유기적으로 연결합니다.
-                                    센터는 효율적인 운영 시스템을 얻고, 유저는 검증된 전문 필드에서 활동할 수 있습니다.
-                                    상주리그의 디지털 전환, BowlingManager가 앞장서겠습니다.
-                                </p>
-                            </div>
+                        <div className="grid md:grid-cols-3 gap-6">
+                            {[
+                                { title: '데이터 보존성', desc: '과거 10년 전의 기록도 단 한 번의 클릭으로 찾아낼 수 있는 강력한 인덱싱 시스템을 갖추고 있습니다.' },
+                                { title: '커뮤니티 연결', desc: '볼링장, 동호회, 개인 유저를 유기적으로 연결하여 실제 오프라인 활동을 디지털로 지원합니다.' },
+                                { title: '기술 혁신', desc: '최신 AI 기술을 볼링에 접목하여 번거로운 수작업을 자동화하고 사용자 편의를 혁신합니다.' }
+                            ].map((item, idx) => (
+                                <div key={idx} className="content-card p-10 hover:border-blue-400 transition-colors">
+                                    <h4 className="text-lg font-black text-slate-900 mb-4">{item.title}</h4>
+                                    <p className="text-slate-500 text-sm leading-relaxed font-medium">{item.desc}</p>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}
 
                 {activeTab === 'guide' && (
-                    <div className="animate-in fade-in slide-in-from-bottom-12 duration-1000 max-w-5xl mx-auto space-y-20">
-                        {/* Section: AI Magic */}
-                        <section className="relative">
-                            <div className="text-center mb-16">
-                                <span className="text-blue-600 font-black text-sm uppercase tracking-[0.3em]">AI Innovation</span>
-                                <h2 className="text-4xl md:text-5xl font-black mt-4 text-slate-950">AI가 만드는 3초의 혁명</h2>
-                            </div>
+                    <div className="animate-in fade-in duration-500 max-w-4xl mx-auto">
+                        <div className="content-card">
+                            <h2 className="text-2xl font-black text-slate-900 mb-10 text-center">BowlingManager 마스터 클래스</h2>
 
-                            <div className="grid md:grid-cols-2 gap-16 items-center">
-                                <div className="space-y-8">
-                                    <div className="premium-card p-8 rounded-[2rem] border-l-8 border-l-blue-600 shadow-lg">
-                                        <h4 className="text-xl font-black text-slate-950 mb-4">사진 한 장이면 충분합니다</h4>
-                                        <p className="text-slate-600 font-medium leading-relaxed">
-                                            매 게임 종료 후 점수판을 직접 타이핑하느라 흐름을 깨뜨리지 마세요.
-                                            레인 모니터를 스마트폰으로 촬영하여 업로드하면, 우리 시스템의 AI가 3초 안에 모든 프레임 점수를 분석하여 자동으로 리포트합니다.
-                                        </p>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 text-center">
-                                            <div className="text-blue-600 font-black text-2xl mb-1">99.8%</div>
-                                            <div className="text-xs text-slate-500 font-bold">인식 정확도</div>
-                                        </div>
-                                        <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100 text-center">
-                                            <div className="text-indigo-600 font-black text-2xl mb-1">3s</div>
-                                            <div className="text-xs text-slate-500 font-bold">처리 속도</div>
-                                        </div>
-                                    </div>
-                                    <div className="p-6 bg-slate-900 text-white rounded-[2rem] shadow-xl">
-                                        <h5 className="font-bold mb-3 flex items-center gap-2">
-                                            <span className="text-yellow-400 font-black">💡</span> Expert Tip
-                                        </h5>
-                                        <p className="text-slate-400 text-sm leading-relaxed">
-                                            모니터의 빛 반사를 최소화하고 수평을 맞춰 촬영하면 AI 인식이 더욱 빨라집니다.
-                                            저장된 기록은 즉시 연도별/월별 통계에 반영됩니다.
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="relative group">
-                                    <div className="absolute -inset-4 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-[3rem] blur-2xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-                                    <div className="relative bg-white p-4 rounded-[3rem] shadow-2xl border border-slate-200">
-                                        <div className="aspect-[4/3] bg-slate-100 rounded-[2.5rem] flex items-center justify-center text-slate-300 font-black text-4xl overflow-hidden relative">
-                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent"></div>
-                                            <div className="relative z-10 text-white text-center">
-                                                <div className="text-sm uppercase tracking-widest mb-2">Scanning Score...</div>
-                                                <div className="w-48 h-1 bg-white/30 rounded-full overflow-hidden">
-                                                    <div className="w-1/2 h-full bg-blue-500 animate-[move_2s_linear_infinite]"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* Section: Dynamic Growth */}
-                        <section className="bg-slate-950 rounded-[4rem] p-10 md:p-20 text-white shadow-2xl overflow-hidden relative">
-                            <div className="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10"></div>
-                            <div className="relative z-10 grid md:grid-cols-2 gap-20 items-center">
-                                <div className="space-y-8">
-                                    <h3 className="text-4xl md:text-5xl font-black leading-tight">
-                                        Data is your <br />
-                                        <span className="text-blue-400">Winning Road.</span>
-                                    </h3>
-                                    <p className="text-slate-400 text-lg leading-relaxed font-medium">
-                                        단순히 평균 점수(Average)만 보고 계신가요? <br />
-                                        BowlingManager의 통계 탭은 당신의 볼링을 입체적으로 분석합니다.
+                            {/* Step 1: AI Analysis Details */}
+                            <div className="guide-step">
+                                <div className="flex-1">
+                                    <h3 className="text-xl font-bold text-slate-900 mb-3">01. AI를 활용한 점수 분석 및 입력</h3>
+                                    <p className="text-slate-600 leading-relaxed font-medium">
+                                        BowlingManager의 가장 강력한 기능 중 하나는 AI 사진 인식(OCR)입니다.
+                                        레인 모니터의 복잡한 숫자들을 사람의 개입 없이 정확하게 읽어내어 저장합니다.
                                     </p>
-                                    <ul className="space-y-6">
-                                        {[
-                                            { title: '스트라이크 확률 분석', desc: '연속 스트라이크(터키, 포베가 등) 가동력을 분석하여 폭발력을 측정합니다.' },
-                                            { title: '스페어 성공률 추이', desc: '커버 실력을 데이터화하여 하이 에버리지 달성의 필수 요소를 확인합니다.' },
-                                            { title: '연도별 성장 아카이브', desc: '1년 전의 나와 현재의 나를 원클릭으로 비교 대조합니다.' }
-                                        ].map((item, idx) => (
-                                            <li key={idx} className="flex gap-4">
-                                                <div className="w-6 h-6 bg-blue-500 rounded-full flex-shrink-0 mt-1 shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
-                                                <div>
-                                                    <h5 className="font-black text-white">{item.title}</h5>
-                                                    <p className="text-slate-500 text-sm">{item.desc}</p>
-                                                </div>
+                                    <div className="detail-box space-y-4">
+                                        <h4 className="font-bold text-blue-600 text-sm uppercase tracking-wider">How it works:</h4>
+                                        <ul className="space-y-3 text-sm text-slate-600 font-semibold">
+                                            <li className="flex gap-2">
+                                                <span className="text-blue-500">•</span>
+                                                <span><strong>이미지 전처리</strong>: 업로드된 사진의 밝기, 대비를 자동으로 조절하여 숫자 가독성을 높입니다.</span>
                                             </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                                <div className="grid grid-cols-2 gap-6">
-                                    {[
-                                        { label: 'Avg Trend', val: '+12' },
-                                        { label: 'Spare %', val: '84%' },
-                                        { label: 'Strike %', val: '46%' },
-                                        { label: 'Games', val: '2.4k' }
-                                    ].map((stat, i) => (
-                                        <div key={i} className="bg-white/5 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/10 text-center hover:bg-white/10 transition-colors">
-                                            <div className="text-blue-400 font-black text-3xl mb-2">{stat.val}</div>
-                                            <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">{stat.label}</div>
-                                        </div>
-                                    ))}
+                                            <li className="flex gap-2">
+                                                <span className="text-blue-500">•</span>
+                                                <span><strong>격자(Grid) 탐지</strong>: 점수판 특유의 표 구조를 인식하여 각 프레임의 위치를 파악합니다.</span>
+                                            </li>
+                                            <li className="flex gap-2">
+                                                <span className="text-blue-500">•</span>
+                                                <span><strong>숫자 판독</strong>: AI가 1프레임부터 10프레임까지의 모든 투구를 읽고 최종 점수와 합산 결과가 맞는지 교차 검증합니다.</span>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
-                        </section>
+
+                            {/* Step 2: Statistics Details */}
+                            <div className="guide-step">
+                                <div className="flex-1">
+                                    <h3 className="text-xl font-bold text-slate-900 mb-3">02. 성장 가속화를 위한 데이터 분석법</h3>
+                                    <p className="text-slate-600 leading-relaxed font-medium">
+                                        단순한 에버리지는 빙산의 일각입니다. 통계 메뉴에 있는 세부 지표를 통해 자신의 볼링 스타일을 더 깊게 이해하세요.
+                                    </p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                                        <div className="p-5 bg-white border border-slate-200 rounded-xl">
+                                            <div className="font-bold mb-2">📈 스트라이크 확률</div>
+                                            <p className="text-xs text-slate-500 leading-relaxed">연속 스트라이크(터키 등) 확률과 더블 가동률을 확인하여 폭발력을 측정하고 집중력 부재 구간을 찾아냅니다.</p>
+                                        </div>
+                                        <div className="p-5 bg-white border border-slate-200 rounded-xl">
+                                            <div className="font-bold mb-2">🛡️ 스페어 처리율</div>
+                                            <p className="text-xs text-slate-500 leading-relaxed">커버 성공률을 기반으로 핀 남김 현상을 분석하여 스페어 기술의 완성도를 수치화합니다.</p>
+                                        </div>
+                                        <div className="p-5 bg-white border border-slate-200 rounded-xl">
+                                            <div className="font-bold mb-2">📅 연간 실력 추이</div>
+                                            <p className="text-xs text-slate-500 leading-relaxed">계절별, 연도별 에버리지 변화를 그래프로 보며 어떤 시기에 성장이 정체되었는지 원인을 분석할 수 있습니다.</p>
+                                        </div>
+                                        <div className="p-5 bg-white border border-slate-200 rounded-xl">
+                                            <div className="font-bold mb-2">📊 오픈 프레임 분석</div>
+                                            <p className="text-xs text-slate-500 leading-relaxed">미스가 발생하는 패턴을 파악하여 실전에서 가장 먼저 보완해야 할 점을 제시해 드립니다.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Step 3: Social & Tournament */}
+                            <div className="guide-step">
+                                <div className="flex-1">
+                                    <h3 className="text-xl font-bold text-slate-900 mb-3">03. 대회 및 커뮤니티 정복하기</h3>
+                                    <p className="text-slate-600 leading-relaxed font-medium">
+                                        개인의 성장을 넘어, 팀의 명예와 대회의 즐거움을 함께 누리는 방법입니다.
+                                    </p>
+                                    <div className="mt-6 flex flex-col md:flex-row gap-6">
+                                        <div className="flex-1 p-6 bg-slate-900 text-white rounded-2xl">
+                                            <h5 className="font-black mb-2 flex items-center gap-2">
+                                                <span>🏆</span> 실시간 리더보드
+                                            </h5>
+                                            <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                                                대회 참가 중인가요? 레인에서 실시간으로 업데이트되는 전체 순위를 확인하세요.
+                                                남은 게임 수와 필요한 점수를 계산하며 전략적인 볼링이 가능해집니다.
+                                            </p>
+                                        </div>
+                                        <div className="flex-1 p-6 bg-blue-600 text-white rounded-2xl">
+                                            <h5 className="font-black mb-2 flex items-center gap-2">
+                                                <span>🏤</span> 센터 및 팀 활동
+                                            </h5>
+                                            <p className="text-xs text-blue-100 leading-relaxed font-medium">
+                                                단골 볼링장을 가입하고 팀에 소속되세요.
+                                                동호회 내에서의 나의 랭킹을 확인하고, 팀원들과 기록을 공유하며 함께 성장할 수 있습니다.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 
