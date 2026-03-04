@@ -81,151 +81,202 @@ export default function AboutPageContent({
     };
 
     return (
-        <div className="max-w-5xl mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold mb-8 text-center text-gray-900">사이트 소개</h1>
+        <div className="max-w-7xl mx-auto px-4 py-12">
+            <header className="text-center mb-16 animate-in fade-in slide-in-from-top-4 duration-1000">
+                <h1 className="text-4xl md:text-5xl font-black mb-4 text-slate-900 tracking-tight">BowlingManager</h1>
+                <p className="text-lg text-slate-500 font-medium">점수 그 이상의 가치, 데이터로 완성되는 볼링 라이프</p>
+            </header>
 
-            {/* Tabs */}
-            <div className="flex flex-wrap justify-center gap-2 mb-8 border-b">
-                {[
-                    { id: 'intro', label: '사이트 소개' },
-                    { id: 'guide', label: '사용 방법' },
-                    { id: 'inquiry', label: '문의 게시판' },
-                ].map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`px-6 py-3 font-semibold transition-colors ${activeTab === tab.id ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
+            {/* Tabs - Modern Pill Style */}
+            <div className="flex justify-center mb-12">
+                <div className="inline-flex p-1.5 bg-slate-100 rounded-2xl border border-slate-200 shadow-inner">
+                    {[
+                        { id: 'intro', label: '서비스 소개', icon: '✨' },
+                        { id: 'guide', label: '사용 가이드', icon: '📖' },
+                        { id: 'inquiry', label: '문의 게시판', icon: '💬' },
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all duration-300 ${activeTab === tab.id
+                                    ? 'bg-white text-blue-600 shadow-md transform scale-105'
+                                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                                }`}
+                        >
+                            <span className="text-lg">{tab.icon}</span>
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {/* Content Sections */}
-            <div className="bg-white rounded-lg shadow-sm p-6 md:p-10 border border-gray-200">
+            {/* Content Container */}
+            <div className="min-h-[600px] transition-all duration-500">
                 {activeTab === 'intro' && (
-                    <div className="prose max-w-none">
-                        <div className="text-center mb-12">
-                            <h2 className="text-3xl font-extrabold mb-4 text-gray-900">당신의 볼링 라이프를 데이터로 혁신합니다</h2>
-                            <p className="text-xl text-gray-600">BowlingManager는 볼링의 스릴과 데이터의 정교함을 연결하는 국내 최고의 점수 관리 및 토너먼트 플랫폼입니다.</p>
-                        </div>
-
-                        <div className="space-y-12">
-                            <section>
-                                <h3 className="text-2xl font-bold mb-4 flex items-center gap-2 text-gray-800">
-                                    <span className="w-2 h-8 bg-primary rounded-full"></span>
-                                    왜 BowlingManager인가요?
-                                </h3>
-                                <p className="text-lg text-gray-700 leading-relaxed">
-                                    기존의 아날로그 방식이나 단순 기록 앱은 데이터의 활용에 한계가 있었습니다.
-                                    우리는 단순히 점수를 '저장'하는 것을 넘어, 기록을 '분석'하고 동료들과 '공유'하며
-                                    볼링장과 '연결'되는 통합 기술 생태계를 제공합니다.
-                                    상주리그 운영의 투명성, 팀 관리의 효율성, 그리고 개인 기록의 성취감을 한 곳에서 경험하세요.
+                    <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        {/* Hero Section */}
+                        <div className="relative mb-16 rounded-[2.5rem] overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 text-white p-8 md:p-20 shadow-2xl border border-white/10">
+                            <div className="relative z-10 max-w-3xl">
+                                <span className="inline-block px-4 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs font-bold tracking-widest uppercase mb-6 border border-blue-500/30">Premium Bowling Platform</span>
+                                <h2 className="text-3xl md:text-5xl font-black mb-6 leading-tight">평범한 볼링을<br /><span className="text-blue-400">특별한 기록</span>으로 바꾸는 힘</h2>
+                                <p className="text-lg text-slate-300 leading-relaxed mb-10 font-medium">
+                                    BowlingManager는 단순한 스코어 보드가 아닙니다. 수만 건의 데이터를 분석하여 당신의 실력을 가시화하고,
+                                    볼링장과 동호회를 하나로 연결하는 국내 유일의 통합 매니지먼트 솔루션입니다.
                                 </p>
-                            </section>
-
-                            <div className="grid md:grid-cols-2 gap-8 mt-10">
-                                <div className="p-8 bg-blue-50 rounded-2xl border border-blue-100 shadow-sm">
-                                    <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mb-6 text-white text-2xl">📊</div>
-                                    <h3 className="text-xl font-bold text-blue-900 mb-3">정밀한 개인 데이터 분석</h3>
-                                    <p className="text-gray-600 leading-relaxed">단순 에버리지를 넘어 최고/최저 점수, 변화 추이, 기간별 통계 등을 통해 당신의 약점을 분석하고 성장 로드맵을 그려줍니다.</p>
-                                </div>
-                                <div className="p-8 bg-green-50 rounded-2xl border border-green-100 shadow-sm">
-                                    <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center mb-6 text-white text-2xl">👥</div>
-                                    <h3 className="text-xl font-bold text-green-900 mb-3">차세대 팀 매니지먼트</h3>
-                                    <p className="text-gray-600 leading-relaxed">동호회 운영진을 위한 자동화 도구를 제공합니다. 팀원 가입 승인, 정기전 기록 합산, 팀 내 랭킹 산출 등을 클릭 몇 번으로 해결하세요.</p>
-                                </div>
-                                <div className="p-8 bg-purple-50 rounded-2xl border border-purple-100 shadow-sm">
-                                    <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center mb-6 text-white text-2xl">🎳</div>
-                                    <h3 className="text-xl font-bold text-purple-900 mb-3">투명한 리그 & 토너먼트</h3>
-                                    <p className="text-gray-600 leading-relaxed">볼링장 관리자와 실시간으로 시스템이 연동됩니다. 대진표 자동 배정, 실시간 스코어 업데이트, 상주리그 순위 실시간 집계를 경험하세요.</p>
-                                </div>
-                                <div className="p-8 bg-orange-50 rounded-2xl border border-orange-100 shadow-sm">
-                                    <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center mb-6 text-white text-2xl">📸</div>
-                                    <h3 className="text-xl font-bold text-orange-900 mb-3">AI 스마트 기록 입력</h3>
-                                    <p className="text-gray-600 leading-relaxed">수기 입력의 번거로움을 획기적으로 줄였습니다. OCR 기술로 점수판 사진 한 장이면 모든 게임 숫자가 라이브러리에 바로 저장됩니다.</p>
+                                <div className="flex flex-wrap gap-4">
+                                    <div className="flex items-center gap-2 bg-white/10 px-5 py-3 rounded-2xl backdrop-blur-sm border border-white/10">
+                                        <span className="text-2xl font-black text-blue-400">10k+</span>
+                                        <span className="text-sm text-slate-300">누적 게임</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 bg-white/10 px-5 py-3 rounded-2xl backdrop-blur-sm border border-white/10">
+                                        <span className="text-2xl font-black text-blue-400">200+</span>
+                                        <span className="text-sm text-slate-300">활동 클럽</span>
+                                    </div>
                                 </div>
                             </div>
+                            {/* Decorative Elements */}
+                            <div className="absolute -top-12 -right-12 w-96 h-96 bg-blue-600/20 rounded-full blur-[100px] pointer-events-none"></div>
+                            <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-indigo-600/20 rounded-full blur-[80px] pointer-events-none"></div>
+                        </div>
 
-                            <div className="bg-gray-900 text-white p-10 rounded-3xl mt-12 overflow-hidden relative">
-                                <div className="relative z-10">
-                                    <h3 className="text-2xl font-bold mb-4">지금 바로 시작하고 성장을 기록하세요</h3>
-                                    <p className="text-gray-400 mb-6 max-w-2xl">이미 수많은 볼러들이 BowlingManager를 통해 더 똑똑한 볼링 라이프를 즐기고 있습니다. 당신의 다음 스트라이크, 우리가 기록하겠습니다.</p>
-                                    <button onClick={() => setActiveTab('guide')} className="bg-white text-gray-900 px-8 py-3 rounded-full font-bold hover:bg-gray-100 transition-colors">기능 가이드 보기</button>
+                        {/* Core Features Grid */}
+                        <div className="grid md:grid-cols-3 gap-8 mb-16">
+                            {[
+                                {
+                                    title: '정밀 데이터 분석',
+                                    desc: '연도별, 월별 에버리지 추이는 물론 최고/최저 점수 기록을 시각화하여 성장을 증명합니다.',
+                                    icon: '📈',
+                                    color: 'bg-blue-50 text-blue-600'
+                                },
+                                {
+                                    title: '스마트 OCR 입력',
+                                    desc: '사진 한 장이면 충분합니다. 최첨단 AI 기술로 점수판 숫자를 자동으로 텍스트로 전환합니다.',
+                                    icon: '📷',
+                                    color: 'bg-indigo-50 text-indigo-600'
+                                },
+                                {
+                                    title: '팀 & 리그 자동화',
+                                    desc: '동호회 관리자라면 필수! 가입 신청, 팀내 랭킹, 대회 대진표를 시스템이 대신 처리합니다.',
+                                    icon: '🛡️',
+                                    color: 'bg-slate-50 text-slate-900'
+                                }
+                            ].map((f, i) => (
+                                <div key={i} className="group bg-white p-10 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
+                                    <div className={`w-14 h-14 ${f.color} rounded-2xl flex items-center justify-center text-3xl mb-8 group-hover:scale-110 transition-transform`}>
+                                        {f.icon}
+                                    </div>
+                                    <h3 className="text-xl font-black mb-4 text-slate-900">{f.title}</h3>
+                                    <p className="text-slate-500 leading-relaxed font-normal">{f.desc}</p>
                                 </div>
-                                <div className="absolute top-0 right-0 opacity-10 scale-150 rotate-12 pointer-events-none">
-                                    <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 8v4" /><path d="M12 16h.01" /></svg>
-                                </div>
+                            ))}
+                        </div>
+
+                        {/* Bottom CTA Card */}
+                        <div className="bg-slate-900 rounded-[2.5rem] p-10 md:p-16 text-center text-white border border-white/10 overflow-hidden relative shadow-2xl">
+                            <div className="relative z-10">
+                                <h3 className="text-2xl md:text-3xl font-black mb-6">당신의 모든 게임이 이력이 됩니다.</h3>
+                                <p className="text-slate-400 mb-10 max-w-2xl mx-auto font-medium">지금 BowlingManager와 함께 더 똑똑한 볼링을 즐기세요.</p>
+                                <button
+                                    onClick={() => setActiveTab('guide')}
+                                    className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-4 rounded-2xl font-bold shadow-lg shadow-blue-900/40 transition-all hover:scale-105"
+                                >
+                                    시작 가이드 보기
+                                </button>
                             </div>
                         </div>
                     </div>
                 )}
 
                 {activeTab === 'guide' && (
-                    <div className="prose max-w-none">
-                        <h2 className="text-3xl font-bold mb-8 text-gray-900">BowlingManager 스마트 활용 가이드</h2>
+                    <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 max-w-4xl mx-auto">
+                        <header className="text-center mb-16">
+                            <h2 className="text-3xl font-black mb-4 text-slate-900">사용 가이드</h2>
+                            <p className="text-slate-500 font-medium">초보부터 관리자까지, 모두를 위한 기능 안내</p>
+                        </header>
 
-                        <div className="space-y-12">
-                            <section className="bg-gray-50 p-8 rounded-2xl border border-gray-100">
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-bold text-lg">01</div>
-                                    <h3 className="text-2xl font-bold text-gray-800 m-0">개인 점수 관리하기</h3>
+                        <div className="space-y-16">
+                            {/* Step 1: Registration */}
+                            <section className="relative pl-12 md:pl-20 border-l border-slate-200 py-4">
+                                <div className="absolute top-0 -left-6 md:-left-8 w-12 h-12 md:w-16 md:h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg border-4 border-white">01</div>
+                                <h3 className="text-2xl font-black mb-4 text-slate-900">회원 등록 및 프로필 설정</h3>
+                                <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm space-y-4 leading-relaxed font-medium">
+                                    <p className="text-slate-600">소셜 계정으로 3초 만에 가입하세요. 가입 후 아래 정보를 설정하면 더욱 편리합니다.</p>
+                                    <ul className="grid md:grid-cols-2 gap-4 text-sm">
+                                        <li className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl text-slate-700 border border-slate-200">
+                                            <span className="text-blue-600 font-bold">✓</span> 실명 및 활동 팀명 등록
+                                        </li>
+                                        <li className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl text-slate-700 border border-slate-200">
+                                            <span className="text-blue-600 font-bold">✓</span> 기본 핸디캡(Handicap) 설정
+                                        </li>
+                                    </ul>
                                 </div>
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    <div className="bg-white p-5 rounded-xl border border-gray-200">
-                                        <h4 className="font-bold text-lg mb-2 text-primary">점수 기록하기</h4>
-                                        <p className="text-gray-600 text-sm mb-3">상단 '점수 기록' 메뉴에서 수기 입력, 엑셀 업로드, 사진 업로드 중 하나를 선택하세요.</p>
-                                        <ul className="list-disc pl-5 text-gray-500 text-sm space-y-1 m-0">
-                                            <li>AI 사진 업로드: 점수판 사진을 올리면 텍스트를 자동 인식합니다.</li>
-                                            <li>엑셀 일괄 업로드: 많은 게임을 한꺼번에 등록할 때 유용합니다.</li>
-                                        </ul>
+                            </section>
+
+                            {/* Step 2: Score Entry - Detailed */}
+                            <section className="relative pl-12 md:pl-20 border-l border-slate-200 py-4">
+                                <div className="absolute top-0 -left-6 md:-left-8 w-12 h-12 md:w-16 md:h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg border-4 border-white">02</div>
+                                <h3 className="text-2xl font-black mb-4 text-slate-900">기록 입력 방식 (3가지)</h3>
+                                <div className="grid gap-6">
+                                    <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm group hover:border-blue-400 transition-all">
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <span className="text-3xl">🤖</span>
+                                            <h4 className="text-xl font-bold text-slate-900">AI 사진 인식 (OCR)</h4>
+                                        </div>
+                                        <p className="text-slate-500 text-sm leading-relaxed mb-4 font-medium">
+                                            점수판(모니터) 사진을 촬영하여 업로드하면 AI가 각 게임 점수를 자동으로 읽어옵니다.
+                                            수기 입력의 번거로움 없이 즉시 기록을 아카이빙할 수 있습니다.
+                                        </p>
+                                        <div className="p-3 bg-blue-50 rounded-xl text-blue-700 text-xs font-bold inline-block">추천 방식 ⭐</div>
                                     </div>
-                                    <div className="bg-white p-5 rounded-xl border border-gray-200">
-                                        <h4 className="font-bold text-lg mb-2 text-primary">데이터 분석 확인</h4>
-                                        <p className="text-gray-600 text-sm mb-3">'통계/순위' 메뉴에서 나의 성장을 시각화된 그래프로 확인하세요.</p>
-                                        <ul className="list-disc pl-5 text-gray-500 text-sm space-y-1 m-0">
-                                            <li>연도별/월별 에버리지 추이</li>
-                                            <li>최고 점수 및 게임당 평균 통계</li>
-                                        </ul>
+
+                                    <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm group hover:border-slate-400 transition-all">
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <span className="text-3xl">💻</span>
+                                            <h4 className="text-xl font-bold text-slate-900">직접 입력 & 엑셀 업로드</h4>
+                                        </div>
+                                        <p className="text-slate-500 text-sm leading-relaxed font-medium">
+                                            게임을 마친 후 즉시 숫자로 입력하거나, 과거 데이터를 정리해둔 엑셀 파일을 일괄 등록할 수 있습니다.
+                                            수천 게임의 과거 데이터도 한 번에 관리하세요.
+                                        </p>
                                     </div>
                                 </div>
                             </section>
 
-                            <section className="bg-gray-50 p-8 rounded-2xl border border-gray-100">
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-bold text-lg">02</div>
-                                    <h3 className="text-2xl font-bold text-gray-800 m-0">연도별 점수 기록 및 분석</h3>
-                                </div>
-                                <div className="space-y-6">
-                                    <div className="bg-white p-6 rounded-xl border border-gray-200">
-                                        <h4 className="font-bold text-lg mb-3">체계적인 연도별 데이터 관리</h4>
-                                        <p className="text-gray-700 leading-relaxed">
-                                            매일 기록한 점수들이 자동으로 연도별로 분류됩니다.
-                                            과거부터 지금까지 쌓인 수천 게임의 기록을 연도별 탭을 통해 언제든지 원클릭으로 찾아볼 수 있습니다.
-                                        </p>
-                                    </div>
-                                    <div className="bg-white p-6 rounded-xl border border-gray-200">
-                                        <h4 className="font-bold text-lg mb-3">데이터 기반의 성장 대조</h4>
-                                        <p className="text-gray-700 leading-relaxed">
-                                            '통계' 메뉴에서는 작년과 올해의 기록을 비교 분석해 줍니다.
-                                            내가 어느 달에 가장 강했는지, 에버리지가 어떻게 변했는지 그래프를 통해 직관적으로 확인하세요.
-                                        </p>
-                                    </div>
-                                </div>
-                            </section>
-
-                            <section className="bg-gray-50 p-8 rounded-2xl border border-gray-100">
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-bold text-lg">03</div>
-                                    <h3 className="text-2xl font-bold text-gray-800 m-0">볼링장 가입 및 대회 신청</h3>
-                                </div>
-                                <div className="bg-white p-6 rounded-xl border border-gray-200">
-                                    <p className="text-gray-700 leading-relaxed mb-4">
-                                        '볼링장/대회' 메뉴에서 가고 싶은 볼링장을 검색하여 '가입하기'를 누르세요.
-                                        단골 볼링장으로 등록되면 해당 볼링장에서 개최하는 <strong>상주리그, 이벤트 대회</strong>의 알림을 받고 간편하게 신청할 수 있습니다.
+                            {/* Step 3: Analysis */}
+                            <section className="relative pl-12 md:pl-20 border-l border-slate-200 py-4">
+                                <div className="absolute top-0 -left-6 md:-left-8 w-12 h-12 md:w-16 md:h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg border-4 border-white">03</div>
+                                <h3 className="text-2xl font-black mb-4 text-slate-900">연도별 성장 리포트</h3>
+                                <div className="bg-gradient-to-br from-indigo-50 to-white p-8 rounded-[2rem] border border-indigo-100 shadow-sm">
+                                    <p className="text-slate-700 leading-relaxed font-medium mb-6">
+                                        '통계' 탭에서 나의 데이터를 연도별로 분류하여 분석하세요.
+                                        단순한 에버리지를 넘어 최고 점수의 변화, 연도별 꾸준함 등을 그래프로 확인할 수 있습니다.
                                     </p>
-                                    <div className="p-4 bg-orange-50 border-l-4 border-orange-400 rounded">
-                                        <p className="text-orange-900 text-sm m-0"><strong>Tip:</strong> 대회 신청 시 사전에 본인의 핸디캡 정보가 입력되어 있으면 더욱 정확하게 신청이 진행됩니다.</p>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        {['연간 에버리지', '월별 추이', '최고/최저점', '활동량'].map((t, i) => (
+                                            <div key={i} className="bg-white p-3 rounded-xl border border-indigo-200 text-center text-xs font-bold text-indigo-700">{t}</div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Step 4: Community & Tournament */}
+                            <section className="relative pl-12 md:pl-20 border-l border-slate-200 py-4">
+                                <div className="absolute top-0 -left-6 md:-left-8 w-12 h-12 md:w-16 md:h-16 bg-orange-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg border-4 border-white">04</div>
+                                <h3 className="text-2xl font-black mb-4 text-slate-900">팀 활동 및 대회 참여</h3>
+                                <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm space-y-6">
+                                    <div className="flex gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-200">
+                                        <div className="text-2xl">🏛️</div>
+                                        <div>
+                                            <h5 className="font-bold text-slate-900 mb-1">볼링장 & 팀 가입</h5>
+                                            <p className="text-sm text-slate-500 font-medium leading-relaxed">자주 가시는 볼링장을 가입하면 해당 센터에서 개최하는 대회 공지를 가장 빠르게 받아볼 수 있습니다.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4 p-5 bg-orange-50/50 rounded-2xl border border-orange-200">
+                                        <div className="text-2xl">🎳</div>
+                                        <div>
+                                            <h5 className="font-bold text-orange-900 mb-1">실시간 대회 스코어링</h5>
+                                            <p className="text-sm text-orange-700 font-medium leading-relaxed">대회 중에는 실시간 리더보드가 제공됩니다. 자신의 순위와 남은 게임 현황을 라이브로 확인하세요.</p>
+                                        </div>
                                     </div>
                                 </div>
                             </section>
