@@ -1171,6 +1171,14 @@ function RoundSideGameTab({ round }: { round: any }) {
 
 // 6. Final Result Tab
 function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boolean }) {
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
     if (round.tournament?.type === 'LEAGUE') {
         let settings: any = {};
         try {
@@ -1538,14 +1546,15 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
     const TableComponent = ({ data, startRank, isRight }: { data: any[], startRank: number, isRight?: boolean }) => {
         return (
             <table style={{
-                width: `${singleTableWidth}px`,
+                width: isMobile ? 'max-content' : `${singleTableWidth}px`,
+                minWidth: isMobile ? 'auto' : `${singleTableWidth}px`,
                 borderCollapse: 'collapse',
                 border: '1px solid black',
-                fontSize: 'clamp(9px, 1.1vw, 11px)',
+                fontSize: isMobile ? '11px' : 'clamp(9px, 1.1vw, 11px)',
                 color: 'black',
                 backgroundColor: 'white',
-                tableLayout: 'fixed',
-                borderLeft: isRight ? 'none' : '1px solid black',
+                tableLayout: isMobile ? 'auto' : 'fixed',
+                borderLeft: isRight && !isMobile ? 'none' : '1px solid black',
                 boxSizing: 'border-box',
                 margin: 0,
                 padding: 0
@@ -1767,18 +1776,19 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
                     <div style={{
                         display: 'flex',
+                        flexDirection: isMobile ? 'column' : 'row',
                         width: '100%',
                         borderTop: 'none',
-                        gap: 0,
+                        gap: isMobile ? '20px' : 0,
                         justifyContent: 'center',
                         boxSizing: 'border-box'
                     }}>
-                        <div style={{ flex: isTeam2To6 ? '1' : `0 0 ${singleTableWidth}px`, width: isTeam2To6 ? 'auto' : `${singleTableWidth}px`, boxSizing: 'border-box' }}>
+                        <div style={{ flex: isTeam2To6 || isMobile ? '1' : `0 0 ${singleTableWidth}px`, width: isTeam2To6 || isMobile ? '100%' : `${singleTableWidth}px`, boxSizing: 'border-box', overflowX: 'auto' }}>
                             <TableComponent data={leftColumn} startRank={1} />
                         </div>
                         {!isTeam2To6 && (
-                            <div style={{ flex: `0 0 ${singleTableWidth}px`, width: `${singleTableWidth}px`, boxSizing: 'border-box' }}>
-                                <TableComponent data={rightColumn} startRank={28} isRight={true} />
+                            <div style={{ flex: isMobile ? '1' : `0 0 ${singleTableWidth}px`, width: isMobile ? '100%' : `${singleTableWidth}px`, boxSizing: 'border-box', overflowX: 'auto', borderTop: isMobile ? '1px solid #ccc' : 'none', paddingTop: isMobile ? '10px' : 0 }}>
+                                <TableComponent data={rightColumn} startRank={rowsPerColumn + 1} isRight={true} />
                             </div>
                         )}
                     </div>
@@ -2493,6 +2503,14 @@ export default function RoundDetailPageContent({
 }) {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
     const initialTab = searchParams.get('tab') || 'overview';
     const [activeTab, setActiveTab] = useState(initialTab);
     const [showEditModal, setShowEditModal] = useState(false);
