@@ -409,10 +409,7 @@ export default function AboutPageContent({
                                 <h4 className="font-bold text-lg text-gray-900 mt-8">4. 이용자 및 법정대리인의 권리</h4>
                                 <p>정보주체는 언제든지 본인의 개인정보를 열람, 수정하거나 가입 해지(탈퇴)를 요청할 수 있습니다.</p>
 
-                                <h4 className="font-bold text-lg text-gray-900 mt-8">5. 구글 애드센스 등 광고 서비스 이용</h4>
-                                <p>본 사이트는 광고 제공을 위해 쿠키를 사용할 수 있으며, 이를 통해 이용자의 방문 기록에 기반한 맞춤형 광고를 노출합니다. 사용자는 브라우저 설정에서 쿠키 거부를 선택할 수 있습니다.</p>
-
-                                <p className="mt-8 border-t pt-4 font-bold text-gray-600">책임자: BowlingManager 운영팀 (sangdy85@gmail.com)</p>
+                                <p className="mt-8 border-t pt-4 font-bold text-gray-600">책임자: BowlingManager 운영팀 (bronzemusic0828@gmail.com)</p>
                             </div>
                         </section>
                     </div>
