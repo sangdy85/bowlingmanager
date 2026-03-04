@@ -90,7 +90,6 @@ export default function AboutPageContent({
                     { id: 'intro', label: '사이트 소개' },
                     { id: 'guide', label: '사용 방법' },
                     { id: 'inquiry', label: '문의 게시판' },
-                    { id: 'terms', label: '약관 및 정책' }
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -362,59 +361,8 @@ export default function AboutPageContent({
                         </div>
                     </div>
                 )}
-
-                {activeTab === 'terms' && (
-                    <div className="max-w-none text-gray-700">
-                        <section className="mb-14">
-                            <h2 className="text-2xl font-bold mb-8 text-gray-900 flex items-center gap-3">
-                                <span className="bg-gray-900 text-white w-8 h-8 rounded flex items-center justify-center text-sm">1</span>
-                                이용 약관
-                            </h2>
-                            <div className="space-y-6 max-h-[500px] overflow-y-auto p-8 border border-gray-200 bg-gray-50 rounded-2xl text-[14px] leading-relaxed scrollbar-thin">
-                                <h4 className="font-bold text-lg text-gray-900">제 1장 총칙</h4>
-                                <p><strong>제1조 (목적)</strong><br />본 약관은 BowlingManager(이하 "본 사이트" 또는 "회사")가 인터넷 서비스(이하 "서비스")를 제공함에 있어 회사와 이용자의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.</p>
-                                <p><strong>제2조 (용어의 정의)</strong><br />① "회원"이란 본 사이트에 접속하여 이 약관에 따라 회원으로 가입하여 서비스를 이용하는 고객을 말합니다.<br />② "서비스"란 회사가 회원에게 제공하는 볼링 점수 관리, 팀 관리, 토너먼트 신청 및 관련 정보 일체를 의미합니다.</p>
-                                <p><strong>제3조 (약관의 효력 및 변경)</strong><br />① 본 약관은 서비스 화면에 게시하거나 전송하는 방법으로 공지하며, 회원이 이에 대해 동의함으로써 효력이 발생합니다.<br />② 회사는 필요한 경우 약관을 변경할 수 있으며, 변경된 약관은 제1항과 같은 방법으로 공지함으로써 효력이 발생합니다.</p>
-
-                                <h4 className="font-bold text-lg text-gray-900 mt-8">제 2장 서비스 이용 계약</h4>
-                                <p><strong>제4조 (이용계약의 성립)</strong><br />이용계약은 회원이 되고자 하는 자가 약관의 내용에 대하여 동의를 하고, 회사가 정한 가입 양식에 따라 회원정보를 기입하여 신청한 후 회사가 이를 승낙함으로써 성립합니다.</p>
-                                <p><strong>제5조 (회원의 의무)</strong><br />회원은 서비스 이용과 관련하여 다음 각 호에 해당되는 행위를 하여서는 안 됩니다.<br />1. 다른 회원의 아이디 및 비밀번호를 도용하는 행위<br />2. 서비스의 안정적 운영을 방해하는 행위<br />3. 타인의 명예를 손상시키거나 불이익을 주는 행위<br />4. 기타 관계법령에 위반되는 행위</p>
-
-                                <h4 className="font-bold text-lg text-gray-900 mt-8">제 3장 서비스 이용 및 제한</h4>
-                                <p><strong>제6조 (서비스 이용 시간)</strong><br />서비스는 회사의 업무상 또는 기술상 특별한 지장이 없는 한 연중무휴 1일 24시간 제공을 원칙으로 합니다. 다만, 설비 점검 운영상의 이유로 서비스가 일시 중지될 수 있습니다.</p>
-                                <p><strong>제7조 (게시물의 저작권)</strong><br />서비스에 게재된 게시물의 저작권은 해당 게시물의 작성자 또는 회사에 귀속되며, 상업적 목적으로 무단 사용 시 책임이 발생할 수 있습니다.</p>
-                                <p><strong>공고일자:</strong> 2024년 3월 1일<br /><strong>시행일자:</strong> 2024년 3월 1일</p>
-                            </div>
-                        </section>
-
-                        <section>
-                            <h2 className="text-2xl font-bold mb-8 text-gray-900 flex items-center gap-3">
-                                <span className="bg-gray-900 text-white w-8 h-8 rounded flex items-center justify-center text-sm">2</span>
-                                개인정보 처리방침
-                            </h2>
-                            <div className="space-y-6 max-h-[500px] overflow-y-auto p-8 border border-gray-200 bg-gray-50 rounded-2xl text-[14px] leading-relaxed scrollbar-thin">
-                                <h4 className="font-bold text-lg text-gray-900">1. 개인정보 수집 및 이용 목적</h4>
-                                <p>회사는 다음의 목적을 위하여 개인정보를 처리하며, 목적 이외의 용도로는 사용하지 않습니다.<br />- 회원 가입 및 관리: 서비스 이용 의사 확인, 본인 식별, 가입 횟수 제한 등<br />- 서비스 제공: 볼링 점수 데이터 보관, 팀 가입 및 초대, 랭킹 산출 기반 데이터 활용</p>
-
-                                <h4 className="font-bold text-lg text-gray-900 mt-8">2. 수집하는 개인정보의 항목</h4>
-                                <ul className="list-disc pl-5 space-y-1">
-                                    <li>필수항목: 이메일(ID), 암호화된 비밀번호, 성명</li>
-                                    <li>선택항목: 핸디캡 정보, 소속 팀, 활동 볼링장 등</li>
-                                    <li>자동생성항목: IP 주소, 서비스 이용 기록, 접속 로그, 쿠키 등</li>
-                                </ul>
-
-                                <h4 className="font-bold text-lg text-gray-900 mt-8">3. 개인정보의 보유 및 이용 기간</h4>
-                                <p>회사는 회원 탈퇴 시까지 사용자 정보를 보유하며, 법령에 따른 의무 기간이 종료된 후에는 지체 없이 해킹 및 복구가 불가능한 방법으로 파기합니다.</p>
-
-                                <h4 className="font-bold text-lg text-gray-900 mt-8">4. 이용자 및 법정대리인의 권리</h4>
-                                <p>정보주체는 언제든지 본인의 개인정보를 열람, 수정하거나 가입 해지(탈퇴)를 요청할 수 있습니다.</p>
-
-                                <p className="mt-8 border-t pt-4 font-bold text-gray-600">책임자: BowlingManager 운영팀 (bronzemusic0828@gmail.com)</p>
-                            </div>
-                        </section>
-                    </div>
-                )}
             </div>
         </div>
     );
 }
+```
