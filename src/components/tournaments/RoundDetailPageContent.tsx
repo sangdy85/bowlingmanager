@@ -1962,11 +1962,11 @@ function TournamentEditModal({ tournament, onClose, onUpdate }: { tournament: an
                                 <input
                                     name="maxParticipants"
                                     type="number"
-                                    defaultValue={tournament.maxParticipants}
+                                    defaultValue={tournament.maxParticipants || ''}
                                     className="input input-bordered w-full h-14 bg-gray-50 border-gray-200 focus:bg-white transition-all text-sm font-bold"
-                                    min={getStepValue()}
+                                    min={tournament.type !== 'LEAGUE' ? getStepValue() : 0}
                                     step={getStepValue()}
-                                    required
+                                    required={tournament.type !== 'LEAGUE'}
                                 />
                                 {getStepValue() > 1 && (
                                     <p className="text-[10px] text-blue-600 font-bold mt-1 ml-1 animate-pulse">

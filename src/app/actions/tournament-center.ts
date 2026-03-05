@@ -273,7 +273,7 @@ export async function updateTournamentBasicInfo(tournamentId: string, formData: 
     const data: any = {
         name,
         startDate,
-        maxParticipants,
+        maxParticipants: isNaN(maxParticipants) ? 0 : maxParticipants,
     };
 
     if (tournament.type === 'EVENT' || tournament.type === 'CHAMP') {
