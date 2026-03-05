@@ -1876,12 +1876,17 @@ function TournamentEditModal({ tournament, onClose, onUpdate }: { tournament: an
         e.preventDefault();
 
         const formData = new FormData(e.currentTarget);
-        const maxParticipants = parseInt(formData.get('maxParticipants') as string);
-        const step = getStepValue();
+        const maxParticipantsRaw = formData.get('maxParticipants');
 
-        if (maxParticipants % step !== 0) {
-            alert(`${step}인조 경기는 참가 정원이 ${step}의 배수여야 합니다. (현재 입력: ${maxParticipants}명)`);
-            return;
+        // Only validate if maxParticipants field exists and has a value
+        if (maxParticipantsRaw && maxParticipantsRaw.toString().trim() !== '') {
+            const maxParticipants = parseInt(maxParticipantsRaw as string);
+            const step = getStepValue();
+
+            if (!isNaN(maxParticipants) && maxParticipants % step !== 0) {
+                alert(`${step}인조 경기는 참가 정원이 ${step}의 배수여야 합니다. (현재 입력: ${maxParticipants}명)`);
+                return;
+            }
         }
 
         setLoading(true);
