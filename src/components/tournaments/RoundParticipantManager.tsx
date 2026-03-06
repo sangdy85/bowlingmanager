@@ -128,6 +128,10 @@ export default function RoundParticipantManager({
     }, [selectedRound]);
 
     const openRegisterModal = () => {
+        if (tournamentType === 'CHAMP') {
+            alert("대표에 의해 차단된 기능입니다");
+            return;
+        }
         setIsEditMode(false);
         setManualName('');
         setManualTeam('');
@@ -190,6 +194,10 @@ export default function RoundParticipantManager({
     };
 
     const selectMember = async (user: any) => {
+        if (tournamentType === 'CHAMP') {
+            alert("대표에 의해 차단된 기능입니다");
+            return;
+        }
         if (!confirm(`"${user.name}"님을 참가자로 등록하시겠습니까?`)) return;
 
         try {
@@ -385,6 +393,11 @@ export default function RoundParticipantManager({
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (tournamentType === 'CHAMP') {
+            alert("대표에 의해 차단된 기능입니다");
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
         const file = e.target.files?.[0];
         if (!file) return;
 

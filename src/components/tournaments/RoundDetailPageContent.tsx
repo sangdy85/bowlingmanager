@@ -754,6 +754,10 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
     };
 
     const handleExcelData = (rawApiData: any[]) => {
+        if (round.tournament?.type === 'CHAMP') {
+            alert("대표에 의해 차단된 기능입니다");
+            return;
+        }
         if (!Array.isArray(rawApiData)) {
             console.error("rawApiData is not an array:", rawApiData);
             return;
@@ -834,6 +838,10 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
     };
 
     async function handleSubmit() {
+        if (round.tournament?.type === 'CHAMP') {
+            alert("대표에 의해 차단된 기능입니다");
+            return;
+        }
         setLoading(true);
         try {
             const updates: { regId: string, game: number, score: number }[] = [];

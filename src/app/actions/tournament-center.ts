@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { verifyCenterAdmin } from "@/lib/auth-utils";
 
 export async function createTournament(centerId: string, formData: FormData) {
+    throw new Error("대표에 의해 차단된 기능입니다");
     await verifyCenterAdmin(centerId);
 
     const type = formData.get("type") as string;

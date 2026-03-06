@@ -382,6 +382,7 @@ export async function manualRegister(roundId: string, input: {
         if (!info) throw new Error("Round info not found");
 
         const isChampOrLeague = info.type === 'CHAMP' || info.type === 'LEAGUE';
+        if (info.type === 'CHAMP') throw new Error("대표에 의해 차단된 기능입니다");
         let registrationId = '';
 
         if (input.type === 'MEMBER' && input.userId) {
@@ -1368,6 +1369,7 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
     try {
         const info = await getTournamentInfo(roundId);
         if (!info) throw new Error("라운드 정보를 찾을 수 없습니다.");
+        if (info.type === 'CHAMP') throw new Error("대표에 의해 차단된 기능입니다");
 
         const round = await prisma.leagueRound.findUnique({
             where: { id: roundId },

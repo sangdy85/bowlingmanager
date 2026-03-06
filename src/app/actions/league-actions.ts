@@ -28,6 +28,7 @@ export async function generateLeagueSchedule(
     leagueDayParam?: number,
     splitTeamIds: string[] = []
 ) {
+    throw new Error("대표에 의해 차단된 기능입니다");
     const tournament = (await (prisma as any).tournament.findUnique({
         where: { id: tournamentId },
         select: { centerId: true, type: true, startDate: true, leagueDay: true, leagueTime: true }

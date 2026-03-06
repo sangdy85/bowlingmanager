@@ -87,6 +87,8 @@ export default function TournamentManager({
     };
 
     const handleGenerateSchedule = async () => {
+        alert("대표에 의해 차단된 기능입니다");
+        return;
         setLoading(true);
         try {
             if (hasStarted) {

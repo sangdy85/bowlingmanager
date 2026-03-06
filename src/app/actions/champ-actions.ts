@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 
 export async function updateChampScores(tournamentId: string, roundId: string, formData: FormData) {
+    throw new Error("대표에 의해 차단된 기능입니다");
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
 

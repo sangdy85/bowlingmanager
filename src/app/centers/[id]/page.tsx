@@ -272,7 +272,12 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
                 {isManager && (
                     <div className="flex gap-2">
                         <Link href={`/centers/${id}/edit`} className="btn btn-secondary text-sm h-10">정보 수정</Link>
-                        <Link href={`/centers/${id}/tournaments/new`} className="btn btn-primary text-sm h-10">+ 새 대회 개최</Link>
+                        <button
+                            onClick={() => alert("대표에 의해 차단된 기능입니다")}
+                            className="btn btn-primary text-sm h-10"
+                        >
+                            + 새 대회 개최
+                        </button>
                     </div>
                 )}
             </div>
