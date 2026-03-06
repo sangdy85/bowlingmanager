@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getEffectiveRoundDate, calculateTournamentStatus, formatKSTDate, parseKSTDate } from "@/lib/tournament-utils";
 import TournamentListManager from "@/components/tournaments/TournamentListManager";
 import JoinCenterSection from "@/components/centers/JoinCenterSection";
+import CenterManageButtons from "@/components/centers/CenterManageButtons";
 
 // ... (existing code, ensure imports are correct)
 
@@ -270,15 +271,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
                 </div>
 
                 {isManager && (
-                    <div className="flex gap-2">
-                        <Link href={`/centers/${id}/edit`} className="btn btn-secondary text-sm h-10">정보 수정</Link>
-                        <button
-                            onClick={() => alert("대표에 의해 차단된 기능입니다")}
-                            className="btn btn-primary text-sm h-10"
-                        >
-                            + 새 대회 개최
-                        </button>
-                    </div>
+                    <CenterManageButtons centerId={id} />
                 )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
