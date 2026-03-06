@@ -79,27 +79,60 @@ export async function mergeCenterGuestStats(centerId: string, guestName: string,
     try {
         await prisma.$transaction(async (tx: any) => {
             // 1. 대회 등록 정보 업데이트 (TournamentRegistration)
-            // 해당 센터의 대회들만 대상으로 함
-            const tournaments = await tx.tournament.findMany({
-                where: { centerId },
-                select: { id: true }
-            });
-            const tournamentIds = tournaments.map((t: any) => t.id);
-
-            await tx.tournamentRegistration.updateMany({
+            // 해당 센터의 대회들에서 이 게스트의 등록 정보를 모두 가져옴
+            const guestRegistrations = await tx.tournamentRegistration.findMany({
                 where: {
-                    tournamentId: { in: tournamentIds },
+                    tournament: { centerId },
                     userId: null,
                     guestName: guestName
-                },
-                data: {
-                    userId: targetUserId,
-                    guestName: null
                 }
             });
 
+            for (const guestReg of guestRegistrations) {
+                // 해당 대회에 타겟 유저가 이미 등록되어 있는지 확인
+                const existingUserReg = await tx.tournamentRegistration.findUnique({
+                    where: {
+                        tournamentId_userId: {
+                            tournamentId: guestReg.tournamentId,
+                            userId: targetUserId
+                        }
+                    }
+                });
+
+                if (existingUserReg) {
+                    // 이미 유저 등록 정보가 있는 경우: 게스트 기록을 유저 등록 정보로 이전하고 게스트 등록 정보 삭제
+
+                    // 1-1. 라운드 참가 정보 이전
+                    await tx.roundParticipant.updateMany({
+                        where: { registrationId: guestReg.id },
+                        data: { registrationId: existingUserReg.id }
+                    });
+
+                    // 1-2. 대회 점수 정보 이전
+                    await tx.tournamentScore.updateMany({
+                        where: { registrationId: guestReg.id },
+                        data: { registrationId: existingUserReg.id }
+                    });
+
+                    // 1-3. 게스트 등록 정보 삭제
+                    await tx.tournamentRegistration.delete({
+                        where: { id: guestReg.id }
+                    });
+                } else {
+                    // 유저 등록 정보가 없는 경우: 게스트 등록 정보를 유저 정보로 업데이트
+                    await tx.tournamentRegistration.update({
+                        where: { id: guestReg.id },
+                        data: {
+                            userId: targetUserId,
+                            guestName: null
+                        }
+                    });
+                }
+            }
+
             // 2. 리그 개별 경기 기록 업데이트 (LeagueMatchupIndividualScore)
-            // 해당 센터의 매치업들만 대상으로 함
+            // 리그 기록의 경우 중복 체크보다는 간단한 통합이 가능함 (하나의 매치업에 동일 유저가 여러 번 들어갈 수 있어도 됨)
+            // 다만, 가급적이면 해당 센터의 기록만 업데이트하도록 함
             const matchups = await tx.leagueMatchup.findMany({
                 where: {
                     round: {
