@@ -2,7 +2,15 @@ const nextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
-      allowedOrigins: ['https://bowlingmanager.co.kr', 'https://www.bowlingmanager.co.kr'],
+      allowedOrigins: [
+        'bowlingmanager.co.kr', 
+        'www.bowlingmanager.co.kr',
+        'http://bowlingmanager.co.kr',
+        'https://bowlingmanager.co.kr',
+        'http://www.bowlingmanager.co.kr',
+        'https://www.bowlingmanager.co.kr',
+        'localhost:3000'
+      ],
     },
   },
   eslint: {
