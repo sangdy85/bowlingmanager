@@ -66,7 +66,7 @@ export async function deleteAccount() {
         });
 
         if (ownedTeams.length > 0) {
-            const teamNames = ownedTeams.map(t => t.name).join(", ");
+            const teamNames = ownedTeams.map((t: any) => t.name).join(", ");
             return {
                 success: false,
                 message: `소유하고 있는 팀(${teamNames})이 있습니다. 팀 소유권을 이전하거나 팀을 삭제한 후 다시 시도해주세요.`
