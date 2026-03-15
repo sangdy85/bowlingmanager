@@ -133,8 +133,8 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                         }
                     },
                     include: {
-                        user: { select: { name: true } },
-                        team: { select: { name: true } }
+                        User: { select: { name: true } },
+                        Team: { select: { name: true } }
                     }
                 });
                 if (member) {
