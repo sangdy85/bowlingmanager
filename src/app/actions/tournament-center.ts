@@ -139,6 +139,7 @@ export async function updateTournamentStatus(tournamentId: string, status: strin
 }
 
 export async function deleteTournament(tournamentId: string) {
+    let centerId: string | null = null;
     try {
         const tournament = await prisma.tournament.findUnique({
             where: { id: tournamentId },
@@ -146,6 +147,7 @@ export async function deleteTournament(tournamentId: string) {
         });
 
         if (!tournament) throw new Error("Tournament not found");
+        centerId = tournament.centerId;
         await verifyCenterAdmin(tournament.centerId);
 
         console.log(`[DeleteTournament] Deleting tournament: ${tournament.name} (${tournamentId})`);
@@ -153,12 +155,14 @@ export async function deleteTournament(tournamentId: string) {
         await prisma.tournament.delete({
             where: { id: tournamentId },
         });
-
-        revalidatePath(`/centers/${tournament.centerId}`);
-        redirect(`/centers/${tournament.centerId}`);
     } catch (error: any) {
         console.error(`[DeleteTournament] Failed to delete tournament ${tournamentId}:`, error);
         throw error;
+    }
+
+    if (centerId) {
+        revalidatePath(`/centers/${centerId}`);
+        redirect(`/centers/${centerId}`);
     }
 }
 
