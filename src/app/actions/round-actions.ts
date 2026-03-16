@@ -1581,7 +1581,8 @@ export async function updateSingleRegistrationGroup(regId: string, groupId: stri
 export async function swapMavolousSquadsInWeek16() {
     try {
         const session = await auth();
-        if (!session || !session.user || (session.user as any).role !== 'ADMIN') {
+        const role = (session?.user as any)?.role;
+        if (!session || !session.user || (role !== 'SUPER_ADMIN' && role !== 'CENTER_ADMIN' && role !== 'ADMIN')) {
             throw new Error("관리자 권한이 필요합니다.");
         }
 
