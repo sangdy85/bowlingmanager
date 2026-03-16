@@ -16,7 +16,7 @@ export default function LeagueScheduleExport({ tournamentName, leagueRounds }: L
         const worksheet = workbook.addWorksheet('대진표');
 
         // Prepare lane headers
-        const lanePairs = Array.from(new Set(leagueRounds.flatMap(r => r.matchups.map((m: any) => m.lanes))))
+        const lanePairs = Array.from(new Set(leagueRounds.flatMap(r => r.matchups.map((m: any) => m.lanes).filter((l: any) => !!l))))
             .sort((a: any, b: any) => parseInt(a) - parseInt(b));
 
         const individualLanes: number[] = [];
@@ -65,12 +65,13 @@ export default function LeagueScheduleExport({ tournamentName, leagueRounds }: L
 
             individualLanes.forEach(lane => {
                 const match = round.matchups.find((m: any) => {
+                    if (!m.lanes) return false;
                     const [start, end] = m.lanes.split('-').map(Number);
                     return lane === start || lane === end;
                 });
 
                 if (match) {
-                    const [start, end] = match.lanes.split('-').map(Number);
+                    const [start, end] = match.lanes?.split('-').map(Number) || [0, 0];
                     const isTeamA = lane === start;
                     const team = isTeamA ? match.teamA : match.teamB;
                     const squad = isTeamA ? match.teamASquad : match.teamBSquad;

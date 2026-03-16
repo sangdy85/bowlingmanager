@@ -38,7 +38,7 @@ export default function LeagueScheduleView({
 }: LeagueScheduleViewProps) {
     const [isExpanded, setIsExpanded] = useState(false);
 
-    const lanePairs = Array.from(new Set(leagueRounds.flatMap(r => r.matchups.map(m => m.lanes))))
+    const lanePairs = Array.from(new Set(leagueRounds.flatMap(r => r.matchups.map(m => m.lanes).filter((l): l is string => !!l))))
         .sort((a, b) => {
             const aNum = parseInt(a.split('-')[0]);
             const bNum = parseInt(b.split('-')[0]);
@@ -111,6 +111,7 @@ export default function LeagueScheduleView({
                                         </td>
                                         {individualLanes.map(lane => {
                                             const match = round.matchups.find(m => {
+                                                if (!m.lanes) return false;
                                                 const [start, end] = m.lanes.split('-').map(Number);
                                                 return lane === start || lane === end;
                                             });
@@ -120,7 +121,7 @@ export default function LeagueScheduleView({
                                                     style={{ borderRight: '2px solid black', borderBottom: '2px solid black', width: '90px' }}>-</td>
                                             );
 
-                                            const [start] = match.lanes.split('-').map(Number);
+                                            const [start] = match.lanes?.split('-').map(Number) || [0];
                                             const team = lane === start ? match.teamA?.name : match.teamB?.name;
                                             const squad = lane === start ? match.teamASquad : match.teamBSquad;
 

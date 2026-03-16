@@ -139,8 +139,8 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                 });
                 if (member) {
                     userProfile = {
-                        name: member.user.name,
-                        teamName: member.team?.name || null
+                        name: (member as any).User.name,
+                        teamName: (member as any).Team?.name || null
                     };
                 }
             }
