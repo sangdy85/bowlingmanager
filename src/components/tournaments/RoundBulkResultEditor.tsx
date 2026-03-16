@@ -540,6 +540,7 @@ export default function RoundBulkResultEditor({
                                                             type="number"
                                                             value={r.handicap}
                                                             onChange={(e) => handlePlayerChange(matchup.id, teamKey, rowIdx, 'handicap', parseInt(e.target.value) || 0)}
+                                                            onWheel={(e) => e.currentTarget.blur()}
                                                             className="w-full h-10 text-center bg-transparent border-2 border-transparent focus:border-black rounded-lg outline-none transition-all"
                                                         />
                                                     </td>
@@ -549,6 +550,7 @@ export default function RoundBulkResultEditor({
                                                                 type="number"
                                                                 value={r[`score${g}` as keyof IndividualScore] ?? 0}
                                                                 onChange={(e) => handlePlayerChange(matchup.id, teamKey, rowIdx, `score${g}` as any, parseInt(e.target.value) || 0)}
+                                                                onWheel={(e) => e.currentTarget.blur()}
                                                                 className={`w-full h-10 text-center font-black bg-primary/5 focus:bg-white border-2 rounded-lg outline-none transition-all ${(r[`score${g}` as keyof IndividualScore] as number) > 300
                                                                         ? 'border-red-500 bg-red-50 ring-2 ring-red-500/20'
                                                                         : 'border-transparent focus:border-black'

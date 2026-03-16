@@ -123,6 +123,7 @@ export default function ScoreEditModal({ isOpen, onClose, userId, userName, date
                                 className="input flex-1 mb-0"
                                 value={item.score}
                                 onChange={(e) => handleScoreChange(index, e.target.value)}
+                                onWheel={(e) => e.currentTarget.blur()}
                                 min={0} max={300}
                             />
                             <button

@@ -143,7 +143,7 @@ export default function WeeklyResultDownloader({
         return isGenerating === type ? "생성 중..." : base;
     };
 
-    const noticeLines = (reportNotice || `* 개인 에버 / 개인 시리즈 / 단게임은 ${Math.ceil(awardMinGames / 3)}주(${awardMinGames}게임) 이상 참여자 대상\n* 모든 개인 기록(에버, 시리즈, 단게임)은 핸디캡 포함 기준입니다.\n* 단체전은 중복시상 가능하나 개인전은 중복시상 불가 (에버 > 시리즈 > 단게임)`).split('\n').filter(l => l.trim() !== '');
+    const noticeLines = (reportNotice || `* 개인 에버 / 개인 하이 / 단게임은 ${Math.ceil(awardMinGames / 3)}주(${awardMinGames}게임) 이상 참여자 대상\n* 모든 개인 기록(에버, 하이, 단게임)은 핸디캡 포함 기준입니다.\n* 단체전은 중복시상 가능하나 개인전은 중복시상 불가 (에버 1,2 > 하이 1 > 에버 3 > 단게임 1 ... 순)`).split('\n').filter(l => l.trim() !== '');
 
     // Style Constants matching LeagueLeaderboard.tsx
     const containerStyle: React.CSSProperties = {

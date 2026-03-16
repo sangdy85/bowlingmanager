@@ -239,6 +239,7 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                                         name="score"
                                         className="input text-center"
                                         placeholder={`${i + 1}G`}
+                                        onWheel={(e) => e.currentTarget.blur()}
                                         min="0"
                                         max="300"
                                         required

@@ -353,7 +353,7 @@ export default function LeagueLeaderboard({ data, title }: { data: LeaderboardDa
                 <div style={{ marginTop: '1rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 700, color: '#dc2626', lineHeight: 1.5 }}>
                     <p>* 개인 에버 / 개인 시리즈 / 단게임은 12주(36게임) 이상 참여자 대상</p>
                     <p>* 개인 하이, 개인 단게임은 핸디 비포함(Raw Score) 우선</p>
-                    <p>* 단체전은 중복시상 가능하나 개인전은 중복시상 불가 (에버 {'>'} 시리즈 {'>'} 단게임)</p>
+                    <p>* 단체전은 중복시상 가능하나 개인전은 중복시상 불가 (에버 1,2 {'>'} 하이 1 {'>'} 에버 3 {'>'} 단게임 1 ... 순)</p>
                 </div>
             )}
         </div>

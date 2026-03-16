@@ -335,18 +335,12 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
     // getWinnerId must use the same composite key to let different guests win awards
     const getWinnerId = (p: any) => p.userId ? `${p.userId}-${p.playerName || ''}` : p.playerName;
 
-    // 1-3. Average 1st, 2nd, 3rd
-    for (let i = 0; i < 3; i++) {
-        const p = sortedByAvg.find(item => !winners.has(getWinnerId(item)));
-        if (p) {
-            winners.add(getWinnerId(p));
-            allocated.average.push(p);
-        }
-    }
-
-    // Define interleaving steps for Series and Game
+    // 1-9. Interleaved Award Allocation based on Priority
     const steps = [
+        { type: 'average', list: sortedByAvg },
+        { type: 'average', list: sortedByAvg },
         { type: 'highSeries', list: sortedBySeries },
+        { type: 'average', list: sortedByAvg },
         { type: 'highGame', list: sortedByGame },
         { type: 'highSeries', list: sortedBySeries },
         { type: 'highGame', list: sortedByGame },
