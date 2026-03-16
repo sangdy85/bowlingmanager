@@ -1586,11 +1586,16 @@ export async function swapMavolousSquadsInWeek16() {
             throw new Error("관리자 권한이 필요합니다.");
         }
 
-        // 1. Find the 19th League Tournament
+        // 1. Find the 19th League Tournament (Flexibile search to handle '19차' vs '19회차')
         const tournament = await prisma.tournament.findFirst({
-            where: { name: { contains: '19차 상주리그' } }
+            where: { 
+                AND: [
+                    { name: { contains: '상주리그' } },
+                    { name: { contains: '19' } }
+                ]
+            }
         });
-        if (!tournament) throw new Error("'19차 상주리그'를 찾을 수 없습니다.");
+        if (!tournament) throw new Error("'19'와 '상주리그'를 포함하는 대회를 찾을 수 없습니다.");
 
         // 2. Find Round 16
         const round = await prisma.leagueRound.findFirst({
