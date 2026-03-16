@@ -393,48 +393,72 @@ export default function WeeklyResultDownloader({
                                     <div style={awardHeaderStyle}>개인 에버 ({Math.ceil(awardMinGames / 3)}주 이상)</div>
                                     <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
                                         <thead style={{ backgroundColor: '#f9fafb', borderBottom: '1.5px solid #000000' }}>
-                                            <tr><th style={{ ...thStyle, border: 'none', width: '50px' }}>순위</th><th style={{ ...thStyle, border: 'none' }}>선수명</th><th style={{ ...thStyle, border: 'none', width: '80px' }}>평균</th></tr>
+                                            <tr>
+                                                <th style={{ ...thStyle, border: 'none', width: '45px' }}>순위</th>
+                                                <th style={{ ...thStyle, border: 'none', width: '80px' }}>선수명</th>
+                                                <th style={{ ...thStyle, border: 'none', width: '100px' }}>팀명</th>
+                                                <th style={{ ...thStyle, border: 'none', width: '70px' }}>평균</th>
+                                            </tr>
                                         </thead>
                                         <tbody style={{ fontWeight: 800 }}>
                                             {templateData.leaderboard.awards.individual.average.map((p: any, i: number) => (
                                                 <tr key={i} style={{ borderBottom: '1px solid #e5e7eb', height: '36px' }}>
-                                                    <td style={{ ...tdStyle, border: 'none' }}>{i + 1}</td>
-                                                    <td style={{ ...tdStyle, border: 'none', fontWeight: 900 }}>{p.playerName}</td>
-                                                    <td style={{ ...tdStyle, border: 'none' }}>{(p.totalPinfall / (p.totalGames || 1)).toFixed(2)}</td>
+                                                    <td style={{ ...tdStyle, border: 'none', width: '45px' }}>{i + 1}</td>
+                                                    <td style={{ ...tdStyle, border: 'none', fontWeight: 900, width: '80px' }}>{p.playerName}</td>
+                                                    <td style={{ ...tdStyle, border: 'none', fontWeight: 900, width: '100px' }}>{p.teamName}</td>
+                                                    <td style={{ ...tdStyle, border: 'none', width: '70px' }}>{(p.totalPinfall / (p.totalGames || 1)).toFixed(2)}</td>
                                                 </tr>
                                             ))}
                                             {Array.from({ length: Math.max(0, 3 - templateData.leaderboard.awards.individual.average.length) }).map((_, i) => (
-                                                <tr key={`empty-indavg-${i}`} style={{ height: '36px' }}><td colSpan={3}>&nbsp;</td></tr>
+                                                <tr key={`empty-indavg-${i}`} style={{ height: '36px' }}><td colSpan={4}>&nbsp;</td></tr>
                                             ))}
                                         </tbody>
                                     </table>
                                     <div style={{ ...awardHeaderStyle, borderTop: '3px solid #000000' }}>개인 시리즈 (1명 x 3게임)</div>
                                     <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
+                                        <thead style={{ backgroundColor: '#f9fafb', borderBottom: '1.5px solid #000000' }}>
+                                            <tr>
+                                                <th style={{ ...thStyle, border: 'none', width: '45px' }}>순위</th>
+                                                <th style={{ ...thStyle, border: 'none', width: '80px' }}>선수명</th>
+                                                <th style={{ ...thStyle, border: 'none', width: '100px' }}>팀명</th>
+                                                <th style={{ ...thStyle, border: 'none', width: '70px' }}>총점</th>
+                                            </tr>
+                                        </thead>
                                         <tbody style={{ fontWeight: 800 }}>
                                             {templateData.leaderboard.awards.individual.highSeries.map((p: any, i: number) => (
                                                 <tr key={i} style={{ borderBottom: '1px solid #e5e7eb', height: '36px' }}>
-                                                    <td style={{ ...tdStyle, border: 'none', width: '50px' }}>{i + 1}</td>
-                                                    <td style={{ ...tdStyle, border: 'none', fontWeight: 900 }}>{p.playerName}</td>
-                                                    <td style={{ ...tdStyle, border: 'none', width: '80px' }}>{p.highSeries}</td>
+                                                    <td style={{ ...tdStyle, border: 'none', width: '45px' }}>{i + 1}</td>
+                                                    <td style={{ ...tdStyle, border: 'none', fontWeight: 900, width: '80px' }}>{p.playerName}</td>
+                                                    <td style={{ ...tdStyle, border: 'none', fontWeight: 900, width: '100px' }}>{p.teamName}</td>
+                                                    <td style={{ ...tdStyle, border: 'none', width: '70px' }}>{p.highSeries}</td>
                                                 </tr>
                                             ))}
                                             {Array.from({ length: Math.max(0, 3 - templateData.leaderboard.awards.individual.highSeries.length) }).map((_, i) => (
-                                                <tr key={`empty-indser-${i}`} style={{ height: '36px' }}><td colSpan={3}>&nbsp;</td></tr>
+                                                <tr key={`empty-indser-${i}`} style={{ height: '36px' }}><td colSpan={4}>&nbsp;</td></tr>
                                             ))}
                                         </tbody>
                                     </table>
                                     <div style={{ ...awardHeaderStyle, borderTop: '3px solid #000000' }}>개인 단게임</div>
                                     <table style={{ ...tableStyle, border: 'none', marginBottom: 0 }}>
+                                        <thead style={{ backgroundColor: '#f9fafb', borderBottom: '1.5px solid #000000' }}>
+                                            <tr>
+                                                <th style={{ ...thStyle, border: 'none', width: '45px' }}>순위</th>
+                                                <th style={{ ...thStyle, border: 'none', width: '80px' }}>선수명</th>
+                                                <th style={{ ...thStyle, border: 'none', width: '100px' }}>팀명</th>
+                                                <th style={{ ...thStyle, border: 'none', width: '70px' }}>점수</th>
+                                            </tr>
+                                        </thead>
                                         <tbody style={{ fontWeight: 800 }}>
                                             {templateData.leaderboard.awards.individual.highGame.map((p: any, i: number) => (
                                                 <tr key={i} style={{ borderBottom: '1px solid #e5e7eb', height: '36px' }}>
-                                                    <td style={{ ...tdStyle, border: 'none', width: '50px' }}>{i + 1}</td>
-                                                    <td style={{ ...tdStyle, border: 'none', fontWeight: 900 }}>{p.playerName}</td>
-                                                    <td style={{ ...tdStyle, border: 'none', width: '80px' }}>{p.highGame}</td>
+                                                    <td style={{ ...tdStyle, border: 'none', width: '45px' }}>{i + 1}</td>
+                                                    <td style={{ ...tdStyle, border: 'none', fontWeight: 900, width: '80px' }}>{p.playerName}</td>
+                                                    <td style={{ ...tdStyle, border: 'none', fontWeight: 900, width: '100px' }}>{p.teamName}</td>
+                                                    <td style={{ ...tdStyle, border: 'none', width: '70px' }}>{p.highGame}</td>
                                                 </tr>
                                             ))}
                                             {Array.from({ length: Math.max(0, 3 - templateData.leaderboard.awards.individual.highGame.length) }).map((_, i) => (
-                                                <tr key={`empty-indgame-${i}`} style={{ height: '36px' }}><td colSpan={3}>&nbsp;</td></tr>
+                                                <tr key={`empty-indgame-${i}`} style={{ height: '36px' }}><td colSpan={4}>&nbsp;</td></tr>
                                             ))}
                                         </tbody>
                                     </table>

@@ -1573,3 +1573,41 @@ export async function updateSingleRegistrationGroup(regId: string, groupId: stri
         throw new Error("조 번호 업데이트 실패");
     }
 }
+
+/**
+ * TEMPORARY FIX ACTION: Swap Mavolous A and B squads in Round 16 of the 19th League.
+ * This is for one-time production fix.
+ */
+export async function swapMavolousSquadsInWeek16() {
+    try {
+        const session = await auth();
+        if (!session || !session.user || (session.user as any).role !== 'ADMIN') {
+            throw new Error("관리자 권한이 필요합니다.");
+        }
+
+        // Round 16 ID: cm6fsv827000e1399zsqp79id
+        // Matchup 1: cmm21phl2005513o057v05790 (B -> A)
+        // Matchup 2: cmm21phl2005713o0b8fh1o8q (A -> B)
+        
+        const results = await prisma.$transaction([
+            prisma.leagueMatchup.update({
+                where: { id: "cmm21phl2005513o057v05790" },
+                data: { teamASquad: "A" }
+            }),
+            prisma.leagueMatchup.update({
+                where: { id: "cmm21phl2005713o0b8fh1o8q" },
+                data: { teamASquad: "B" }
+            })
+        ]);
+
+        console.log("Successfully swapped Mavolous squads in Round 16", results);
+        
+        // Revalidate the bracket page
+        revalidatePath(`/centers/clwq8p9o9000013jshj7m4k9v/tournaments/cm534v827000x1399vsqp79id/rounds/cm6fsv827000e1399zsqp79id`);
+        
+        return { success: true, message: "마볼러스 A/B 스쿼드 교체가 완료되었습니다. 대진표를 확인해주세요." };
+    } catch (error: any) {
+        console.error("Failed to swap squads:", error);
+        return { success: false, message: error.message || "교체 작업 중 오류가 발생했습니다." };
+    }
+}
