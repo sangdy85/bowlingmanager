@@ -1586,29 +1586,57 @@ export async function swapMavolousSquadsInWeek16() {
             throw new Error("관리자 권한이 필요합니다.");
         }
 
-        // Round 16 ID: cm6fsv827000e1399zsqp79id
-        // Matchup 1: cmm21phl2005513o057v05790 (B -> A)
-        // Matchup 2: cmm21phl2005713o0b8fh1o8q (A -> B)
-        
-        const results = await prisma.$transaction([
-            prisma.leagueMatchup.update({
-                where: { id: "cmm21phl2005513o057v05790" },
-                data: { teamASquad: "A" }
-            }),
-            prisma.leagueMatchup.update({
-                where: { id: "cmm21phl2005713o0b8fh1o8q" },
-                data: { teamASquad: "B" }
-            })
-        ]);
+        // 1. Find the 19th League Tournament
+        const tournament = await prisma.tournament.findFirst({
+            where: { name: { contains: '19차 상주리그' } }
+        });
+        if (!tournament) throw new Error("'19차 상주리그'를 찾을 수 없습니다.");
 
-        console.log("Successfully swapped Mavolous squads in Round 16", results);
+        // 2. Find Round 16
+        const round = await prisma.leagueRound.findFirst({
+            where: { tournamentId: tournament.id, roundNumber: 16 }
+        });
+        if (!round) throw new Error("16주차 정보를 찾을 수 없습니다.");
+
+        // 3. Find matchups involving "마볼러스" in this round
+        const matchups = await prisma.leagueMatchup.findMany({
+            where: { roundId: round.id },
+            include: { teamA: true, teamB: true }
+        });
+
+        const mavMatchups = matchups.filter(m => 
+            m.teamA?.name?.includes('마볼러스') || m.teamB?.name?.includes('마볼러스')
+        );
+
+        if (mavMatchups.length === 0) throw new Error("16주차에서 '마볼러스' 팀의 매치업을 찾을 수 없습니다.");
+
+        // 4. Update the squads
+        // Expected logic based on user report:
+        // Matchup with Squad B should become A, Matchup with Squad A should become B (for teamA)
+        const updates = mavMatchups.map(m => {
+            if (m.teamASquad === "A") {
+                return prisma.leagueMatchup.update({ where: { id: m.id }, data: { teamASquad: "B" } });
+            } else if (m.teamASquad === "B") {
+                return prisma.leagueMatchup.update({ where: { id: m.id }, data: { teamASquad: "A" } });
+            }
+            return null;
+        }).filter(u => u !== null) as any[];
+
+        if (updates.length === 0) throw new Error("교체할 대상 스쿼드(A/B)가 없습니다.");
+
+        const results = await prisma.$transaction(updates);
+
+        console.log("Successfully swapped Mavolous squads dynamically:", results);
         
         // Revalidate the bracket page
-        revalidatePath(`/centers/clwq8p9o9000013jshj7m4k9v/tournaments/cm534v827000x1399vsqp79id/rounds/cm6fsv827000e1399zsqp79id`);
+        revalidatePath(`/centers/${tournament.centerId}/tournaments/${tournament.id}/rounds/${round.id}`);
         
-        return { success: true, message: "마볼러스 A/B 스쿼드 교체가 완료되었습니다. 대진표를 확인해주세요." };
+        return { 
+            success: true, 
+            message: `마볼러스 ${results.length}개 매치업의 스쿼드 교체가 완료되었습니다. (${tournament.name} 16주차)` 
+        };
     } catch (error: any) {
-        console.error("Failed to swap squads:", error);
+        console.error("Dynamic swap failed:", error);
         return { success: false, message: error.message || "교체 작업 중 오류가 발생했습니다." };
     }
 }
