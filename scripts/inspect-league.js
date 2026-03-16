@@ -14,7 +14,7 @@ async function main() {
       ]
     },
     include: {
-      rounds: {
+      leagueRounds: {
         orderBy: { roundNumber: 'asc' }
       }
     }
@@ -30,11 +30,11 @@ async function main() {
 
   for (const t of tournaments) {
     console.log(`\n[대회 발견] ID: ${t.id} | 이름: ${t.name}`);
-    console.log(`라운드 수: ${t.rounds.length}`);
+    console.log(`라운드 수: ${t.leagueRounds.length}`);
 
     // 특정 라운드 (예: 16라운드) 상세 조회
     const targetRoundNumber = 16;
-    const round = t.rounds.find(r => r.roundNumber === targetRoundNumber);
+    const round = t.leagueRounds.find(r => r.roundNumber === targetRoundNumber);
 
     if (round) {
       console.log(`\n--- ${targetRoundNumber}주차 매치업 리스트 ---`);
