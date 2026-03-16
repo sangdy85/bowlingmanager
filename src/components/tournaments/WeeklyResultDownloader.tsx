@@ -640,20 +640,20 @@ export default function WeeklyResultDownloader({
 
                             <table style={{ ...tableStyle, width: '800px', margin: '0 auto' }}>
                                 <thead>
-                                    <tr style={{ backgroundColor: '#18181b', color: '#ffffff', borderBottom: '3px solid #000000', height: '60px' }}>
+                                    <tr style={{ backgroundColor: '#18181b', color: '#ffffff', borderBottom: '3px solid #000000', height: '60px', fontSize: '18px' }}>
                                         <th style={{ ...thStyle, backgroundColor: 'transparent', border: 'none', width: '100px' }}>순위</th>
                                         <th style={{ ...thStyle, backgroundColor: 'transparent', border: 'none' }}>선수명</th>
                                         <th style={{ ...thStyle, backgroundColor: 'transparent', border: 'none' }}>팀명</th>
-                                        <th style={{ ...thStyle, backgroundColor: 'transparent', border: 'none', width: '150px' }}>에버리지</th>
+                                        <th style={{ ...thStyle, backgroundColor: 'transparent', border: 'none', width: '160px' }}>에버리지</th>
                                     </tr>
                                 </thead>
                                 <tbody style={{ fontWeight: 800 }}>
                                     {templateData.individual.top30.map((p: any, idx: number) => (
-                                        <tr key={idx} style={{ borderBottom: '1px solid #000000', height: '45px' }}>
-                                            <td style={{ ...rankStyle, borderBottom: 'none' }}>{idx + 1}</td>
-                                            <td style={{ ...tdStyle, fontWeight: 900, textAlign: 'left', paddingLeft: '40px', borderBottom: 'none' }}>{p.name}</td>
-                                            <td style={{ ...tdStyle, color: '#4b5563', fontSize: '13px', borderBottom: 'none' }}>{p.teamName}</td>
-                                            <td style={{ ...tdStyle, color: '#2563eb', fontSize: '24px', fontWeight: 900, fontStyle: 'italic', borderBottom: 'none' }}>{(p.totalHandicappedPins / (p.gamesCount || 1)).toFixed(2)}</td>
+                                        <tr key={idx} style={{ borderBottom: '1px solid #000000', height: '55px' }}>
+                                            <td style={{ ...rankStyle, borderBottom: 'none', fontSize: '18px' }}>{idx + 1}</td>
+                                            <td style={{ ...tdStyle, fontWeight: 900, textAlign: 'center', fontSize: '20px', borderBottom: 'none' }}>{p.name}</td>
+                                            <td style={{ ...tdStyle, color: '#4b5563', fontSize: '18px', borderBottom: 'none' }}>{p.teamName}</td>
+                                            <td style={{ ...tdStyle, color: '#2563eb', fontSize: '26px', fontWeight: 900, fontStyle: 'italic', borderBottom: 'none' }}>{(p.totalHandicappedPins / (p.gamesCount || 1)).toFixed(2)}</td>
                                         </tr>
                                     ))}
                                     {Array.from({ length: Math.max(0, 30 - templateData.individual.top30.length) }).map((_, i) => (
