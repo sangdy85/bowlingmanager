@@ -7,6 +7,7 @@ interface Player {
     gamesCount: number;
     handicap: number;
     totalRawPins: number;
+    totalHandicappedPins: number;
     highSeries: number;
     highGame: number;
     lastMatchRawScore: number;
@@ -121,7 +122,7 @@ export default function Top30Leaderboard({ data, title }: { data: Top30Leaderboa
                                 <td style={{ ...topTdStyle, fontWeight: 900 }}>{p.name}</td>
                                 <td style={topTdStyle}>{p.teamName}</td>
                                 <td style={{ ...topTdStyle, backgroundColor: '#f3f4f6', fontWeight: index < 3 ? 900 : 700 }}>
-                                    {(p.totalRawPins / (p.gamesCount || 1)).toFixed(2)}
+                                    {(p.totalHandicappedPins / (p.gamesCount || 1)).toFixed(2)}
                                 </td>
                             </tr>
                         ))}

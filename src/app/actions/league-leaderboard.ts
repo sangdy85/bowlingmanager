@@ -416,6 +416,7 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
             gamesCount: number;
             handicap: number;
             totalRawPins: number;
+            totalHandicappedPins: number;
             highSeries: number;
             highGame: number;
             lastMatchRawScore: number;
@@ -457,19 +458,23 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
             const teamAKey = (match as any).teamASquad ? `${match.teamAId}-${(match as any).teamASquad}` : match.teamAId;
             const teamBKey = (match as any).teamBSquad ? `${match.teamBId}-${(match as any).teamBSquad}` : match.teamBId;
 
-            if (teamAKey && !dataByTeam[teamAKey]) {
-                const name = match.teamA?.name || 'Unknown';
-                const disp = (match as any).teamASquad ? `${name} (${(match as any).teamASquad})` : name;
-                dataByTeam[teamAKey] = { teamId: match.teamAId, teamName: disp, wins: 0, totalPinfall: 0, players: {} };
+            if (teamAKey) {
+                if (!dataByTeam[teamAKey]) {
+                    const name = match.teamA?.name || 'Unknown';
+                    const disp = (match as any).teamASquad ? `${name} (${(match as any).teamASquad})` : name;
+                    dataByTeam[teamAKey] = { teamId: match.teamAId, teamName: disp, wins: 0, totalPinfall: 0, players: {} };
+                }
             }
-            if (teamBKey && !dataByTeam[teamBKey]) {
-                const name = match.teamB?.name || 'Unknown';
-                const disp = (match as any).teamBSquad ? `${name} (${(match as any).teamBSquad})` : name;
-                dataByTeam[teamBKey] = { teamId: match.teamBId, teamName: disp, wins: 0, totalPinfall: 0, players: {} };
+            if (teamBKey) {
+                if (!dataByTeam[teamBKey]) {
+                    const name = match.teamB?.name || 'Unknown';
+                    const disp = (match as any).teamBSquad ? `${name} (${(match as any).teamBSquad})` : name;
+                    dataByTeam[teamBKey] = { teamId: match.teamBId, teamName: disp, wins: 0, totalPinfall: 0, players: {} };
+                }
             }
 
-            if (dataByTeam[teamAKey]) dataByTeam[teamAKey].wins += (match.pointsA || 0);
-            if (dataByTeam[teamBKey]) dataByTeam[teamBKey].wins += (match.pointsB || 0);
+            if (teamAKey && dataByTeam[teamAKey]) dataByTeam[teamAKey].wins += (match.pointsA || 0);
+            if (teamBKey && dataByTeam[teamBKey]) dataByTeam[teamBKey].wins += (match.pointsB || 0);
 
             for (const score of match.individualScores) {
                 const curTeamId = score.teamId;
@@ -503,6 +508,7 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                         gamesCount: 0,
                         handicap: score.handicap,
                         totalRawPins: 0,
+                        totalHandicappedPins: 0,
                         highSeries: 0,
                         highGame: 0,
                         lastMatchRawScore: 0,
@@ -525,6 +531,7 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                     const hSeries = rawSeries + hTotal;
                     p.gamesCount += 3;
                     p.totalRawPins += rawSeries;
+                    p.totalHandicappedPins += hSeries;
                     p.highSeries = Math.max(p.highSeries, hSeries);
                     p.highGame = Math.max(p.highGame, score.score1 + score.handicap, score.score2 + score.handicap, score.score3 + score.handicap);
                     p.handicap = score.handicap;
@@ -549,8 +556,8 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
         .map(team => ({
             ...team,
             players: Object.values(team.players).sort((a, b) => {
-                const aTotal = a.totalRawPins + (a.handicap * a.gamesCount);
-                const bTotal = b.totalRawPins + (b.handicap * b.gamesCount);
+                const aTotal = a.totalHandicappedPins;
+                const bTotal = b.totalHandicappedPins;
                 if (bTotal !== aTotal) return bTotal - aTotal;
 
                 const aHavg = aTotal / (a.gamesCount || 1);
@@ -581,8 +588,8 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
             return true;
         })
         .sort((a, b) => {
-            const aTotalWithH = a.totalRawPins + a.handicap * a.gamesCount;
-            const bTotalWithH = b.totalRawPins + b.handicap * b.gamesCount;
+            const aTotalWithH = a.totalHandicappedPins;
+            const bTotalWithH = b.totalHandicappedPins;
             return (bTotalWithH / (b.gamesCount || 1)) - (aTotalWithH / (a.gamesCount || 1));
         })
         .slice(0, avgTopRankCount);

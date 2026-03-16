@@ -653,7 +653,7 @@ export default function WeeklyResultDownloader({
                                             <td style={{ ...rankStyle, borderBottom: 'none' }}>{idx + 1}</td>
                                             <td style={{ ...tdStyle, fontWeight: 900, textAlign: 'left', paddingLeft: '40px', borderBottom: 'none' }}>{p.name}</td>
                                             <td style={{ ...tdStyle, color: '#4b5563', fontSize: '13px', borderBottom: 'none' }}>{p.teamName}</td>
-                                            <td style={{ ...tdStyle, color: '#2563eb', fontSize: '24px', fontWeight: 900, fontStyle: 'italic', borderBottom: 'none' }}>{((p.totalRawPins + (p.handicap * p.gamesCount)) / (p.gamesCount || 1)).toFixed(2)}</td>
+                                            <td style={{ ...tdStyle, color: '#2563eb', fontSize: '24px', fontWeight: 900, fontStyle: 'italic', borderBottom: 'none' }}>{(p.totalHandicappedPins / (p.gamesCount || 1)).toFixed(2)}</td>
                                         </tr>
                                     ))}
                                     {Array.from({ length: Math.max(0, 30 - templateData.individual.top30.length) }).map((_, i) => (
