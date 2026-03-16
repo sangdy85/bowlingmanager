@@ -44,7 +44,7 @@ async function main() {
           teamA: true,
           teamB: true
         },
-        orderBy: { matchupOrder: 'asc' }
+        orderBy: { lanes: 'asc' }
       });
 
       if (matchups.length === 0) {
