@@ -2432,7 +2432,7 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
                             </div>
                         ) : (
                             <div
-                                className="text-gray-700 font-black animate-pulse tracking-[0.3em] leading-tight"
+                                className="text-gray-400 font-black animate-pulse tracking-[0.3em] leading-tight"
                                 style={{ fontSize: 'min(7vw, 100px)' }}
                             >
                                 READY TO DRAW
@@ -2508,9 +2508,9 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
                             </thead>
                             <tbody>
                                 {winners.map((winner, idx) => (
-                                    <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                    <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                                         <td style={{ padding: 'clamp(1.5rem, 3vw, 2.5rem) 1rem', textAlign: 'center' }}>
-                                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 'clamp(3rem, 6vw, 4.5rem)', height: 'clamp(3rem, 6vw, 4.5rem)', backgroundColor: '#0f172a', color: '#ffffff', borderRadius: '1rem', fontWeight: 900, fontSize: 'clamp(1.25rem, 3vw, 1.75rem)', fontStyle: 'italic', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 'clamp(3rem, 6vw, 4.5rem)', height: 'clamp(3rem, 6vw, 4.5rem)', backgroundColor: '#2563eb', color: '#ffffff', borderRadius: '1rem', fontWeight: 900, fontSize: 'clamp(1.25rem, 3vw, 1.75rem)', fontStyle: 'italic', boxShadow: '0 10px 15px -3px rgba(37,99,235,0.4)' }}>
                                                 #{idx + 1}
                                             </div>
                                         </td>
@@ -2521,11 +2521,22 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
                                         </td>
                                         <td style={{ padding: 'clamp(1.5rem, 3vw, 2.5rem) 1rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                <span style={{ fontWeight: 900, color: '#0f172a', fontSize: 'clamp(1.75rem, 5vw, 3.5rem)', letterSpacing: '-0.05em' }}>
-                                                    {winner.registration.guestName ?? winner.registration.user?.name}
-                                                </span>
+                                                <div 
+                                                    style={{ 
+                                                        backgroundColor: '#0f172a', 
+                                                        padding: '0.5rem 1.5rem', 
+                                                        borderRadius: '1.5rem',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)'
+                                                    }}
+                                                >
+                                                    <span style={{ fontWeight: 900, color: '#ffffff', fontSize: 'clamp(1.5rem, 5vw, 3rem)', letterSpacing: '-0.05em' }}>
+                                                        {winner.registration.guestName ?? winner.registration.user?.name}
+                                                    </span>
+                                                </div>
                                                 {idx === winners.length - 1 && !isRunning && (
-                                                    <span className="bg-blue-600 text-white px-2 py-0.5 rounded-lg font-black text-[10px] hidden sm:inline-block">
+                                                    <span className="bg-yellow-400 text-black px-2 py-0.5 rounded-lg font-black text-[10px] hidden sm:inline-block animate-bounce-slow h-fit">
                                                         NEW!
                                                     </span>
                                                 )}
@@ -2816,8 +2827,8 @@ export default function RoundDetailPageContent({
                                             <div className="bg-slate-50 rounded-[2.5rem] p-8 border-2 border-slate-200 shadow-inner">
                                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                                     {result.winners.map((winner: any, idx: number) => (
-                                                        <div key={idx} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1">
-                                                            <span className="text-blue-600 font-black text-lg">
+                                                        <div key={idx} className="bg-slate-900 p-4 rounded-2xl shadow-lg border border-slate-800 flex flex-col items-center gap-1">
+                                                            <span className="text-white font-black text-lg">
                                                                 {winner.registration?.guestName ?? winner.registration?.user?.name}
                                                             </span>
                                                             <span className="text-[10px] font-bold text-slate-400">

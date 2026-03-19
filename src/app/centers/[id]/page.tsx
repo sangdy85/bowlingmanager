@@ -114,20 +114,25 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
         if (t.type === 'LEAGUE' || t.status === 'FINISHED') return [];
 
         if (t.type === 'CHAMP') {
-            const recruitingRounds = t.leagueRounds
-                .map((r: any) => {
-                    const effectiveDate = getEffectiveRoundDate(r.date, t.leagueTime);
-                    const status = calculateTournamentStatus(effectiveDate, r.registrationStart, null, t.status, now);
-                    return { ...r, effectiveDate, calculatedStatus: status };
-                })
-                .filter((r: any) => r.calculatedStatus === 'OPEN' || r.calculatedStatus === 'CLOSED' || r.calculatedStatus === 'ONGOING')
-                .sort((a: any, b: any) => {
-                    const statusPriority: Record<string, number> = { OPEN: 0, ONGOING: 1, CLOSED: 2 };
-                    if (statusPriority[a.calculatedStatus] !== statusPriority[b.calculatedStatus]) {
-                        return statusPriority[a.calculatedStatus] - statusPriority[b.calculatedStatus];
-                    }
-                    return a.roundNumber - b.roundNumber;
-                });
+            const allRounds = t.leagueRounds.map((r: any) => {
+                const effectiveDate = getEffectiveRoundDate(r.date, t.leagueTime);
+                const status = calculateTournamentStatus(effectiveDate, r.registrationStart, null, t.status, now);
+                return { ...r, effectiveDate, calculatedStatus: status };
+            });
+
+            // Filter for rounds that are currently interactive (OPEN, CLOSED, ONGOING)
+            let recruitingRounds = allRounds.filter((r: any) => 
+                r.calculatedStatus === 'OPEN' || r.calculatedStatus === 'CLOSED' || r.calculatedStatus === 'ONGOING'
+            );
+
+            // If no round is interactive, but future rounds exist and tournament hasn't ended,
+            // show the next upcoming round in the active list.
+            if (recruitingRounds.length === 0) {
+                const upcomingRounds = allRounds.filter((r: any) => r.calculatedStatus === 'UPCOMING');
+                if (upcomingRounds.length > 0) {
+                    recruitingRounds = [upcomingRounds[0]];
+                }
+            }
 
             if (recruitingRounds.length > 0) {
                 const nextRound = recruitingRounds[0];
@@ -211,13 +216,19 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
 
                     const allFinished = roundStatuses.every((s: string) => s === 'FINISHED');
                     const anyOngoing = roundStatuses.some((s: string) => s === 'ONGOING' || s === 'OPEN' || s === 'CLOSED');
+                    const anyUpcoming = roundStatuses.some((s: string) => s === 'UPCOMING');
 
-                    if (allFinished) {
+                    // Check overall tournament endDate if it exists
+                    const tournamentOverallStatus = calculateTournamentStatus(t.startDate, t.registrationStart, t.endDate, t.status, now);
+
+                    if (allFinished && tournamentOverallStatus === 'FINISHED') {
                         currentStatus = 'FINISHED';
                     } else if (anyOngoing) {
                         currentStatus = 'ONGOING';
-                    } else {
+                    } else if (anyUpcoming || tournamentOverallStatus !== 'FINISHED') {
                         currentStatus = 'UPCOMING';
+                    } else {
+                        currentStatus = 'FINISHED';
                     }
                 }
             } else {

@@ -213,6 +213,27 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
         isRegisteredInRound = initialRound.participants?.some((p: any) => p.registration?.userId === session?.user?.id);
     }
 
+    // 5. Calculate overall display status for header
+    let currentStatus = tournament.status;
+    if (tournament.type === 'CHAMP' || tournament.type === 'LEAGUE') {
+        const roundStatuses = processedRounds.map((r: any) => r.calculatedStatus);
+        const allFinished = roundStatuses.every((s: string) => s === 'FINISHED');
+        const anyOngoing = roundStatuses.some((s: string) => s === 'ONGOING' || s === 'OPEN' || s === 'CLOSED');
+        const anyUpcoming = roundStatuses.some((s: string) => s === 'UPCOMING');
+        
+        const tournamentOverallStatus = calculateTournamentStatus(tournament.startDate, tournamentSettings.registrationStart, tournament.endDate, tournament.status, now);
+
+        if (allFinished && tournamentOverallStatus === 'FINISHED') {
+            currentStatus = 'FINISHED';
+        } else if (anyOngoing || hasStarted) {
+            currentStatus = 'ONGOING';
+        } else if (anyUpcoming || tournamentOverallStatus !== 'FINISHED') {
+            currentStatus = 'UPCOMING';
+        } else {
+            currentStatus = 'FINISHED';
+        }
+    }
+
     // Merge processed rounds back into tournament for passing to client components
     const safeTournamentRaw = {
         ...tournament,
@@ -248,11 +269,11 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                             {typeMap[safeTournament.type]?.label || safeTournament.type}
                         </span>
                         <span className="text-secondary-foreground font-medium flex items-center gap-1.5">
-                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${safeTournament.status === 'FINISHED' ? 'bg-red-500' :
-                                (safeTournament.status === 'ONGOING' || hasStarted) ? 'bg-blue-500' : 'bg-green-500'
+                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${currentStatus === 'FINISHED' ? 'bg-red-500' :
+                                (currentStatus === 'ONGOING' || hasStarted) ? 'bg-blue-500' : 'bg-green-500'
                                 }`}></span>
-                            {safeTournament.status === 'FINISHED' ? '종료' :
-                                (hasStarted ? '진행 중' : (statusMap[safeTournament.status]?.label || safeTournament.status))}
+                            {currentStatus === 'FINISHED' ? '종료' :
+                                (currentStatus === 'ONGOING' || hasStarted ? '진행 중' : (currentStatus === 'OPEN' ? '모집 중' : (currentStatus === 'CLOSED' ? '마감' : (statusMap[currentStatus]?.label || currentStatus))))}
                         </span>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black tracking-tight">
