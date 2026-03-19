@@ -156,7 +156,7 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
             effectiveDate,
             r.registrationStart || tournamentSettings.registrationStart,
             null,
-            tournament.status,
+            undefined, // Don't force round status based on tournament status
             now
         );
         return {

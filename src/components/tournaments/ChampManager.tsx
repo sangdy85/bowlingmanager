@@ -150,7 +150,15 @@ export default function ChampManager({ tournament, centerId, isManager, currentU
                                                         </div>
                                                         <div className="flex flex-wrap gap-2">
                                                             {result.winners.map((winner: any, idx: number) => (
-                                                                <span key={idx} className="text-xs font-bold text-white bg-blue-600/50 px-2 py-1 rounded-lg">
+                                                                <span key={idx} style={{ 
+                                                                    fontSize: '12px', 
+                                                                    fontWeight: 900, 
+                                                                    color: '#ffffff', 
+                                                                    backgroundColor: 'rgba(37, 99, 235, 0.8)', 
+                                                                    padding: '4px 8px', 
+                                                                    borderRadius: '8px',
+                                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                                }}>
                                                                     {winner.registration?.user?.name || winner.registration?.guestName}
                                                                 </span>
                                                             ))}
