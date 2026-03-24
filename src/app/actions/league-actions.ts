@@ -340,21 +340,28 @@ export async function updateLeagueMatchupResult(matchupId: string, data: {
         throw new Error("300점을 초과하는 점수가 입력되었습니다.");
     }
 
-    const calculateCappedTotal = (scores: any[], gameNum: number) => {
-        return scores.reduce((sum, s) => sum + Math.min((s[`score${gameNum}`] || 0) + (s.handicap || 0), 300), 0);
+    const hLimit = matchup.round.tournament.teamHandicapLimit;
+    const aHRaw = teamAScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
+    const bHRaw = teamBScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
+
+    const aH = (hLimit !== null && aHRaw > hLimit) ? hLimit : aHRaw;
+    const bH = (hLimit !== null && bHRaw > hLimit) ? hLimit : bHRaw;
+
+    const aExcessH = Math.max(0, aHRaw - aH);
+    const bExcessH = Math.max(0, bHRaw - bH);
+
+    const calculateCappedTotal = (scores: any[], gameNum: number, excessH: number) => {
+        return scores.reduce((sum, s) => sum + Math.min((s[`score${gameNum}`] || 0) + (s.handicap || 0), 300), 0) - excessH;
     };
 
-    const aH = teamAScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
-    const bH = teamBScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
-
-    const aG1 = calculateCappedTotal(teamAScores, 1);
-    const aG2 = calculateCappedTotal(teamAScores, 2);
-    const aG3 = calculateCappedTotal(teamAScores, 3);
+    const aG1 = calculateCappedTotal(teamAScores, 1, aExcessH);
+    const aG2 = calculateCappedTotal(teamAScores, 2, aExcessH);
+    const aG3 = calculateCappedTotal(teamAScores, 3, aExcessH);
     const aTotal = aG1 + aG2 + aG3;
 
-    const bG1 = calculateCappedTotal(teamBScores, 1);
-    const bG2 = calculateCappedTotal(teamBScores, 2);
-    const bG3 = calculateCappedTotal(teamBScores, 3);
+    const bG1 = calculateCappedTotal(teamBScores, 1, bExcessH);
+    const bG2 = calculateCappedTotal(teamBScores, 2, bExcessH);
+    const bG3 = calculateCappedTotal(teamBScores, 3, bExcessH);
     const bTotal = bG1 + bG2 + bG3;
 
     const getHiLow = (scores: any[], gameNum: number) => {
@@ -444,8 +451,8 @@ export async function updateLeagueRoundResults(roundId: string, results: {
         }
     });
 
-    const calculateCappedTotal = (scores: any[], gameNum: number) => {
-        return scores.reduce((sum, s) => sum + Math.min((s[`score${gameNum}`] || 0) + (s.handicap || 0), 300), 0);
+    const calculateCappedTotal = (scores: any[], gameNum: number, excessH: number) => {
+        return scores.reduce((sum, s) => sum + Math.min((s[`score${gameNum}`] || 0) + (s.handicap || 0), 300), 0) - excessH;
     };
 
     const getHiLow = (scores: any[], gameNum: number) => {
@@ -473,17 +480,24 @@ export async function updateLeagueRoundResults(roundId: string, results: {
         const teamBScores = res.teamBScores;
         const allIndividualScores = [...teamAScores, ...teamBScores];
 
-        const aH = teamAScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
-        const bH = teamBScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
+        const hLimit = round.tournament.teamHandicapLimit;
+        const aHRaw = teamAScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
+        const bHRaw = teamBScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
 
-        const aG1 = calculateCappedTotal(teamAScores, 1);
-        const aG2 = calculateCappedTotal(teamAScores, 2);
-        const aG3 = calculateCappedTotal(teamAScores, 3);
+        const aH = (hLimit !== null && aHRaw > hLimit) ? hLimit : aHRaw;
+        const bH = (hLimit !== null && bHRaw > hLimit) ? hLimit : bHRaw;
+
+        const aExcessH = Math.max(0, aHRaw - aH);
+        const bExcessH = Math.max(0, bHRaw - bH);
+
+        const aG1 = calculateCappedTotal(teamAScores, 1, aExcessH);
+        const aG2 = calculateCappedTotal(teamAScores, 2, aExcessH);
+        const aG3 = calculateCappedTotal(teamAScores, 3, aExcessH);
         const aTotal = aG1 + aG2 + aG3;
 
-        const bG1 = calculateCappedTotal(teamBScores, 1);
-        const bG2 = calculateCappedTotal(teamBScores, 2);
-        const bG3 = calculateCappedTotal(teamBScores, 3);
+        const bG1 = calculateCappedTotal(teamBScores, 1, bExcessH);
+        const bG2 = calculateCappedTotal(teamBScores, 2, bExcessH);
+        const bG3 = calculateCappedTotal(teamBScores, 3, bExcessH);
         const bTotal = bG1 + bG2 + bG3;
 
         const pG1 = calculatePoints(aG1, bG1, aH, bH, getHiLow(teamAScores, 1), getHiLow(teamBScores, 1));

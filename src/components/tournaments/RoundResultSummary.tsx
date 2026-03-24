@@ -103,9 +103,11 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                         const hLimit = teamHandicapLimit !== undefined && teamHandicapLimit !== null ? Number(teamHandicapLimit) : null;
                         const hSum = (hLimit !== null && rawHSum > hLimit) ? hLimit : rawHSum;
 
-                        const g1 = teamScores.reduce((sum, s) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0);
-                        const g2 = teamScores.reduce((sum, s) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0);
-                        const g3 = teamScores.reduce((sum, s) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0);
+                        const excessH = Math.max(0, rawHSum - hSum);
+
+                        const g1 = teamScores.reduce((sum, s) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0) - excessH;
+                        const g2 = teamScores.reduce((sum, s) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0) - excessH;
+                        const g3 = teamScores.reduce((sum, s) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0) - excessH;
 
                         const opponentId = isRight ? m.teamAId : m.teamBId;
                         const opponentSquad = isRight ? m.teamASquad : m.teamBSquad;

@@ -320,11 +320,13 @@ export default function RoundBulkResultEditor({
             if (!matchupData) return;
 
             const calculateTeam = (teamScores: IndividualScore[]) => {
-                const g1 = teamScores.reduce((sum, s) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0);
-                const g2 = teamScores.reduce((sum, s) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0);
-                const g3 = teamScores.reduce((sum, s) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0);
                 const rawHSum = teamScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
                 const hSum = (teamHandicapLimit !== undefined && teamHandicapLimit !== null && rawHSum > teamHandicapLimit) ? teamHandicapLimit : rawHSum;
+                const excessH = Math.max(0, rawHSum - hSum);
+
+                const g1 = teamScores.reduce((sum, s) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0) - excessH;
+                const g2 = teamScores.reduce((sum, s) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0) - excessH;
+                const g3 = teamScores.reduce((sum, s) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0) - excessH;
 
                 const getHL = (gameIdx: 1 | 2 | 3) => {
                     const vals = teamScores.map(s => s[`score${gameIdx}` as keyof IndividualScore] as number || 0);
