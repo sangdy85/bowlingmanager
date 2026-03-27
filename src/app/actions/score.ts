@@ -96,7 +96,7 @@ export async function addScore(prevState: any, formData: FormData) {
             for (const score of validScores) {
                 const isGuest = targetUserId === 'guest';
 
-                const created = await tx.score.create({
+                await tx.score.create({
                     data: {
                         id: uuidv4(),
                         score,
@@ -104,13 +104,10 @@ export async function addScore(prevState: any, formData: FormData) {
                         guestName: isGuest ? guestName : null,
                         gameDate: gameDate,
                         teamId: currentTeam.id,
-                        gameType: gameType
+                        gameType: gameType,
+                        memo: memo
                     }
                 });
-
-                if (memo) {
-                    await tx.$executeRaw`UPDATE Score SET memo = ${memo} WHERE id = ${created.id}`;
-                }
             }
         });
 

@@ -12,27 +12,26 @@ export interface BulkScoreData {
     gameDate?: string; // Optional per-record date
 }
 
-export async function bulkAddScores(data: BulkScoreData[], defaultGameDateStr?: string, defaultGameType: string = "정기전") {
+export async function bulkAddScores(data: BulkScoreData[], defaultGameDateStr?: string, defaultGameType: string = "정기전", teamId?: string) {
     const session = await auth();
     if (!session?.user?.id) {
         return { success: false, message: "로그인이 필요합니다." };
     }
 
-    // Verify team membership via TeamMember
-    const membership = await prisma.teamMember.findFirst({
-        where: { userId: session.user.id },
-        include: { team: true }
-    });
-
-    if (!membership) {
-        return { success: false, message: "팀에 소속되어 있지 않습니다." };
+    // Determine target team
+    let currentTeamId = teamId;
+    if (!currentTeamId) {
+        const membership = await prisma.teamMember.findFirst({
+            where: { userId: session.user.id },
+            include: { team: true }
+        });
+        if (!membership) return { success: false, message: "팀에 소속되어 있지 않습니다." };
+        currentTeamId = membership.teamId;
     }
-
-    const currentTeam = membership.team;
 
     // Check permissions: Owner or Manager
     const teamRecord = await prisma.team.findUnique({
-        where: { id: currentTeam.id },
+        where: { id: currentTeamId },
         include: {
             User: {
                 where: { id: session.user.id }
@@ -40,7 +39,9 @@ export async function bulkAddScores(data: BulkScoreData[], defaultGameDateStr?: 
         }
     });
 
-    const isOwner = teamRecord?.ownerId === session.user.id;
+    if (!teamRecord) return { success: false, message: "팀 정보를 찾을 수 없습니다." };
+
+    const isOwner = teamRecord.ownerId === session.user.id;
     const isManager = ((teamRecord as any)?.User?.length ?? 0) > 0;
 
     if (!isOwner && !isManager) {
@@ -53,7 +54,7 @@ export async function bulkAddScores(data: BulkScoreData[], defaultGameDateStr?: 
 
     // Cache team members for lookup (supporting Aliases)
     const teamMembers = await prisma.teamMember.findMany({
-        where: { teamId: currentTeam.id },
+        where: { teamId: currentTeamId },
         include: { user: true }
     });
 
@@ -77,21 +78,18 @@ export async function bulkAddScores(data: BulkScoreData[], defaultGameDateStr?: 
                 for (const score of row.scores) {
                     if (isNaN(score) || score < 0 || score > 300) continue;
 
-                    const created = await tx.score.create({
+                    await tx.score.create({
                         data: {
                             id: uuidv4(),
                             userId: userId,
                             guestName: guestName,
                             score,
-                            teamId: currentTeam.id,
+                            teamId: currentTeamId as string,
                             gameDate,
-                            gameType: defaultGameType
+                            gameType: defaultGameType,
+                            memo: row.memo || null
                         }
                     });
-
-                    if (row.memo) {
-                        await tx.$executeRaw`UPDATE Score SET memo = ${row.memo} WHERE id = ${created.id}`;
-                    }
                 }
                 successCount++;
             }

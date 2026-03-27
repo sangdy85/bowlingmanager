@@ -149,7 +149,7 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
 
                 {/* Mode Specific Content */}
                 {mode === 'excel' ? (
-                    <ExcelUpload />
+                    <ExcelUpload teamId={selectedTeamId} />
                 ) : mode === 'ocr' ? (
                     <div className="flex flex-col gap-4">
                         <GeminiScoreUpload

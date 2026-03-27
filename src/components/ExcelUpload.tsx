@@ -5,7 +5,11 @@ import * as XLSX from 'xlsx';
 import { bulkAddScores, BulkScoreData } from '@/app/actions/score-bulk';
 import { analyzeExcelWithGemini } from '@/app/actions/gemini-score';
 
-export default function ExcelUpload() {
+interface ExcelUploadProps {
+    teamId?: string;
+}
+
+export default function ExcelUpload({ teamId }: ExcelUploadProps) {
     const [previewData, setPreviewData] = useState<BulkScoreData[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -80,8 +84,8 @@ export default function ExcelUpload() {
     const handleUpload = async () => {
         if (previewData.length === 0) return;
         setIsUploading(true);
-        // bulkAddScores now supports per-row gameDate
-        const result = await bulkAddScores(previewData, defaultDate, gameType);
+        // Pass teamId to bulkAddScores
+        const result = await bulkAddScores(previewData, defaultDate, gameType, teamId);
         setIsUploading(false);
         setMessage({ type: result.success ? 'success' : 'error', text: result.message });
         if (result.success) {
