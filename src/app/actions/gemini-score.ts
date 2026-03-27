@@ -24,30 +24,41 @@ function extractJson(text: string): string {
     // 1. Basic cleaning
     let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-    // 2. Find JSON structure
-    const startIdxObj = cleanText.indexOf('{');
+    // 2. Find JSON structure (Prefer array if possible)
     const startIdxArr = cleanText.indexOf('[');
+    const startIdxObj = cleanText.indexOf('{');
+    
     let startIdx = -1;
-    let endIdx = -1;
+    let isArray = false;
 
-    if (startIdxObj !== -1 && (startIdxArr === -1 || startIdxObj < startIdxArr)) {
-        startIdx = startIdxObj;
-        endIdx = cleanText.lastIndexOf('}');
-    } else if (startIdxArr !== -1) {
+    if (startIdxArr !== -1 && (startIdxObj === -1 || startIdxArr < startIdxObj)) {
         startIdx = startIdxArr;
-        endIdx = cleanText.lastIndexOf(']');
+        isArray = true;
+    } else if (startIdxObj !== -1) {
+        startIdx = startIdxObj;
+        isArray = false;
     }
 
-    if (startIdx !== -1 && endIdx !== -1) {
-        let result = cleanText.slice(startIdx, endIdx + 1);
-        
-        // 3. Robustness check for truncation
-        // If it's an array and doesn't end with more elements but has a trailing comma or incomplete object
-        // we try to fix it or just let JSON.parse handle the sliced part.
-        // With JSON Response Mime Type, the model is much less likely to return markdown.
-        return result;
+    if (startIdx === -1) return cleanText;
+
+    let sub = cleanText.slice(startIdx);
+    const endChar = isArray ? ']' : '}';
+    const lastEndIdx = sub.lastIndexOf(endChar);
+
+    if (lastEndIdx !== -1) {
+        return sub.slice(0, lastEndIdx + 1);
     }
-    return cleanText;
+
+    // 3. Robustness check for truncation
+    // If we are in an array and it's truncated, look for the last complete object
+    if (isArray) {
+        const lastObjClose = sub.lastIndexOf('}');
+        if (lastObjClose !== -1) {
+            return sub.slice(0, lastObjClose + 1) + ']';
+        }
+    }
+
+    return sub;
 }
 
 // ... existing code ...
@@ -81,7 +92,7 @@ export async function analyzeLeagueRoundExcelWithGemini(
             Focus: Extract Lane numbers, Row index (Slot), and exactly ${gameCount} individual Game scores.
 
             INPUT EXCEL DATA (2D Array - Grid View):
-            ${JSON.stringify(excelData.slice(0, 500))}
+            ${JSON.stringify(excelData.slice(0, 300))}
 
             INSTRUCTIONS:
             1. **Identify Lane Sections**: 

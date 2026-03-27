@@ -9,24 +9,41 @@ function extractJson(text: string): string {
     // 1. Basic cleaning
     let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-    // 2. Find JSON structure
-    const startIdxObj = cleanText.indexOf('{');
+    // 2. Find JSON structure (Prefer array if possible)
     const startIdxArr = cleanText.indexOf('[');
+    const startIdxObj = cleanText.indexOf('{');
+    
     let startIdx = -1;
-    let endIdx = -1;
+    let isArray = false;
 
-    if (startIdxObj !== -1 && (startIdxArr === -1 || startIdxObj < startIdxArr)) {
-        startIdx = startIdxObj;
-        endIdx = cleanText.lastIndexOf('}');
-    } else if (startIdxArr !== -1) {
+    if (startIdxArr !== -1 && (startIdxObj === -1 || startIdxArr < startIdxObj)) {
         startIdx = startIdxArr;
-        endIdx = cleanText.lastIndexOf(']');
+        isArray = true;
+    } else if (startIdxObj !== -1) {
+        startIdx = startIdxObj;
+        isArray = false;
     }
 
-    if (startIdx !== -1 && endIdx !== -1) {
-        return cleanText.slice(startIdx, endIdx + 1);
+    if (startIdx === -1) return cleanText;
+
+    let sub = cleanText.slice(startIdx);
+    const endChar = isArray ? ']' : '}';
+    const lastEndIdx = sub.lastIndexOf(endChar);
+
+    if (lastEndIdx !== -1) {
+        return sub.slice(0, lastEndIdx + 1);
     }
-    return cleanText;
+
+    // 3. Robustness check for truncation
+    // If we are in an array and it's truncated, look for the last complete object
+    if (isArray) {
+        const lastObjClose = sub.lastIndexOf('}');
+        if (lastObjClose !== -1) {
+            return sub.slice(0, lastObjClose + 1) + ']';
+        }
+    }
+
+    return sub;
 }
 
 export async function uploadRawLaneScores(
