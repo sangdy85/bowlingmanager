@@ -100,10 +100,10 @@ export async function addScore(prevState: any, formData: FormData) {
                     data: {
                         id: uuidv4(),
                         score,
-                        userId: isGuest ? null : targetUserId,
+                        User: isGuest ? undefined : { connect: { id: targetUserId } },
+                        Team: { connect: { id: currentTeam.id } },
                         guestName: isGuest ? guestName : null,
                         gameDate: gameDate,
-                        teamId: currentTeam.id,
                         gameType: gameType,
                         memo: memo
                     }

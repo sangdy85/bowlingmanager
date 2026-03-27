@@ -98,9 +98,9 @@ export async function saveDailyScores(
                         data: {
                             id: uuidv4(),
                             score: item.score,
-                            teamId: teamId,
+                            Team: { connect: { id: teamId } },
                             gameDate: targetDate,
-                            userId: targetGuestName ? null : targetUserId,
+                            User: targetGuestName ? undefined : { connect: { id: targetUserId } },
                             guestName: targetGuestName || null
                         }
                     });

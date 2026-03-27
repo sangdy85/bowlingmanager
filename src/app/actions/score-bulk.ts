@@ -75,15 +75,15 @@ export async function bulkAddScores(data: BulkScoreData[], defaultGameDateStr?: 
                 const guestName = !userId ? row.memberName : null;
 
                 for (const score of row.scores) {
-                    if (isNaN(score) || score < 0 || score > 300) continue;
+                    if (score === null || score === undefined || isNaN(Number(score)) || score < 0 || score > 300) continue;
 
                     await tx.score.create({
                         data: {
                             id: uuidv4(),
-                            userId: userId,
+                            User: userId ? { connect: { id: userId } } : undefined,
+                            Team: { connect: { id: currentTeamId as string } },
                             guestName: guestName,
-                            score,
-                            teamId: currentTeamId as string,
+                            score: Number(score),
                             gameDate,
                             gameType: defaultGameType,
                             memo: row.memo || null
