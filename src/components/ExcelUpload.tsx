@@ -39,7 +39,16 @@ export default function ExcelUpload({ teamId }: ExcelUploadProps) {
                     // Send structure-agnostic JSON to Gemini
                     const result = await analyzeExcelWithGemini(rawData);
                     if (result.success && result.data) {
-                        setPreviewData(result.data);
+                        // Ensure result.data is an array to prevent client-side crashes
+                        const anyData = result.data as any;
+                        const safeData = Array.isArray(anyData) 
+                            ? anyData 
+                            : (anyData.players || anyData.rows || anyData.data || []);
+                        
+                        setPreviewData(Array.isArray(safeData) ? safeData : []);
+                        if (!Array.isArray(safeData)) {
+                            setMessage({ type: 'error', text: "AI 분석 결과 형식이 올바르지 않습니다." });
+                        }
                     } else {
                         setMessage({ type: 'error', text: result.message || "AI 분석에 실패했습니다." });
                     }

@@ -203,7 +203,14 @@ export async function addBulkScores(
 
         await prisma.$transaction(async (tx) => {
             for (const data of recordsToCreate) {
-                await tx.score.create({ data });
+                const { userId, teamId, ...rest } = data;
+                await tx.score.create({ 
+                    data: {
+                        ...rest,
+                        User: userId ? { connect: { id: userId } } : undefined,
+                        Team: { connect: { id: teamId } }
+                    }
+                });
             }
         });
 
