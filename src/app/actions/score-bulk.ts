@@ -8,8 +8,8 @@ import { v4 as uuidv4 } from "uuid";
 export interface BulkScoreData {
     memberName: string;
     scores: number[];
-    memo?: string;
     gameDate?: string; // Optional per-record date
+    memo?: string;      // Optional per-record memo
 }
 
 export async function bulkAddScores(data: BulkScoreData[], defaultGameDateStr?: string, defaultGameType: string = "정기전", teamId?: string) {
@@ -65,7 +65,6 @@ export async function bulkAddScores(data: BulkScoreData[], defaultGameDateStr?: 
     try {
         await prisma.$transaction(async (tx) => {
             for (const row of data) {
-                // Determine the date for this row
                 const dateStr = row.gameDate || defaultGameDateStr;
                 if (!dateStr) continue;
 
@@ -93,6 +92,8 @@ export async function bulkAddScores(data: BulkScoreData[], defaultGameDateStr?: 
                 }
                 successCount++;
             }
+        }, {
+            timeout: 60000 // Increase timeout to 60 seconds for SQLite
         });
 
         revalidatePath("/dashboard");
@@ -101,8 +102,11 @@ export async function bulkAddScores(data: BulkScoreData[], defaultGameDateStr?: 
             message: `${successCount}명의 기록이 성공적으로 저장되었습니다.`
         };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Bulk add error:", error);
-        return { success: false, message: "일괄 등록 중 오류가 발생했습니다." };
+        return { 
+            success: false, 
+            message: `일괄 저장 실패: ${error.message || "알 수 없는 오류"}` 
+        };
     }
 }
