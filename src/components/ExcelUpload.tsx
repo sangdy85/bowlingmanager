@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { bulkAddScores, BulkScoreData } from '@/app/actions/score-bulk';
 import { analyzeExcelWithGemini } from '@/app/actions/gemini-score';
@@ -15,9 +15,12 @@ export default function ExcelUpload({ teamId }: ExcelUploadProps) {
     const [isUploading, setIsUploading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [useAI, setUseAI] = useState(true);
-
     const [gameType, setGameType] = useState("정기전");
-    const [defaultDate, setDefaultDate] = useState(new Date().toISOString().split('T')[0]);
+    const [defaultDate, setDefaultDate] = useState("");
+    
+    useEffect(() => {
+        setDefaultDate(new Date().toISOString().split('T')[0]);
+    }, []);
     const GAME_TYPES = ["정기전", "벙개", "상주", "교류전", "기타"];
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

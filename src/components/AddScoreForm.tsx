@@ -1,12 +1,14 @@
 
 'use client';
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useEffect } from "react";
 import { addScore, addBulkScores } from "@/app/actions/score";
 import Link from "next/link";
 import { GeminiParsedRow } from "@/app/actions/gemini-score";
 
-import ExcelUpload from "./ExcelUpload";
+import dynamic from 'next/dynamic';
+
+const ExcelUpload = dynamic(() => import("./ExcelUpload"), { ssr: false });
 import GeminiScoreUpload from "./GeminiScoreUpload";
 
 interface Team {
@@ -31,7 +33,18 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
 
     // Shared Form State
     const [gameCount, setGameCount] = useState(3);
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(""); // Initialize with empty string to prevent hydration mismatch
+    const [defaultDate, setDefaultDate] = useState("");
+    
+    useEffect(() => {
+        // Set the date on the client side after hydration
+        setDefaultDate(new Date().toISOString().split('T')[0]);
+    }, []);
+
+    useEffect(() => {
+        setDate(defaultDate);
+    }, [defaultDate]);
+
     const [selectedTeamId, setSelectedTeamId] = useState(teams[0]?.id || "");
     const [selectedUserId, setSelectedUserId] = useState(currentUserId);
     const [gameType, setGameType] = useState("정기전");
