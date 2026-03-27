@@ -6,15 +6,15 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { v4 as uuidv4 } from 'uuid';
 
 function extractJson(text: string): string {
+    // 1. Basic cleaning
     let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    // Try to find the JSON object or array
+
+    // 2. Find JSON structure
     const startIdxObj = cleanText.indexOf('{');
     const startIdxArr = cleanText.indexOf('[');
-
     let startIdx = -1;
     let endIdx = -1;
 
-    // Determine if it starts with { or [
     if (startIdxObj !== -1 && (startIdxArr === -1 || startIdxObj < startIdxArr)) {
         startIdx = startIdxObj;
         endIdx = cleanText.lastIndexOf('}');
@@ -41,7 +41,10 @@ export async function uploadRawLaneScores(
         if (!apiKey) return { success: false, message: "API Key 오류" };
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-2.0-flash",
+            generationConfig: { responseMimeType: "application/json" }
+        });
 
         // Limit data size to avoid token overflow
         const inputData = excelData.length > 500 ? excelData.slice(0, 500) : excelData;

@@ -21,15 +21,15 @@ async function getKstDate() {
 }
 
 function extractJson(text: string): string {
+    // 1. Basic cleaning
     let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    // Try to find the JSON object or array
+
+    // 2. Find JSON structure
     const startIdxObj = cleanText.indexOf('{');
     const startIdxArr = cleanText.indexOf('[');
-
     let startIdx = -1;
     let endIdx = -1;
 
-    // Determine if it starts with { or [
     if (startIdxObj !== -1 && (startIdxArr === -1 || startIdxObj < startIdxArr)) {
         startIdx = startIdxObj;
         endIdx = cleanText.lastIndexOf('}');
@@ -39,7 +39,13 @@ function extractJson(text: string): string {
     }
 
     if (startIdx !== -1 && endIdx !== -1) {
-        return cleanText.slice(startIdx, endIdx + 1);
+        let result = cleanText.slice(startIdx, endIdx + 1);
+        
+        // 3. Robustness check for truncation
+        // If it's an array and doesn't end with more elements but has a trailing comma or incomplete object
+        // we try to fix it or just let JSON.parse handle the sliced part.
+        // With JSON Response Mime Type, the model is much less likely to return markdown.
+        return result;
     }
     return cleanText;
 }
@@ -64,7 +70,10 @@ export async function analyzeLeagueRoundExcelWithGemini(
         if (!hasQuota) return { success: false, message: "오늘 무료 사용 횟수를 초과했습니다.", errorType: 'QUOTA' };
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-2.0-flash",
+            generationConfig: { responseMimeType: "application/json" }
+        });
 
         const prompt = `
             Task: Extract bowling scores from an Excel grid into a standardized JSON format.
@@ -247,7 +256,10 @@ export async function analyzeScoreboardWithGemini(
         const mimeType = file.type || 'image/jpeg';
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-2.0-flash",
+            generationConfig: { responseMimeType: "application/json" }
+        });
 
         const prompt = `
       Analyze this bowling scoreboard image.
@@ -360,7 +372,10 @@ export async function analyzeExcelWithGemini(
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-2.0-flash",
+            generationConfig: { responseMimeType: "application/json" }
+        });
 
         const prompt = `
             Analyze this raw JSON data extracted from an Excel file for professional bowling scores.
