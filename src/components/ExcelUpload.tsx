@@ -116,10 +116,12 @@ export default function ExcelUpload({ teamId }: ExcelUploadProps) {
         XLSX.writeFile(wb, "score_template.xlsx");
     };
 
-    // Group preview data by date for better display
+    // Group preview data by date for better display - Added defensive filtering to prevent crashes
+    const filteredPreviewData = Array.isArray(previewData) ? previewData.filter(item => item !== null && typeof item === 'object') : [];
     const groupedData: Record<string, BulkScoreData[]> = {};
-    previewData.forEach(item => {
-        const d = item.gameDate || defaultDate;
+    
+    filteredPreviewData.forEach(item => {
+        const d = item.gameDate || defaultDate || 'Unknown Date';
         if (!groupedData[d]) groupedData[d] = [];
         groupedData[d].push(item);
     });
@@ -237,7 +239,7 @@ export default function ExcelUpload({ teamId }: ExcelUploadProps) {
                                                     <div style={{ fontSize: '10px', color: 'var(--secondary-foreground)' }}>{row.memo || '-'}</div>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '4px' }}>
-                                                    {row.scores.map((s, si) => (
+                                                    {Array.isArray(row.scores) && row.scores.map((s, si) => (
                                                         <span key={si} style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--input)', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>
                                                             {s}
                                                         </span>

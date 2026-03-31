@@ -31,7 +31,7 @@ function extractJson(text: string): string {
     let startIdx = -1;
     let isArray = false;
 
-    if (startIdxArr !== -1 && (startIdxObj === -1 || startIdxArr < startIdxObj)) {
+    if (startIdxArr !== -1 && (startIdxObj === -1 || (startIdxArr < startIdxObj))) {
         startIdx = startIdxArr;
         isArray = true;
     } else if (startIdxObj !== -1) {
@@ -42,23 +42,59 @@ function extractJson(text: string): string {
     if (startIdx === -1) return cleanText;
 
     let sub = cleanText.slice(startIdx);
-    const endChar = isArray ? ']' : '}';
-    const lastEndIdx = sub.lastIndexOf(endChar);
+    
+    // 3. Robust iterative search for valid JSON
+    // We start from the end and try to find the last point where the JSON is valid.
+    // This handles both hard truncation and minor syntax errors (like trailing commas).
+    const closingChar = isArray ? ']' : '}';
+    
+    let searchIdx = sub.length;
+    while (searchIdx > 0) {
+        // Find last potential closing bracket
+        const lastBracket = sub.lastIndexOf(closingChar, searchIdx);
+        if (lastBracket === -1) break;
 
-    if (lastEndIdx !== -1) {
-        return sub.slice(0, lastEndIdx + 1);
-    }
-
-    // 3. Robustness check for truncation
-    // If we are in an array and it's truncated, look for the last complete object
-    if (isArray) {
-        const lastObjClose = sub.lastIndexOf('}');
-        if (lastObjClose !== -1) {
-            return sub.slice(0, lastObjClose + 1) + ']';
+        let candidate = sub.slice(0, lastBracket + 1).trim();
+        
+        // Try parsing the current candidate
+        try {
+            JSON.parse(candidate);
+            return candidate;
+        } catch (e) {
+            // If it failed due to a trailing comma (very common in truncation or model quirks):
+            // Attempt a simple fix: remove characters before the bracket and see if it helps
+            // [ {}, {} , ] -> [ {}, {} ]
+            const commaMatch = candidate.match(/,\s*[\]}]$/);
+            if (commaMatch) {
+                const fixedCandidate = candidate.replace(/,\s*([\]}])$/, '$1');
+                try {
+                    JSON.parse(fixedCandidate);
+                    return fixedCandidate;
+                } catch (e2) {
+                    // Fall through to search earlier
+                }
+            }
+            
+            // Move search point back
+            searchIdx = lastBracket - 1;
         }
     }
 
-    return sub;
+    // Last resort: If we couldn't find a valid outer structure, try the last object close
+    if (isArray) {
+        let lastObjClose = sub.lastIndexOf('}');
+        if (lastObjClose !== -1) {
+            let candidate = sub.slice(0, lastObjClose + 1).trim() + ']';
+            // Cleanup trailing comma
+            candidate = candidate.replace(/,\s*\]$/, ']');
+            try {
+                JSON.parse(candidate);
+                return candidate;
+            } catch (e) {}
+        }
+    }
+
+    return sub; // Return original if all else fails
 }
 
 // ... existing code ...
@@ -83,7 +119,10 @@ export async function analyzeLeagueRoundExcelWithGemini(
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ 
             model: "gemini-2.0-flash",
-            generationConfig: { responseMimeType: "application/json" }
+            generationConfig: { 
+                responseMimeType: "application/json",
+                maxOutputTokens: 8192
+            }
         });
 
         const prompt = `
@@ -92,7 +131,7 @@ export async function analyzeLeagueRoundExcelWithGemini(
             Focus: Extract Lane numbers, Row index (Slot), and exactly ${gameCount} individual Game scores.
 
             INPUT EXCEL DATA (2D Array - Grid View):
-            ${JSON.stringify(excelData.slice(0, 300))}
+            ${JSON.stringify(excelData.slice(0, 80))} (Only showing first 80 rows for stability)
 
             INSTRUCTIONS:
             1. **Identify Lane Sections**: 
@@ -112,6 +151,7 @@ export async function analyzeLeagueRoundExcelWithGemini(
                - Ignore Totals/Sums/Averages. Only take the individual game scores (1G to ${gameCount}G).
                - Scores must be 0-300.
                - DO NOT attempt to find player names or IDs. Just Lane, Slot, and Games.
+            5. **Output limit**: Be as concise as possible. If there are too many entries, process up to the limit.
 
             CRITICAL OUTPUT RULES:
             - **RETURN ONLY** THE JSON ARRAY BELOW. NO MARKDOWN. NO COMMENTS.
@@ -149,8 +189,8 @@ export async function analyzeLeagueRoundExcelWithGemini(
             const rawArray = Array.isArray(parsed) ? parsed : (parsed.raw || parsed.data || []);
             return { success: true, data: rawArray };
         } catch (parseError) {
-            console.error("JSON Parse Error:", parseError);
-            return { success: false, message: "AI응답 형식이 올바르지 않습니다. (JSON Parse Error)" };
+            console.error("League Round AI JSON Parse Error:", parseError, "JSON string:", jsonString);
+            return { success: false, message: "AI응답 형식이 올바르지 않습니다. (Truncation error at pos " + (parseError instanceof Error ? (parseError as any).pos : "?") + ")" };
         }
 
     } catch (error: any) {
@@ -269,7 +309,10 @@ export async function analyzeScoreboardWithGemini(
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ 
             model: "gemini-2.0-flash",
-            generationConfig: { responseMimeType: "application/json" }
+            generationConfig: { 
+                responseMimeType: "application/json",
+                maxOutputTokens: 2048
+            }
         });
 
         const prompt = `
@@ -385,7 +428,10 @@ export async function analyzeExcelWithGemini(
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ 
             model: "gemini-2.0-flash",
-            generationConfig: { responseMimeType: "application/json" }
+            generationConfig: { 
+                responseMimeType: "application/json",
+                maxOutputTokens: 8192
+            }
         });
 
         const prompt = `
@@ -393,7 +439,7 @@ export async function analyzeExcelWithGemini(
             Task: Standardize the data into a list of players, their scores, and potentially the date of the games.
 
             INPUT DATA:
-            ${JSON.stringify(excelData.slice(0, 100))} (Only showing first 100 rows for brevity)
+            ${JSON.stringify(excelData.slice(0, 80))} (Only showing first 80 rows for stability)
 
             INSTRUCTIONS:
             1. Identify columns for Name, Date (if any), Scores, and Memo.
@@ -413,6 +459,7 @@ export async function analyzeExcelWithGemini(
             4. Some Excel files might have dates in a header row or a separate column. Use your intelligence to associate the correct date with each score.
             5. If a score cell contains two numbers separated by a slash (e.g., '191/205'), you MUST take only the HIGHER number (e.g., 205).
             6. Return strictly a JSON array. No markdown formatting or preamble text.
+            7. **Output limit**: Be as concise as possible. If there are too many entries, process up to the limit.
 
             OUTPUT FORMAT (JSON Array):
             [
@@ -432,9 +479,14 @@ export async function analyzeExcelWithGemini(
         await incrementUserAiUsage(session.user.id, kstDate, inputTokens, outputTokens);
 
         const jsonString = extractJson(text);
-        const parsedData = JSON.parse(jsonString);
-
-        return { success: true, data: parsedData };
+        
+        try {
+            const parsedData = JSON.parse(jsonString);
+            return { success: true, data: parsedData };
+        } catch (perr) {
+            console.error("Gemini JSON parse failed even after extraction:", perr, "JSON String:", jsonString);
+            return { success: false, message: "AI응답 형식이 올바르지 않습니다. (Truncation error at pos " + (perr instanceof Error ? (perr as any).pos : "?") + ")" };
+        }
     } catch (error: any) {
         console.error("Excel AI Analysis Error:", error);
         return { success: false, message: error.message || "Failed to analyze Excel data with AI." };
