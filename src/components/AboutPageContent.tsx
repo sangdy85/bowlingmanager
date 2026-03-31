@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createInquiry, answerInquiry, deleteInquiry } from '@/app/actions/inquiry-actions';
 
 interface InquiryWithAuthor {
@@ -435,6 +436,11 @@ export default function AboutPageContent({
                         </div>
                     </div>
                 )}
+            </div>
+            <div className="mt-24 pt-8 border-t border-slate-200 flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm font-medium text-slate-500">
+                <Link href="/privacy" className="hover:text-blue-600 transition-colors underline underline-offset-4">개인정보처리방침</Link>
+                <Link href="/terms" className="hover:text-blue-600 transition-colors underline underline-offset-4">이용약관</Link>
+                <span>© {new Date().getFullYear()} BowlingManager. All rights reserved.</span>
             </div>
         </div>
     );
