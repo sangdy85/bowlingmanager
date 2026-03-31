@@ -436,7 +436,15 @@ export async function analyzeExcelWithGemini(
 
         const prompt = `
             Analyze this raw JSON data extracted from an Excel file for professional bowling scores.
-            Task: Standardize the data into a list of players, their scores, and potentially the date of the games.
+            Analyze this raw JSON data extracted from an Excel file for professional bowling scores.
+            Task: Standardize the data into a list of players, their scores, and the correct date of each game session.
+
+            HORIZONTAL MULTI-TABLE LAYOUT SUPPORT:
+            - **IMPORTANT**: The input data may contain multiple tables arranged **SIDE-BY-SIDE** (horizontally).
+            - Look for date headers (e.g., "20240831", "2024-09-14", "No. 1 24.10.15") at the top of each vertical column group.
+            - A single row in the input array may contain data for DIFFERENT dates in different columns.
+            - You MUST correctly associate each player (memberName) and their scores with the date header that appears at the top of their specific column group.
+            - If a table lacks a header, use the user's provided default date.
 
             INPUT DATA:
             ${JSON.stringify(excelData.slice(0, 80))} (Only showing first 80 rows for stability)
@@ -446,24 +454,17 @@ export async function analyzeExcelWithGemini(
             2. For each row representing a score entry:
                - memberName: The player's name.
                - scores: An array of numbers (0-300).
-               - gameDate: The date in YYYY-MM-DD format. If multiple dates exist in the file, map them accordingly. If no date is found in a specific row, omit it (it will use the default).
+               - gameDate: The date in YYYY-MM-DD format. Ensure you map it to the correct column group's header date.
                - memo: Any text that looks like a note for that entry.
-            3. **Extract Scores per Row (RESET BY LANE)**:
-               - IMPORTANT: The "slot" represents the sequence (1, 2, 3...) within a specific Lane section.
-               - **ALWAYS reset "slot" to 1** when a new Lane section begins.
-               - DO NOT use global rank numbers (e.g., 7, 8, 9) if they appear in the sheet.
-               - For each row that contains a player's scores:
-                 - "lane": The lane number/name this player is assigned to.
-                 - "slot": The local sequence number (1, 2, 3...) within that lane.
-                 - "games": An array of numbers (Game 1, 2, ...).
-            4. Some Excel files might have dates in a header row or a separate column. Use your intelligence to associate the correct date with each score.
-            5. If a score cell contains two numbers separated by a slash (e.g., '191/205'), you MUST take only the HIGHER number (e.g., 205).
-            6. Return strictly a JSON array. No markdown formatting or preamble text.
-            7. **Output limit**: Be as concise as possible. If there are too many entries, process up to the limit.
+            3. Some Excel files might have dates in a header row or a separate column. Use your intelligence to associate the correct date with each score.
+            4. If a score cell contains two numbers separated by a slash (e.g., '191/205'), you MUST take only the HIGHER number (e.g., 205).
+            5. Final Output: Strictly a JSON array. No markdown formatting or preamble text.
+            6. **Output limit**: Be as concise as possible. If there are too many entries, process up to the limit.
 
             OUTPUT FORMAT (JSON Array):
             [
-              { "memberName": "Name", "scores": [180, 210, 195], "gameDate": "2024-05-15", "memo": "Note here" },
+              { "memberName": "홍길동", "scores": [180, 210, 195], "gameDate": "2024-08-31", "memo": "정기전" },
+              { "memberName": "김철수", "scores": [150, 160], "gameDate": "2024-09-14" },
               ...
             ]
         `;
