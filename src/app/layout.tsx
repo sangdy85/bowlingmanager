@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/NavbarWrapper";
+import Footer from "@/components/Footer";
 import AuthContext from '@/components/AuthContext';
 import Script from "next/script";
 
@@ -32,11 +33,12 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <AuthContext>
-          <div className="min-h-screen bg-background text-foreground">
+          <div className="min-h-screen flex flex-col bg-background text-foreground">
             <Navbar />
-            <main className="container mx-auto px-4 py-8">
+            <main className="container flex-grow mx-auto px-4 py-8">
               {children}
             </main>
+            <Footer />
           </div>
         </AuthContext>
       </body>
