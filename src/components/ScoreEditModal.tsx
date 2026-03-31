@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { saveDailyScores } from "@/app/actions/score-edit";
+import { useRouter } from "next/navigation";
 
 interface ScoreItem {
     id?: string;
@@ -20,6 +21,7 @@ interface ScoreEditModalProps {
 }
 
 export default function ScoreEditModal({ isOpen, onClose, userId, userName, dateStr, initialScores, teamId, guestName }: ScoreEditModalProps) {
+    const router = useRouter();
     const [scores, setScores] = useState<ScoreItem[]>(initialScores);
     const [isSaving, setIsSaving] = useState(false);
     const [editDate, setEditDate] = useState(dateStr);
@@ -57,6 +59,7 @@ export default function ScoreEditModal({ isOpen, onClose, userId, userName, date
 
         if (result.success) {
             alert("저장되었습니다.");
+            router.refresh();
             onClose();
         } else {
             alert(result.message);
@@ -75,6 +78,7 @@ export default function ScoreEditModal({ isOpen, onClose, userId, userName, date
 
         if (result.success) {
             alert("삭제되었습니다.");
+            router.refresh();
             onClose();
         } else {
             alert(result.message);

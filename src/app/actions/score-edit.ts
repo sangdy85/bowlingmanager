@@ -74,6 +74,19 @@ export async function saveDailyScores(
             const existingIds = existingScores.map(s => s.id);
             const incomingIds = scores.map(s => s.id).filter(id => id !== undefined) as string[];
 
+            // Get existing session details (gameType, memo) from any score on this day for this team
+            const sessionTemplate = existingScores[0] || (await tx.score.findFirst({
+                where: {
+                    teamId: teamId,
+                    gameDate: {
+                        gte: startOfCurrentDay,
+                        lte: endOfCurrentDay
+                    }
+                }
+            }));
+            const sessionGameType = sessionTemplate?.gameType || null;
+            const sessionMemo = sessionTemplate?.memo || null;
+
             // Delete removed scores (if scores array is empty, this handles "Delete All")
             const toDelete = existingIds.filter(id => !incomingIds.includes(id));
             if (toDelete.length > 0) {
@@ -101,7 +114,9 @@ export async function saveDailyScores(
                             Team: { connect: { id: teamId } },
                             gameDate: targetDate,
                             User: targetGuestName ? undefined : { connect: { id: targetUserId } },
-                            guestName: targetGuestName || null
+                            guestName: targetGuestName || null,
+                            gameType: sessionGameType,
+                            memo: sessionMemo
                         }
                     });
                 }
