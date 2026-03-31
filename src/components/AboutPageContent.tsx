@@ -30,10 +30,13 @@ export default function AboutPageContent({
 
     const [adminFilter, setAdminFilter] = useState<'all' | 'pending'>('pending');
 
-    // Sort and filter inquiries
-    const sortedInquiries = [...inquiries].sort((a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    // Sort and filter inquiries - Defensive check for null items
+    const validInquiries = Array.isArray(inquiries) ? inquiries.filter(i => i !== null) : [];
+    const sortedInquiries = [...validInquiries].sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
+    });
 
     const filteredInquiries = isAdmin && adminFilter === 'pending'
         ? sortedInquiries.filter(i => i.status === 'PENDING')
@@ -379,7 +382,7 @@ export default function AboutPageContent({
                                                     <h4 className="font-bold text-gray-900 text-lg leading-tight">{inq.title}</h4>
                                                 </div>
                                                 <div className="text-sm text-gray-500 font-medium">
-                                                    {inq.author.name} · {new Date(inq.createdAt).toLocaleDateString()}
+                                                    {inq.author?.name || '익명'} · {inq.createdAt ? new Date(inq.createdAt).toISOString().split('T')[0] : '-'}
                                                 </div>
                                             </div>
                                             {isAdmin && (
