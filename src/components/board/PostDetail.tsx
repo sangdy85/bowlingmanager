@@ -46,13 +46,21 @@ export default function PostDetail({ postId, teamId, onBack }: PostDetailProps) 
             {post.images && post.images.length > 0 && (
                 <div className="flex flex-col gap-4 mb-6">
                     {post.images.map((img: any) => (
-                        <div key={img.id} className="relative rounded-lg overflow-hidden border border-border/50 bg-muted/20">
-                            <img
-                                src={img.url}
-                                alt="첨부 이미지"
-                                className="w-full h-auto object-contain max-h-[600px]"
-                                loading="lazy"
-                            />
+                        <div key={img.id} className="relative rounded-lg overflow-hidden border border-border/50 bg-muted/20 group">
+                            <a 
+                                href={img.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="block cursor-pointer hover:opacity-90 transition-opacity"
+                                title="이미지 크게 보기"
+                            >
+                                <img
+                                    src={img.url}
+                                    alt="첨부 이미지"
+                                    className="w-full h-auto object-contain max-h-[600px]"
+                                    loading="lazy"
+                                />
+                            </a>
                         </div>
                     ))}
                 </div>
