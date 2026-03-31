@@ -139,17 +139,25 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
                         &larr; 팀 목록
                     </Link>
                     {(isOwner || isManager) && (
-                        <Link
-                            href={isManageMode ? `/team/${teamId}` : `/team/${teamId}?view=manage`}
-                            className="btn h-10 px-4 min-w-[100px] text-sm flex items-center justify-center shadow-sm"
-                            style={{
-                                backgroundColor: '#ffffff',
-                                color: '#000000',
-                                border: '1px solid #d1d5db'
-                            }}
-                        >
-                            {isManageMode ? '대시보드' : '팀원 관리'}
-                        </Link>
+                        <>
+                            <Link
+                                href={`/score/add?teamId=${teamId}`}
+                                className="btn btn-primary h-10 px-4 min-w-[100px] text-sm flex items-center justify-center shadow-sm"
+                            >
+                                점수 기록하기
+                            </Link>
+                            <Link
+                                href={isManageMode ? `/team/${teamId}` : `/team/${teamId}?view=manage`}
+                                className="btn h-10 px-4 min-w-[100px] text-sm flex items-center justify-center shadow-sm"
+                                style={{
+                                    backgroundColor: '#ffffff',
+                                    color: '#000000',
+                                    border: '1px solid #d1d5db'
+                                }}
+                            >
+                                {isManageMode ? '대시보드' : '팀원 관리'}
+                            </Link>
+                        </>
                     )}
                     <LeaveTeamButton onLeave={leaveTeam.bind(null, teamId)} />
                 </div>

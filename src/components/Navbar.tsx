@@ -52,7 +52,7 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
                 </>
               ) : (
                 <>
-                  <Link href="/personal" className={styles.link} onClick={closeMenu}>점수 기록</Link>
+                  <Link href="/personal" className={styles.link} onClick={closeMenu}>나의 기록실</Link>
                   <Link href="/team" className={styles.link} onClick={closeMenu}>팀 관리</Link>
                   <Link href="/stats" className={styles.link} onClick={closeMenu}>통계/순위</Link>
                   <Link href="/centers" className={styles.link} onClick={closeMenu}>볼링장/대회</Link>
