@@ -302,8 +302,9 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         }))
     ];
 
+    const myYearlyScoresExcludingImpromptu = myYearlyScores.filter((s: any) => s.gameType !== '벙개');
     const allIntegratedScores = [
-        ...myYearlyScores.map((s: any) => ({ score: s.score, gameDate: s.gameDate })),
+        ...myYearlyScoresExcludingImpromptu.map((s: any) => ({ score: s.score, gameDate: s.gameDate })),
         ...officialOnlyScores
     ];
 
