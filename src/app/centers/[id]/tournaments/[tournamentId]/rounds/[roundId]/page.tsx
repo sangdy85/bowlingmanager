@@ -242,7 +242,6 @@ export default async function RoundDetailPage({ params }: { params: { id: string
             ...roundData.tournament,
             startDate: roundData.tournament.startDate?.toISOString(),
             endDate: roundData.tournament.endDate?.toISOString(),
-            registrationStart: roundData.tournament.registrationStart?.toISOString(),
             rounds: processedRounds
         }
     };
