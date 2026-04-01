@@ -114,10 +114,11 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                         const opponentScores = m.individualScores.filter(s => s.teamId === opponentId && s.teamSquad === opponentSquad);
                         const rawOHSum = opponentScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
                         const ohSum = (hLimit !== null && rawOHSum > hLimit) ? hLimit : rawOHSum;
+                        const excessOH = Math.max(0, rawOHSum - ohSum);
 
-                        const og1 = opponentScores.reduce((sum, s) => sum + (s.score1 || 0), 0);
-                        const og2 = opponentScores.reduce((sum, s) => sum + (s.score2 || 0), 0);
-                        const og3 = opponentScores.reduce((sum, s) => sum + (s.score3 || 0), 0);
+                        const og1 = opponentScores.reduce((sum, s) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0) - excessOH;
+                        const og2 = opponentScores.reduce((sum, s) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0) - excessOH;
+                        const og3 = opponentScores.reduce((sum, s) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0) - excessOH;
 
 
                         const draws = points !== null && (points % 1) === 0.5 ? 1 : 0;
@@ -212,7 +213,7 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                                         <td style={{ ...baseCell, fontSize: isMobile ? '12px' : '18px', ...(marks[0] === 'O' ? winStyle : {}) }}>{marks[0]}</td>
                                         <td style={{ ...baseCell, fontSize: isMobile ? '12px' : '18px', ...(marks[1] === 'O' ? winStyle : {}) }}>{marks[1]}</td>
                                         <td style={{ ...baseCell, fontSize: isMobile ? '12px' : '18px', ...(marks[2] === 'O' ? winStyle : {}) }}>{marks[2]}</td>
-                                        <td style={{ ...baseCell, fontSize: isMobile ? '12px' : '18px', fontStyle: 'italic', backgroundColor: '#f1f5f9', ...(isWinner ? winStyle : {}) }}>{getMarker(points || 0, 2)}</td>
+                                        <td style={{ ...baseCell, fontSize: isMobile ? '12px' : '18px', fontStyle: 'italic', backgroundColor: '#f1f5f9', ...(isWinner ? winStyle : {}) }}>{getMarker(g1 + g2 + g3, og1 + og2 + og3)}</td>
                                     </tr>
                                 </tbody>
                             </table>
