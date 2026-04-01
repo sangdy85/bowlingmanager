@@ -560,8 +560,8 @@ export async function joinRound(roundId: string, userId: string) {
             }
         });
 
-        if (existing.length > 0) {
-            registrationId = (existing[0] as any).id;
+        if (existing) {
+            registrationId = existing.id;
         } else {
             // [LINKING LOGIC] Check if there's a manual GUEST registration with matching Name + Team
             const userMember = await prisma.centerMember.findUnique({
@@ -1148,7 +1148,9 @@ export async function updateRegistration(
             include: {
                 roundParticipations: true,
                 scores: true,
-                tournament: true
+                tournament: true,
+                user: true,
+                team: true
             }
         });
 

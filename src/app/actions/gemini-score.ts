@@ -131,7 +131,7 @@ export async function analyzeLeagueRoundExcelWithGemini(
             Focus: Extract Lane numbers, Row index (Slot), and exactly ${gameCount} individual Game scores.
 
             INPUT EXCEL DATA (2D Array - Grid View):
-            ${JSON.stringify(excelData.slice(0, 80))} (Only showing first 80 rows for stability)
+            ${JSON.stringify(excelData.slice(0, 400))} (Showing up to 400 rows for broad lane coverage)
 
             INSTRUCTIONS:
             1. **Identify Lane Sections**: 
@@ -311,7 +311,7 @@ export async function analyzeScoreboardWithGemini(
             model: "gemini-2.0-flash",
             generationConfig: { 
                 responseMimeType: "application/json",
-                maxOutputTokens: 2048
+                maxOutputTokens: 8192
             }
         });
 
@@ -447,7 +447,7 @@ export async function analyzeExcelWithGemini(
             - If a table lacks a header, use the user's provided default date.
 
             INPUT DATA:
-            ${JSON.stringify(excelData.slice(0, 80))} (Only showing first 80 rows for stability)
+            ${JSON.stringify(excelData.slice(0, 400))} (Showing up to 400 rows for broad lane coverage)
 
             INSTRUCTIONS:
             1. Identify columns for Name, Date (if any), Scores, and Memo.
