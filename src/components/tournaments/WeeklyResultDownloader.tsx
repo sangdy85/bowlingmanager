@@ -558,7 +558,7 @@ export default function WeeklyResultDownloader({
                                             ? teamHandicapLimit
                                             : oppRawHandiSum;
 
-                                        const total = g1Total + g2Total + g3Total + handiSum;
+                                        const total = g1Total + g2Total + g3Total + handiSum; const oppTotal = oppG1Total + oppG2Total + oppG3Total + oppHandiSum;
 
                                         const getMarker = (a: number, b: number) => {
                                             if (a > b) return 'O';
@@ -636,7 +636,7 @@ export default function WeeklyResultDownloader({
                                                             <td style={{ ...baseCell, fontSize: '18px', ...(markers[0] === 'O' ? winStyle : {}) }}>{markers[0]}</td>
                                                             <td style={{ ...baseCell, fontSize: '18px', ...(markers[1] === 'O' ? winStyle : {}) }}>{markers[1]}</td>
                                                             <td style={{ ...baseCell, fontSize: '18px', ...(markers[2] === 'O' ? winStyle : {}) }}>{markers[2]}</td>
-                                                            <td style={{ ...baseCell, fontSize: '18px', fontStyle: 'italic', backgroundColor: '#f1f5f9', ...(isWinner ? winStyle : {}) }}>{getMarker(points || 0, 2)}</td>
+                                                            <td style={{ ...baseCell, fontSize: '18px', fontStyle: 'italic', backgroundColor: '#f1f5f9', ...(isWinner ? winStyle : {}) }}>{getMarker(total, oppTotal)}</td>
                                                         </tr>
                                                     </tfoot>
                                                 </table>
