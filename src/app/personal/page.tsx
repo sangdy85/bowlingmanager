@@ -554,17 +554,34 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                             {/* Medal Awards Section */}
                             {(goldCount > 0 || silverCount > 0 || bronzeCount > 0) && (
                                 <div className="mt-4 pt-4 border-t border-white/10">
-                                    <div className="flex flex-col gap-2">
-                                        <div className="flex -space-x-3 overflow-visible py-1">
-                                            {Array.from({ length: Math.min(10, goldCount) }).map((_, i) => (
-                                                <span key={`gold-${i}`} className="text-2xl filter drop-shadow-[0_0_8px_rgba(255,215,0,0.5)]">🥇</span>
-                                            ))}
-                                            {Array.from({ length: Math.min(10, silverCount) }).map((_, i) => (
-                                                <span key={`silver-${i}`} className="text-2xl filter drop-shadow-[0_0_8px_rgba(192,192,192,0.5)]">🥈</span>
-                                            ))}
-                                            {Array.from({ length: Math.min(10, bronzeCount) }).map((_, i) => (
-                                                <span key={`bronze-${i}`} className="text-2xl filter drop-shadow-[0_0_8px_rgba(205,127,50,0.5)]">🥉</span>
-                                            ))}
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex flex-col gap-1">
+                                            {(() => {
+                                                const allMedals = [
+                                                    ...Array.from({ length: goldCount }).map((_, i) => ({ type: 'gold', icon: '🥇', color: 'rgba(255,215,0,0.5)' })),
+                                                    ...Array.from({ length: silverCount }).map((_, i) => ({ type: 'silver', icon: '🥈', color: 'rgba(192,192,192,0.5)' })),
+                                                    ...Array.from({ length: bronzeCount }).map((_, i) => ({ type: 'bronze', icon: '🥉', color: 'rgba(205,127,50,0.5)' }))
+                                                ];
+                                                
+                                                const rows = [];
+                                                for (let i = 0; i < allMedals.length; i += 8) {
+                                                    rows.push(allMedals.slice(i, i + 8));
+                                                }
+
+                                                return rows.map((row, rowIdx) => (
+                                                    <div key={rowIdx} className="flex -space-x-3 overflow-visible py-0.5">
+                                                        {row.map((medal, i) => (
+                                                            <span 
+                                                                key={`${medal.type}-${rowIdx}-${i}`} 
+                                                                className="text-2xl filter"
+                                                                style={{ filter: `drop-shadow(0 0 8px ${medal.color})` }}
+                                                            >
+                                                                {medal.icon}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ));
+                                            })()}
                                         </div>
                                         <div className="text-[13px] font-black tracking-wider text-white/90 bg-white/5 px-2.5 py-1 rounded-md border border-white/5 w-fit">
                                             {goldCount > 0 && <span className="text-yellow-400">금 {goldCount}</span>}
