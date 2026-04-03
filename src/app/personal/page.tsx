@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import React from "react";
 import YearSelector from "@/components/YearSelector";
 import StatsDisplayRow from "@/components/StatsDisplayRow";
+import RadarChart from "@/components/RadarChart";
 
 export const dynamic = 'force-dynamic';
 
@@ -341,6 +342,81 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         (tm.team as any).User.some((m: any) => m.id === user.id)
     );
 
+    // --- 평가 그래프 데이터 계산 (Radar Chart) ---
+    // 1. 정기전 데이터
+    const regularRoundsMap = new Map<string, { scores: number[], avg: number }>();
+    globalRegularScores.forEach((s: any) => {
+        const d = s.gameDate.toISOString().split('T')[0];
+        if (!regularRoundsMap.has(d)) regularRoundsMap.set(d, { scores: [], avg: 0 });
+        regularRoundsMap.get(d)!.scores.push(s.score);
+    });
+    regularRoundsMap.forEach(v => {
+        v.avg = v.scores.reduce((a, b) => a + b, 0) / v.scores.length;
+    });
+
+    const regularRounds = Array.from(regularRoundsMap.values());
+    const regAvg = regularRounds.length > 0 ? (regularRounds.reduce((a, b) => a + b.scores.reduce((c, d) => c + d, 0), 0) / regularRounds.reduce((a, b) => a + b.scores.length, 0)) : 0;
+    const regMaxRoundAvg = regularRounds.length > 0 ? Math.max(...regularRounds.map(r => r.avg)) : 0;
+    const regMinRoundAvg = regularRounds.length > 0 ? Math.min(...regularRounds.map(r => r.avg)) : 0;
+    const regMaxScore = globalRegularScores.length > 0 ? Math.max(...globalRegularScores.map((s: any) => s.score)) : 0;
+    const regMinScore = globalRegularScores.length > 0 ? Math.min(...globalRegularScores.map((s: any) => s.score)) : 0;
+    const regHighLow = regMaxScore - regMinScore;
+
+    // 정기전 출석률 계산
+    const allTeamRegularScores = await prisma.score.findMany({
+        where: {
+            teamId: { in: userTeamIds },
+            gameType: '정기전',
+            gameDate: { gte: startOfYear, lte: endOfYear }
+        },
+        select: { gameDate: true }
+    });
+    const totalTeamRoundsCount = new Set(allTeamRegularScores.map((s: any) => s.gameDate.toISOString().split('T')[0])).size;
+    const regAttendancePct = totalTeamRoundsCount > 0 ? (regularRounds.length / totalTeamRoundsCount) * 100 : 0;
+
+    const calcRegPoint = (val: number, base: number, step: number) => {
+        const p = 10 - (base - val) * step;
+        return Math.min(10, Math.max(1, p));
+    };
+
+    const datasets = [];
+    if (regularRounds.length >= 3) {
+        datasets.push({
+            label: '정기전',
+            color: '#3b82f6',
+            points: [
+                calcRegPoint(regAvg, 234, 0.1),             // 기량
+                calcRegPoint(regMaxRoundAvg, 250, 0.2),     // 포텐셜
+                Math.min(10, Math.max(1, 10 - (regHighLow - 10) * 0.1)), // 기복
+                calcRegPoint(regMinRoundAvg, 200, 0.1),     // 안정감
+                Math.min(10, Math.max(1, regAttendancePct / 10)) // 성실
+            ]
+        });
+    }
+
+    // 2. 볼링장 대회 데이터
+    if (officialRecords.length >= 3) {
+        const offAvg = officialSummary.total.pins / (officialSummary.total.games || 1);
+        const offMaxRoundAvg = Math.max(...officialRecords.map(r => parseFloat(r.avg)));
+        const offMinRoundAvg = Math.min(...officialRecords.map(r => parseFloat(r.avg)));
+        const offMaxScore = Math.max(...officialRecords.flatMap(r => r.scores));
+        const offMinScore = Math.min(...officialRecords.flatMap(r => r.scores));
+        const offHighLow = offMaxScore - offMinScore;
+        const offAttendanceCount = officialRecords.length;
+
+        datasets.push({
+            label: '볼링장 대회',
+            color: '#f59e0b',
+            points: [
+                calcRegPoint(offAvg, 234, 0.1),             // 기량
+                calcRegPoint(offMaxRoundAvg, 250, 0.2),     // 포텐셜
+                Math.min(10, Math.max(1, 10 - (offHighLow - 10) * 0.1)), // 기복
+                calcRegPoint(offMinRoundAvg, 200, 0.1),     // 안정감
+                Math.min(10, Math.max(1, offAttendanceCount)) // 성실
+            ]
+        });
+    }
+
     return (
         <div className="container py-8 max-w-4xl mx-auto">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 text-[#0f172a]">
@@ -361,6 +437,29 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             </div>
 
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
+
+            {datasets.length > 0 && (
+                <div className="bg-white border-2 border-slate-200 rounded-xl p-6 mb-8 shadow-sm flex flex-col md:flex-row items-center gap-8">
+                    <div className="flex-1 text-center md:text-left">
+                        <div className="inline-block bg-blue-100 text-blue-700 text-xs font-black px-2 py-1 rounded-full mb-2">PLAYER PROFILE</div>
+                        <h2 className="text-3xl font-black text-slate-900 mb-1">{user.name} <span className="text-slate-400 font-normal">선수</span></h2>
+                        <p className="text-slate-500 text-sm font-medium">실력 평가 지표 (0-10점 만점)</p>
+                        <div className="mt-4 grid grid-cols-2 gap-2 text-[11px] font-bold text-slate-600">
+                            <div className="flex items-center gap-1">📊 에버: {regAvg.toFixed(1)}</div>
+                            <div className="flex items-center gap-1">🚀 하이: {regMaxScore}</div>
+                            <div className="flex items-center gap-1">🎯 출석: {regularRounds.length}회</div>
+                            <div className="flex items-center gap-1">📉 편차: {regHighLow}</div>
+                        </div>
+                    </div>
+                    <div className="flex-none bg-slate-50 rounded-lg p-2 border border-slate-100">
+                        <RadarChart 
+                            datasets={datasets} 
+                            labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
+                            size={280} 
+                        />
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 gap-8">
                 <div className="bg-[#1e293b] border border-[#334155] p-3 shadow-lg rounded-t-lg" style={{ borderBottom: '2px solid #3b82f6' }}>
