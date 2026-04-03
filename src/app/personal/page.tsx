@@ -432,7 +432,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     }
 
     return (
-        <div className="container py-8 max-w-4xl mx-auto">
+        <div className="container py-8 max-w-6xl mx-auto">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 text-[#0f172a]">
                 <div>
                     <h1 className="page-title" style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: 900 }}>나의 기록실</h1>
@@ -525,7 +525,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         <RadarChart 
                             datasets={datasets} 
                             labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
-                            size={400} 
+                            size={500} 
                         />
                     </div>
 
