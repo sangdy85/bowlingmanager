@@ -512,24 +512,24 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             {datasets.length > 0 && (
-                <div className="mb-12 flex flex-col md:flex-row items-center md:items-start justify-center gap-6 md:gap-4 relative max-w-full overflow-hidden">
-                    {/* 1. Left: Profile Info - Mobile: order-1 */}
-                    <div className="flex flex-col justify-center min-w-[320px] md:min-w-[280px] order-1 w-full md:w-auto px-4 md:px-0 pt-2 lg:pt-0">
+                <div className="mb-12 flex flex-col md:flex-row md:flex-nowrap items-center md:items-start justify-center gap-8 md:gap-12 relative max-w-full overflow-hidden">
+                    {/* 1. Left: Profile Info & Stats - MD: Side-by-side */}
+                    <div className="flex flex-col shrink-0 w-full md:w-[280px] order-1 px-4 md:px-0">
                         <div className="text-white/40 text-[11px] font-bold tracking-widest mb-1.5 uppercase">PLAYER PROFILE</div>
-                        <h2 className="text-3xl font-black text-white mb-8 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
+                        <h2 className="text-3xl font-black text-white mb-8 tracking-tight capitalize">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
                         
-                        <div className="space-y-0.5 md:space-y-0 text-[14px] md:text-[13px]">
+                        <div className="space-y-0.5 text-[14px] md:text-[13px]">
                             {/* Total Average */}
-                            <div className="flex items-center mb-1">
-                                <span className="text-white/90 font-bold min-w-[80px]">✨ 총평균</span>
-                                <span className="font-black text-white ml-24">{totalAvg.toFixed(1)}</span>
+                            <div className="flex justify-between items-center mb-2 max-w-[240px]">
+                                <span className="text-white/90 font-bold">✨ 총평균</span>
+                                <span className="font-black text-white">{totalAvg.toFixed(1)}</span>
                             </div>
 
-                            <div className="flex flex-col gap-2 pt-1">
+                            <div className="flex flex-col gap-3 pt-2">
                                 {/* Regular Stats */}
                                 <div className="space-y-0">
                                     <div className="font-bold text-white/90 mb-1">정기전</div>
-                                    <div className="flex flex-col text-white/80 font-bold space-y-0">
+                                    <div className="flex flex-col text-white/80 font-bold space-y-0.2">
                                         <div>평균 :{regAvg.toFixed(1)}</div>
                                         <div>하이 :{regMaxScore}</div>
                                         <div>로우 :{regMinScore}</div>
@@ -539,9 +539,9 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                 </div>
 
                                 {/* Tournament Stats */}
-                                <div className="space-y-0 pt-1">
+                                <div className="space-y-0 pt-2">
                                     <div className="font-bold text-white/90 mb-1">대회</div>
-                                    <div className="flex flex-col text-white/80 font-bold space-y-0">
+                                    <div className="flex flex-col text-white/80 font-bold space-y-0.2">
                                         <div>평균 :{offAvg.toFixed(1)}</div>
                                         <div>하이 :{offMaxScore}</div>
                                         <div>로우 :{offMinScore}</div>
@@ -551,24 +551,26 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                 </div>
 
                                 {/* Medals on Desktop (Bottom of column) */}
-                                <div className="hidden md:block pt-6 border-transparent mt-2">
+                                <div className="hidden md:block pt-8 mt-2">
                                     {medalRow}
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* 2. Center: Radar Chart - Mobile: order-2 */}
-                    <div className="flex flex-col items-center justify-center order-2 w-full max-w-[420px] md:max-w-none md:flex-1 relative">
-                        <div className="flex flex-row items-center w-full justify-center">
-                            <RadarChart 
-                                datasets={datasets} 
-                                labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
-                                size={500} 
-                            />
+                    {/* 2. Right: Radar Chart & Legend - MD: Responsive side-by-side content */}
+                    <div className="flex flex-col items-center justify-center order-2 w-full md:flex-1 relative mt-8 md:mt-0">
+                        <div className="flex flex-col md:flex-row items-center w-full justify-center gap-6">
+                            <div className="relative w-full max-w-[420px] md:max-w-none md:flex-1 flex justify-center">
+                                <RadarChart 
+                                    datasets={datasets} 
+                                    labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
+                                    size={500} 
+                                />
+                            </div>
                             
                             {/* Legend for Desktop (Placed to the right of graph) */}
-                            <div className="hidden md:flex flex-col items-end gap-3 pr-2 ml-4">
+                            <div className="hidden md:flex flex-col items-end gap-3 pr-2 shrink-0">
                                 {datasets.map((dataset, idx) => (
                                     <div key={idx} className="flex items-center gap-4">
                                         <span className="text-[14px] font-bold text-white/90 whitespace-nowrap tracking-tight">{dataset.label}</span>
