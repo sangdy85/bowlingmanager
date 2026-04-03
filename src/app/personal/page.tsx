@@ -439,7 +439,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             {datasets.length > 0 && (
-                <div className="bg-[#0f172a] border border-slate-800 rounded-xl overflow-hidden mb-8 shadow-2xl flex flex-row items-stretch min-h-[360px]">
+                <div className="bg-[#0f172a] border border-slate-800 rounded-xl overflow-hidden mb-8 shadow-2xl flex flex-row items-stretch min-h-[420px]">
                     {/* Left Column: Profile Info */}
                     <div className="w-[40%] p-8 flex flex-col justify-center border-r border-slate-700/50">
                         <div className="text-white/60 text-[10px] font-black tracking-widest mb-1 uppercase">PLAYER PROFILE</div>
@@ -470,7 +470,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         <RadarChart 
                             datasets={datasets} 
                             labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
-                            size={300} 
+                            size={400} 
                         />
                     </div>
                 </div>
