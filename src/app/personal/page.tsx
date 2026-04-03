@@ -527,9 +527,9 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             {datasets.length > 0 && (
-                <div className="mb-12 flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-12 relative max-w-full overflow-hidden">
-                    {/* 1. Left: Profile Info - Mobile: order-1 */}
-                    <div className="flex flex-col justify-center min-w-[320px] order-1 w-full lg:w-auto px-4 lg:px-0">
+                <div className="mb-12 flex flex-col md:flex-row items-center md:items-start justify-center gap-6 md:gap-8 lg:gap-12 relative max-w-full overflow-hidden">
+                    {/* 1. Left: Profile Info - Mobile/Tablet: Stacked, Desktop: Left Column */}
+                    <div className="flex flex-col justify-center min-w-[300px] md:min-w-[280px] order-1 w-full md:w-auto px-4 md:px-0">
                         <div className="text-white/60 text-[10px] font-black tracking-widest mb-1 uppercase">PLAYER PROFILE</div>
                         <h2 className="text-3xl lg:text-4xl font-black text-white mb-4 lg:mb-6 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
                         
@@ -540,7 +540,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                 <span className="text-2xl font-black text-blue-400">{totalAvg.toFixed(1)}</span>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-4 pt-1">
+                            <div className="grid grid-cols-2 gap-x-6 md:gap-x-8 gap-y-4 pt-1">
                                 {/* Regular Stats */}
                                 <div className="space-y-1.5">
                                     <div className="text-[10px] font-black text-blue-400/80 tracking-tighter uppercase mb-2 border-l-2 border-blue-400/50 pl-2">정기전</div>
@@ -557,12 +557,8 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                         <span className="font-black text-white">{regMinScore}</span>
                                     </div>
                                     <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="text-white/40 font-bold">게임수 :</span>
-                                        <span className="font-black text-white">{regGames} G <span className="text-[10px] text-white/40 font-normal">({regAttendancePct.toFixed(0)}%)</span></span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="text-white/40 font-bold">편차 :</span>
-                                        <span className="font-black text-white">{regHighLow}</span>
+                                        <span className="text-white/40 font-bold">게임 :</span>
+                                        <span className="font-black text-white">{regGames} G</span>
                                     </div>
                                 </div>
 
@@ -582,33 +578,24 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                         <span className="font-black text-white">{offMinScore}</span>
                                     </div>
                                     <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="text-white/40 font-bold">게임수 :</span>
-                                        <span className="font-black text-white">{offGames} G <span className="text-[10px] text-white/40 font-normal">({officialRecords.length}회)</span></span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="text-white/40 font-bold">편차 :</span>
-                                        <span className="font-black text-white">{offHighLow}</span>
+                                        <span className="text-white/40 font-bold">게임 :</span>
+                                        <span className="font-black text-white">{offGames} G</span>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            {/* Desktop Medal Award Section */}
-                            <div className="hidden lg:block">
-                                {medalSection}
                             </div>
                         </div>
                     </div>
 
                     {/* 2. Center: Radar Chart - Mobile: order-2 */}
-                    <div className="flex flex-col items-center justify-center order-2 w-full max-w-[400px] lg:max-w-none">
+                    <div className="flex flex-col items-center justify-center order-2 w-full max-w-[420px] md:max-w-none md:flex-1">
                         <RadarChart 
                             datasets={datasets} 
                             labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
                             size={500} 
                         />
                         
-                        {/* Legend for Mobile */}
-                        <div className="flex lg:hidden flex-row flex-wrap justify-center gap-4 mt-6">
+                        {/* Legend for Mobile/Tablet (Hidden on Desktop) */}
+                        <div className="flex md:hidden flex-row flex-wrap justify-center gap-4 mt-6">
                             {datasets.map((dataset, idx) => (
                                 <div key={idx} className="flex items-center gap-2">
                                     <div style={{ width: '20px', height: '4px', backgroundColor: dataset.color, borderRadius: '2px' }} />
@@ -617,8 +604,8 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                             ))}
                         </div>
                         
-                        {/* Mobile Medal Award Section - order-3 (Stacked below graph) */}
-                        <div className="block lg:hidden mt-8 w-full px-4">
+                        {/* Mobile/Tablet Medal Award Section (order-3 visually on mobile) */}
+                        <div className="block md:hidden mt-8 w-full px-4">
                             <div className="bg-white/5 rounded-xl border border-white/10 p-5 shadow-2xl backdrop-blur-sm">
                                 <div className="text-white/60 text-[10px] font-black tracking-widest mb-4 uppercase">HONORARY AWARDS</div>
                                 {medalSection}
@@ -626,19 +613,26 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         </div>
                     </div>
 
-                    {/* 3. Right: Legend for Desktop ONLY (order-3) */}
-                    <div className="hidden lg:flex flex-col justify-end self-end mb-8 pt-20 order-3">
-                        <div className="flex flex-col items-end gap-3 pr-4">
+                    {/* 3. Right: Medals & Legend (Desktop ONLY) - order-3 */}
+                    <div className="hidden md:flex flex-col justify-between self-stretch py-4 order-3 min-w-[200px]">
+                        {/* Medals on Desktop (Top right) */}
+                        <div className="bg-white/5 rounded-xl border border-white/10 p-4 shadow-2xl backdrop-blur-sm mb-6">
+                            <div className="text-white/60 text-[9px] font-black tracking-widest mb-3 uppercase">HONORARY AWARDS</div>
+                            {medalSection}
+                        </div>
+
+                        {/* Legend on Desktop (Bottom right) */}
+                        <div className="flex flex-col items-end gap-3 pr-2 mt-auto">
                             {datasets.map((dataset, idx) => (
                                 <div key={idx} className="flex items-center gap-4">
-                                    <span className="text-[13px] font-black text-white/90 whitespace-nowrap tracking-tight">{dataset.label}</span>
+                                    <span className="text-[12px] font-black text-white/90 whitespace-nowrap tracking-tight">{dataset.label}</span>
                                     <div 
                                         style={{ 
-                                            width: '50px', 
-                                            height: '6px', 
+                                            width: '40px', 
+                                            height: '5px', 
                                             backgroundColor: dataset.color,
                                             borderRadius: '999px',
-                                            boxShadow: '0 0 12px ' + dataset.color + '66'
+                                            boxShadow: '0 0 10px ' + dataset.color + '66'
                                         }} 
                                     />
                                 </div>
