@@ -12,8 +12,8 @@ interface RadarChartProps {
     size?: number;
 }
 
-const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 300 }) => {
-    const radius = size / 3.2; // Slightly smaller to give more space for labels
+const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320 }) => {
+    const radius = size / 4; // Smaller chart for more label space
     const center = size / 2;
     const angleStep = (Math.PI * 2) / 5;
 
@@ -28,7 +28,7 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 300 })
     const levels = [2, 4, 6, 8, 10];
 
     return (
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center bg-[#1e293b] p-4 rounded-xl border border-slate-700 shadow-inner">
             <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
                 {/* Background Polygons (Grid) */}
                 {levels.map((level) => {
@@ -99,7 +99,7 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 300 })
 
                 {/* Labels */}
                 {labels.map((label, i) => {
-                    const { x, y } = getCoordinates(14, i * angleStep); // Further outside
+                    const { x, y } = getCoordinates(15, i * angleStep); // Much further outside
                     return (
                         <text
                             key={i}
@@ -107,8 +107,8 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 300 })
                             y={y}
                             textAnchor="middle"
                             dominantBaseline="middle"
-                            className="text-[12px] font-black"
-                            style={{ fill: 'white', filter: 'drop-shadow(0px 0px 4px rgba(0,0,0,0.8))' }}
+                            className="text-[13px] font-black"
+                            style={{ fill: '#f8fafc', filter: 'drop-shadow(0px 0px 3px rgba(0,0,0,1))' }}
                         >
                             {label}
                         </text>
@@ -117,11 +117,11 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 300 })
             </svg>
             
             {/* Legend */}
-            <div className="flex gap-4 mt-4 px-4 py-2 bg-slate-800/80 border border-slate-700 rounded-full shadow-lg">
+            <div className="flex gap-4 mt-4 px-5 py-3 bg-[#0f172a] border border-slate-700 rounded-lg shadow-xl">
                 {datasets.map((dataset, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: dataset.color, opacity: 0.8 }}></div>
-                        <span className="text-[12px] font-bold text-white whitespace-nowrap">{dataset.label}</span>
+                    <div key={idx} className="flex items-center gap-3">
+                        <div className="w-4 h-4 rounded-full border-2 border-white/20" style={{ backgroundColor: dataset.color }}></div>
+                        <span className="text-[13px] font-black text-white whitespace-nowrap">{dataset.label}</span>
                     </div>
                 ))}
             </div>

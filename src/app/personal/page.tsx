@@ -439,18 +439,18 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             {datasets.length > 0 && (
-                <div className="bg-white border-2 border-slate-200 rounded-xl p-6 mb-8 shadow-sm flex flex-col md:flex-row items-center gap-8">
+                <div className="bg-[#1e293b] border-2 border-[#1e293b] rounded-xl p-6 mb-8 shadow-2xl flex flex-col md:flex-row items-center gap-8 text-white">
                     <div className="flex-1 text-center md:text-left">
-                        <div className="inline-block bg-blue-100 text-blue-700 text-xs font-black px-2 py-1 rounded-full mb-2">PLAYER PROFILE</div>
-                        <h2 className="text-3xl font-black text-slate-900 mb-1">{user.name} <span className="text-slate-400 font-normal">선수</span></h2>
-                        <div className="mt-4 grid grid-cols-2 gap-2 text-[11px] font-bold text-slate-600">
+                        <div className="inline-block bg-blue-500/20 text-blue-400 text-xs font-black px-2 py-1 rounded-full mb-2 border border-blue-500/30">PLAYER PROFILE</div>
+                        <h2 className="text-3xl font-black text-white mb-1">{user.name} <span className="text-slate-400 font-normal">선수</span></h2>
+                        <div className="mt-4 grid grid-cols-2 gap-2 text-[12px] font-bold text-slate-300">
                             <div className="flex items-center gap-1">📊 에버: {regAvg.toFixed(1)}</div>
                             <div className="flex items-center gap-1">🚀 하이: {regMaxScore}</div>
                             <div className="flex items-center gap-1">🎯 출석: {regularRounds.length}회</div>
                             <div className="flex items-center gap-1">📉 편차: {regHighLow}</div>
                         </div>
                     </div>
-                    <div className="flex-none bg-slate-50 rounded-lg p-2 border border-slate-100">
+                    <div className="flex-none">
                         <RadarChart 
                             datasets={datasets} 
                             labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
