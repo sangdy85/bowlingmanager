@@ -468,52 +468,52 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
 
                             <div className="grid grid-cols-2 gap-x-8 gap-y-4 pt-1">
                                 {/* Regular Stats */}
-                                <div className="space-y-3">
-                                    <div className="text-[10px] font-black text-blue-400/80 tracking-tighter uppercase mb-1">정기전</div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-white/40 font-bold">평균</span>
-                                        <span className="text-base font-black text-white">{regAvg.toFixed(1)}</span>
+                                <div className="space-y-2">
+                                    <div className="text-[10px] font-black text-blue-400/80 tracking-tighter uppercase mb-2 border-l-2 border-blue-400/50 pl-2">정기전</div>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-white/40 font-bold">정기전 평균 :</span>
+                                        <span className="font-black text-white">{regAvg.toFixed(1)}</span>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-white/40 font-bold">하이</span>
-                                        <span className="text-base font-black text-white">{regMaxScore}</span>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-white/40 font-bold">정기전 하이 :</span>
+                                        <span className="font-black text-white">{regMaxScore}</span>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-white/40 font-bold">로우</span>
-                                        <span className="text-base font-black text-white">{regMinScore}</span>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-white/40 font-bold">정기전 로우 :</span>
+                                        <span className="font-black text-white">{regMinScore}</span>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-white/40 font-bold">게임수</span>
-                                        <span className="text-base font-black text-white">{regGames} <span className="text-[10px] font-normal text-white/40">G</span></span>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-white/40 font-bold">정기전 게임수 :</span>
+                                        <span className="font-black text-white">{regGames} G</span>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-white/40 font-bold">편차</span>
-                                        <span className="text-base font-black text-white">{regHighLow}</span>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-white/40 font-bold">정기전 편차 :</span>
+                                        <span className="font-black text-white">{regHighLow}</span>
                                     </div>
                                 </div>
 
                                 {/* Tournament Stats */}
-                                <div className="space-y-3">
-                                    <div className="text-[10px] font-black text-orange-400/80 tracking-tighter uppercase mb-1">대회</div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-white/40 font-bold">평균</span>
-                                        <span className="text-base font-black text-white">{offAvg.toFixed(1)}</span>
+                                <div className="space-y-2">
+                                    <div className="text-[10px] font-black text-orange-400/80 tracking-tighter uppercase mb-2 border-l-2 border-orange-400/50 pl-2">대회</div>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-white/40 font-bold">대회 평균 :</span>
+                                        <span className="font-black text-white">{offAvg.toFixed(1)}</span>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-white/40 font-bold">하이</span>
-                                        <span className="text-base font-black text-white">{offMaxScore}</span>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-white/40 font-bold">대회 하이 :</span>
+                                        <span className="font-black text-white">{offMaxScore}</span>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-white/40 font-bold">로우</span>
-                                        <span className="text-base font-black text-white">{offMinScore}</span>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-white/40 font-bold">대회 로우 :</span>
+                                        <span className="font-black text-white">{offMinScore}</span>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-white/40 font-bold">게임수</span>
-                                        <span className="text-base font-black text-white">{offGames} <span className="text-[10px] font-normal text-white/40">G</span></span>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-white/40 font-bold">대회 게임수 :</span>
+                                        <span className="font-black text-white">{offGames} G</span>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-white/40 font-bold">편차</span>
-                                        <span className="text-base font-black text-white">{offHighLow}</span>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-white/40 font-bold">대회 편차 :</span>
+                                        <span className="font-black text-white">{offHighLow}</span>
                                     </div>
                                 </div>
                             </div>
