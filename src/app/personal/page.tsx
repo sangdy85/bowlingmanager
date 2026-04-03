@@ -473,6 +473,47 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             ]
         });
     }
+    const medalSection = (goldCount > 0 || silverCount > 0 || bronzeCount > 0) && (
+        <div className="mt-4 pt-4 border-t border-white/10 w-full lg:w-auto">
+            <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                    {(() => {
+                        const allMedals = [
+                            ...Array.from({ length: goldCount }).map((_, i) => ({ type: 'gold', icon: '🥇', color: 'rgba(255,215,0,0.5)' })),
+                            ...Array.from({ length: silverCount }).map((_, i) => ({ type: 'silver', icon: '🥈', color: 'rgba(192,192,192,0.5)' })),
+                            ...Array.from({ length: bronzeCount }).map((_, i) => ({ type: 'bronze', icon: '🥉', color: 'rgba(205,127,50,0.5)' }))
+                        ];
+                        
+                        const rows = [];
+                        for (let i = 0; i < allMedals.length; i += 8) {
+                            rows.push(allMedals.slice(i, i + 8));
+                        }
+
+                        return rows.map((row, rowIdx) => (
+                            <div key={rowIdx} className="flex -space-x-3 overflow-visible py-0.5">
+                                {row.map((medal, i) => (
+                                    <span 
+                                        key={`${medal.type}-${rowIdx}-${i}`} 
+                                        className="text-2xl filter"
+                                        style={{ filter: `drop-shadow(0 0 8px ${medal.color})` }}
+                                    >
+                                        {medal.icon}
+                                    </span>
+                                ))}
+                            </div>
+                        ));
+                    })()}
+                </div>
+                <div className="text-[13px] font-black tracking-wider text-white/90 bg-white/5 px-2.5 py-1 rounded-md border border-white/5 w-fit">
+                    {goldCount > 0 && <span className="text-yellow-400">금 {goldCount}</span>}
+                    {silverCount > 0 && <span className="mx-2 text-white/20">/</span>}
+                    {silverCount > 0 && <span className="text-slate-300">은 {silverCount}</span>}
+                    {bronzeCount > 0 && <span className="mx-2 text-white/20">/</span>}
+                    {bronzeCount > 0 && <span className="text-orange-400">동 {bronzeCount}</span>}
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div className="container py-8 max-w-6xl mx-auto">
@@ -486,11 +527,11 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             {datasets.length > 0 && (
-                <div className="mb-12 flex flex-row items-center justify-center gap-4 lg:gap-12 relative max-w-full overflow-hidden">
-                    {/* 1. Left: Profile Info */}
-                    <div className="flex flex-col justify-center min-w-[320px]">
+                <div className="mb-12 flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-12 relative max-w-full overflow-hidden">
+                    {/* 1. Left: Profile Info - Mobile: order-1 */}
+                    <div className="flex flex-col justify-center min-w-[320px] order-1 w-full lg:w-auto px-4 lg:px-0">
                         <div className="text-white/60 text-[10px] font-black tracking-widest mb-1 uppercase">PLAYER PROFILE</div>
-                        <h2 className="text-4xl font-black text-white mb-6 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
+                        <h2 className="text-3xl lg:text-4xl font-black text-white mb-4 lg:mb-6 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
                         
                         <div className="bg-white/5 rounded-xl border border-white/10 p-5 space-y-4 shadow-2xl backdrop-blur-sm">
                             {/* Total Average */}
@@ -550,63 +591,43 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Medal Awards Section */}
-                            {(goldCount > 0 || silverCount > 0 || bronzeCount > 0) && (
-                                <div className="mt-4 pt-4 border-t border-white/10">
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex flex-col gap-1">
-                                            {(() => {
-                                                const allMedals = [
-                                                    ...Array.from({ length: goldCount }).map((_, i) => ({ type: 'gold', icon: '🥇', color: 'rgba(255,215,0,0.5)' })),
-                                                    ...Array.from({ length: silverCount }).map((_, i) => ({ type: 'silver', icon: '🥈', color: 'rgba(192,192,192,0.5)' })),
-                                                    ...Array.from({ length: bronzeCount }).map((_, i) => ({ type: 'bronze', icon: '🥉', color: 'rgba(205,127,50,0.5)' }))
-                                                ];
-                                                
-                                                const rows = [];
-                                                for (let i = 0; i < allMedals.length; i += 8) {
-                                                    rows.push(allMedals.slice(i, i + 8));
-                                                }
-
-                                                return rows.map((row, rowIdx) => (
-                                                    <div key={rowIdx} className="flex -space-x-3 overflow-visible py-0.5">
-                                                        {row.map((medal, i) => (
-                                                            <span 
-                                                                key={`${medal.type}-${rowIdx}-${i}`} 
-                                                                className="text-2xl filter"
-                                                                style={{ filter: `drop-shadow(0 0 8px ${medal.color})` }}
-                                                            >
-                                                                {medal.icon}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                ));
-                                            })()}
-                                        </div>
-                                        <div className="text-[13px] font-black tracking-wider text-white/90 bg-white/5 px-2.5 py-1 rounded-md border border-white/5 w-fit">
-                                            {goldCount > 0 && <span className="text-yellow-400">금 {goldCount}</span>}
-                                            {silverCount > 0 && <span className="mx-2 text-white/20">/</span>}
-                                            {silverCount > 0 && <span className="text-slate-300">은 {silverCount}</span>}
-                                            {bronzeCount > 0 && <span className="mx-2 text-white/20">/</span>}
-                                            {bronzeCount > 0 && <span className="text-orange-400">동 {bronzeCount}</span>}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            
+                            {/* Desktop Medal Award Section */}
+                            <div className="hidden lg:block">
+                                {medalSection}
+                            </div>
                         </div>
                     </div>
 
-                    {/* 2. Center: Radar Chart */}
-                    <div className="flex flex-col items-center justify-center">
+                    {/* 2. Center: Radar Chart - Mobile: order-2 */}
+                    <div className="flex flex-col items-center justify-center order-2 w-full max-w-[400px] lg:max-w-none">
                         <RadarChart 
                             datasets={datasets} 
                             labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
                             size={500} 
                         />
+                        
+                        {/* Legend for Mobile */}
+                        <div className="flex lg:hidden flex-row flex-wrap justify-center gap-4 mt-6">
+                            {datasets.map((dataset, idx) => (
+                                <div key={idx} className="flex items-center gap-2">
+                                    <div style={{ width: '20px', height: '4px', backgroundColor: dataset.color, borderRadius: '2px' }} />
+                                    <span className="text-[11px] font-bold text-white/70">{dataset.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        {/* Mobile Medal Award Section - order-3 (Stacked below graph) */}
+                        <div className="block lg:hidden mt-8 w-full px-4">
+                            <div className="bg-white/5 rounded-xl border border-white/10 p-5 shadow-2xl backdrop-blur-sm">
+                                <div className="text-white/60 text-[10px] font-black tracking-widest mb-4 uppercase">HONORARY AWARDS</div>
+                                {medalSection}
+                            </div>
+                        </div>
                     </div>
 
-                    {/* 3. Right: Specialized Legend (Stacked vertically, aligned to bottom of chart area) */}
-                    <div className="flex flex-col justify-end self-end mb-8 pt-20">
+                    {/* 3. Right: Legend for Desktop ONLY (order-3) */}
+                    <div className="hidden lg:flex flex-col justify-end self-end mb-8 pt-20 order-3">
                         <div className="flex flex-col items-end gap-3 pr-4">
                             {datasets.map((dataset, idx) => (
                                 <div key={idx} className="flex items-center gap-4">
