@@ -398,19 +398,25 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         });
     }
 
-    // 2. 볼링장 대회 데이터
+    // 2. 볼링장 대회 데이터 및 총평균 계산 (항상 계산하여 프로필에서 사용 가능하게 함)
+    const offMaxScore = officialRecords.length > 0 ? Math.max(...officialRecords.flatMap(r => r.scores)) : 0;
+    const offMinScore = officialRecords.length > 0 ? Math.min(...officialRecords.flatMap(r => r.scores)) : 0;
+    const offRoundDiffs = officialRecords.map(r => Math.max(...r.scores) - Math.min(...r.scores));
+    const offAvgRoundDiff = offRoundDiffs.length > 0 ? (offRoundDiffs.reduce((a, b) => a + b, 0) / offRoundDiffs.length) : 0;
+    const offHighLow = Math.round(offAvgRoundDiff);
+    const offGames = officialSummary.total.pins > 0 ? officialSummary.total.games : 0;
+    const offAvg = offGames > 0 ? (officialSummary.total.pins / offGames) : 0;
+    const offMaxRoundAvg = officialRecords.length > 0 ? Math.max(...officialRecords.map(r => parseFloat(r.avg))) : 0;
+    const offMinRoundAvg = officialRecords.length > 0 ? Math.min(...officialRecords.map(r => parseFloat(r.avg))) : 0;
+
+    // 총평균 계산
+    const regGames = globalRegularScores.length;
+    const regPins = globalRegularScores.reduce((a, s: any) => a + s.score, 0);
+    const totalGames = regGames + offGames;
+    const totalPins = regPins + officialSummary.total.pins;
+    const totalAvg = totalGames > 0 ? totalPins / totalGames : 0;
+
     if (officialRecords.length >= 3) {
-        const offAvg = officialSummary.total.pins / (officialSummary.total.games || 1);
-        const offMaxRoundAvg = Math.max(...officialRecords.map(r => parseFloat(r.avg)));
-        const offMinRoundAvg = Math.min(...officialRecords.map(r => parseFloat(r.avg)));
-        const offMaxScore = Math.max(...officialRecords.flatMap(r => r.scores));
-        const offMinScore = Math.min(...officialRecords.flatMap(r => r.scores));
-        
-        // 기복: 회차별 하이로우 평균값으로 변경
-        const offRoundDiffs = officialRecords.map(r => Math.max(...r.scores) - Math.min(...r.scores));
-        const offAvgRoundDiff = offRoundDiffs.length > 0 ? (offRoundDiffs.reduce((a, b) => a + b, 0) / offRoundDiffs.length) : 0;
-        const offHighLow = Math.round(offAvgRoundDiff);
-        const offAttendanceCount = officialRecords.length;
 
         datasets.push({
             label: '볼링장 대회',
@@ -420,7 +426,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                 calcRegPoint(offMaxRoundAvg, 250, 0.2),     // 포텐셜
                 Math.min(10, Math.max(0, 10 - (offAvgRoundDiff - 10) * 0.1)), // 기복 (10점 기준, 11점부터 0.1점씩 차감)
                 calcRegPoint(offMinRoundAvg, 200, 0.1),     // 안정감
-                Math.min(10, Math.max(1, offAttendanceCount)) // 성실
+                Math.min(10, Math.max(1, officialRecords.length)) // 성실
             ]
         });
     }
@@ -449,26 +455,67 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             {datasets.length > 0 && (
                 <div className="mb-12 flex flex-row items-center justify-center gap-4 lg:gap-12 relative max-w-full overflow-hidden">
                     {/* 1. Left: Profile Info */}
-                    <div className="flex flex-col justify-center">
+                    <div className="flex flex-col justify-center min-w-[320px]">
                         <div className="text-white/60 text-[10px] font-black tracking-widest mb-1 uppercase">PLAYER PROFILE</div>
-                        <h2 className="text-4xl font-black text-white mb-8 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
+                        <h2 className="text-4xl font-black text-white mb-6 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
                         
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-3 text-white">
-                                <span className="text-xl w-8 h-8 flex items-center justify-center bg-blue-500/10 rounded-lg border border-blue-500/20">📊</span>
-                                <span className="text-lg font-bold">에버: {regAvg.toFixed(1)}</span>
+                        <div className="bg-white/5 rounded-xl border border-white/10 p-5 space-y-4 shadow-2xl backdrop-blur-sm">
+                            {/* Total Average */}
+                            <div className="flex justify-between items-center pb-3 border-b border-white/10">
+                                <span className="text-white/60 font-bold text-sm">✨ 총평균</span>
+                                <span className="text-2xl font-black text-blue-400">{totalAvg.toFixed(1)}</span>
                             </div>
-                            <div className="flex items-center gap-3 text-white">
-                                <span className="text-xl w-8 h-8 flex items-center justify-center bg-pink-500/10 rounded-lg border border-pink-500/20">🚀</span>
-                                <span className="text-lg font-bold">하이: {regMaxScore}</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-white">
-                                <span className="text-xl w-8 h-8 flex items-center justify-center bg-purple-500/10 rounded-lg border border-purple-500/20">🎯</span>
-                                <span className="text-lg font-bold">출석: {regularRounds.length}회</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-white">
-                                <span className="text-xl w-8 h-8 flex items-center justify-center bg-red-500/10 rounded-lg border border-red-500/20">📉</span>
-                                <span className="text-lg font-bold">편차: {regHighLow}</span>
+
+                            <div className="grid grid-cols-2 gap-x-8 gap-y-4 pt-1">
+                                {/* Regular Stats */}
+                                <div className="space-y-3">
+                                    <div className="text-[10px] font-black text-blue-400/80 tracking-tighter uppercase mb-1">정기전</div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-white/40 font-bold">평균</span>
+                                        <span className="text-base font-black text-white">{regAvg.toFixed(1)}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-white/40 font-bold">하이</span>
+                                        <span className="text-base font-black text-white">{regMaxScore}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-white/40 font-bold">로우</span>
+                                        <span className="text-base font-black text-white">{regMinScore}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-white/40 font-bold">게임수</span>
+                                        <span className="text-base font-black text-white">{regGames} <span className="text-[10px] font-normal text-white/40">G</span></span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-white/40 font-bold">편차</span>
+                                        <span className="text-base font-black text-white">{regHighLow}</span>
+                                    </div>
+                                </div>
+
+                                {/* Tournament Stats */}
+                                <div className="space-y-3">
+                                    <div className="text-[10px] font-black text-orange-400/80 tracking-tighter uppercase mb-1">대회</div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-white/40 font-bold">평균</span>
+                                        <span className="text-base font-black text-white">{offAvg.toFixed(1)}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-white/40 font-bold">하이</span>
+                                        <span className="text-base font-black text-white">{offMaxScore}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-white/40 font-bold">로우</span>
+                                        <span className="text-base font-black text-white">{offMinScore}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-white/40 font-bold">게임수</span>
+                                        <span className="text-base font-black text-white">{offGames} <span className="text-[10px] font-normal text-white/40">G</span></span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-white/40 font-bold">편차</span>
+                                        <span className="text-base font-black text-white">{offHighLow}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
