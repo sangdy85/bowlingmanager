@@ -373,7 +373,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             gameType: '정기전',
             gameDate: { gte: startOfYear, lte: endOfYear }
         },
-        select: { gameDate: true, userId: true, score: true, teamId: true }
+        select: { gameDate: true, userId: true, score: true, teamId: true, guestName: true }
     });
 
     // 회차별(팀별) 사용자 총점 및 게임수 계산
@@ -386,8 +386,11 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         if (!roundUserStats.has(key)) roundUserStats.set(key, new Map());
         const userMap = roundUserStats.get(key)!;
         
-        if (!userMap.has(s.userId)) userMap.set(s.userId, { pins: 0, games: 0 });
-        const stats = userMap.get(s.userId)!;
+        // 유저 고유 키 (ID가 없으면 게스트명 사용)
+        const playerKey = s.userId || s.guestName || `unknown_${s.id}`;
+        
+        if (!userMap.has(playerKey)) userMap.set(playerKey, { pins: 0, games: 0 });
+        const stats = userMap.get(playerKey)!;
         stats.pins += s.score;
         stats.games += 1;
     });
