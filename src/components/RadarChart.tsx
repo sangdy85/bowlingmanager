@@ -28,8 +28,8 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320 })
     const levels = [2, 4, 6, 8, 10];
 
     return (
-        <div className="relative flex flex-col items-center justify-center w-full max-w-[500px] aspect-square mx-auto">
-            <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full overflow-visible">
+        <div className="relative flex flex-col items-center w-full h-full justify-center">
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible min-w-[300px]">
                 {/* Background Polygons (Grid) */}
                 {levels.map((level) => {
                     const points = labels.map((_, i) => {

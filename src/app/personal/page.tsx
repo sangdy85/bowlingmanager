@@ -486,9 +486,9 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             {datasets.length > 0 && (
-                <div className="mb-12 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12 relative max-w-full overflow-hidden">
+                <div className="mb-12 flex flex-row items-center justify-center gap-4 lg:gap-12 relative max-w-full overflow-hidden">
                     {/* 1. Left: Profile Info */}
-                    <div className="flex flex-col items-center lg:items-start justify-center w-full max-w-[420px] lg:w-auto lg:min-w-[320px]">
+                    <div className="flex flex-col justify-center min-w-[320px]">
                         <div className="text-white/60 text-[10px] font-black tracking-widest mb-1 uppercase">PLAYER PROFILE</div>
                         <h2 className="text-4xl font-black text-white mb-6 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
                         
@@ -597,7 +597,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                     </div>
 
                     {/* 2. Center: Radar Chart */}
-                    <div className="flex flex-col items-center justify-center w-full max-w-[500px]">
+                    <div className="flex flex-col items-center justify-center">
                         <RadarChart 
                             datasets={datasets} 
                             labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
@@ -605,9 +605,9 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         />
                     </div>
 
-                    {/* 3. Right: Specialized Legend */}
-                    <div className="flex flex-col lg:justify-end lg:self-end mt-4 lg:mt-0 mb-8 lg:pt-20">
-                        <div className="flex flex-row lg:flex-col items-center lg:items-end gap-6 lg:gap-3 px-4 flex-wrap justify-center">
+                    {/* 3. Right: Specialized Legend (Stacked vertically, aligned to bottom of chart area) */}
+                    <div className="flex flex-col justify-end self-end mb-8 pt-20">
+                        <div className="flex flex-col items-end gap-3 pr-4">
                             {datasets.map((dataset, idx) => (
                                 <div key={idx} className="flex items-center gap-4">
                                     <span className="text-[13px] font-black text-white/90 whitespace-nowrap tracking-tight">{dataset.label}</span>
