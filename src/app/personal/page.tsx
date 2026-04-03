@@ -360,7 +360,11 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     const regMinRoundAvg = regularRounds.length > 0 ? Math.min(...regularRounds.map(r => r.avg)) : 0;
     const regMaxScore = globalRegularScores.length > 0 ? Math.max(...globalRegularScores.map((s: any) => s.score)) : 0;
     const regMinScore = globalRegularScores.length > 0 ? Math.min(...globalRegularScores.map((s: any) => s.score)) : 0;
-    const regHighLow = regMaxScore - regMinScore;
+    
+    // 기복: 회차별 하이로우 평균값으로 변경
+    const regRoundDiffs = regularRounds.map(r => Math.max(...r.scores) - Math.min(...r.scores));
+    const regAvgRoundDiff = regRoundDiffs.length > 0 ? (regRoundDiffs.reduce((a, b) => a + b, 0) / regRoundDiffs.length) : 0;
+    const regHighLow = Math.round(regAvgRoundDiff);
 
     // 정기전 출석률 계산
     const allTeamRegularScores = await prisma.score.findMany({
@@ -387,7 +391,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             points: [
                 calcRegPoint(regAvg, 234, 0.1),             // 기량
                 calcRegPoint(regMaxRoundAvg, 250, 0.2),     // 포텐셜
-                Math.min(10, Math.max(1, 10 - (regHighLow - 10) * 0.1)), // 기복
+                Math.min(10, Math.max(0, 10 - (regAvgRoundDiff - 10) * 0.1)), // 기복 (10점 기준, 11점부터 0.1점씩 차감)
                 calcRegPoint(regMinRoundAvg, 200, 0.1),     // 안정감
                 Math.min(10, Math.max(1, regAttendancePct / 10)) // 성실
             ]
@@ -401,7 +405,11 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         const offMinRoundAvg = Math.min(...officialRecords.map(r => parseFloat(r.avg)));
         const offMaxScore = Math.max(...officialRecords.flatMap(r => r.scores));
         const offMinScore = Math.min(...officialRecords.flatMap(r => r.scores));
-        const offHighLow = offMaxScore - offMinScore;
+        
+        // 기복: 회차별 하이로우 평균값으로 변경
+        const offRoundDiffs = officialRecords.map(r => Math.max(...r.scores) - Math.min(...r.scores));
+        const offAvgRoundDiff = offRoundDiffs.length > 0 ? (offRoundDiffs.reduce((a, b) => a + b, 0) / offRoundDiffs.length) : 0;
+        const offHighLow = Math.round(offAvgRoundDiff);
         const offAttendanceCount = officialRecords.length;
 
         datasets.push({
@@ -410,7 +418,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             points: [
                 calcRegPoint(offAvg, 234, 0.1),             // 기량
                 calcRegPoint(offMaxRoundAvg, 250, 0.2),     // 포텐셜
-                Math.min(10, Math.max(1, 10 - (offHighLow - 10) * 0.1)), // 기복
+                Math.min(10, Math.max(0, 10 - (offAvgRoundDiff - 10) * 0.1)), // 기복 (10점 기준, 11점부터 0.1점씩 차감)
                 calcRegPoint(offMinRoundAvg, 200, 0.1),     // 안정감
                 Math.min(10, Math.max(1, offAttendanceCount)) // 성실
             ]
