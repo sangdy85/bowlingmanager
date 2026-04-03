@@ -439,51 +439,54 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             {datasets.length > 0 && (
-                <div className="mb-12 flex flex-row items-center justify-center gap-16">
-                    {/* Left Column: Profile Info */}
+                <div className="mb-12 flex flex-row items-center justify-center gap-4 lg:gap-12 relative max-w-full overflow-hidden">
+                    {/* 1. Left: Profile Info */}
                     <div className="flex flex-col justify-center">
-                            <div className="text-white/60 text-[10px] font-black tracking-widest mb-1 uppercase">PLAYER PROFILE</div>
-                            <h2 className="text-4xl font-black text-white mb-8 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
-                            
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-3 text-white">
-                                    <span className="text-xl w-8 h-8 flex items-center justify-center bg-blue-500/10 rounded-lg border border-blue-500/20">📊</span>
-                                    <span className="text-lg font-bold">에버: {regAvg.toFixed(1)}</span>
-                                </div>
-                                <div className="flex items-center gap-3 text-white">
-                                    <span className="text-xl w-8 h-8 flex items-center justify-center bg-pink-500/10 rounded-lg border border-pink-500/20">🚀</span>
-                                    <span className="text-lg font-bold">하이: {regMaxScore}</span>
-                                </div>
-                                <div className="flex items-center gap-3 text-white">
-                                    <span className="text-xl w-8 h-8 flex items-center justify-center bg-purple-500/10 rounded-lg border border-purple-500/20">🎯</span>
-                                    <span className="text-lg font-bold">출석: {regularRounds.length}회</span>
-                                </div>
-                                <div className="flex items-center gap-3 text-white">
-                                    <span className="text-xl w-8 h-8 flex items-center justify-center bg-red-500/10 rounded-lg border border-red-500/20">📉</span>
-                                    <span className="text-lg font-bold">편차: {regHighLow}</span>
-                                </div>
+                        <div className="text-white/60 text-[10px] font-black tracking-widest mb-1 uppercase">PLAYER PROFILE</div>
+                        <h2 className="text-4xl font-black text-white mb-8 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
+                        
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3 text-white">
+                                <span className="text-xl w-8 h-8 flex items-center justify-center bg-blue-500/10 rounded-lg border border-blue-500/20">📊</span>
+                                <span className="text-lg font-bold">에버: {regAvg.toFixed(1)}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-white">
+                                <span className="text-xl w-8 h-8 flex items-center justify-center bg-pink-500/10 rounded-lg border border-pink-500/20">🚀</span>
+                                <span className="text-lg font-bold">하이: {regMaxScore}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-white">
+                                <span className="text-xl w-8 h-8 flex items-center justify-center bg-purple-500/10 rounded-lg border border-purple-500/20">🎯</span>
+                                <span className="text-lg font-bold">출석: {regularRounds.length}회</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-white">
+                                <span className="text-xl w-8 h-8 flex items-center justify-center bg-red-500/10 rounded-lg border border-red-500/20">📉</span>
+                                <span className="text-lg font-bold">편차: {regHighLow}</span>
                             </div>
                         </div>
+                    </div>
 
-                    {/* Right Column: Radar Chart & Integrated Legend */}
-                    <div className="flex flex-col items-end justify-center p-4">
+                    {/* 2. Center: Radar Chart */}
+                    <div className="flex flex-col items-center justify-center">
                         <RadarChart 
                             datasets={datasets} 
                             labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
                             size={400} 
                         />
-                        {/* Integrated Legend positioned manually below the chart */}
-                        <div className="mt-4 flex flex-col items-end gap-3 pr-8">
+                    </div>
+
+                    {/* 3. Right: Specialized Legend (Stacked vertically, aligned to bottom of chart area) */}
+                    <div className="flex flex-col justify-end self-end mb-8 pt-20">
+                        <div className="flex flex-col items-end gap-3 pr-4">
                             {datasets.map((dataset, idx) => (
                                 <div key={idx} className="flex items-center gap-4">
-                                    <span className="text-base font-black text-white whitespace-nowrap tracking-tight">{dataset.label}</span>
+                                    <span className="text-[13px] font-black text-white/90 whitespace-nowrap tracking-tight">{dataset.label}</span>
                                     <div 
                                         style={{ 
-                                            width: '60px', 
-                                            height: '8px', 
+                                            width: '50px', 
+                                            height: '6px', 
                                             backgroundColor: dataset.color,
                                             borderRadius: '999px',
-                                            boxShadow: '0 0 15px ' + dataset.color + '44'
+                                            boxShadow: '0 0 12px ' + dataset.color + '66'
                                         }} 
                                     />
                                 </div>
