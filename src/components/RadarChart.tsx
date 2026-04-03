@@ -41,7 +41,8 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 300 })
                             key={level}
                             points={points}
                             fill="none"
-                            stroke="#e2e8f0"
+                            stroke="#94a3b8"
+                            strokeOpacity="0.3"
                             strokeWidth="1"
                         />
                     );
@@ -57,7 +58,8 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 300 })
                             y1={center}
                             x2={x}
                             y2={y}
-                            stroke="#e2e8f0"
+                            stroke="#94a3b8"
+                            strokeOpacity="0.3"
                             strokeWidth="1"
                         />
                     );
@@ -105,7 +107,8 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 300 })
                             y={y}
                             textAnchor="middle"
                             dominantBaseline="middle"
-                            className="text-[10px] font-bold fill-slate-600"
+                            className="text-[11px] font-black fill-slate-800"
+                            style={{ paintOrder: 'stroke', stroke: 'white', strokeWidth: '0.5px' }}
                         >
                             {label}
                         </text>
@@ -114,11 +117,11 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 300 })
             </svg>
             
             {/* Legend */}
-            <div className="flex gap-4 mt-2">
+            <div className="flex gap-6 mt-4 p-2 bg-slate-50 border border-slate-100 rounded-lg">
                 {datasets.map((dataset, idx) => (
-                    <div key={idx} className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dataset.color }}></div>
-                        <span className="text-[10px] font-bold text-slate-500">{dataset.label}</span>
+                    <div key={idx} className="flex items-center gap-2">
+                        <div className="w-4 h-1.5 rounded-full" style={{ backgroundColor: dataset.color }}></div>
+                        <span className="text-[11px] font-black text-slate-700">{dataset.label}</span>
                     </div>
                 ))}
             </div>

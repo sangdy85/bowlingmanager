@@ -443,7 +443,6 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                     <div className="flex-1 text-center md:text-left">
                         <div className="inline-block bg-blue-100 text-blue-700 text-xs font-black px-2 py-1 rounded-full mb-2">PLAYER PROFILE</div>
                         <h2 className="text-3xl font-black text-slate-900 mb-1">{user.name} <span className="text-slate-400 font-normal">선수</span></h2>
-                        <p className="text-slate-500 text-sm font-medium">실력 평가 지표 (0-10점 만점)</p>
                         <div className="mt-4 grid grid-cols-2 gap-2 text-[11px] font-bold text-slate-600">
                             <div className="flex items-center gap-1">📊 에버: {regAvg.toFixed(1)}</div>
                             <div className="flex items-center gap-1">🚀 하이: {regMaxScore}</div>
