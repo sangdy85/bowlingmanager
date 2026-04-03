@@ -473,32 +473,6 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             ]
         });
     }
-    const medalRow = (goldCount > 0 || silverCount > 0 || bronzeCount > 0) && (
-        <div className="flex flex-wrap items-center gap-0.5 md:gap-0.5 py-0.5">
-            {(() => {
-                const allMedals = [
-                    ...Array.from({ length: goldCount }).map((_, i) => ({ type: 'gold', icon: '🥇', color: 'rgba(255,215,0,0.3)' })),
-                    ...Array.from({ length: silverCount }).map((_, i) => ({ type: 'silver', icon: '🥈', color: 'rgba(192,192,192,0.3)' })),
-                    ...Array.from({ length: bronzeCount }).map((_, i) => ({ type: 'bronze', icon: '🥉', color: 'rgba(205,127,50,0.3)' }))
-                ];
-                
-                return allMedals.map((medal, i) => (
-                    <span 
-                        key={`${medal.type}-${i}`} 
-                        className="text-base md:text-sm filter saturate-150"
-                        style={{ filter: `drop-shadow(0 0 4px ${medal.color})` }}
-                    >
-                        {medal.icon}
-                    </span>
-                ));
-            })()}
-            <span className="text-[12px] md:text-[13px] font-bold text-white/90 ml-1.5">
-                {goldCount > 0 && <span>금{goldCount}</span>}
-                {silverCount > 0 && <span>/은{silverCount}</span>}
-                {bronzeCount > 0 && <span>/동{bronzeCount}</span>}
-            </span>
-        </div>
-    );
 
     return (
         <div className="container py-8 max-w-6xl mx-auto">
@@ -512,100 +486,142 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             {datasets.length > 0 && (
-                <div className="mb-12 flex flex-row flex-nowrap max-sm:flex-col max-sm:flex-wrap items-start justify-center gap-10 max-sm:gap-8 relative max-w-full overflow-visible">
-                    {/* 1. Left Column: Profile & Stats - Always left in Desktop view */}
-                    <div className="flex flex-col shrink-0 w-[280px] max-sm:w-full order-1 px-0 max-sm:px-4">
-                        <div className="text-white/40 text-[11px] font-bold tracking-widest mb-1.5 uppercase">PLAYER PROFILE</div>
-                        <h2 className="text-3xl font-black text-white mb-8 tracking-tight capitalize">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
+                <div className="mb-12 flex flex-row items-center justify-center gap-4 lg:gap-12 relative max-w-full overflow-hidden">
+                    {/* 1. Left: Profile Info */}
+                    <div className="flex flex-col justify-center min-w-[320px]">
+                        <div className="text-white/60 text-[10px] font-black tracking-widest mb-1 uppercase">PLAYER PROFILE</div>
+                        <h2 className="text-4xl font-black text-white mb-6 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
                         
-                        <div className="space-y-0.5 text-[14px]">
+                        <div className="bg-white/5 rounded-xl border border-white/10 p-5 space-y-4 shadow-2xl backdrop-blur-sm">
                             {/* Total Average */}
-                            <div className="flex justify-between items-center mb-2 w-full max-w-[260px]">
-                                <span className="text-white/90 font-bold">✨ 총평균</span>
-                                <span className="font-black text-white">{totalAvg.toFixed(1)}</span>
+                            <div className="flex justify-between items-center pb-3 border-b border-white/10">
+                                <span className="text-white/60 font-bold text-sm">✨ 총평균</span>
+                                <span className="text-2xl font-black text-blue-400">{totalAvg.toFixed(1)}</span>
                             </div>
 
-                            <div className="flex flex-col gap-3 pt-2">
+                            <div className="grid grid-cols-2 gap-x-8 gap-y-4 pt-1">
                                 {/* Regular Stats */}
-                                <div className="space-y-0">
-                                    <div className="font-bold text-white/90 mb-1">정기전</div>
-                                    <div className="flex flex-col text-white/80 font-bold space-y-0.2">
-                                        <div>평균 :{regAvg.toFixed(1)}</div>
-                                        <div>하이 :{regMaxScore}</div>
-                                        <div>로우 :{regMinScore}</div>
-                                        <div>게임수 :{regGames} G ({regAttendancePct.toFixed(0)}%)</div>
-                                        <div>편차 :{regHighLow}</div>
+                                <div className="space-y-1.5">
+                                    <div className="text-[10px] font-black text-blue-400/80 tracking-tighter uppercase mb-2 border-l-2 border-blue-400/50 pl-2">정기전</div>
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-white/40 font-bold">평균 :</span>
+                                        <span className="font-black text-white">{regAvg.toFixed(1)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-white/40 font-bold">하이 :</span>
+                                        <span className="font-black text-white">{regMaxScore}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-white/40 font-bold">로우 :</span>
+                                        <span className="font-black text-white">{regMinScore}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-white/40 font-bold">게임수 :</span>
+                                        <span className="font-black text-white">{regGames} G <span className="text-[10px] text-white/40 font-normal">({regAttendancePct.toFixed(0)}%)</span></span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-white/40 font-bold">편차 :</span>
+                                        <span className="font-black text-white">{regHighLow}</span>
                                     </div>
                                 </div>
 
                                 {/* Tournament Stats */}
-                                <div className="space-y-0 pt-2">
-                                    <div className="font-bold text-white/90 mb-1">대회</div>
-                                    <div className="flex flex-col text-white/80 font-bold space-y-0.2">
-                                        <div>평균 :{offAvg.toFixed(1)}</div>
-                                        <div>하이 :{offMaxScore}</div>
-                                        <div>로우 :{offMinScore}</div>
-                                        <div>게임수 :{offGames} G ({officialRecords.length}회)</div>
-                                        <div>편차 :{offHighLow}</div>
+                                <div className="space-y-1.5">
+                                    <div className="text-[10px] font-black text-orange-400/80 tracking-tighter uppercase mb-2 border-l-2 border-orange-400/50 pl-2">대회</div>
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-white/40 font-bold">평균 :</span>
+                                        <span className="font-black text-white">{offAvg.toFixed(1)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-white/40 font-bold">하이 :</span>
+                                        <span className="font-black text-white">{offMaxScore}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-white/40 font-bold">로우 :</span>
+                                        <span className="font-black text-white">{offMinScore}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-white/40 font-bold">게임수 :</span>
+                                        <span className="font-black text-white">{offGames} G <span className="text-[10px] text-white/40 font-normal">({officialRecords.length}회)</span></span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-white/40 font-bold">편차 :</span>
+                                        <span className="font-black text-white">{offHighLow}</span>
                                     </div>
                                 </div>
-
-                                {/* Medals on Desktop (Bottom of column) */}
-                                <div className="hidden sm:block pt-8 mt-2">
-                                    {medalRow}
-                                </div>
                             </div>
+
+                            {/* Medal Awards Section */}
+                            {(goldCount > 0 || silverCount > 0 || bronzeCount > 0) && (
+                                <div className="mt-4 pt-4 border-t border-white/10">
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex flex-col gap-1">
+                                            {(() => {
+                                                const allMedals = [
+                                                    ...Array.from({ length: goldCount }).map((_, i) => ({ type: 'gold', icon: '🥇', color: 'rgba(255,215,0,0.5)' })),
+                                                    ...Array.from({ length: silverCount }).map((_, i) => ({ type: 'silver', icon: '🥈', color: 'rgba(192,192,192,0.5)' })),
+                                                    ...Array.from({ length: bronzeCount }).map((_, i) => ({ type: 'bronze', icon: '🥉', color: 'rgba(205,127,50,0.5)' }))
+                                                ];
+                                                
+                                                const rows = [];
+                                                for (let i = 0; i < allMedals.length; i += 8) {
+                                                    rows.push(allMedals.slice(i, i + 8));
+                                                }
+
+                                                return rows.map((row, rowIdx) => (
+                                                    <div key={rowIdx} className="flex -space-x-3 overflow-visible py-0.5">
+                                                        {row.map((medal, i) => (
+                                                            <span 
+                                                                key={`${medal.type}-${rowIdx}-${i}`} 
+                                                                className="text-2xl filter"
+                                                                style={{ filter: `drop-shadow(0 0 8px ${medal.color})` }}
+                                                            >
+                                                                {medal.icon}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ));
+                                            })()}
+                                        </div>
+                                        <div className="text-[13px] font-black tracking-wider text-white/90 bg-white/5 px-2.5 py-1 rounded-md border border-white/5 w-fit">
+                                            {goldCount > 0 && <span className="text-yellow-400">금 {goldCount}</span>}
+                                            {silverCount > 0 && <span className="mx-2 text-white/20">/</span>}
+                                            {silverCount > 0 && <span className="text-slate-300">은 {silverCount}</span>}
+                                            {bronzeCount > 0 && <span className="mx-2 text-white/20">/</span>}
+                                            {bronzeCount > 0 && <span className="text-orange-400">동 {bronzeCount}</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* 2. Right: Radar Chart & Legend - Filling remaining space */}
-                    <div className="flex flex-col items-center justify-center order-2 flex-1 max-sm:w-full relative mt-0 max-sm:mt-8">
-                        <div className="flex flex-row max-sm:flex-col items-center w-full justify-center gap-6">
-                            <div className="relative flex-1 max-sm:w-full max-w-none max-sm:max-w-[420px] flex justify-center">
-                                <RadarChart 
-                                    datasets={datasets} 
-                                    labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
-                                    size={500} 
-                                />
-                            </div>
-                            
-                            {/* Legend for Desktop (Placed to the right of graph) */}
-                            <div className="flex flex-col items-end gap-3 pr-2 shrink-0 max-sm:hidden">
-                                {datasets.map((dataset, idx) => (
-                                    <div key={idx} className="flex items-center gap-4">
-                                        <span className="text-[14px] font-bold text-white/90 whitespace-nowrap tracking-tight">{dataset.label}</span>
-                                        <div 
-                                            style={{ 
-                                                width: '44px', 
-                                                height: '6px', 
-                                                backgroundColor: dataset.color,
-                                                borderRadius: '3px',
-                                                boxShadow: '0 0 10px ' + dataset.color + '44'
-                                            }} 
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        
-                        {/* Legend for Mobile (Hidden on Desktop) */}
-                        <div className="hidden max-sm:flex flex-row flex-wrap justify-center gap-4 mt-6">
+                    {/* 2. Center: Radar Chart */}
+                    <div className="flex flex-col items-center justify-center">
+                        <RadarChart 
+                            datasets={datasets} 
+                            labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
+                            size={500} 
+                        />
+                    </div>
+
+                    {/* 3. Right: Specialized Legend (Stacked vertically, aligned to bottom of chart area) */}
+                    <div className="flex flex-col justify-end self-end mb-8 pt-20">
+                        <div className="flex flex-col items-end gap-3 pr-4">
                             {datasets.map((dataset, idx) => (
-                                <div key={idx} className="flex items-center gap-2">
-                                    <div style={{ width: '20px', height: '4px', backgroundColor: dataset.color, borderRadius: '2px' }} />
-                                    <span className="text-[11px] font-bold text-white/70">{dataset.label}</span>
+                                <div key={idx} className="flex items-center gap-4">
+                                    <span className="text-[13px] font-black text-white/90 whitespace-nowrap tracking-tight">{dataset.label}</span>
+                                    <div 
+                                        style={{ 
+                                            width: '50px', 
+                                            height: '6px', 
+                                            backgroundColor: dataset.color,
+                                            borderRadius: '999px',
+                                            boxShadow: '0 0 12px ' + dataset.color + '66'
+                                        }} 
+                                    />
                                 </div>
                             ))}
-                        </div>
-                        
-                        {/* Mobile Medal Award Section (order-3 visually on mobile) */}
-                        <div className="hidden max-sm:block mt-8 w-full px-4">
-                            <div className="bg-white/5 rounded-xl border border-white/10 p-5 shadow-2xl backdrop-blur-sm">
-                                <div className="text-white/60 text-[10px] font-black tracking-widest mb-4 uppercase text-center">HONORARY AWARDS</div>
-                                <div className="flex justify-center">
-                                    {medalRow}
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
