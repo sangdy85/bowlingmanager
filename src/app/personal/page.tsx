@@ -439,10 +439,9 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             {datasets.length > 0 && (
-                <div className="mb-8 flex flex-col items-center">
-                    <div className="w-full flex flex-row items-center justify-between mb-2">
-                        {/* Left Column: Profile Info */}
-                        <div className="flex-1 flex flex-col justify-center">
+                <div className="mb-12 flex flex-row items-center justify-center gap-16">
+                    {/* Left Column: Profile Info */}
+                    <div className="flex flex-col justify-center">
                             <div className="text-white/60 text-[10px] font-black tracking-widest mb-1 uppercase">PLAYER PROFILE</div>
                             <h2 className="text-4xl font-black text-white mb-8 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
                             
@@ -466,14 +465,13 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                             </div>
                         </div>
 
-                        {/* Right Column: Radar Chart */}
-                        <div className="flex-1 flex items-center justify-center">
-                            <RadarChart 
-                                datasets={datasets} 
-                                labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
-                                size={400} 
-                            />
-                        </div>
+                    {/* Right Column: Radar Chart */}
+                    <div className="flex items-center justify-center">
+                        <RadarChart 
+                            datasets={datasets} 
+                            labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
+                            size={400} 
+                        />
                     </div>
                 </div>
             )}

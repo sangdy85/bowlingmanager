@@ -115,16 +115,6 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320 })
                     );
                 })}
             </svg>
-            
-            {/* Legend */}
-            {/* Legend - Clean and Centered as per image */}
-            <div className="flex gap-4 mt-4 justify-center">
-                {datasets.map((dataset, idx) => (
-                    <div key={idx} className="flex items-center gap-1">
-                        <span className="text-sm font-bold text-white/90">{dataset.label}</span>
-                    </div>
-                ))}
-            </div>
         </div>
     );
 };
