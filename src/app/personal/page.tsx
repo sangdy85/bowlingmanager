@@ -554,24 +554,24 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                             {/* Medal Awards Section */}
                             {(goldCount > 0 || silverCount > 0 || bronzeCount > 0) && (
                                 <div className="mt-4 pt-4 border-t border-white/10">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex -space-x-3 flex-shrink-0">
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex -space-x-3 overflow-visible py-1">
                                             {Array.from({ length: Math.min(10, goldCount) }).map((_, i) => (
-                                                <span key={`gold-${i}`} className="text-xl filter drop-shadow-[0_0_8px_rgba(255,215,0,0.5)]">🥇</span>
+                                                <span key={`gold-${i}`} className="text-2xl filter drop-shadow-[0_0_8px_rgba(255,215,0,0.5)]">🥇</span>
                                             ))}
                                             {Array.from({ length: Math.min(10, silverCount) }).map((_, i) => (
-                                                <span key={`silver-${i}`} className="text-xl filter drop-shadow-[0_0_8px_rgba(192,192,192,0.5)]">🥈</span>
+                                                <span key={`silver-${i}`} className="text-2xl filter drop-shadow-[0_0_8px_rgba(192,192,192,0.5)]">🥈</span>
                                             ))}
                                             {Array.from({ length: Math.min(10, bronzeCount) }).map((_, i) => (
-                                                <span key={`bronze-${i}`} className="text-xl filter drop-shadow-[0_0_8px_rgba(205,127,50,0.5)]">🥉</span>
+                                                <span key={`bronze-${i}`} className="text-2xl filter drop-shadow-[0_0_8px_rgba(205,127,50,0.5)]">🥉</span>
                                             ))}
                                         </div>
-                                        <div className="text-sm font-black tracking-tight text-white/80 whitespace-nowrap flex-shrink-0">
-                                            {goldCount > 0 && <span className="text-yellow-400">금{goldCount}</span>}
-                                            {silverCount > 0 && <span className="mx-1 text-white/20">/</span>}
-                                            {silverCount > 0 && <span className="text-slate-300">은{silverCount}</span>}
-                                            {bronzeCount > 0 && <span className="mx-1 text-white/20">/</span>}
-                                            {bronzeCount > 0 && <span className="text-orange-400">동{bronzeCount}</span>}
+                                        <div className="text-[13px] font-black tracking-wider text-white/90 bg-white/5 px-2.5 py-1 rounded-md border border-white/5 w-fit">
+                                            {goldCount > 0 && <span className="text-yellow-400">금 {goldCount}</span>}
+                                            {silverCount > 0 && <span className="mx-2 text-white/20">/</span>}
+                                            {silverCount > 0 && <span className="text-slate-300">은 {silverCount}</span>}
+                                            {bronzeCount > 0 && <span className="mx-2 text-white/20">/</span>}
+                                            {bronzeCount > 0 && <span className="text-orange-400">동 {bronzeCount}</span>}
                                         </div>
                                     </div>
                                 </div>
