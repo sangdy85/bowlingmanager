@@ -439,22 +439,38 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             {datasets.length > 0 && (
-                <div className="bg-[#1e293b] border-2 border-[#1e293b] rounded-xl p-6 mb-8 shadow-2xl flex flex-col md:flex-row items-center gap-8 text-white">
-                    <div className="flex-1 text-center md:text-left">
-                        <div className="inline-block bg-blue-500/20 text-blue-400 text-xs font-black px-2 py-1 rounded-full mb-2 border border-blue-500/30">PLAYER PROFILE</div>
-                        <h2 className="text-3xl font-black text-white mb-1">{user.name} <span className="text-slate-400 font-normal">선수</span></h2>
-                        <div className="mt-4 grid grid-cols-2 gap-2 text-[12px] font-bold text-slate-300">
-                            <div className="flex items-center gap-1">📊 에버: {regAvg.toFixed(1)}</div>
-                            <div className="flex items-center gap-1">🚀 하이: {regMaxScore}</div>
-                            <div className="flex items-center gap-1">🎯 출석: {regularRounds.length}회</div>
-                            <div className="flex items-center gap-1">📉 편차: {regHighLow}</div>
+                <div className="bg-[#0f172a] border border-slate-800 rounded-xl overflow-hidden mb-8 shadow-2xl flex flex-col md:flex-row items-stretch min-h-[340px]">
+                    {/* Left Column: Profile Info */}
+                    <div className="flex-1 p-8 flex flex-col justify-center border-b md:border-b-0 md:border-r border-slate-700/50">
+                        <div className="text-white/60 text-[10px] font-black tracking-widest mb-1 uppercase">PLAYER PROFILE</div>
+                        <h2 className="text-4xl font-black text-white mb-8 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
+                        
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3 text-white">
+                                <span className="text-xl w-8 h-8 flex items-center justify-center bg-blue-500/10 rounded-lg border border-blue-500/20">📊</span>
+                                <span className="text-lg font-bold">에버: {regAvg.toFixed(1)}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-white">
+                                <span className="text-xl w-8 h-8 flex items-center justify-center bg-pink-500/10 rounded-lg border border-pink-500/20">🚀</span>
+                                <span className="text-lg font-bold">하이: {regMaxScore}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-white">
+                                <span className="text-xl w-8 h-8 flex items-center justify-center bg-purple-500/10 rounded-lg border border-purple-500/20">🎯</span>
+                                <span className="text-lg font-bold">출석: {regularRounds.length}회</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-white">
+                                <span className="text-xl w-8 h-8 flex items-center justify-center bg-red-500/10 rounded-lg border border-red-500/20">📉</span>
+                                <span className="text-lg font-bold">편차: {regHighLow}</span>
+                            </div>
                         </div>
                     </div>
-                    <div className="flex-none">
+
+                    {/* Right Column: Radar Chart */}
+                    <div className="flex-1 p-4 bg-[#0f172a] flex items-center justify-center">
                         <RadarChart 
                             datasets={datasets} 
                             labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
-                            size={280} 
+                            size={300} 
                         />
                     </div>
                 </div>
