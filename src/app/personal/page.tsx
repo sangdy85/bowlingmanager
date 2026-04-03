@@ -473,11 +473,19 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                             size={400} 
                         />
                         {/* Integrated Legend positioned manually below the chart */}
-                        <div className="mt-4 flex flex-col items-end gap-2 pr-4">
+                        <div className="mt-4 flex flex-col items-end gap-3 pr-8">
                             {datasets.map((dataset, idx) => (
-                                <div key={idx} className="flex items-center gap-3">
-                                    <span className="text-[14px] font-black text-white/90 whitespace-nowrap">{dataset.label}</span>
-                                    <div className="w-14 h-2 rounded-full shadow-[0_0_12px_rgba(255,255,255,0.15)]" style={{ backgroundColor: dataset.color }}></div>
+                                <div key={idx} className="flex items-center gap-4">
+                                    <span className="text-base font-black text-white whitespace-nowrap tracking-tight">{dataset.label}</span>
+                                    <div 
+                                        style={{ 
+                                            width: '60px', 
+                                            height: '8px', 
+                                            backgroundColor: dataset.color,
+                                            borderRadius: '999px',
+                                            boxShadow: '0 0 15px ' + dataset.color + '44'
+                                        }} 
+                                    />
                                 </div>
                             ))}
                         </div>
