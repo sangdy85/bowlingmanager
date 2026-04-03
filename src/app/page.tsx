@@ -21,7 +21,7 @@ export default async function Home() {
           className="card text-center hover:bg-secondary/20 transition-colors cursor-pointer block no-underline text-inherit"
         >
           <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🎳</div>
-          <h3 className="mb-2">점수 기록</h3>
+          <h3 className="mb-2">나의 기록실</h3>
           <p style={{ color: 'var(--secondary-foreground)' }}>매 게임 점수를 간편하게 기록하고 저장하세요.</p>
         </Link>
         <Link

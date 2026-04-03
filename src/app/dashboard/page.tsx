@@ -67,7 +67,7 @@ export default async function DashboardPage() {
                 <Link href="/personal" className="block group no-underline h-full">
                     <div className="card h-full hover:shadow-lg transition-shadow bg-secondary/10 border-2 border-transparent group-hover:border-primary cursor-pointer text-center flex flex-col items-center justify-center">
                         <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">🎳</div>
-                        <h2 className="text-xl font-bold mb-2 text-foreground">점수 기록</h2>
+                        <h2 className="text-xl font-bold mb-2 text-foreground">나의 기록실</h2>
                         <p className="text-secondary-foreground text-sm">
                             나의 개인 기록을 관리하고<br />새로운 점수를 입력합니다.
                         </p>
