@@ -512,15 +512,15 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             {datasets.length > 0 && (
-                <div className="mb-12 flex flex-col md:flex-row md:flex-nowrap items-center md:items-start justify-center gap-8 md:gap-12 relative max-w-full overflow-hidden">
-                    {/* 1. Left: Profile Info & Stats - MD: Side-by-side */}
-                    <div className="flex flex-col shrink-0 w-full md:w-[280px] order-1 px-4 md:px-0">
+                <div className="mb-12 flex flex-row flex-nowrap max-sm:flex-col max-sm:flex-wrap items-start justify-center gap-10 max-sm:gap-8 relative max-w-full overflow-visible">
+                    {/* 1. Left Column: Profile & Stats - Always left in Desktop view */}
+                    <div className="flex flex-col shrink-0 w-[280px] max-sm:w-full order-1 px-0 max-sm:px-4">
                         <div className="text-white/40 text-[11px] font-bold tracking-widest mb-1.5 uppercase">PLAYER PROFILE</div>
                         <h2 className="text-3xl font-black text-white mb-8 tracking-tight capitalize">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
                         
-                        <div className="space-y-0.5 text-[14px] md:text-[13px]">
+                        <div className="space-y-0.5 text-[14px]">
                             {/* Total Average */}
-                            <div className="flex justify-between items-center mb-2 max-w-[240px]">
+                            <div className="flex justify-between items-center mb-2 w-full max-w-[260px]">
                                 <span className="text-white/90 font-bold">✨ 총평균</span>
                                 <span className="font-black text-white">{totalAvg.toFixed(1)}</span>
                             </div>
@@ -551,17 +551,17 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                 </div>
 
                                 {/* Medals on Desktop (Bottom of column) */}
-                                <div className="hidden md:block pt-8 mt-2">
+                                <div className="hidden sm:block pt-8 mt-2">
                                     {medalRow}
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* 2. Right: Radar Chart & Legend - MD: Responsive side-by-side content */}
-                    <div className="flex flex-col items-center justify-center order-2 w-full md:flex-1 relative mt-8 md:mt-0">
-                        <div className="flex flex-col md:flex-row items-center w-full justify-center gap-6">
-                            <div className="relative w-full max-w-[420px] md:max-w-none md:flex-1 flex justify-center">
+                    {/* 2. Right: Radar Chart & Legend - Filling remaining space */}
+                    <div className="flex flex-col items-center justify-center order-2 flex-1 max-sm:w-full relative mt-0 max-sm:mt-8">
+                        <div className="flex flex-row max-sm:flex-col items-center w-full justify-center gap-6">
+                            <div className="relative flex-1 max-sm:w-full max-w-none max-sm:max-w-[420px] flex justify-center">
                                 <RadarChart 
                                     datasets={datasets} 
                                     labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
@@ -570,7 +570,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                             </div>
                             
                             {/* Legend for Desktop (Placed to the right of graph) */}
-                            <div className="hidden md:flex flex-col items-end gap-3 pr-2 shrink-0">
+                            <div className="flex flex-col items-end gap-3 pr-2 shrink-0 max-sm:hidden">
                                 {datasets.map((dataset, idx) => (
                                     <div key={idx} className="flex items-center gap-4">
                                         <span className="text-[14px] font-bold text-white/90 whitespace-nowrap tracking-tight">{dataset.label}</span>
@@ -589,7 +589,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         </div>
                         
                         {/* Legend for Mobile (Hidden on Desktop) */}
-                        <div className="flex md:hidden flex-row flex-wrap justify-center gap-4 mt-6">
+                        <div className="hidden max-sm:flex flex-row flex-wrap justify-center gap-4 mt-6">
                             {datasets.map((dataset, idx) => (
                                 <div key={idx} className="flex items-center gap-2">
                                     <div style={{ width: '20px', height: '4px', backgroundColor: dataset.color, borderRadius: '2px' }} />
@@ -599,7 +599,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         </div>
                         
                         {/* Mobile Medal Award Section (order-3 visually on mobile) */}
-                        <div className="block md:hidden mt-8 w-full px-4">
+                        <div className="hidden max-sm:block mt-8 w-full px-4">
                             <div className="bg-white/5 rounded-xl border border-white/10 p-5 shadow-2xl backdrop-blur-sm">
                                 <div className="text-white/60 text-[10px] font-black tracking-widest mb-4 uppercase text-center">HONORARY AWARDS</div>
                                 <div className="flex justify-center">
