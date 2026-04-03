@@ -565,7 +565,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                             {(goldCount > 0 || silverCount > 0 || bronzeCount > 0) && (
                                 <div className="mt-4 pt-4 border-t border-white/10">
                                     <div className="flex items-center gap-3">
-                                        <div className="flex -space-x-2">
+                                        <div className="flex -space-x-3 flex-shrink-0">
                                             {Array.from({ length: Math.min(10, goldCount) }).map((_, i) => (
                                                 <span key={`gold-${i}`} className="text-xl filter drop-shadow-[0_0_8px_rgba(255,215,0,0.5)]">🥇</span>
                                             ))}
@@ -576,7 +576,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                                 <span key={`bronze-${i}`} className="text-xl filter drop-shadow-[0_0_8px_rgba(205,127,50,0.5)]">🥉</span>
                                             ))}
                                         </div>
-                                        <div className="text-sm font-black tracking-tight text-white/80">
+                                        <div className="text-sm font-black tracking-tight text-white/80 whitespace-nowrap flex-shrink-0">
                                             {goldCount > 0 && <span className="text-yellow-400">금{goldCount}</span>}
                                             {silverCount > 0 && <span className="mx-1 text-white/20">/</span>}
                                             {silverCount > 0 && <span className="text-slate-300">은{silverCount}</span>}
