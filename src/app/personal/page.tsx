@@ -474,25 +474,25 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         });
     }
     const medalRow = (goldCount > 0 || silverCount > 0 || bronzeCount > 0) && (
-        <div className="flex flex-wrap items-center gap-x-1.5 md:gap-x-1 py-1">
+        <div className="flex flex-wrap items-center gap-0.5 md:gap-0.5 py-0.5">
             {(() => {
                 const allMedals = [
-                    ...Array.from({ length: goldCount }).map((_, i) => ({ type: 'gold', icon: '🥇', color: 'rgba(255,215,0,0.4)' })),
-                    ...Array.from({ length: silverCount }).map((_, i) => ({ type: 'silver', icon: '🥈', color: 'rgba(192,192,192,0.4)' })),
-                    ...Array.from({ length: bronzeCount }).map((_, i) => ({ type: 'bronze', icon: '🥉', color: 'rgba(205,127,50,0.4)' }))
+                    ...Array.from({ length: goldCount }).map((_, i) => ({ type: 'gold', icon: '🥇', color: 'rgba(255,215,0,0.3)' })),
+                    ...Array.from({ length: silverCount }).map((_, i) => ({ type: 'silver', icon: '🥈', color: 'rgba(192,192,192,0.3)' })),
+                    ...Array.from({ length: bronzeCount }).map((_, i) => ({ type: 'bronze', icon: '🥉', color: 'rgba(205,127,50,0.3)' }))
                 ];
                 
                 return allMedals.map((medal, i) => (
                     <span 
                         key={`${medal.type}-${i}`} 
-                        className="text-xl md:text-[18px] filter"
-                        style={{ filter: `drop-shadow(0 0 6px ${medal.color})` }}
+                        className="text-base md:text-sm filter saturate-150"
+                        style={{ filter: `drop-shadow(0 0 4px ${medal.color})` }}
                     >
                         {medal.icon}
                     </span>
                 ));
             })()}
-            <span className="text-[12px] md:text-[13px] font-black tracking-tight text-white/90 ml-1.5 opacity-90">
+            <span className="text-[12px] md:text-[13px] font-bold text-white/90 ml-1.5">
                 {goldCount > 0 && <span>금{goldCount}</span>}
                 {silverCount > 0 && <span>/은{silverCount}</span>}
                 {bronzeCount > 0 && <span>/동{bronzeCount}</span>}
@@ -514,22 +514,22 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             {datasets.length > 0 && (
                 <div className="mb-12 flex flex-col md:flex-row items-center md:items-start justify-center gap-6 md:gap-4 relative max-w-full overflow-hidden">
                     {/* 1. Left: Profile Info - Mobile: order-1 */}
-                    <div className="flex flex-col justify-center min-w-[320px] md:min-w-[300px] order-1 w-full md:w-auto px-4 md:px-0 pt-4">
-                        <div className="text-white/40 text-[10px] font-black tracking-widest mb-1 uppercase">PLAYER PROFILE</div>
-                        <h2 className="text-3xl font-black text-white mb-6 uppercase tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
+                    <div className="flex flex-col justify-center min-w-[320px] md:min-w-[280px] order-1 w-full md:w-auto px-4 md:px-0 pt-2 lg:pt-0">
+                        <div className="text-white/40 text-[11px] font-bold tracking-widest mb-1.5 uppercase">PLAYER PROFILE</div>
+                        <h2 className="text-3xl font-black text-white mb-8 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
                         
-                        <div className="space-y-4 md:space-y-2">
+                        <div className="space-y-0.5 md:space-y-0 text-[14px] md:text-[13px]">
                             {/* Total Average */}
-                            <div className="flex justify-between items-center pb-2">
-                                <span className="text-white font-bold text-sm">✨ 총평균</span>
-                                <span className="text-2xl font-black text-blue-400">{totalAvg.toFixed(1)}</span>
+                            <div className="flex items-center mb-1">
+                                <span className="text-white/90 font-bold min-w-[80px]">✨ 총평균</span>
+                                <span className="font-black text-white ml-24">{totalAvg.toFixed(1)}</span>
                             </div>
 
-                            <div className="flex flex-col gap-6 md:gap-4">
+                            <div className="flex flex-col gap-2 pt-1">
                                 {/* Regular Stats */}
-                                <div className="space-y-1">
-                                    <div className="text-[13px] font-black text-white/90 tracking-tight uppercase">정기전</div>
-                                    <div className="flex flex-col text-[13px] text-white/80 font-bold space-y-0.5">
+                                <div className="space-y-0">
+                                    <div className="font-bold text-white/90 mb-1">정기전</div>
+                                    <div className="flex flex-col text-white/80 font-bold space-y-0">
                                         <div>평균 :{regAvg.toFixed(1)}</div>
                                         <div>하이 :{regMaxScore}</div>
                                         <div>로우 :{regMinScore}</div>
@@ -539,9 +539,9 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                 </div>
 
                                 {/* Tournament Stats */}
-                                <div className="space-y-1">
-                                    <div className="text-[13px] font-black text-white/90 tracking-tight uppercase">대회</div>
-                                    <div className="flex flex-col text-[13px] text-white/80 font-bold space-y-0.5">
+                                <div className="space-y-0 pt-1">
+                                    <div className="font-bold text-white/90 mb-1">대회</div>
+                                    <div className="flex flex-col text-white/80 font-bold space-y-0">
                                         <div>평균 :{offAvg.toFixed(1)}</div>
                                         <div>하이 :{offMaxScore}</div>
                                         <div>로우 :{offMinScore}</div>
@@ -551,7 +551,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                 </div>
 
                                 {/* Medals on Desktop (Bottom of column) */}
-                                <div className="hidden md:block pt-4 border-t border-white/10 mt-2">
+                                <div className="hidden md:block pt-6 border-transparent mt-2">
                                     {medalRow}
                                 </div>
                             </div>
@@ -571,14 +571,14 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                             <div className="hidden md:flex flex-col items-end gap-3 pr-2 ml-4">
                                 {datasets.map((dataset, idx) => (
                                     <div key={idx} className="flex items-center gap-4">
-                                        <span className="text-[13px] font-black text-white/90 whitespace-nowrap tracking-tight">{dataset.label}</span>
+                                        <span className="text-[14px] font-bold text-white/90 whitespace-nowrap tracking-tight">{dataset.label}</span>
                                         <div 
                                             style={{ 
-                                                width: '40px', 
+                                                width: '44px', 
                                                 height: '6px', 
                                                 backgroundColor: dataset.color,
-                                                borderRadius: '999px',
-                                                boxShadow: '0 0 10px ' + dataset.color + '66'
+                                                borderRadius: '3px',
+                                                boxShadow: '0 0 10px ' + dataset.color + '44'
                                             }} 
                                         />
                                     </div>
