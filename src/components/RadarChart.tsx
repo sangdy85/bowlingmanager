@@ -28,7 +28,7 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320 })
     const levels = [2, 4, 6, 8, 10];
 
     return (
-        <div className="flex flex-col items-center w-full h-full justify-center">
+        <div className="relative flex flex-col items-center w-full h-full justify-center">
             <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible min-w-[300px]">
                 {/* Background Polygons (Grid) */}
                 {levels.map((level) => {
@@ -115,16 +115,6 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320 })
                     );
                 })}
             </svg>
-            
-            {/* Absolute Positioned Legend to match the image */}
-            <div className="absolute bottom-0 right-0 p-2 flex flex-col items-end gap-1 pointer-events-none">
-                {datasets.map((dataset, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                        <span className="text-[12px] font-black text-white/90">{dataset.label}</span>
-                        <div className="w-10 h-1.5 rounded-full" style={{ backgroundColor: dataset.color }}></div>
-                    </div>
-                ))}
-            </div>
         </div>
     );
 };
