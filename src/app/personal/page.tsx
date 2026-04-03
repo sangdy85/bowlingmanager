@@ -465,19 +465,19 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                             </div>
                         </div>
 
-                    {/* Right Column: Radar Chart */}
-                    <div className="relative flex items-center justify-center p-4">
+                    {/* Right Column: Radar Chart & Integrated Legend */}
+                    <div className="flex flex-col items-end justify-center p-4">
                         <RadarChart 
                             datasets={datasets} 
                             labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
                             size={400} 
                         />
-                        {/* Integrated Legend to match the image precisely */}
-                        <div className="absolute bottom-4 -right-8 flex flex-col items-end gap-2 pr-2">
+                        {/* Integrated Legend positioned manually below the chart */}
+                        <div className="mt-4 flex flex-col items-end gap-2 pr-4">
                             {datasets.map((dataset, idx) => (
                                 <div key={idx} className="flex items-center gap-3">
-                                    <span className="text-[13px] font-black text-white/90 whitespace-nowrap">{dataset.label}</span>
-                                    <div className="w-12 h-1.5 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.1)]" style={{ backgroundColor: dataset.color }}></div>
+                                    <span className="text-[14px] font-black text-white/90 whitespace-nowrap">{dataset.label}</span>
+                                    <div className="w-14 h-2 rounded-full shadow-[0_0_12px_rgba(255,255,255,0.15)]" style={{ backgroundColor: dataset.color }}></div>
                                 </div>
                             ))}
                         </div>
