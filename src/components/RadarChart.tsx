@@ -115,6 +115,16 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320 })
                     );
                 })}
             </svg>
+            
+            {/* Absolute Positioned Legend to match the image */}
+            <div className="absolute bottom-0 right-0 p-2 flex flex-col items-end gap-1 pointer-events-none">
+                {datasets.map((dataset, idx) => (
+                    <div key={idx} className="flex items-center gap-3">
+                        <span className="text-[12px] font-black text-white/90">{dataset.label}</span>
+                        <div className="w-10 h-1.5 rounded-full" style={{ backgroundColor: dataset.color }}></div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 };
