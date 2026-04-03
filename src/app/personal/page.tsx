@@ -481,16 +481,6 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                     <h1 className="page-title" style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: 900 }}>나의 기록실</h1>
                     <p className="text-secondary-foreground text-sm font-bold">개인 기록과 통계를 확인합니다.</p>
                 </div>
-                <div className="flex gap-2 w-full sm:w-auto">
-                    <Link href="/dashboard" className="btn btn-secondary flex-1 sm:flex-none text-center">
-                        &larr; 메인
-                    </Link>
-                    {hasAuthority && (
-                        <Link href="/score/add" className="btn btn-primary flex-1 sm:flex-none text-center">
-                            + 점수 기록하기
-                        </Link>
-                    )}
-                </div>
             </div>
 
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
