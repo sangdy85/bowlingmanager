@@ -366,6 +366,14 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     const regAvgRoundDiff = regRoundDiffs.length > 0 ? (regRoundDiffs.reduce((a, b) => a + b, 0) / regRoundDiffs.length) : 0;
     const regHighLow = Math.round(regAvgRoundDiff);
 
+    // 사용자 및 팀원 핸디캡 맵 구축
+    const userIdToHandicap = new Map<string, number>();
+    user.teamMemberships.forEach((tm: any) => {
+        tm.team.members.forEach((m: any) => {
+            if (m.user) userIdToHandicap.set(m.userId, m.user.handicap || 0);
+        });
+    });
+
     // 정기전 출석률 및 훈장(순위) 계산
     const allTeamRegularScores = await prisma.score.findMany({
         where: {
@@ -373,32 +381,50 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             gameType: '정기전',
             gameDate: { gte: startOfYear, lte: endOfYear }
         },
-        select: { gameDate: true, userId: true, score: true }
+        select: { gameDate: true, userId: true, score: true, teamId: true }
     });
 
-    // 회차별 사용자 총점 계산
-    const roundUserSums = new Map<string, Map<string, number>>();
+    // 회차별(팀별) 사용자 총점 및 게임수 계산
+    const roundUserStats = new Map<string, Map<string, { pins: number, games: number }>>();
     allTeamRegularScores.forEach((s: any) => {
         const d = s.gameDate.toISOString().split('T')[0];
-        if (!roundUserSums.has(d)) roundUserSums.set(d, new Map<string, number>());
-        const userMap = roundUserSums.get(d)!;
-        userMap.set(s.userId, (userMap.get(s.userId) || 0) + s.score);
+        const teamId = s.teamId || 'unknown';
+        const key = `${d}_${teamId}`;
+        
+        if (!roundUserStats.has(key)) roundUserStats.set(key, new Map());
+        const userMap = roundUserStats.get(key)!;
+        
+        if (!userMap.has(s.userId)) userMap.set(s.userId, { pins: 0, games: 0 });
+        const stats = userMap.get(s.userId)!;
+        stats.pins += s.score;
+        stats.games += 1;
     });
 
     let goldCount = 0;
     let silverCount = 0;
     let bronzeCount = 0;
 
-    roundUserSums.forEach((userMap) => {
+    roundUserStats.forEach((userMap) => {
         if (!userMap.has(user.id)) return;
-        const sortedUsers = Array.from(userMap.entries()).sort((a, b) => b[1] - a[1]);
-        const rank = sortedUsers.findIndex(u => u[0] === user.id) + 1;
-        if (rank === 1) goldCount++;
-        else if (rank === 2) silverCount++;
-        else if (rank === 3) bronzeCount++;
+
+        // 최종 점수(총점 + 핸디캡*게임수)로 순위 산정
+        const rankings = Array.from(userMap.entries()).map(([uId, stats]) => {
+            const hdc = userIdToHandicap.get(uId) || 0;
+            return { userId: uId, finalScore: stats.pins + (hdc * stats.games) };
+        }).sort((a, b) => b.finalScore - a.finalScore);
+
+        // 내 순위 확인 (동점자 고려)
+        const myResult = rankings.find(r => r.userId === user.id);
+        if (!myResult) return;
+
+        const myRank = rankings.filter(r => r.finalScore > myResult.finalScore).length + 1;
+        
+        if (myRank === 1) goldCount++;
+        else if (myRank === 2) silverCount++;
+        else if (myRank === 3) bronzeCount++;
     });
 
-    const totalTeamRoundsCount = roundUserSums.size;
+    const totalTeamRoundsCount = roundUserStats.size;
     const regAttendancePct = totalTeamRoundsCount > 0 ? (regularRounds.length / totalTeamRoundsCount) * 100 : 0;
 
     const calcRegPoint = (val: number, base: number, step: number) => {
