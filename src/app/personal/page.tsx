@@ -366,14 +366,6 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     const regAvgRoundDiff = regRoundDiffs.length > 0 ? (regRoundDiffs.reduce((a, b) => a + b, 0) / regRoundDiffs.length) : 0;
     const regHighLow = Math.round(regAvgRoundDiff);
 
-    // 사용자 및 팀원 핸디캡 맵 구축
-    const userIdToHandicap = new Map<string, number>();
-    user.teamMemberships.forEach((tm: any) => {
-        tm.team.members.forEach((m: any) => {
-            if (m.user) userIdToHandicap.set(m.userId, m.user.handicap || 0);
-        });
-    });
-
     // 정기전 출석률 및 훈장(순위) 계산
     const allTeamRegularScores = await prisma.score.findMany({
         where: {
@@ -407,10 +399,9 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     roundUserStats.forEach((userMap) => {
         if (!userMap.has(user.id)) return;
 
-        // 최종 점수(총점 + 핸디캡*게임수)로 순위 산정
+        // 최종 점수(총점)로 순위 산정 (점수에 핸디캡이 이미 포함되어 있음)
         const rankings = Array.from(userMap.entries()).map(([uId, stats]) => {
-            const hdc = userIdToHandicap.get(uId) || 0;
-            return { userId: uId, finalScore: stats.pins + (hdc * stats.games) };
+            return { userId: uId, finalScore: stats.pins };
         }).sort((a, b) => b.finalScore - a.finalScore);
 
         // 내 순위 확인 (동점자 고려)
