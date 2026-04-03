@@ -366,16 +366,39 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     const regAvgRoundDiff = regRoundDiffs.length > 0 ? (regRoundDiffs.reduce((a, b) => a + b, 0) / regRoundDiffs.length) : 0;
     const regHighLow = Math.round(regAvgRoundDiff);
 
-    // 정기전 출석률 계산
+    // 정기전 출석률 및 훈장(순위) 계산
     const allTeamRegularScores = await prisma.score.findMany({
         where: {
             teamId: { in: userTeamIds },
             gameType: '정기전',
             gameDate: { gte: startOfYear, lte: endOfYear }
         },
-        select: { gameDate: true }
+        select: { gameDate: true, userId: true, score: true }
     });
-    const totalTeamRoundsCount = new Set(allTeamRegularScores.map((s: any) => s.gameDate.toISOString().split('T')[0])).size;
+
+    // 회차별 사용자 총점 계산
+    const roundUserSums = new Map<string, Map<string, number>>();
+    allTeamRegularScores.forEach((s: any) => {
+        const d = s.gameDate.toISOString().split('T')[0];
+        if (!roundUserSums.has(d)) roundUserSums.set(d, new Map<string, number>());
+        const userMap = roundUserSums.get(d)!;
+        userMap.set(s.userId, (userMap.get(s.userId) || 0) + s.score);
+    });
+
+    let goldCount = 0;
+    let silverCount = 0;
+    let bronzeCount = 0;
+
+    roundUserSums.forEach((userMap) => {
+        if (!userMap.has(user.id)) return;
+        const sortedUsers = Array.from(userMap.entries()).sort((a, b) => b[1] - a[1]);
+        const rank = sortedUsers.findIndex(u => u[0] === user.id) + 1;
+        if (rank === 1) goldCount++;
+        else if (rank === 2) silverCount++;
+        else if (rank === 3) bronzeCount++;
+    });
+
+    const totalTeamRoundsCount = roundUserSums.size;
     const regAttendancePct = totalTeamRoundsCount > 0 ? (regularRounds.length / totalTeamRoundsCount) * 100 : 0;
 
     const calcRegPoint = (val: number, base: number, step: number) => {
@@ -517,6 +540,32 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Medal Awards Section */}
+                            {(goldCount > 0 || silverCount > 0 || bronzeCount > 0) && (
+                                <div className="mt-4 pt-4 border-t border-white/10">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex -space-x-2">
+                                            {Array.from({ length: Math.min(10, goldCount) }).map((_, i) => (
+                                                <span key={`gold-${i}`} className="text-xl filter drop-shadow-[0_0_8px_rgba(255,215,0,0.5)]">🥇</span>
+                                            ))}
+                                            {Array.from({ length: Math.min(10, silverCount) }).map((_, i) => (
+                                                <span key={`silver-${i}`} className="text-xl filter drop-shadow-[0_0_8px_rgba(192,192,192,0.5)]">🥈</span>
+                                            ))}
+                                            {Array.from({ length: Math.min(10, bronzeCount) }).map((_, i) => (
+                                                <span key={`bronze-${i}`} className="text-xl filter drop-shadow-[0_0_8px_rgba(205,127,50,0.5)]">🥉</span>
+                                            ))}
+                                        </div>
+                                        <div className="text-sm font-black tracking-tight text-white/80">
+                                            {goldCount > 0 && <span className="text-yellow-400">금{goldCount}</span>}
+                                            {silverCount > 0 && <span className="mx-1 text-white/20">/</span>}
+                                            {silverCount > 0 && <span className="text-slate-300">은{silverCount}</span>}
+                                            {bronzeCount > 0 && <span className="mx-1 text-white/20">/</span>}
+                                            {bronzeCount > 0 && <span className="text-orange-400">동{bronzeCount}</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
