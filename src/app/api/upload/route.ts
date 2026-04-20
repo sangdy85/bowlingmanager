@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { auth } from '@/auth';
+import sharp from 'sharp';
 
 export async function POST(request: NextRequest) {
     try {
@@ -17,9 +18,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
         }
 
-        // Limit to 2MB as per frontend logic
-        if (file.size > 2 * 1024 * 1024) {
-            return NextResponse.json({ error: 'File size too large (max 2MB)' }, { status: 400 });
+        // Limit to 5MB (increased from 2MB as we process with sharp)
+        if (file.size > 5 * 1024 * 1024) {
+            return NextResponse.json({ error: 'File size too large (max 5MB)' }, { status: 400 });
         }
 
         const bytes = await file.arrayBuffer();
@@ -32,25 +33,29 @@ export async function POST(request: NextRequest) {
         try {
             await mkdir(uploadDir, { recursive: true });
         } catch (e) {
-            // Already exists or other error handled by recursive: true
+            // Error handled by recursive: true
         }
 
-        // Generate unique filename (Sanitize to alphanumeric only for safety)
+        // Generate safe unique filename (using timestamp)
         const timestamp = Date.now();
-        const extension = file.name.split('.').pop() || 'png';
-        const fileName = `${timestamp}.${extension}`;
+        const fileName = `${timestamp}.webp`;
         const path = join(uploadDir, fileName);
 
-        // Save file
-        await writeFile(path, buffer);
-        console.log(`File saved to: ${path}`);
+        // Process with sharp and save as webp
+        await sharp(buffer)
+            .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
+            .webp({ quality: 80 })
+            .toFile(path);
 
-        const fileUrl = `/uploads/${fileName}`;
+        console.log(`File processed and saved to: ${path}`);
+
+        // Return the NEW API route URL
+        const fileUrl = `/api/images/${fileName}`;
 
         return NextResponse.json({
             success: true,
             url: fileUrl,
-            size: file.size
+            size: buffer.length // approximate
         });
     } catch (error: any) {
         console.error('Upload Error:', error);

@@ -59,6 +59,14 @@ export default function PostDetail({ postId, teamId, onBack }: PostDetailProps) 
                                     alt="첨부 이미지"
                                     className="w-full h-auto object-contain max-h-[600px]"
                                     loading="lazy"
+                                    onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        if (target.src.includes('/uploads/')) {
+                                            target.src = target.src.replace('/uploads/', '/api/images/');
+                                        } else {
+                                            target.style.display = 'none';
+                                        }
+                                    }}
                                 />
                             </a>
                         </div>
