@@ -125,10 +125,8 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                 let handicapSum = 0;
 
                 teamScores.forEach(s => {
-                    if (gameIndex === 0) { rawScoreSum += s.score1; }
-                    else if (gameIndex === 1) { rawScoreSum += s.score2; }
-                    else { rawScoreSum += s.score3; }
-
+                    const capped = Math.min((gameIndex === 0 ? s.score1 : (gameIndex === 1 ? s.score2 : s.score3)) + s.handicap, 300);
+                    rawScoreSum += (capped - s.handicap); // Using effective score contribution
                     handicapSum += s.handicap;
                 });
 
@@ -258,12 +256,15 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
 
                 if (s1 > 0 || s2 > 0 || s3 > 0) {
                     const hTotal = score.handicap * 3;
-                    const series = s1 + s2 + s3 + hTotal;
+                    const cs1 = Math.min(s1 + score.handicap, 300);
+                    const cs2 = Math.min(s2 + score.handicap, 300);
+                    const cs3 = Math.min(s3 + score.handicap, 300);
+                    const series = cs1 + cs2 + cs3;
                     individualStats[key].totalPinfall += series;
                     individualStats[key].totalGames += 3;
 
                     individualStats[key].highSeries = Math.max(individualStats[key].highSeries, series);
-                    individualStats[key].highGame = Math.max(individualStats[key].highGame, s1 + score.handicap, s2 + score.handicap, s3 + score.handicap);
+                    individualStats[key].highGame = Math.max(individualStats[key].highGame, cs1, cs2, cs3);
                     individualStats[key].handicap = score.handicap;
 
                     if (isLastRound) {
@@ -425,7 +426,7 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
         }>
     }> = {};
 
-    const squadLookup: Record<string, string> = {};
+    const squadLookup: Record<string, string | null> = {};
     tournament.leagueRounds.forEach((round: any) => {
         round.matchups.forEach((match: any) => {
             match.individualScores.forEach((s: any) => {
@@ -462,14 +463,14 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                 if (!dataByTeam[teamAKey]) {
                     const name = match.teamA?.name || 'Unknown';
                     const disp = (match as any).teamASquad ? `${name} (${(match as any).teamASquad})` : name;
-                    dataByTeam[teamAKey] = { teamId: match.teamAId, teamName: disp, wins: 0, totalPinfall: 0, players: {} };
+                    dataByTeam[teamAKey] = { teamId: match.teamAId || '', teamName: disp, wins: 0, totalPinfall: 0, players: {} };
                 }
             }
             if (teamBKey) {
                 if (!dataByTeam[teamBKey]) {
                     const name = match.teamB?.name || 'Unknown';
                     const disp = (match as any).teamBSquad ? `${name} (${(match as any).teamBSquad})` : name;
-                    dataByTeam[teamBKey] = { teamId: match.teamBId, teamName: disp, wins: 0, totalPinfall: 0, players: {} };
+                    dataByTeam[teamBKey] = { teamId: match.teamBId || '', teamName: disp, wins: 0, totalPinfall: 0, players: {} };
                 }
             }
 
@@ -528,12 +529,16 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
 
                 if (rawSeries > 0) {
                     const hTotal = score.handicap * 3;
-                    const hSeries = rawSeries + hTotal;
+                    const cs1 = Math.min(score.score1 + score.handicap, 300);
+                    const cs2 = Math.min(score.score2 + score.handicap, 300);
+                    const cs3 = Math.min(score.score3 + score.handicap, 300);
+                    const hSeries = cs1 + cs2 + cs3;
                     p.gamesCount += 3;
-                    p.totalRawPins += rawSeries;
+                    p.totalRawPins += rawSeries; // raw remains uncapped for reference? or should it be capped? 
+                    // Usually totalHandicappedPins is what matters for standing
                     p.totalHandicappedPins += hSeries;
                     p.highSeries = Math.max(p.highSeries, hSeries);
-                    p.highGame = Math.max(p.highGame, score.score1 + score.handicap, score.score2 + score.handicap, score.score3 + score.handicap);
+                    p.highGame = Math.max(p.highGame, cs1, cs2, cs3);
                     p.handicap = score.handicap;
 
                     if (isLastRound) {
