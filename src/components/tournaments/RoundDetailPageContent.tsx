@@ -1240,18 +1240,17 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     };
                 }
                 const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
-                let pTotalRaw = 0;
-                let pGamesPlayed = 0;
+                const handicap = p.handicap ?? p.registration?.handicap ?? 0;
+                let pTotalCapped = 0;
                 for (let g = 1; g <= gameCount; g++) {
                     const s = pScores.find((sc: any) => sc.gameNumber === g)?.score || 0;
-                    groups[groupId].gameScores[g - 1] += s;
-                    pTotalRaw += s;
-                    if (s > 0) pGamesPlayed++;
+                    if (s > 0) {
+                        const capped = Math.min(s + handicap, 300);
+                        groups[groupId].gameScores[g - 1] += capped;
+                        pTotalCapped += capped;
+                    }
                 }
-                const handicap = p.handicap ?? p.registration?.handicap ?? 0;
-                groups[groupId].totalRaw += pTotalRaw;
-                groups[groupId].totalHandicap += (handicap * pGamesPlayed);
-                groups[groupId].handicapSum += handicap;
+                groups[groupId].totalRaw += pTotalCapped; // Using totalRaw as capped total in this context
                 groups[groupId].members.push(p.registration.guestName ?? p.registration.user?.name ?? 'Unknown');
             });
 
@@ -1263,9 +1262,9 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 name: g.members.join(', '),
                 team: g.teamName,
                 scores: g.gameScores,
-                total: g.totalRaw + g.totalHandicap,
+                total: g.totalRaw, // totalRaw now contains capped sum
                 handicapEach: g.handicapSum,
-                totalHandicap: g.totalHandicap,
+                totalHandicap: 0, // Handicaps are already included in totalRaw for teams here
                 hiLow: hiLow,
                 isTeam: true
             };
@@ -1288,6 +1287,10 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             .map((p: any) => {
                 const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
 
+                const handicap = p.handicap ?? p.registration?.handicap ?? 0;
+                const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
+                const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인회원';
+
                 const scores: number[] = [];
                 let totalRaw = 0;
                 let gamesPlayed = 0;
@@ -1296,13 +1299,13 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     const sRecord = pScores.find((s: any) => s.gameNumber === g);
                     const score = sRecord?.score || 0;
                     scores.push(score);
-                    totalRaw += score;
-                    if (sRecord) gamesPlayed++;
+                    if (sRecord && score > 0) {
+                        totalRaw += Math.min(score + handicap, 300);
+                        gamesPlayed++;
+                    } else if (sRecord) {
+                        gamesPlayed++;
+                    }
                 }
-
-                const handicap = p.handicap ?? p.registration?.handicap ?? 0;
-                const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
-                const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인회원';
 
                 // 1. Calculate system penalty from previous round (minusApplied)
                 let minusApplied = 0;
@@ -1352,7 +1355,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 const positiveHandicapTotal = (handicap > 0 ? handicap : 0) * gamesPlayed;
                 const finalHandicapValue = positiveHandicapTotal - finalPenaltyTotal;
 
-                const total = totalRaw + finalHandicapValue;
+                const total = totalRaw - (finalPenaltyTotal > 0 ? finalPenaltyTotal : 0);
 
                 return {
                     id: p.registrationId,
@@ -1444,7 +1447,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
             const rowData: any[] = [rank, res.team, res.name];
             res.scores.forEach((s: number) => {
-                rowData.push(s > 0 ? (s + res.handicapEach) : '');
+                rowData.push(s > 0 ? Math.min(s + res.handicapEach, 300) : '');
             });
             rowData.push(res.totalHandicap);
             rowData.push(res.total);
@@ -1662,7 +1665,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                         minWidth: `${colWidths.game}px`,
                                         maxWidth: isMobile ? 'none' : `${colWidths.game}px`
                                     }}>
-                                        {s > 0 ? s + res.handicapEach : ''}
+                                        {s > 0 ? Math.min(s + res.handicapEach, 300) : ''}
                                     </td>
                                 ))}
                                 <td style={{
@@ -2061,6 +2064,8 @@ function TournamentEditModal({ tournament, onClose, onUpdate }: { tournament: an
 }
 
 // 7.5 Round Points Tab (for Grand Finale Points inspection)
+
+
 function RoundPointsTab({ round }: { round: any }) {
     const settings = round.tournament?.settings ? JSON.parse(round.tournament.settings) : {};
     const pointConfig = settings.grandFinalePoints || {};
@@ -2086,6 +2091,8 @@ function RoundPointsTab({ round }: { round: any }) {
     // Logic to calculate rankings (same as in FinalResultsTab)
     const results = round.participants.map((p: any) => {
         const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
+        const handicap = p.handicap ?? p.registration?.handicap ?? 0;
+        let totalCapped = 0;
         const scores: number[] = [];
         let totalRaw = 0;
         let gamesPlayed = 0;
@@ -2094,10 +2101,12 @@ function RoundPointsTab({ round }: { round: any }) {
             const score = sRecord?.score || 0;
             scores.push(score);
             totalRaw += score;
-            if (sRecord && score > 0) gamesPlayed++;
+            if (sRecord && score > 0) {
+                totalCapped += Math.min(score + handicap, 300);
+                gamesPlayed++;
+            }
         }
 
-        const handicap = p.handicap ?? p.registration?.handicap ?? 0;
         const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
         const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인';
 
@@ -2124,9 +2133,8 @@ function RoundPointsTab({ round }: { round: any }) {
 
         const manualPenaltyTotal = handicap < 0 ? Math.abs(handicap) : 0;
         const finalPenaltyTotal = Math.max(manualPenaltyTotal, minusApplied);
-        const positiveHandicapTotal = (handicap > 0 ? handicap : 0) * gamesPlayed;
-        const finalHandicapValue = positiveHandicapTotal - finalPenaltyTotal;
-        const totalWithHandicap = totalRaw + finalHandicapValue;
+        
+        const totalWithHandicap = totalCapped - finalPenaltyTotal;
 
         const validScores = scores.filter(s => s > 0);
         const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
@@ -2192,13 +2200,13 @@ function RoundPointsTab({ round }: { round: any }) {
                                         {res.name}
                                     </td>
                                     <td className="py-4 px-2 text-center text-slate-400 font-bold">
-                                        {res.scores[0] || '-'}
+                                        {res.scores[0] > 0 ? Math.min(res.scores[0] + res.handicapEach, 300) : '-'}
                                     </td>
                                     <td className="py-4 px-2 text-center text-slate-400 font-bold">
-                                        {res.scores[1] || '-'}
+                                        {res.scores[1] > 0 ? Math.min(res.scores[1] + res.handicapEach, 300) : '-'}
                                     </td>
                                     <td className="py-4 px-2 text-center text-slate-400 font-bold">
-                                        {res.scores[2] || '-'}
+                                        {res.scores[2] > 0 ? Math.min(res.scores[2] + res.handicapEach, 300) : '-'}
                                     </td>
                                     <td className="py-4 px-2 text-center font-black text-slate-900 bg-slate-50">
                                         {res.totalWithHandicap}
