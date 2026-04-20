@@ -124,17 +124,51 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                         const draws = points !== null && (points % 1) === 0.5 ? 1 : 0;
                         const isWinner = points !== null && points >= 3;
 
-                        const getMarker = (a: number, b: number) => {
-                            if (a > b) return 'O';
-                            if (a < b) return 'X';
-                            return draws > 0 && a === b ? '△' : '-';
+                        const getHiLow = (scores: any[], gameNum: number) => {
+                            const gs = scores.map(s => s[`score${gameNum}`] || 0);
+                            if (gs.length === 0) return 0;
+                            return Math.max(...gs) - Math.min(...gs);
+                        };
+
+                        const getMarker = (valA: number, valB: number, hA: number, hB: number, hlA: number, hlB: number) => {
+                            if (valA > valB) return 'O';
+                            if (valA < valB) return 'X';
+                            // Tiebreaker 1: Lower Handicap wins
+                            if (hA < hB) return 'O';
+                            if (hB < hA) return 'X';
+                            // Tiebreaker 2: Lower High-Low wins
+                            if (hlA < hlB) return 'O';
+                            if (hlB < hlA) return 'X';
+                            // If still tied
+                            return draws > 0 && valA === valB ? '△' : '-';
                         };
 
                         const marks = [
-                            getMarker(g1, og1),
-                            getMarker(g2, og2),
-                            getMarker(g3, og3)
+                            getMarker(g1, og1, hSum, ohSum, getHiLow(teamScores, 1), getHiLow(opponentScores, 1)),
+                            getMarker(g2, og2, hSum, ohSum, getHiLow(teamScores, 2), getHiLow(opponentScores, 2)),
+                            getMarker(g3, og3, hSum, ohSum, getHiLow(teamScores, 3), getHiLow(opponentScores, 3))
                         ];
+
+                        const getSeriesTotalRaw = (scores: any[], gameNum: number) => {
+                            return scores.reduce((sum, s) => sum + (s[`score${gameNum}`] || 0), 0);
+                        };
+
+                        const getSeriesHiLow = (scores: any[]) => {
+                            if (scores.length === 0) return 0;
+                            const rg1 = getSeriesTotalRaw(scores, 1);
+                            const rg2 = getSeriesTotalRaw(scores, 2);
+                            const rg3 = getSeriesTotalRaw(scores, 3);
+                            return Math.max(rg1, rg2, rg3) - Math.min(rg1, rg2, rg3);
+                        };
+
+                        const totalMark = getMarker(
+                            g1 + g2 + g3,
+                            og1 + og2 + og3,
+                            hSum,
+                            ohSum,
+                            getSeriesHiLow(teamScores),
+                            getSeriesHiLow(opponentScores)
+                        );
 
                         const baseCell: React.CSSProperties = {
                             border: '1px solid #000000',
@@ -213,7 +247,7 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                                         <td style={{ ...baseCell, fontSize: isMobile ? '12px' : '18px', ...(marks[0] === 'O' ? winStyle : {}) }}>{marks[0]}</td>
                                         <td style={{ ...baseCell, fontSize: isMobile ? '12px' : '18px', ...(marks[1] === 'O' ? winStyle : {}) }}>{marks[1]}</td>
                                         <td style={{ ...baseCell, fontSize: isMobile ? '12px' : '18px', ...(marks[2] === 'O' ? winStyle : {}) }}>{marks[2]}</td>
-                                        <td style={{ ...baseCell, fontSize: isMobile ? '12px' : '18px', fontStyle: 'italic', backgroundColor: '#f1f5f9', ...(isWinner ? winStyle : {}) }}>{getMarker(g1 + g2 + g3, og1 + og2 + og3)}</td>
+                                        <td style={{ ...baseCell, fontSize: isMobile ? '12px' : '18px', fontStyle: 'italic', backgroundColor: '#f1f5f9', ...(isWinner ? winStyle : {}) }}>{totalMark}</td>
                                     </tr>
                                 </tbody>
                             </table>
