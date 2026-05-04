@@ -165,6 +165,13 @@ export default function SmartExcelScoreUpload({ onDataParsed, gameCount = 3 }: S
                                 if (finalScore > 0) hasValidScore = true;
                             }
                             
+                            // Check if this is actually the header row "1, 2, 3..."
+                            // Usually a player won't score exactly 1, 2, 3 in order.
+                            // If the first score is 1, and the second is 2 (if gameCount > 1), it's the header row.
+                            if (scores[0] === 1 && (gameCount < 2 || scores[1] === 2)) {
+                                continue;
+                            }
+                            
                             if (hasValidScore) {
                                 processed.push({
                                     lane: currentLane,
