@@ -251,7 +251,7 @@ export default function RoundBulkResultEditor({
                 data.forEach((row) => {
                     for (let c = 0; c < row.length; c++) {
                         const cellStr = String(row[c] || '').trim();
-                        const laneMatch = cellStr.match(/^(\d+)$/) || cellStr.match(/(\d+)\s*(?:레인|Lane|L)/i);
+                        const laneMatch = cellStr.match(/레인\s*[:：]?\s*(\d+)/) || cellStr.match(/(\d+)\s*(?:레인|Lane|L)/i) || cellStr.match(/^(\d+)$/);
                         if (laneMatch) {
                             currentLane = parseInt(laneMatch[1]);
                             playersFoundForLane = 0;
@@ -274,7 +274,13 @@ export default function RoundBulkResultEditor({
                     }
 
                     const numbersWithIdx = row
-                        .map((c, idx) => ({ val: typeof c === 'number' ? c : parseInt(String(c || '').replace(/[^0-9]/g, '')), idx }))
+                        .map((c, idx) => {
+                            if (typeof c === 'number') return { val: c, idx };
+                            const str = String(c || '').trim();
+                            // Avoid extracting numbers from names or identifiers like "P1" or "Team1"
+                            if (/^[a-zA-Z가-힣]+/.test(str)) return { val: NaN, idx };
+                            return { val: parseInt(str.replace(/[^0-9]/g, '')), idx };
+                        })
                         .filter(n => !isNaN(n.val) && n.val >= 0 && n.val <= 300);
 
                     if (uploadMode === 'STANDARD2' && numbersWithIdx.length >= 2 && numbersWithIdx[0].val === 1 && numbersWithIdx[1].val === 2) {
