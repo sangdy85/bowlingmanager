@@ -266,7 +266,7 @@ export default function SmartExcelScoreUpload({ onDataParsed, gameCount = 3 }: S
                         ) : (
                             <span className="text-lg">🎳</span>
                         )}
-                        <span>이벤트전 양식 (JangAn)</span>
+                        <span>표준 양식 2</span>
                     </button>
 
                     <button
