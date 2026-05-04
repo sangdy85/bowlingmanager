@@ -106,45 +106,72 @@ export default function SmartExcelScoreUpload({ onDataParsed, gameCount = 3 }: S
             } else if (uploadMode === 'STANDARD2') {
                 // 2. Standard Mode 2: Event Tournament parsing (e.g. JangAn Perfect)
                 const processed = [];
+                let currentLane = 0;
+
                 for (let r = 0; r < sanitizedData.length; r++) {
                     const row = sanitizedData[r];
+                    
+                    let laneFoundInRow = false;
                     for (let c = 0; c < row.length; c++) {
                         const cell = String(row[c] || '').trim();
                         if (cell.replace(/\s+/g, '').startsWith('레인:')) {
-                            const laneMatch = cell.match(/\d+/);
-                            const lane = laneMatch ? parseInt(laneMatch[0]) : 0;
+                            const match = cell.match(/\d+/);
+                            if (match) {
+                                currentLane = parseInt(match[0]);
+                                laneFoundInRow = true;
+                            }
+                            break;
+                        }
+                    }
+                    
+                    if (laneFoundInRow && currentLane > 0) {
+                        let slot = 1;
+                        for (let pr = r + 1; pr < sanitizedData.length; pr++) {
+                            const pRow = sanitizedData[pr];
+                            if (!pRow) break;
                             
-                            if (lane > 0) {
-                                let slot = 1;
-                                for (let pr = r + 2; pr < sanitizedData.length; pr++) {
-                                    const pRow = sanitizedData[pr];
-                                    if (!pRow) break;
-                                    const pCell = String(pRow[c] || '').trim();
-                                    
-                                    if (!pCell || pCell.includes('소속') || pCell.includes('레인') || pCell === '참가자') {
-                                        break;
-                                    }
-                                    
-                                    const scores: number[] = [];
-                                    let hasValidScore = false;
-                                    for (let g = 0; g < gameCount; g++) {
-                                        const scoreIdx = c + 1 + g;
-                                        const scoreVal = parseInt(String(pRow[scoreIdx] || '0').replace(/[^0-9]/g, ''));
-                                        const finalScore = isNaN(scoreVal) ? 0 : scoreVal;
-                                        scores.push(finalScore);
-                                        if (finalScore > 0) hasValidScore = true;
-                                    }
-                                    
-                                    // Only add if there are any scores
-                                    if (hasValidScore) {
-                                        processed.push({
-                                            lane,
-                                            slot,
-                                            games: scores
-                                        });
-                                        slot++;
-                                    }
-                                }
+                            // Check if this row is a new block (contains "레인:" or "소속")
+                            if (pRow.some(cell => {
+                                const text = String(cell).replace(/\s+/g, '');
+                                return text.startsWith('레인:') || text.includes('소속');
+                            })) {
+                                break;
+                            }
+                            
+                            let nameCol = 0;
+                            while(nameCol < pRow.length && !String(pRow[nameCol] || '').trim()) {
+                                nameCol++;
+                            }
+                            
+                            const pName = String(pRow[nameCol] || '').trim();
+                            
+                            if (pName === '참가자' || !pName || pName.includes('팀') || pName.includes('총점')) {
+                                continue;
+                            }
+                            
+                            const scores: number[] = [];
+                            let scoreStartCol = nameCol + 1;
+                            while(scoreStartCol < pRow.length && String(pRow[scoreStartCol] || '').trim() === '') {
+                                scoreStartCol++;
+                            }
+                            
+                            let hasValidScore = false;
+                            for (let g = 0; g < gameCount; g++) {
+                                const scoreIdx = scoreStartCol + g;
+                                const valStr = String(pRow[scoreIdx] || '0').trim();
+                                const val = parseInt(valStr.replace(/[^0-9]/g, ''));
+                                const finalScore = isNaN(val) ? 0 : val;
+                                scores.push(finalScore);
+                                if (finalScore > 0) hasValidScore = true;
+                            }
+                            
+                            if (hasValidScore) {
+                                processed.push({
+                                    lane: currentLane,
+                                    slot,
+                                    games: scores
+                                });
+                                slot++;
                             }
                         }
                     }
