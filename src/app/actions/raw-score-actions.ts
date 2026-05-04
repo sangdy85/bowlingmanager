@@ -2,60 +2,31 @@
 
 import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
+import { 
+    getKstDate, 
+    extractJson, 
+    checkUserAiQuota, 
+    incrementUserAiUsage, 
+    handleGeminiError 
+} from '@/lib/gemini-utils';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { v4 as uuidv4 } from 'uuid';
 
-function extractJson(text: string): string {
-    // 1. Basic cleaning
-    let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-    // 2. Find JSON structure (Prefer array if possible)
-    const startIdxArr = cleanText.indexOf('[');
-    const startIdxObj = cleanText.indexOf('{');
-    
-    let startIdx = -1;
-    let isArray = false;
-
-    if (startIdxArr !== -1 && (startIdxObj === -1 || startIdxArr < startIdxObj)) {
-        startIdx = startIdxArr;
-        isArray = true;
-    } else if (startIdxObj !== -1) {
-        startIdx = startIdxObj;
-        isArray = false;
-    }
-
-    if (startIdx === -1) return cleanText;
-
-    let sub = cleanText.slice(startIdx);
-    const endChar = isArray ? ']' : '}';
-    const lastEndIdx = sub.lastIndexOf(endChar);
-
-    if (lastEndIdx !== -1) {
-        return sub.slice(0, lastEndIdx + 1);
-    }
-
-    // 3. Robustness check for truncation
-    // If we are in an array and it's truncated, look for the last complete object
-    if (isArray) {
-        const lastObjClose = sub.lastIndexOf('}');
-        if (lastObjClose !== -1) {
-            return sub.slice(0, lastObjClose + 1) + ']';
-        }
-    }
-
-    return sub;
-}
 
 export async function uploadRawLaneScores(
     roundId: String,
     excelData: any[]
-): Promise<{ success: boolean; message?: string; count?: number; data?: any[] }> {
+): Promise<{ success: boolean; message?: string; count?: number; data?: any[]; errorType?: 'QUOTA' | 'GENERAL' }> {
     try {
         const session = await auth();
         if (!session?.user?.id) return { success: false, message: "로그인이 필요합니다." };
 
         const apiKey = process.env.GOOGLE_API_KEY;
         if (!apiKey) return { success: false, message: "API Key 오류" };
+
+        const kstDate = await getKstDate();
+        const quotaResult = await checkUserAiQuota(session.user.id, kstDate);
+        if (!quotaResult.hasQuota) return { success: false, message: quotaResult.message, errorType: 'QUOTA' };
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ 
@@ -103,8 +74,13 @@ export async function uploadRawLaneScores(
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
-
         console.log("Gemini Raw Response (First 100 chars):", text.substring(0, 100));
+
+        // Track Usage
+        const usageMetadata = result.response.usageMetadata;
+        const inputTokens = usageMetadata?.promptTokenCount || 0;
+        const outputTokens = usageMetadata?.candidatesTokenCount || 0;
+        await incrementUserAiUsage(session.user.id, kstDate, inputTokens, outputTokens);
 
         let jsonStr = extractJson(text);
         let parsed;
@@ -147,7 +123,8 @@ export async function uploadRawLaneScores(
 
     } catch (e: any) {
         console.error("Upload Raw Scores Error:", e);
-        return { success: false, message: e.message || "알 수 없는 오류가 발생했습니다." };
+        const handled = handleGeminiError(e);
+        return { success: false, message: handled.message, errorType: handled.errorType };
     }
 }
 

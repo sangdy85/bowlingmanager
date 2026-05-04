@@ -12,7 +12,7 @@ export default function SmartExcelScoreUpload({ onDataParsed, gameCount = 3 }: S
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [rawScores, setRawScores] = useState<any[]>([]); // New state for verification table
     const [showRawScores, setShowRawScores] = useState(false); // Collapsible state
-    const [uploadMode, setUploadMode] = useState<'AI' | 'STANDARD'>('AI');
+    const [uploadMode, setUploadMode] = useState<'AI' | 'STANDARD' | 'STANDARD2'>('AI');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const downloadTemplate = () => {
@@ -103,8 +103,62 @@ export default function SmartExcelScoreUpload({ onDataParsed, gameCount = 3 }: S
                 onDataParsed(processed);
                 setRawScores(processed);
                 setMessage({ type: 'success', text: `표준 양식 분석 완료! ${processed.length}개의 데이터를 읽었습니다.` });
+            } else if (uploadMode === 'STANDARD2') {
+                // 2. Standard Mode 2: Event Tournament parsing (e.g. JangAn Perfect)
+                const processed = [];
+                for (let r = 0; r < sanitizedData.length; r++) {
+                    const row = sanitizedData[r];
+                    for (let c = 0; c < row.length; c++) {
+                        const cell = String(row[c] || '').trim();
+                        if (cell.replace(/\s+/g, '').startsWith('레인:')) {
+                            const laneMatch = cell.match(/\d+/);
+                            const lane = laneMatch ? parseInt(laneMatch[0]) : 0;
+                            
+                            if (lane > 0) {
+                                let slot = 1;
+                                for (let pr = r + 2; pr < sanitizedData.length; pr++) {
+                                    const pRow = sanitizedData[pr];
+                                    if (!pRow) break;
+                                    const pCell = String(pRow[c] || '').trim();
+                                    
+                                    if (!pCell || pCell.includes('소속') || pCell.includes('레인') || pCell === '참가자') {
+                                        break;
+                                    }
+                                    
+                                    const scores: number[] = [];
+                                    let hasValidScore = false;
+                                    for (let g = 0; g < gameCount; g++) {
+                                        const scoreIdx = c + 1 + g;
+                                        const scoreVal = parseInt(String(pRow[scoreIdx] || '0').replace(/[^0-9]/g, ''));
+                                        const finalScore = isNaN(scoreVal) ? 0 : scoreVal;
+                                        scores.push(finalScore);
+                                        if (finalScore > 0) hasValidScore = true;
+                                    }
+                                    
+                                    // Only add if there are any scores
+                                    if (hasValidScore) {
+                                        processed.push({
+                                            lane,
+                                            slot,
+                                            games: scores
+                                        });
+                                        slot++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (processed.length === 0) {
+                    throw new Error("처리할 수 있는 점수 데이터가 없습니다. 양식(레인: X) 정보를 확인해주세요.");
+                }
+
+                onDataParsed(processed);
+                setRawScores(processed);
+                setMessage({ type: 'success', text: `표준 양식 2 분석 완료! ${processed.length}개의 데이터를 읽었습니다.` });
             } else {
-                // 2. AI Mode: Call Server Action
+                // 3. AI Mode: Call Server Action
                 const result = await analyzeLeagueRoundExcelWithGemini(sanitizedData, gameCount);
 
                 if (result.success && result.data) {
@@ -152,26 +206,41 @@ export default function SmartExcelScoreUpload({ onDataParsed, gameCount = 3 }: S
                     <span>AI 업로드</span>
                 </button>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 mt-2">
                     <button
                         type="button"
                         onClick={() => { setUploadMode('STANDARD'); setTimeout(() => fileInputRef.current?.click(), 0); }}
                         disabled={isAnalyzing}
-                        className="btn bg-slate-600 hover:bg-slate-700 text-white font-black shadow-md border-0 flex items-center gap-2 transition-all active:scale-95 h-12 px-5 shrink-0"
+                        className="btn bg-slate-600 hover:bg-slate-700 text-white font-black shadow-md border-0 flex items-center gap-2 transition-all active:scale-95 h-10 px-4 shrink-0 text-sm"
                     >
                         {isAnalyzing && uploadMode === 'STANDARD' ? (
                             <span className="loading loading-spinner loading-sm"></span>
                         ) : (
-                            <span className="text-xl">📋</span>
+                            <span className="text-lg">📋</span>
                         )}
                         <span>표준 양식 업로드</span>
                     </button>
+                    
+                    <button
+                        type="button"
+                        onClick={() => { setUploadMode('STANDARD2'); setTimeout(() => fileInputRef.current?.click(), 0); }}
+                        disabled={isAnalyzing}
+                        className="btn bg-indigo-600 hover:bg-indigo-700 text-white font-black shadow-md border-0 flex items-center gap-2 transition-all active:scale-95 h-10 px-4 shrink-0 text-sm"
+                    >
+                        {isAnalyzing && uploadMode === 'STANDARD2' ? (
+                            <span className="loading loading-spinner loading-sm"></span>
+                        ) : (
+                            <span className="text-lg">🎳</span>
+                        )}
+                        <span>이벤트전 양식 (JangAn)</span>
+                    </button>
+
                     <button
                         type="button"
                         onClick={downloadTemplate}
-                        className="text-[10px] text-slate-400 hover:text-blue-500 underline whitespace-nowrap"
+                        className="text-[10px] text-slate-400 hover:text-blue-500 underline whitespace-nowrap ml-auto"
                     >
-                        [{gameCount}게임 양식 다운로드]
+                        [{gameCount}게임 표준양식 다운로드]
                     </button>
                 </div>
 

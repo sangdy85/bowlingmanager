@@ -5,97 +5,20 @@ import prisma from '@/lib/prisma'; // Your prisma client
 import { auth } from '@/auth'; // Your auth (NextAuth/Auth.js)
 import { v4 as uuidv4 } from 'uuid';
 
-// Pricing constants (Approx KRW per token for Flash models)
-const COST_PER_INPUT_TOKEN = 0.00015;
-const COST_PER_OUTPUT_TOKEN = 0.0006;
-const DAILY_BUDGET_KRW = 5000; // Restore daily budget
-const USER_DAILY_LIMIT = 10;   // Set user daily limit to 10
+import { 
+    getKstDate, 
+    extractJson, 
+    checkUserAiQuota, 
+    incrementUserAiUsage, 
+    handleGeminiError 
+} from '@/lib/gemini-utils';
 
 export type GeminiParsedRow = {
     memberName: string;
     scores: number[];
 };
 
-async function getKstDate() {
-    return new Date(new Date().getTime() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
-}
 
-function extractJson(text: string): string {
-    // 1. Basic cleaning
-    let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-
-    // 2. Find JSON structure (Prefer array if possible)
-    const startIdxArr = cleanText.indexOf('[');
-    const startIdxObj = cleanText.indexOf('{');
-    
-    let startIdx = -1;
-    let isArray = false;
-
-    if (startIdxArr !== -1 && (startIdxObj === -1 || (startIdxArr < startIdxObj))) {
-        startIdx = startIdxArr;
-        isArray = true;
-    } else if (startIdxObj !== -1) {
-        startIdx = startIdxObj;
-        isArray = false;
-    }
-
-    if (startIdx === -1) return cleanText;
-
-    let sub = cleanText.slice(startIdx);
-    
-    // 3. Robust iterative search for valid JSON
-    // We start from the end and try to find the last point where the JSON is valid.
-    // This handles both hard truncation and minor syntax errors (like trailing commas).
-    const closingChar = isArray ? ']' : '}';
-    
-    let searchIdx = sub.length;
-    while (searchIdx > 0) {
-        // Find last potential closing bracket
-        const lastBracket = sub.lastIndexOf(closingChar, searchIdx);
-        if (lastBracket === -1) break;
-
-        let candidate = sub.slice(0, lastBracket + 1).trim();
-        
-        // Try parsing the current candidate
-        try {
-            JSON.parse(candidate);
-            return candidate;
-        } catch (e) {
-            // If it failed due to a trailing comma (very common in truncation or model quirks):
-            // Attempt a simple fix: remove characters before the bracket and see if it helps
-            // [ {}, {} , ] -> [ {}, {} ]
-            const commaMatch = candidate.match(/,\s*[\]}]$/);
-            if (commaMatch) {
-                const fixedCandidate = candidate.replace(/,\s*([\]}])$/, '$1');
-                try {
-                    JSON.parse(fixedCandidate);
-                    return fixedCandidate;
-                } catch (e2) {
-                    // Fall through to search earlier
-                }
-            }
-            
-            // Move search point back
-            searchIdx = lastBracket - 1;
-        }
-    }
-
-    // Last resort: If we couldn't find a valid outer structure, try the last object close
-    if (isArray) {
-        let lastObjClose = sub.lastIndexOf('}');
-        if (lastObjClose !== -1) {
-            let candidate = sub.slice(0, lastObjClose + 1).trim() + ']';
-            // Cleanup trailing comma
-            candidate = candidate.replace(/,\s*\]$/, ']');
-            try {
-                JSON.parse(candidate);
-                return candidate;
-            } catch (e) {}
-        }
-    }
-
-    return sub; // Return original if all else fails
-}
 
 // ... existing code ...
 
@@ -113,8 +36,8 @@ export async function analyzeLeagueRoundExcelWithGemini(
         if (!apiKey) return { success: false, message: "API Key 설정 오류" };
 
         const kstDate = await getKstDate();
-        const hasQuota = await checkUserAiQuota(session.user.id, kstDate);
-        if (!hasQuota) return { success: false, message: "오늘 무료 사용 횟수를 초과했습니다.", errorType: 'QUOTA' };
+        const quotaResult = await checkUserAiQuota(session.user.id, kstDate);
+        if (!quotaResult.hasQuota) return { success: false, message: quotaResult.message, errorType: 'QUOTA' };
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ 
@@ -195,59 +118,12 @@ export async function analyzeLeagueRoundExcelWithGemini(
 
     } catch (error: any) {
         console.error("League Round AI Error:", error);
-        return { success: false, message: error.message };
+        const handled = handleGeminiError(error);
+        return { success: false, message: handled.message, errorType: handled.errorType };
     }
 }
 
-async function checkUserAiQuota(userId: string, date: string): Promise<boolean> {
-    const usage = await prisma.userApiUsage.upsert({
-        where: { userId_date: { userId, date } },
-        update: {},
-        create: { userId, date, count: 0, id: uuidv4(), updatedAt: new Date() },
-    });
 
-    // Global check
-    const globalUsage = await prisma.apiUsage.upsert({
-        where: { date },
-        update: {},
-        create: { date, count: 0, inputTokens: 0, outputTokens: 0, cost: 0, updatedAt: new Date() },
-    });
-
-    if (usage.count >= USER_DAILY_LIMIT) return false;
-    if (globalUsage.cost >= DAILY_BUDGET_KRW) return false;
-
-    return true;
-}
-
-async function incrementUserAiUsage(userId: string, date: string, inputTokens = 0, outputTokens = 0) {
-    const cost = (inputTokens * COST_PER_INPUT_TOKEN) + (outputTokens * COST_PER_OUTPUT_TOKEN);
-
-    await prisma.$transaction([
-        prisma.userApiUsage.upsert({
-            where: { userId_date: { userId, date } },
-            update: { count: { increment: 1 }, updatedAt: new Date() },
-            create: { userId, date, count: 1, id: uuidv4(), updatedAt: new Date() },
-        }),
-        prisma.apiUsage.upsert({
-            where: { date },
-            update: {
-                count: { increment: 1 },
-                inputTokens: { increment: inputTokens },
-                outputTokens: { increment: outputTokens },
-                cost: { increment: cost },
-                updatedAt: new Date()
-            },
-            create: {
-                date,
-                count: 1,
-                inputTokens,
-                outputTokens,
-                cost,
-                updatedAt: new Date()
-            }
-        })
-    ]);
-}
 
 export async function analyzeScoreboardWithGemini(
     formData: FormData
@@ -270,25 +146,12 @@ export async function analyzeScoreboardWithGemini(
 
         const kstDate = await getKstDate();
 
-        // 1. Check Global Daily Budget
-        const globalUsage = await prisma.apiUsage.findUnique({
-            where: { date: kstDate }
-        });
-
-        if (globalUsage && globalUsage.cost >= DAILY_BUDGET_KRW) {
+        // Check Quota
+        const quotaResult = await checkUserAiQuota(session.user.id, kstDate);
+        if (!quotaResult.hasQuota) {
             return {
                 success: false,
-                message: "금일 전체 AI 사용 예산을 초과했습니다. 내일 다시 시도해주세요.",
-                errorType: 'QUOTA'
-            };
-        }
-
-        // 2. Check Per-User Quota
-        const hasQuota = await checkUserAiQuota(session.user.id, kstDate);
-        if (!hasQuota) {
-            return {
-                success: false,
-                message: `오늘 무료 분석 횟수(${USER_DAILY_LIMIT}회)를 모두 사용했습니다. 내일 다시 시도해주세요.`,
+                message: quotaResult.message,
                 errorType: 'QUOTA'
             };
         }
@@ -369,15 +232,8 @@ export async function analyzeScoreboardWithGemini(
 
         return { success: true, data: parsedData };
     } catch (error: any) {
-        console.error("Gemini Analysis Error:", error);
-        if (error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED')) {
-            return {
-                success: false,
-                message: "서비스 할당량을 초과했습니다. 잠시 후 다시 시도해주세요.",
-                errorType: 'QUOTA'
-            };
-        }
-        return { success: false, message: error.message || "Failed to analyze image with AI." };
+        const handled = handleGeminiError(error);
+        return { success: false, message: handled.message, errorType: handled.errorType };
     }
 }
 
@@ -402,25 +258,12 @@ export async function analyzeExcelWithGemini(
 
         const kstDate = await getKstDate();
 
-        // 1. Check Global Daily Budget
-        const globalUsage = await prisma.apiUsage.findUnique({
-            where: { date: kstDate }
-        });
-
-        if (globalUsage && globalUsage.cost >= DAILY_BUDGET_KRW) {
+        // Check Quota
+        const quotaResult = await checkUserAiQuota(session.user.id, kstDate);
+        if (!quotaResult.hasQuota) {
             return {
                 success: false,
-                message: "금일 전체 AI 사용 예산을 초과했습니다.",
-                errorType: 'QUOTA'
-            };
-        }
-
-        // 2. Check Per-User Quota
-        const hasQuota = await checkUserAiQuota(session.user.id, kstDate);
-        if (!hasQuota) {
-            return {
-                success: false,
-                message: `오늘 무료 분석 횟수(${USER_DAILY_LIMIT}회)를 모두 사용했습니다. 내일 다시 시도해주세요.`,
+                message: quotaResult.message,
                 errorType: 'QUOTA'
             };
         }
@@ -489,7 +332,7 @@ export async function analyzeExcelWithGemini(
             return { success: false, message: "AI응답 형식이 올바르지 않습니다. (Truncation error at pos " + (perr instanceof Error ? (perr as any).pos : "?") + ")" };
         }
     } catch (error: any) {
-        console.error("Excel AI Analysis Error:", error);
-        return { success: false, message: error.message || "Failed to analyze Excel data with AI." };
+        const handled = handleGeminiError(error);
+        return { success: false, message: handled.message, errorType: handled.errorType };
     }
 }

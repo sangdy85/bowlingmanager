@@ -160,7 +160,11 @@ export default function RoundBulkResultEditor({
                 try {
                     const uploadResult = await uploadRawLaneScores(round.id, data);
                     if (!uploadResult.success || !uploadResult.data) {
-                        alert(uploadResult.message || "AI 분석 실패");
+                        if (uploadResult.errorType === 'QUOTA') {
+                            alert(uploadResult.message || "오늘 AI 사용량을 모두 소모했습니다. 내일 다시 시도해주세요.");
+                        } else {
+                            alert(uploadResult.message || "AI 분석 실패");
+                        }
                         return;
                     }
 
