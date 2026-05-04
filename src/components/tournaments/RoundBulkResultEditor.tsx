@@ -73,7 +73,7 @@ export default function RoundBulkResultEditor({
     const [loading, setLoading] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [rawResultData, setRawResultData] = useState<any[]>([]);
-    const [useAI, setUseAI] = useState(true);
+    const [uploadMode, setUploadMode] = useState<'AI' | 'STANDARD' | 'STANDARD2'>('AI');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // results[matchupId] = { teamA: IndividualScore[], teamB: IndividualScore[] }
@@ -155,7 +155,7 @@ export default function RoundBulkResultEditor({
             const ws = wb.Sheets[sheetName];
             const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as any[][];
 
-            if (useAI) {
+            if (uploadMode === 'AI') {
                 setIsProcessing(true);
                 try {
                     const uploadResult = await uploadRawLaneScores(round.id, data);
@@ -276,6 +276,10 @@ export default function RoundBulkResultEditor({
                     const numbersWithIdx = row
                         .map((c, idx) => ({ val: typeof c === 'number' ? c : parseInt(String(c || '').replace(/[^0-9]/g, '')), idx }))
                         .filter(n => !isNaN(n.val) && n.val >= 0 && n.val <= 300);
+
+                    if (uploadMode === 'STANDARD2' && numbersWithIdx.length >= 2 && numbersWithIdx[0].val === 1 && numbersWithIdx[1].val === 2) {
+                        return; // Skip header row 1, 2, 3
+                    }
 
                     if (numbersWithIdx.length >= 3) {
                         const matchup = round.matchups.find(m => m.lanes?.split('-').map(l => parseInt(l.trim())).includes(currentLane!));
@@ -441,15 +445,6 @@ export default function RoundBulkResultEditor({
                 <div className="flex items-center gap-6">
                     <div className="flex flex-col items-end gap-1">
                         <span className="text-[10px] font-black text-primary uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full mb-1">Manager Mode</span>
-                        <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-xl border-2 border-black/5 shadow-inner">
-                            <span className={`text-[10px] font-black uppercase tracking-tighter ${useAI ? 'text-primary' : 'text-slate-400'}`}>✨ AI 스마트 모드</span>
-                            <button
-                                onClick={() => setUseAI(!useAI)}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${useAI ? 'bg-primary' : 'bg-slate-300'}`}
-                            >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${useAI ? 'translate-x-6' : 'translate-x-1'}`} />
-                            </button>
-                        </div>
                     </div>
                     <div className="flex gap-4">
                         <input
@@ -459,20 +454,29 @@ export default function RoundBulkResultEditor({
                             accept=".xlsx, .xls, .csv"
                             className="hidden"
                         />
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={isProcessing}
-                            className={`btn h-14 px-8 font-black border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-lg hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all ${useAI ? 'bg-yellow-400 text-black border-black' : 'btn-outline bg-white'}`}
-                        >
-                            {isProcessing ? (
-                                <span className="flex items-center gap-2">
-                                    <span className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
-                                    AI 분석 중...
-                                </span>
-                            ) : (
-                                useAI ? '✨ AI 스마트 엑셀 등록' : '📊 엑셀 점수 정규 등록'
-                            )}
-                        </button>
+                        <div className="flex bg-slate-100 p-1.5 rounded-2xl shadow-inner border border-slate-200 h-14">
+                            <button
+                                onClick={() => { setUploadMode('AI'); setTimeout(() => fileInputRef.current?.click(), 0); }}
+                                disabled={isProcessing}
+                                className={`px-4 font-black rounded-xl transition-all flex items-center gap-2 ${uploadMode === 'AI' ? 'bg-white text-blue-600 shadow-md border border-black/5' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                {isProcessing && uploadMode === 'AI' ? <span className="loading loading-spinner loading-sm"></span> : '✨ AI 업로드'}
+                            </button>
+                            <button
+                                onClick={() => { setUploadMode('STANDARD'); setTimeout(() => fileInputRef.current?.click(), 0); }}
+                                disabled={isProcessing}
+                                className={`px-4 font-black rounded-xl transition-all flex items-center gap-2 ${uploadMode === 'STANDARD' ? 'bg-white text-blue-600 shadow-md border border-black/5' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                {isProcessing && uploadMode === 'STANDARD' ? <span className="loading loading-spinner loading-sm"></span> : '📊 표준 양식 업로드'}
+                            </button>
+                            <button
+                                onClick={() => { setUploadMode('STANDARD2'); setTimeout(() => fileInputRef.current?.click(), 0); }}
+                                disabled={isProcessing}
+                                className={`px-4 font-black rounded-xl transition-all flex items-center gap-2 ${uploadMode === 'STANDARD2' ? 'bg-white text-blue-600 shadow-md border border-black/5' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                {isProcessing && uploadMode === 'STANDARD2' ? <span className="loading loading-spinner loading-sm"></span> : '🎳 표준 양식 업로드2'}
+                            </button>
+                        </div>
                         <button
                             onClick={handleSave}
                             disabled={loading || isProcessing}
