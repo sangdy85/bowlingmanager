@@ -236,6 +236,99 @@ export default function RoundBulkResultEditor({
                 } finally {
                     setIsProcessing(false);
                 }
+            } else if (uploadMode === 'STANDARD2') {
+                // STANDARD2 Mode: Event Tournament parsing (e.g. JangAn Perfect)
+                let totalPlayersImported = 0;
+                let currentLane = 0;
+
+                for (let r = 0; r < data.length; r++) {
+                    const row = data[r];
+                    let laneFoundInRow = false;
+                    for (let c = 0; c < row.length; c++) {
+                        const cell = String(row[c] || '').trim();
+                        if (cell.replace(/\s+/g, '').startsWith('레인:')) {
+                            const match = cell.match(/\d+/);
+                            if (match) {
+                                currentLane = parseInt(match[0]);
+                                laneFoundInRow = true;
+                            }
+                            break;
+                        }
+                    }
+
+                    if (laneFoundInRow && currentLane > 0) {
+                        const matchup = round.matchups.find(m => m.lanes?.split('-').map(l => parseInt(l.trim())).includes(currentLane!));
+                        if (!matchup) continue;
+
+                        const laneParts = matchup.lanes?.split('-').map(l => parseInt(l.trim())) || [];
+                        const isTeamBHeader = laneParts.length > 1 && laneParts[1] === currentLane;
+                        let playersFoundForLane = 0;
+
+                        for (let pr = r + 1; pr < data.length; pr++) {
+                            const pRow = data[pr];
+                            if (!pRow) break;
+
+                            if (pRow.some(cell => {
+                                const text = String(cell).replace(/\s+/g, '');
+                                return text.startsWith('레인:') || text.includes('소속');
+                            })) {
+                                break;
+                            }
+
+                            let nameCol = 0;
+                            while (nameCol < pRow.length && !String(pRow[nameCol] || '').trim()) {
+                                nameCol++;
+                            }
+
+                            const pName = String(pRow[nameCol] || '').trim();
+                            if (pName === '참가자' || !pName || pName.includes('팀') || pName.includes('총점')) {
+                                continue;
+                            }
+
+                            const scores: number[] = [];
+                            let scoreStartCol = nameCol + 1;
+                            while (scoreStartCol < pRow.length && String(pRow[scoreStartCol] || '').trim() === '') {
+                                scoreStartCol++;
+                            }
+
+                            let hasValidScore = false;
+                            for (let g = 0; g < 3; g++) { // League has 3 games max per view usually
+                                const scoreIdx = scoreStartCol + g;
+                                const valStr = String(pRow[scoreIdx] || '0').trim();
+                                const val = parseInt(valStr.replace(/[^0-9]/g, ''));
+                                const finalScore = isNaN(val) ? 0 : val;
+                                scores.push(finalScore);
+                                if (finalScore > 0) hasValidScore = true;
+                            }
+
+                            if (scores[0] === 1 && scores[1] === 2) {
+                                continue; // skip header
+                            }
+
+                            if (hasValidScore && playersFoundForLane < 6) {
+                                let playerIdx = playersFoundForLane < 3 ? (isTeamBHeader ? 3 : 0) + playersFoundForLane : (isTeamBHeader ? 0 : 3) + (playersFoundForLane - 3);
+
+                                if (tempAllMatchupsData[matchup.id]?.[playerIdx]) {
+                                    tempAllMatchupsData[matchup.id][playerIdx] = { 
+                                        ...tempAllMatchupsData[matchup.id][playerIdx], 
+                                        score1: scores[0] || 0, 
+                                        score2: scores[1] || 0, 
+                                        score3: scores[2] || 0
+                                    };
+                                    playersFoundForLane++;
+                                    totalPlayersImported++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                const finalResults: { [matchupId: string]: { teamA: IndividualScore[], teamB: IndividualScore[] } } = {};
+                Object.entries(tempAllMatchupsData).forEach(([mid, scores]) => {
+                    finalResults[mid] = { teamA: scores.slice(0, 3), teamB: scores.slice(3, 6) };
+                });
+                setResults(finalResults);
+                alert(`총 ${totalPlayersImported}명의 선수 데이터를 로드했습니다.`);
             } else {
                 // Traditional parsing logic
                 const HD_KEYS = ['핸디', 'H/C', 'HDC', 'HANDI', 'HDCP'];
