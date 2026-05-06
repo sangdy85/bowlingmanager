@@ -123,16 +123,27 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     const leagueScores = await prisma.leagueMatchupIndividualScore.findMany({
         where: {
             OR: [
-                { userId: user.id },
                 {
                     AND: [
-                        { playerName: user.name },
+                        { userId: user.id },
+                        {
+                            OR: [
+                                { playerName: null },
+                                { playerName: '' },
+                                { playerName: { contains: user.name } }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    AND: [
+                        { playerName: { contains: user.name } },
                         { teamId: { in: userTeamIds } }
                     ]
                 },
                 {
                     AND: [
-                        { playerName: user.name },
+                        { playerName: { contains: user.name } },
                         { Team: { name: { in: currentTeamNames } } }
                     ]
                 }
@@ -162,16 +173,27 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     const tournamentScores = await prisma.tournamentScore.findMany({
         where: {
             OR: [
-                { registration: { userId: user.id } },
                 {
                     AND: [
-                        { registration: { guestName: user.name } },
+                        { registration: { userId: user.id } },
+                        {
+                            OR: [
+                                { registration: { guestName: null } },
+                                { registration: { guestName: '' } },
+                                { registration: { guestName: { contains: user.name } } }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    AND: [
+                        { registration: { guestName: { contains: user.name } } },
                         { registration: { teamId: { in: userTeamIds } } }
                     ]
                 },
                 {
                     AND: [
-                        { registration: { guestName: user.name } },
+                        { registration: { guestName: { contains: user.name } } },
                         { registration: { guestTeamName: { in: currentTeamNames } } }
                     ]
                 }
