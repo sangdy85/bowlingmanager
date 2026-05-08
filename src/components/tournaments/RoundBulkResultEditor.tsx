@@ -281,7 +281,7 @@ export default function RoundBulkResultEditor({
                             }
 
                             const pName = String(pRow[nameCol] || '').trim();
-                            if (pName === '참가자' || !pName || pName.includes('팀') || pName.includes('총점')) {
+                            if (pName === '참가자' || !pName || pName.includes('팀') || pName.includes('총점') || pName.includes('토탈') || pName.toUpperCase().includes('TOTAL')) {
                                 continue;
                             }
 
@@ -305,17 +305,15 @@ export default function RoundBulkResultEditor({
                                 continue; // skip header
                             }
 
-                            if (hasValidScore && playersFoundForLane < 6) {
-                                let playerIdx = playersFoundForLane < 3 ? (isTeamBHeader ? 3 : 0) + playersFoundForLane : (isTeamBHeader ? 0 : 3) + (playersFoundForLane - 3);
+                            if (hasValidScore && playersFoundForLane < 3) {
+                                let playerIdx = (isTeamBHeader ? 3 : 0) + playersFoundForLane;
 
                                 if (tempAllMatchupsData[matchup.id]?.[playerIdx]) {
                                     tempAllMatchupsData[matchup.id][playerIdx] = { 
                                         ...tempAllMatchupsData[matchup.id][playerIdx], 
                                         score1: scores[0] || 0, 
                                         score2: scores[1] || 0, 
-                                        score3: scores[2] || 0,
-                                        playerName: `${currentLane}-${playersFoundForLane + 1}`,
-                                        userId: null
+                                        score3: scores[2] || 0
                                     };
                                     playersFoundForLane++;
                                     totalPlayersImported++;
