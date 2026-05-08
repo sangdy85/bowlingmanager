@@ -313,7 +313,9 @@ export default function RoundBulkResultEditor({
                                         ...tempAllMatchupsData[matchup.id][playerIdx], 
                                         score1: scores[0] || 0, 
                                         score2: scores[1] || 0, 
-                                        score3: scores[2] || 0
+                                        score3: scores[2] || 0,
+                                        playerName: `${currentLane}-${playersFoundForLane + 1}`,
+                                        userId: null
                                     };
                                     playersFoundForLane++;
                                     totalPlayersImported++;
