@@ -1465,7 +1465,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
 
             const rowData: any[] = [rank, res.team, res.name];
             res.scores.forEach((s: number) => {
-                rowData.push(s > 0 ? Math.min(s + res.handicapEach, 300) : '');
+                rowData.push(s > 0 ? (res.isTeam ? s : Math.min(s + res.handicapEach, 300)) : '');
             });
             rowData.push(res.totalHandicap);
             rowData.push(res.total);
@@ -1683,7 +1683,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                                         minWidth: `${colWidths.game}px`,
                                         maxWidth: isMobile ? 'none' : `${colWidths.game}px`
                                     }}>
-                                        {s > 0 ? Math.min(s + res.handicapEach, 300) : ''}
+                                        {s > 0 ? (res.isTeam ? s : Math.min(s + res.handicapEach, 300)) : ''}
                                     </td>
                                 ))}
                                 <td style={{
