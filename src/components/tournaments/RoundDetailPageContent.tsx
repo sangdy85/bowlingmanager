@@ -786,10 +786,28 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
             } else if (moveType === 'LEFT') {
                 return (((curr - firstLane - offset) % totalLanes + totalLanes) % totalLanes) + firstLane;
             } else if (moveType === 'CROSS') {
-                if (curr % 2 === 0) { // Even -> Right
-                    return ((curr - firstLane + offset) % totalLanes) + firstLane;
-                } else { // Odd -> Left
-                    return (((curr - firstLane - offset) % totalLanes + totalLanes) % totalLanes) + firstLane;
+                const odds: number[] = [];
+                const evens: number[] = [];
+                for (let l = firstLane; l <= lastLane; l++) {
+                    if (l % 2 !== 0) {
+                        odds.push(l);
+                    } else {
+                        evens.push(l);
+                    }
+                }
+
+                if (curr % 2 !== 0) {
+                    // Odd lanes move left (index - moveCount)
+                    const idx = odds.indexOf(curr);
+                    if (idx === -1 || odds.length === 0) return curr;
+                    const nextIdx = ((idx - moveCount) % odds.length + odds.length) % odds.length;
+                    return odds[nextIdx];
+                } else {
+                    // Even lanes move right (index + moveCount)
+                    const idx = evens.indexOf(curr);
+                    if (idx === -1 || evens.length === 0) return curr;
+                    const nextIdx = (idx + moveCount) % evens.length;
+                    return evens[nextIdx];
                 }
             }
             return curr;

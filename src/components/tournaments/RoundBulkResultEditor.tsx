@@ -207,7 +207,32 @@ export default function RoundBulkResultEditor({
                             const calculateNextLane = (currLane: number) => {
                                 if (moveType === 'RIGHT') return ((currLane - firstLane + offset) % totalLanesInRound) + firstLane;
                                 if (moveType === 'LEFT') return (((currLane - firstLane - offset) % totalLanesInRound + totalLanesInRound) % totalLanesInRound) + firstLane;
-                                if (moveType === 'CROSS') return currLane % 2 === 0 ? ((currLane - firstLane + offset) % totalLanesInRound) + firstLane : (((currLane - firstLane - offset) % totalLanesInRound + totalLanesInRound) % totalLanesInRound) + firstLane;
+                                if (moveType === 'CROSS') {
+                                    const odds: number[] = [];
+                                    const evens: number[] = [];
+                                    const lastLane = firstLane + totalLanesInRound - 1;
+                                    for (let l = firstLane; l <= lastLane; l++) {
+                                        if (l % 2 !== 0) {
+                                            odds.push(l);
+                                        } else {
+                                            evens.push(l);
+                                        }
+                                    }
+
+                                    if (currLane % 2 !== 0) {
+                                        // Odd lanes move left (index - moveCount)
+                                        const idx = odds.indexOf(currLane);
+                                        if (idx === -1 || odds.length === 0) return currLane;
+                                        const nextIdx = ((idx - moveCount) % odds.length + odds.length) % odds.length;
+                                        return odds[nextIdx];
+                                    } else {
+                                        // Even lanes move right (index + moveCount)
+                                        const idx = evens.indexOf(currLane);
+                                        if (idx === -1 || evens.length === 0) return currLane;
+                                        const nextIdx = (idx + moveCount) % evens.length;
+                                        return evens[nextIdx];
+                                    }
+                                }
                                 return currLane;
                             };
 
