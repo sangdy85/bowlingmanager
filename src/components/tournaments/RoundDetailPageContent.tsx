@@ -1269,6 +1269,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     }
                 }
                 groups[groupId].totalRaw += pTotalCapped; // Using totalRaw as capped total in this context
+                groups[groupId].handicapSum += handicap;
                 groups[groupId].members.push(p.registration.guestName ?? p.registration.user?.name ?? 'Unknown');
             });
 
@@ -1282,7 +1283,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                 scores: g.gameScores,
                 total: g.totalRaw, // totalRaw now contains capped sum
                 handicapEach: g.handicapSum,
-                totalHandicap: 0, // Handicaps are already included in totalRaw for teams here
+                totalHandicap: g.handicapSum * validScores.length,
                 hiLow: hiLow,
                 isTeam: true
             };
@@ -1394,11 +1395,13 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         return { ...r, isFemaleChamp: participant?.isFemaleChamp || false };
     }).sort((a: any, b: any) => {
         if (b.total !== a.total) return b.total - a.total;
-        // Tie-breaker 1: Lower Handicap priority
-        const handicapA = a.handicapEach || 0;
-        const handicapB = b.handicapEach || 0;
-        if (handicapA !== handicapB) return handicapA - handicapB;
-        // Tie-breaker 2: Lower Hi-Low priority
+        
+        // 1. 비핸디 점수(Scratch Score) 우선 정렬 (높은 순)
+        const scratchA = a.total - (a.totalHandicap || 0);
+        const scratchB = b.total - (b.totalHandicap || 0);
+        if (scratchB !== scratchA) return scratchB - scratchA;
+        
+        // 2. 게임 하이로우 편차 정렬 (낮은 순)
         const hiLowA = a.hiLow || 0;
         const hiLowB = b.hiLow || 0;
         return hiLowA - hiLowB;
@@ -2172,9 +2175,13 @@ function RoundPointsTab({ round }: { round: any }) {
         .filter((r: any) => r.hasScore && !waitlistedRegIds.has(r.id))
         .sort((a: any, b: any) => {
             if (b.totalWithHandicap !== a.totalWithHandicap) return b.totalWithHandicap - a.totalWithHandicap;
-            const handicapA = a.handicapEach || 0;
-            const handicapB = b.handicapEach || 0;
-            if (handicapA !== handicapB) return handicapA - handicapB;
+            
+            // 1. 비핸디 점수(Scratch Score) 우선 정렬 (높은 순)
+            const scratchA = a.totalWithHandicap - (a.handicapEach || 0) * gameCount;
+            const scratchB = b.totalWithHandicap - (b.handicapEach || 0) * gameCount;
+            if (scratchB !== scratchA) return scratchB - scratchA;
+            
+            // 2. 게임 하이로우 편차 정렬 (낮은 순)
             return a.hiLow - b.hiLow;
         });
 
