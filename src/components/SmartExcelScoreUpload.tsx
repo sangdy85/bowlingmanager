@@ -145,7 +145,20 @@ export default function SmartExcelScoreUpload({ onDataParsed, gameCount = 3 }: S
                             
                             const pName = String(pRow[nameCol] || '').trim();
                             
-                            if (pName === '참가자' || !pName || pName.includes('팀') || pName.includes('총점')) {
+                            const isHeaderName = 
+                                pName === '참가자' || 
+                                pName === '볼러' || 
+                                pName === '선수' || 
+                                pName === '선수명' || 
+                                pName === '이름' || 
+                                pName === '성명' || 
+                                pName.includes('볼러') ||
+                                pName.includes('팀') || 
+                                pName.includes('총점') ||
+                                pName.includes('합계') ||
+                                pName.includes('평균');
+
+                            if (!pName || isHeaderName) {
                                 continue;
                             }
                             

@@ -306,7 +306,22 @@ export default function RoundBulkResultEditor({
                             }
 
                             const pName = String(pRow[nameCol] || '').trim();
-                            if (pName === '참가자' || !pName || pName.includes('팀') || pName.includes('총점') || pName.includes('토탈') || pName.toUpperCase().includes('TOTAL')) {
+                            const isHeaderName = 
+                                pName === '참가자' || 
+                                pName === '볼러' || 
+                                pName === '선수' || 
+                                pName === '선수명' || 
+                                pName === '이름' || 
+                                pName === '성명' || 
+                                pName.includes('볼러') ||
+                                pName.includes('팀') || 
+                                pName.includes('총점') ||
+                                pName.includes('토탈') || 
+                                pName.includes('합계') ||
+                                pName.includes('평균') ||
+                                pName.toUpperCase().includes('TOTAL');
+
+                            if (!pName || isHeaderName) {
                                 continue;
                             }
 
@@ -401,7 +416,7 @@ export default function RoundBulkResultEditor({
                         })
                         .filter(n => !isNaN(n.val) && n.val >= 0 && n.val <= 300);
 
-                    if (uploadMode === 'STANDARD2' && numbersWithIdx.length >= 2 && numbersWithIdx[0].val === 1 && numbersWithIdx[1].val === 2) {
+                    if ((uploadMode as string) === 'STANDARD2' && numbersWithIdx.length >= 2 && numbersWithIdx[0].val === 1 && numbersWithIdx[1].val === 2) {
                         return; // Skip header row 1, 2, 3
                     }
 
