@@ -41,7 +41,7 @@ export async function analyzeLeagueRoundExcelWithGemini(
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-flash",
             generationConfig: { 
                 responseMimeType: "application/json",
                 maxOutputTokens: 8192
@@ -171,7 +171,7 @@ export async function analyzeScoreboardWithGemini(
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-flash",
             generationConfig: { 
                 responseMimeType: "application/json",
                 maxOutputTokens: 8192
@@ -270,7 +270,7 @@ export async function analyzeExcelWithGemini(
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-flash",
             generationConfig: { 
                 responseMimeType: "application/json",
                 maxOutputTokens: 8192
