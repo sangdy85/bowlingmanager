@@ -126,6 +126,8 @@ export default function SmartExcelScoreUpload({ onDataParsed, gameCount = 3 }: S
                     
                     if (laneFoundInRow && currentLane > 0) {
                         let slot = 1;
+                        let scoreStartCol = -1;
+
                         for (let pr = r + 1; pr < sanitizedData.length; pr++) {
                             const pRow = sanitizedData[pr];
                             if (!pRow) break;
@@ -158,19 +160,34 @@ export default function SmartExcelScoreUpload({ onDataParsed, gameCount = 3 }: S
                                 pName.includes('합계') ||
                                 pName.includes('평균');
 
-                            if (!pName || isHeaderName) {
+                            if (isHeaderName) {
+                                for (let c = nameCol + 1; c < pRow.length; c++) {
+                                    const val = String(pRow[c] || '').replace(/\s+/g, '').toLowerCase();
+                                    if (
+                                        val === '1' || 
+                                        val === '1g' || 
+                                        val === '1게임' || 
+                                        val === '1g(1)' || 
+                                        val === 'game1' || 
+                                        val === 'g1'
+                                    ) {
+                                        scoreStartCol = c;
+                                        break;
+                                    }
+                                }
+                                continue;
+                            }
+
+                            if (!pName) {
                                 continue;
                             }
                             
+                            const targetScoreStartCol = scoreStartCol !== -1 ? scoreStartCol : nameCol + 1;
                             const scores: number[] = [];
-                            let scoreStartCol = nameCol + 1;
-                            while(scoreStartCol < pRow.length && String(pRow[scoreStartCol] || '').trim() === '') {
-                                scoreStartCol++;
-                            }
-                            
                             let hasValidScore = false;
+                            
                             for (let g = 0; g < gameCount; g++) {
-                                const scoreIdx = scoreStartCol + g;
+                                const scoreIdx = targetScoreStartCol + g;
                                 const valStr = String(pRow[scoreIdx] || '0').trim();
                                 const val = parseInt(valStr.replace(/[^0-9]/g, ''));
                                 const finalScore = isNaN(val) ? 0 : val;
