@@ -805,14 +805,42 @@ export default function RoundParticipantManager({
                                                                 <option value="">레인 선택</option>
                                                                 {(() => {
                                                                     const options = [];
+                                                                    let maxSlot = 3;
+                                                                    try {
+                                                                        if (selectedRound.laneConfig) {
+                                                                            const config = JSON.parse(selectedRound.laneConfig);
+                                                                            let highest = 0;
+                                                                            Object.values(config).forEach((slots: any) => {
+                                                                                if (Array.isArray(slots)) {
+                                                                                    slots.forEach(s => {
+                                                                                        const sNum = parseInt(s);
+                                                                                        if (!isNaN(sNum) && sNum > highest) {
+                                                                                            highest = sNum;
+                                                                                        }
+                                                                                    });
+                                                                                }
+                                                                            });
+                                                                            if (highest > 0) maxSlot = highest;
+                                                                        }
+                                                                    } catch (e) {
+                                                                        console.error("Failed to parse laneConfig for manual lane options", e);
+                                                                    }
+
+                                                                    if (maxSlot < 3) maxSlot = 3;
+
                                                                     for (let l = selectedRound.startLane || 1; l <= (selectedRound.endLane || 40); l += 2) {
+                                                                        const l1Options = [];
+                                                                        const l2Options = [];
+                                                                        for (let s = 1; s <= maxSlot; s++) {
+                                                                            l1Options.push(<option key={`${l}-${s}`} value={`${l}-${s}`}>{l}-{s}</option>);
+                                                                            l2Options.push(<option key={`${l + 1}-${s}`} value={`${l + 1}-${s}`}>{l + 1}-{s}</option>);
+                                                                        }
+
                                                                         options.push(
                                                                             <optgroup key={`lane-${l}`} label={`${l}-${l + 1} 라인`}>
-                                                                                <option value={`${l}-1`}>{l}-1</option>
-                                                                                <option value={`${l}-2`}>{l}-2</option>
-                                                                                <option value={`${l + 1}-1`}>{l + 1}-1</option>
-                                                                                <option value={`${l + 1}-2`}>{l + 1}-2</option>
-                                                                            </optgroup>
+                                                                                 {l1Options}
+                                                                                 {l2Options}
+                                                                             </optgroup>
                                                                         );
                                                                     }
                                                                     return options;
