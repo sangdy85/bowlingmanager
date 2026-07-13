@@ -137,7 +137,7 @@ export default function SideGameManager({
                         regId: p.registrationId,
                         score: {
                             scores: scoreGroups[p.registrationId] || new Array(gameCount).fill(0),
-                            handicap: p.registration?.handicap || 0,
+                            handicap: p.handicap ?? p.registration?.handicap ?? 0,
                             registrationId: p.registrationId
                         }
                     });

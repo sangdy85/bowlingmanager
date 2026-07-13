@@ -100,6 +100,7 @@ export default function GrandFinaleWinnersManager({ tournamentId, rounds, select
 
                                 const idStr = String(regId);
                                 if (!groups[idStr]) {
+                                    const participant = round.participants?.find((p: any) => String(p.registrationId) === idStr);
                                     groups[idStr] = {
                                         id: idStr,
                                         registrationId: idStr,
@@ -107,7 +108,7 @@ export default function GrandFinaleWinnersManager({ tournamentId, rounds, select
                                         score1: 0,
                                         score2: 0,
                                         score3: 0,
-                                        handicap: s.registration?.handicap || 0
+                                        handicap: participant ? (participant.handicap ?? participant.registration?.handicap ?? 0) : (s.registration?.handicap || 0)
                                     };
                                 }
                                 if (s.gameNumber === 1) groups[idStr].score1 = s.score;

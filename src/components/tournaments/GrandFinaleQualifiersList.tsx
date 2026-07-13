@@ -26,13 +26,14 @@ export default function GrandFinaleQualifiersList({ tournament, rounds, registra
                 if (!qualifiedRegIds.has(regId)) return;
 
                 if (!groups[regId]) {
+                    const participant = round.participants?.find((p: any) => String(p.registrationId) === regId);
                     groups[regId] = {
                         registrationId: regId,
                         registration: s.registration,
                         score1: 0,
                         score2: 0,
                         score3: 0,
-                        handicap: s.registration?.handicap || 0
+                        handicap: participant ? (participant.handicap ?? participant.registration?.handicap ?? 0) : (s.registration?.handicap || 0)
                     };
                 }
                 if (s.gameNumber === 1) groups[regId].score1 = s.score;
