@@ -47,10 +47,11 @@ export default async function StatsPage({ searchParams }: StatsPageProps) {
     });
     const activeYears = Array.from<number>(new Set(allTeamScores.map((s: { gameDate: Date }) => s.gameDate.getFullYear()))).sort((a, b) => b - a);
 
-    // Fetch all scores for the team in this year
+    // Fetch all scores for the team in this year (only regular games)
     const scores = await prisma.score.findMany({
         where: {
             teamId: currentTeam.id,
+            gameType: '정기전',
             gameDate: {
                 gte: startOfYear,
                 lte: endOfYear
