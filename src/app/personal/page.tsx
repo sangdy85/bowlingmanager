@@ -228,7 +228,9 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         const team = ls.Team.name;
         const key = `${dateStr}_${tName}_${rNum}_${team}`;
 
-        const scores = [ls.score1, ls.score2, ls.score3].filter(s => s > 0);
+        const scores = [ls.score1, ls.score2, ls.score3]
+            .filter(s => s > 0)
+            .map(s => s + (ls.handicap || 0));
         if (scores.length === 0) return;
 
         const total = scores.reduce((a, b) => a + b, 0);
@@ -272,8 +274,9 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         }
 
         const group = groupedOfficialMap.get(key);
-        group.scores.push(ts.score);
-        group.total += ts.score;
+        const handicappedScore = ts.score + (ts.registration.handicap || 0);
+        group.scores.push(handicappedScore);
+        group.total += handicappedScore;
         group.avg = (group.total / group.scores.length).toFixed(1);
     });
 
@@ -317,10 +320,10 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             const d = ls.LeagueMatchup.round.date || ls.createdAt;
             return [ls.score1, ls.score2, ls.score3]
                 .filter(s => s > 0)
-                .map(s => ({ score: s, gameDate: d }));
+                .map(s => ({ score: s + (ls.handicap || 0), gameDate: d }));
         }),
         ...tournamentScores.map((ts: any) => ({
-            score: ts.score,
+            score: ts.score + (ts.registration.handicap || 0),
             gameDate: ts.round?.date || ts.createdAt
         }))
     ];
