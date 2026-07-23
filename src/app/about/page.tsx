@@ -5,8 +5,8 @@ import AboutPageContent from "@/components/AboutPageContent";
 import { auth } from "@/auth";
 
 export const metadata = {
-    title: "사이트 소개 | BowlingManager",
-    description: "BowlingManager 서비스 소개 및 이용 가이드, 문의 게시판입니다.",
+    title: "이용 방법 | BowlingManager",
+    description: "BowlingManager 이용 방법 및 상세 가이드, 문의 게시판입니다.",
 };
 
 export default async function AboutPage() {

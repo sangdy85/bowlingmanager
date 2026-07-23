@@ -15,7 +15,7 @@ export default function Footer() {
                         <div>
                             <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">서비스</h5>
                             <ul className="space-y-3 text-sm font-medium text-slate-600">
-                                <li><Link href="/about" className="hover:text-blue-600 transition-colors">서비스 소개</Link></li>
+                                <li><Link href="/about" className="hover:text-blue-600 transition-colors">이용 방법</Link></li>
                                 <li><Link href="/score" className="hover:text-blue-600 transition-colors">점수 통계</Link></li>
                                 <li><Link href="/team" className="hover:text-blue-600 transition-colors">팀 관리</Link></li>
                             </ul>

@@ -44,7 +44,7 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
           {isLoggedIn ? (
             <>
               <Link href="/" className={styles.link} onClick={closeMenu}>홈</Link>
-              <Link href="/about" className={styles.link} onClick={closeMenu}>소개</Link>
+              <Link href="/about" className={styles.link} onClick={closeMenu}>이용 방법</Link>
               {userRole === 'SUPER_ADMIN' ? (
                 <>
                   <Link href="/admin" className={styles.link} onClick={closeMenu}>사이트 관리</Link>
