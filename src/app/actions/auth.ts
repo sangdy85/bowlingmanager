@@ -6,7 +6,7 @@ import { getPrisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { generateVerificationToken } from "@/lib/tokens";
-import { sendVerificationEmail } from "@/lib/mail";
+import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/mail";
 
 /**
  * NOTE: We keep these actions in a dedicated "use server" file.
@@ -174,9 +174,71 @@ export async function sendCode(email: string) {
 }
 
 export async function requestPasswordReset(email: string) {
-    return { success: true, message: "테스트 모드: 요청이 접수되었습니다." };
+    try {
+        const prisma = getPrisma();
+        const existingUser = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (!existingUser) {
+            return { success: false, message: "존재하지 않는 계정입니다." };
+        }
+
+        const verificationToken = await generateVerificationToken(email);
+        await sendPasswordResetEmail(verificationToken.identifier, verificationToken.token);
+
+        return { success: true, message: "비밀번호 재설정 인증 코드가 발송되었습니다." };
+    } catch (error: any) {
+        console.error("[SERVER ACTION] requestPasswordReset CRITICAL ERROR:", error);
+        return {
+            success: false,
+            message: "인증 코드 발송 중 오류가 발생했습니다: " + (error.message || "알 수 없는 오류")
+        };
+    }
 }
 
 export async function resetPassword(email: string, code: string, newPassword: string) {
-    return { success: true, message: "테스트 모드: 비밀번호가 변경되었습니다." };
+    if (!email || !code || !newPassword) {
+        return { success: false, message: "모든 필드를 입력해주세요." };
+    }
+
+    try {
+        const prisma = getPrisma();
+
+        // 1. Verify Code
+        const verificationToken = await prisma.verificationToken.findFirst({
+            where: { identifier: email, token: code }
+        });
+
+        if (!verificationToken || new Date(verificationToken.expires) < new Date()) {
+            return { success: false, message: "인증 코드가 틀리거나 만료되었습니다." };
+        }
+
+        // 2. Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // 3. Update password
+        await prisma.user.update({
+            where: { email },
+            data: {
+                password: hashedPassword,
+                updatedAt: new Date(),
+            }
+        });
+
+        // 4. Delete used token
+        await prisma.verificationToken.delete({
+            where: {
+                identifier_token: {
+                    identifier: email,
+                    token: code,
+                }
+            }
+        });
+
+        return { success: true, message: "비밀번호가 성공적으로 변경되었습니다." };
+    } catch (error: any) {
+        console.error("[SERVER ACTION] resetPassword CRITICAL ERROR:", error);
+        return { success: false, message: "비밀번호 재설정 중 오류가 발생했습니다: " + (error.message || "알 수 없는 오류") };
+    }
 }
