@@ -9,8 +9,8 @@ const inter = Inter({ subsets: ["latin"] });
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "볼링 점수 관리",
-  description: "개인 및 팀 볼링 점수 관리 서비스",
+  title: "볼링매니저 | 동호회 및 대회 자동화 서비스",
+  description: "개인 및 동호회(팀) 볼링 점수 기록 관리, 상주리그 및 볼링장 대회 운영 자동화, 실시간 순위 리더보드 서비스",
   other: {
     "google-adsense-account": "ca-pub-6753153221253393",
   },
