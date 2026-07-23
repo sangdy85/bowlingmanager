@@ -18,6 +18,7 @@ export async function createInquiry(formData: { title: string; content: string }
             },
         });
         revalidatePath('/about');
+        revalidatePath('/inquiry');
         return { success: true, inquiry };
     } catch (error) {
         console.error('Failed to create inquiry:', error);
@@ -62,6 +63,7 @@ export async function answerInquiry(inquiryId: string, answer: string) {
             },
         });
         revalidatePath('/about');
+        revalidatePath('/inquiry');
         return { success: true };
     } catch (error) {
         console.error('Failed to answer inquiry:', error);
@@ -86,6 +88,7 @@ export async function deleteInquiry(inquiryId: string) {
             where: { id: inquiryId },
         });
         revalidatePath('/about');
+        revalidatePath('/inquiry');
         return { success: true };
     } catch (error) {
         console.error('Failed to delete inquiry:', error);

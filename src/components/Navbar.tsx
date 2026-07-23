@@ -49,6 +49,7 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
                 <>
                   <Link href="/admin" className={styles.link} onClick={closeMenu}>사이트 관리</Link>
                   <Link href="/centers" className={styles.link} onClick={closeMenu}>센터/대회 관리</Link>
+                  <Link href="/inquiry" className={styles.link} onClick={closeMenu}>문의 관리</Link>
                 </>
               ) : (
                 <>
@@ -56,6 +57,7 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
                   <Link href="/team" className={styles.link} onClick={closeMenu}>팀 관리</Link>
                   <Link href="/stats" className={styles.link} onClick={closeMenu}>통계/순위</Link>
                   <Link href="/centers" className={styles.link} onClick={closeMenu}>볼링장/대회</Link>
+                  <Link href="/inquiry" className={styles.link} onClick={closeMenu}>문의하기</Link>
                 </>
               )}
               <Link href="/settings" className={styles.link} onClick={closeMenu}>계정 설정</Link>
