@@ -175,13 +175,12 @@ export default function AboutPageContent({
 
             {/* Premium Tabs */}
             <div className="flex justify-center mb-16 px-2">
-                <div className="flex flex-row bg-slate-100 p-2 rounded-2xl border border-slate-200 shadow-sm w-full max-w-4xl overflow-x-auto no-scrollbar">
+                <div className="flex flex-row bg-slate-100 p-2 rounded-2xl border border-slate-200 shadow-sm w-full max-w-3xl overflow-x-auto no-scrollbar">
                     {[
                         { id: 'intro', label: '서비스 소개', icon: '📝' },
                         { id: 'my-records', label: '나의 기록실', icon: '🎳' },
                         { id: 'team-mgmt', label: '팀 관리', icon: '🏆' },
                         { id: 'center-tournaments', label: '볼링장/대회', icon: '🏤' },
-                        { id: 'inquiry', label: '1:1 문의', icon: '📞' },
                     ].map(tab => (
                         <button
                             key={tab.id}
