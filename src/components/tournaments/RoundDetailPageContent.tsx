@@ -1719,6 +1719,8 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
         );
     };
 
+    const totalPages = isTeam2To6 ? 1 : (Math.ceil(sortedResults.length / 54) || 1);
+
     return (
         <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box', overflowX: isMobile ? 'auto' : 'hidden' }}>
             <style dangerouslySetInnerHTML={{
@@ -1769,115 +1771,147 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                     }
                 }
             `}} />
-            <div id="print-area" className="table-responsive !p-0 w-full" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%' }}>
-                {/* Main Result Container */}
-                <div style={{ width: '100%', margin: '0', padding: '0 0 20px 0', boxSizing: 'border-box', overflow: 'visible' }}>
-                    <div style={{
-                        backgroundColor: '#FFFF00',
-                        border: '1.5px solid black',
-                        borderBottom: 'none',
-                        padding: '12px',
-                        textAlign: 'center',
-                        position: 'relative',
-                        width: '100%',
-                        boxSizing: 'border-box'
-                    }}>
-                        <h2 style={{ textAlign: 'center', fontSize: '20px', fontWeight: '900', color: 'black', margin: '0' }}>
-                            {round.tournament.type === 'EVENT' ? round.tournament.name : `${round.tournament.name} ${round.roundNumber}회차`} 결과
-                        </h2>
-                        <div style={{
-                            position: 'absolute',
-                            right: '10px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            display: 'flex',
-                            gap: '8px',
-                            zIndex: 10
-                        }} className="no-print">
-                            {isManager && (
-                                <>
-                                    <button
-                                        onClick={handleExcelDownload}
-                                        style={{
-                                            backgroundColor: 'white',
-                                            color: 'black',
-                                            border: '1px solid black',
-                                            borderRadius: '4px',
-                                            padding: '6px 10px',
-                                            fontSize: '11px',
-                                            fontWeight: 'bold',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '4px',
-                                            height: '28px',
-                                            boxSizing: 'border-box'
-                                        }}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
-                                        엑셀 다운로드
-                                    </button>
-                                    <button
-                                        onClick={() => window.print()}
-                                        style={{
-                                            backgroundColor: 'white',
-                                            color: 'black',
-                                            border: '1.5px solid black',
-                                            borderRadius: '4px',
-                                            padding: '4px 12px',
-                                            fontSize: '11px',
-                                            fontWeight: 'bold',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '4px',
-                                            height: '28px',
-                                            boxSizing: 'border-box'
-                                        }}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                                        </svg>
-                                        출력
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
+            <div id="print-area" className="table-responsive !p-0 w-full" style={{ display: 'flex', flexDirection: 'column', gap: '24px', alignItems: 'stretch', width: '100%' }}>
+                {Array.from({ length: totalPages }).map((_, pageIndex) => {
+                    let leftData: any[] = [];
+                    let rightData: any[] = [];
+                    let leftTableStartRank = 1;
+                    let rightTableStartRank = 28;
 
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: isMobile ? 'column' : 'row',
-                        width: '100%',
-                        borderTop: 'none',
-                        gap: isMobile ? '20px' : 0,
-                        justifyContent: 'center',
-                        boxSizing: 'border-box'
-                    }}>
-                        <div style={{
-                            flex: '1',
-                            width: isMobile ? '100%' : (isTeam2To6 ? '100%' : '50%'),
-                            boxSizing: 'border-box',
-                            overflowX: isMobile ? 'auto' : 'visible'
-                        }}>
-                            <TableComponent data={leftColumn} startRank={1} />
-                        </div>
-                        {!isTeam2To6 && (
+                    if (isTeam2To6) {
+                        leftData = sortedResults;
+                        rightData = [];
+                    } else {
+                        const startIndex = pageIndex * 54;
+                        const pageResults = sortedResults.slice(startIndex, startIndex + 54);
+                        leftData = pageResults.slice(0, 27);
+                        rightData = pageResults.slice(27, 54);
+                        leftTableStartRank = startIndex + 1;
+                        rightTableStartRank = startIndex + 28;
+                    }
+
+                    return (
+                        <div 
+                            key={pageIndex} 
+                            style={{ 
+                                width: '100%', 
+                                margin: '0', 
+                                padding: '0 0 20px 0', 
+                                boxSizing: 'border-box', 
+                                overflow: 'visible',
+                                pageBreakAfter: pageIndex < totalPages - 1 ? 'always' : 'auto'
+                            }}
+                        >
                             <div style={{
-                                flex: '1',
-                                width: isMobile ? '100%' : '50%',
-                                boxSizing: 'border-box',
-                                overflowX: isMobile ? 'auto' : 'visible',
-                                borderTop: isMobile ? '1px solid #ccc' : 'none',
-                                paddingTop: isMobile ? '10px' : 0
+                                backgroundColor: '#FFFF00',
+                                border: '1.5px solid black',
+                                borderBottom: 'none',
+                                padding: '12px',
+                                textAlign: 'center',
+                                position: 'relative',
+                                width: '100%',
+                                boxSizing: 'border-box'
                             }}>
-                                <TableComponent data={rightColumn} startRank={rowsPerColumn + 1} isRight={true} />
+                                <h2 style={{ textAlign: 'center', fontSize: '20px', fontWeight: '900', color: 'black', margin: '0' }}>
+                                    {round.tournament.type === 'EVENT' ? round.tournament.name : `${round.tournament.name} ${round.roundNumber}회차`} 결과 {totalPages > 1 ? `(${pageIndex + 1}/${totalPages} 페이지)` : ''}
+                                </h2>
+                                {pageIndex === 0 && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        right: '10px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        display: 'flex',
+                                        gap: '8px',
+                                        zIndex: 10
+                                    }} className="no-print">
+                                        {isManager && (
+                                            <>
+                                                <button
+                                                    onClick={handleExcelDownload}
+                                                    style={{
+                                                        backgroundColor: 'white',
+                                                        color: 'black',
+                                                        border: '1px solid black',
+                                                        borderRadius: '4px',
+                                                        padding: '6px 10px',
+                                                        fontSize: '11px',
+                                                        fontWeight: 'bold',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        height: '28px',
+                                                        boxSizing: 'border-box'
+                                                    }}
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                    </svg>
+                                                    엑셀 다운로드
+                                                </button>
+                                                <button
+                                                    onClick={() => window.print()}
+                                                    style={{
+                                                        backgroundColor: 'white',
+                                                        color: 'black',
+                                                        border: '1.5px solid black',
+                                                        borderRadius: '4px',
+                                                        padding: '4px 12px',
+                                                        fontSize: '11px',
+                                                        fontWeight: 'bold',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        height: '28px',
+                                                        boxSizing: 'border-box'
+                                                    }}
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                                    </svg>
+                                                    출력
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
-                </div>
+
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: isMobile ? 'column' : 'row',
+                                width: '100%',
+                                borderTop: 'none',
+                                gap: isMobile ? '20px' : 0,
+                                justifyContent: 'center',
+                                boxSizing: 'border-box'
+                            }}>
+                                <div style={{
+                                    flex: '1',
+                                    width: isMobile ? '100%' : (isTeam2To6 ? '100%' : '50%'),
+                                    boxSizing: 'border-box',
+                                    overflowX: isMobile ? 'auto' : 'visible'
+                                }}>
+                                    <TableComponent data={leftData} startRank={leftTableStartRank} />
+                                </div>
+                                {!isTeam2To6 && (
+                                    <div style={{
+                                        flex: '1',
+                                        width: isMobile ? '100%' : '50%',
+                                        boxSizing: 'border-box',
+                                        overflowX: isMobile ? 'auto' : 'visible',
+                                        borderTop: isMobile ? '1px solid #ccc' : 'none',
+                                        paddingTop: isMobile ? '10px' : 0
+                                    }}>
+                                        <TableComponent data={rightData} startRank={rightTableStartRank} isRight={true} />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

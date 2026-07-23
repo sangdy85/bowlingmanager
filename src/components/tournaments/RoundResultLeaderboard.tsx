@@ -22,9 +22,7 @@ interface RoundResultData {
 export default function RoundResultLeaderboard({ data, title }: { data: RoundResultData, title: string }) {
     const { results, gameCount, roundNumber } = data;
 
-    // Split logic matching manager view (27 rows per side)
-    const leftColumn = results.slice(0, 27);
-    const rightColumn = results.slice(27, 54);
+    const totalPages = Math.ceil(results.length / 54) || 1;
 
     const TableComponent = ({ columnResults, startRank, isRight }: { columnResults: any[], startRank: number, isRight?: boolean }) => (
         <table style={{
@@ -102,23 +100,57 @@ export default function RoundResultLeaderboard({ data, title }: { data: RoundRes
     );
 
     return (
-        <div style={{ backgroundColor: 'white', padding: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', border: '2px solid black' }}>
-            <div style={{ width: '100%', padding: '0 0 20px 0' }}>
-                <div style={{ backgroundColor: '#FFFF00', border: '1px solid black', borderBottomWidth: '2px', padding: '12px 20px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    <h2 style={{ textAlign: 'center', fontSize: '20px', fontWeight: '900', color: 'black', margin: '0' }}>
-                        {title} {roundNumber}회차 결과
-                    </h2>
-                </div>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {Array.from({ length: totalPages }).map((_, pageIndex) => {
+                const startIndex = pageIndex * 54;
+                const pageResults = results.slice(startIndex, startIndex + 54);
+                const leftColumn = pageResults.slice(0, 27);
+                const rightColumn = pageResults.slice(27, 54);
+                const leftTableStartRank = startIndex + 1;
+                const rightTableStartRank = startIndex + 28;
 
-                <div className="flex flex-col md:flex-row w-full overflow-x-auto">
-                    <div style={{ flex: 1, minWidth: '450px' }}>
-                        <TableComponent columnResults={leftColumn} startRank={1} />
+                return (
+                    <div 
+                        key={pageIndex} 
+                        style={{ 
+                            backgroundColor: 'white', 
+                            padding: '0', 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            alignItems: 'center', 
+                            width: '100%', 
+                            border: '2px solid black',
+                            pageBreakAfter: pageIndex < totalPages - 1 ? 'always' : 'auto'
+                        }}
+                    >
+                        <div style={{ width: '100%', padding: '0 0 20px 0' }}>
+                            <div style={{ 
+                                backgroundColor: '#FFFF00', 
+                                border: '1px solid black', 
+                                borderBottomWidth: '2px', 
+                                padding: '12px 20px', 
+                                width: '100%', 
+                                display: 'flex', 
+                                justifyContent: 'center', 
+                                alignItems: 'center' 
+                            }}>
+                                <h2 style={{ textAlign: 'center', fontSize: '20px', fontWeight: '900', color: 'black', margin: '0' }}>
+                                    {title} {roundNumber}회차 결과 {totalPages > 1 ? `(${pageIndex + 1}/${totalPages} 페이지)` : ''}
+                                </h2>
+                            </div>
+
+                            <div className="flex flex-col md:flex-row w-full overflow-x-auto">
+                                <div style={{ flex: 1, minWidth: '450px' }}>
+                                    <TableComponent columnResults={leftColumn} startRank={leftTableStartRank} />
+                                </div>
+                                <div style={{ flex: 1, minWidth: '450px' }}>
+                                    <TableComponent columnResults={rightColumn} startRank={rightTableStartRank} isRight={true} />
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div style={{ flex: 1, minWidth: '450px' }}>
-                        <TableComponent columnResults={rightColumn} startRank={28} isRight={true} />
-                    </div>
-                </div>
-            </div>
+                );
+            })}
         </div>
     );
 }
