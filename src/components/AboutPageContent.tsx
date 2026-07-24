@@ -268,10 +268,17 @@ export default function AboutPageContent({
                                 <div className="space-y-8 animate-in fade-in duration-300">
                                     <div className="p-6 bg-blue-950/20 border border-blue-900/40 rounded-2xl">
                                         <h3 className="text-xl font-black text-blue-400 mb-2">⭐ 1페이지: 플레이어 프로필</h3>
-                                        <p className="text-slate-300 text-base leading-relaxed">
+                                        <p className="text-slate-300 text-base leading-relaxed mb-6">
                                             클럽 또는 개인적으로 기록한 점수를 평균, 하이, 로우, 게임수, 편차를 보여주고 해당 데이터를 토대로 <strong>파란색 그래프</strong>로 보여줍니다.<br />
                                             볼링장, 대회에서 기록한 점수를 평균, 하이, 로우, 게임수, 편차를 보여주고 해당 데이터를 토대로 <strong>주황색 그래프</strong>로 보여줍니다.
                                         </p>
+                                        <div className="flex justify-center border border-blue-900/40 rounded-xl overflow-hidden bg-slate-950/50 p-3 max-w-xl mx-auto shadow-inner">
+                                            <img 
+                                                src="/images/profile-guide.png" 
+                                                alt="플레이어 프로필 가이드" 
+                                                style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem' }} 
+                                            />
+                                        </div>
                                     </div>
 
                                     <div>
