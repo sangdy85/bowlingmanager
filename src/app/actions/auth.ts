@@ -31,6 +31,10 @@ export async function login(prevState: string | undefined, formData: FormData) {
             return "존재하지 않는 계정입니다.";
         }
 
+        if (!user.password) {
+            return "소셜 로그인(구글/네이버)으로 가입된 계정입니다. 소셜 로그인 버튼을 이용해주세요.";
+        }
+
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             return "비밀번호가 일치하지 않습니다.";
@@ -184,6 +188,10 @@ export async function requestPasswordReset(email: string) {
             return { success: false, message: "존재하지 않는 계정입니다." };
         }
 
+        if (!existingUser.password) {
+            return { success: false, message: "소셜 로그인으로 가입된 계정은 비밀번호를 재설정할 수 없습니다." };
+        }
+
         const verificationToken = await generateVerificationToken(email);
         await sendPasswordResetEmail(verificationToken.identifier, verificationToken.token);
 
@@ -240,5 +248,14 @@ export async function resetPassword(email: string, code: string, newPassword: st
     } catch (error: any) {
         console.error("[SERVER ACTION] resetPassword CRITICAL ERROR:", error);
         return { success: false, message: "비밀번호 재설정 중 오류가 발생했습니다: " + (error.message || "알 수 없는 오류") };
+    }
+}
+
+export async function signInWithProvider(provider: "google" | "naver") {
+    try {
+        await signIn(provider, { redirectTo: "/" });
+    } catch (error: any) {
+        if (error.digest?.startsWith("NEXT_REDIRECT")) throw error;
+        throw error;
     }
 }

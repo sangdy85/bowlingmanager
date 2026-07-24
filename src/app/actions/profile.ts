@@ -32,6 +32,10 @@ export async function changePassword(prevState: any, formData: FormData) {
             return { success: false, message: "사용자를 찾을 수 없습니다." };
         }
 
+        if (!user.password) {
+            return { success: false, message: "소셜 로그인으로 가입된 계정은 비밀번호를 변경할 수 없습니다." };
+        }
+
         const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
         if (!isPasswordValid) {
             return { success: false, message: "현재 비밀번호가 올바르지 않습니다." };

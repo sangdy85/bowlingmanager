@@ -310,3 +310,61 @@ input[type=number] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+/* Social Login Buttons */
+.social-login-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--secondary-foreground);
+  font-size: 0.875rem;
+  margin: 1.5rem 0;
+}
+
+.social-login-divider::before,
+.social-login-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--border);
+}
+
+.social-login-divider:not(:empty)::before {
+  margin-right: .75em;
+}
+
+.social-login-divider:not(:empty)::after {
+  margin-left: .75em;
+}
+
+.social-btn-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.btn-google {
+  background-color: #ffffff;
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
+}
+
+.btn-google:hover {
+  background-color: #f9fafb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.btn-naver {
+  background-color: #03C75A;
+  color: #ffffff;
+}
+
+.btn-naver:hover {
+  background-color: #02b34f;
+  box-shadow: 0 4px 6px -1px rgba(3, 199, 90, 0.2);
+}
+
+.social-icon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  vertical-align: middle;
+}
