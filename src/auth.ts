@@ -104,11 +104,13 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             if (token.sub && session.user) {
                 session.user.id = token.sub;
                 session.user.role = token.role as string;
+                session.user.provider = token.provider as string || "credentials";
             }
             return session;
         },
         async jwt({ token, user, trigger, session, account }) {
             if (user) {
+                token.provider = account?.provider || "credentials";
                 if (account && (account.provider === "google" || account.provider === "naver")) {
                     const dbUser = await prisma.user.findUnique({
                         where: { email: user.email! }
