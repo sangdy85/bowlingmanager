@@ -25,14 +25,16 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
     }
 
     const { teamId } = await params;
+    const isSuperAdmin = session.user.role === "SUPER_ADMIN";
 
-    // Verify user membership in this specific team
-    // Verify user membership in this specific team
+    // Verify user membership in this specific team (or bypass if SUPER_ADMIN)
     const teamRaw = await prisma.team.findFirst({
-        where: {
-            id: teamId,
-            members: { some: { userId: session.user.id } }
-        },
+        where: isSuperAdmin
+            ? { id: teamId }
+            : {
+                id: teamId,
+                members: { some: { userId: session.user.id } }
+              },
         include: {
             members: {
                 include: { user: true },
@@ -135,7 +137,7 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Link href="/team" className="btn btn-secondary h-10 px-4 min-w-[100px] text-sm flex items-center justify-center">
+                    <Link href={isSuperAdmin ? "/admin/teams" : "/team"} className="btn btn-secondary h-10 px-4 min-w-[100px] text-sm flex items-center justify-center">
                         &larr; 팀 목록
                     </Link>
                     {(isOwner || isManager) && (
