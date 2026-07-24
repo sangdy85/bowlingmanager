@@ -10,7 +10,10 @@ export default function LeaveTeamButton({ onLeave }: LeaveTeamButtonProps) {
     return (
         <form action={async () => {
             if (confirm("정말 팀을 탈퇴하시겠습니까? 기록은 유지되지만 팀 목록에서 제외됩니다.")) {
-                await onLeave();
+                const res = await onLeave();
+                if (res) {
+                    alert(res);
+                }
             }
         }} className="flex items-center">
             <SubmitButton />

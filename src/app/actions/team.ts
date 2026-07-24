@@ -189,8 +189,14 @@ export async function leaveTeam(teamId: string) {
 
         if (!team) return "존재하지 않는 팀입니다.";
 
+        const memberCount = await prisma.teamMember.count({
+            where: { teamId: team.id }
+        });
+
         if (team.ownerId === session.user.id) {
-            return "팀장은 탈퇴할 수 없습니다. 소유권을 이전하거나 팀을 삭제하세요.";
+            if (memberCount > 1) {
+                return "팀장은 탈퇴할 수 없습니다. 소유권을 이전하거나 팀을 삭제하세요.";
+            }
         }
 
         // Find existing member record to get alias for score preservation
@@ -228,6 +234,18 @@ export async function leaveTeam(teamId: string) {
                     }
                 }
             });
+
+            // If no members are left, soft-delete the team
+            const remainingCount = await prisma.teamMember.count({
+                where: { teamId: team.id }
+            });
+
+            if (remainingCount === 0) {
+                await prisma.team.update({
+                    where: { id: team.id },
+                    data: { isActive: false }
+                });
+            }
         }
 
     } catch (error) {
