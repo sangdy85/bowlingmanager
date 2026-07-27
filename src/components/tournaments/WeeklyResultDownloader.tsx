@@ -512,7 +512,7 @@ export default function WeeklyResultDownloader({
                                                             <td style={tdStyle}>{totalWithHandicap.toLocaleString()}</td>
                                                             <td style={tdStyle}>{(totalWithHandicap / (p.gamesCount || 1)).toFixed(1)}</td>
                                                             <td style={tdStyle}>{p.highSeries}</td>
-                                                            <td style={tdStyle}>{p.highGame}</td>
+                                            <td style={tdStyle}>{p.highGame}</td>
                                                             <td style={{ ...tdStyle, backgroundColor: '#eff6ff' }}>{currentWeekWithHandicap.toLocaleString()}</td>
                                                             <td style={tdStyle}>{previousTotalWithHandicap.toLocaleString()}</td>
                                                         </tr>
@@ -534,45 +534,85 @@ export default function WeeklyResultDownloader({
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.5rem 1.5rem' }}>
                                 {templateData.roundInfo.matchups.map((match: any, matchIdx: number) => {
-                                    const renderTeamBox = (teamId: string | null, teamName: string, lanes: string, points: number | null, isA: boolean) => {
-                                        const scores = match.individualScores?.filter((s: any) => s.teamId === teamId) || [];
+                                    const renderTeamBox = (
+                                        teamId: string | null,
+                                        teamName: string,
+                                        squad: string | undefined | null,
+                                        lanes: string,
+                                        points: number | null,
+                                        isA: boolean
+                                    ) => {
+                                        const scores = match.individualScores?.filter((s: any) => s.teamId === teamId && s.teamSquad === squad) || [];
                                         const oppId = isA ? match.teamBId : match.teamAId;
-                                        const oppScores = match.individualScores?.filter((s: any) => s.teamId === oppId) || [];
+                                        const oppSquad = isA ? match.teamBSquad : match.teamASquad;
+                                        const oppScores = match.individualScores?.filter((s: any) => s.teamId === oppId && s.teamSquad === oppSquad) || [];
 
-                                        const g1Total = scores.reduce((sum: number, s: any) => sum + s.score1, 0);
-                                        const g2Total = scores.reduce((sum: number, s: any) => sum + s.score2, 0);
-                                        const g3Total = scores.reduce((sum: number, s: any) => sum + s.score3, 0);
-                                        const rawHandiSum = scores.reduce((sum: number, s: any) => sum + s.handicap, 0);
+                                        const rawHandiSum = scores.reduce((sum: number, s: any) => sum + (s.handicap || 0), 0);
+                                        const oppRawHandiSum = oppScores.reduce((sum: number, s: any) => sum + (s.handicap || 0), 0);
 
-                                        const oppG1Total = oppScores.reduce((sum: number, s: any) => sum + s.score1, 0);
-                                        const oppG2Total = oppScores.reduce((sum: number, s: any) => sum + s.score2, 0);
-                                        const oppG3Total = oppScores.reduce((sum: number, s: any) => sum + s.score3, 0);
-                                        const oppRawHandiSum = oppScores.reduce((sum: number, s: any) => sum + s.handicap, 0);
+                                        const hLimit = teamHandicapLimit !== undefined && teamHandicapLimit !== null ? Number(teamHandicapLimit) : null;
+                                        const handiSum = (hLimit !== null && rawHandiSum > hLimit) ? hLimit : rawHandiSum;
+                                        const oppHandiSum = (hLimit !== null && oppRawHandiSum > hLimit) ? hLimit : oppRawHandiSum;
 
-                                        // Apply Team Handicap Limit
-                                        const handiSum = (teamHandicapLimit !== undefined && teamHandicapLimit !== null && rawHandiSum > teamHandicapLimit)
-                                            ? teamHandicapLimit
-                                            : rawHandiSum;
+                                        const excessH = Math.max(0, rawHandiSum - handiSum);
+                                        const oppExcessH = Math.max(0, oppRawHandiSum - oppHandiSum);
 
-                                        const oppHandiSum = (teamHandicapLimit !== undefined && teamHandicapLimit !== null && oppRawHandiSum > teamHandicapLimit)
-                                            ? teamHandicapLimit
-                                            : oppRawHandiSum;
+                                        const g1 = scores.reduce((sum: number, s: any) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0) - excessH;
+                                        const g2 = scores.reduce((sum: number, s: any) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0) - excessH;
+                                        const g3 = scores.reduce((sum: number, s: any) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0) - excessH;
 
-                                        const total = g1Total + g2Total + g3Total + handiSum; const oppTotal = oppG1Total + oppG2Total + oppG3Total + oppHandiSum;
+                                        const oppG1 = oppScores.reduce((sum: number, s: any) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0) - oppExcessH;
+                                        const oppG2 = oppScores.reduce((sum: number, s: any) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0) - oppExcessH;
+                                        const oppG3 = oppScores.reduce((sum: number, s: any) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0) - oppExcessH;
 
-                                        const getMarker = (a: number, b: number) => {
-                                            if (a > b) return 'O';
-                                            if (a < b) return 'X';
-                                            return (points !== null && (points % 1) === 0.5) ? '△' : '-';
+                                        const total = g1 + g2 + g3;
+                                        const oppTotal = oppG1 + oppG2 + oppG3;
+
+                                        const draws = points !== null && (points % 1) === 0.5 ? 1 : 0;
+                                        const isWinner = points !== null && points >= 3;
+
+                                        const getHiLow = (sList: any[], gameNum: number) => {
+                                            const gs = sList.map(s => s[`score${gameNum}`] || 0);
+                                            if (gs.length === 0) return 0;
+                                            return Math.max(...gs) - Math.min(...gs);
+                                        };
+
+                                        const getMarker = (valA: number, valB: number, hA: number, hB: number, hlA: number, hlB: number) => {
+                                            if (valA > valB) return 'O';
+                                            if (valA < valB) return 'X';
+                                            if (hA < hB) return 'O';
+                                            if (hB < hA) return 'X';
+                                            if (hlA < hlB) return 'O';
+                                            if (hlB < hlA) return 'X';
+                                            return draws > 0 && valA === valB ? '△' : '-';
                                         };
 
                                         const markers = [
-                                            getMarker(g1Total + handiSum, oppG1Total + oppHandiSum),
-                                            getMarker(g2Total + handiSum, oppG2Total + oppHandiSum),
-                                            getMarker(g3Total + handiSum, oppG3Total + oppHandiSum)
+                                            getMarker(g1, oppG1, handiSum, oppHandiSum, getHiLow(scores, 1), getHiLow(oppScores, 1)),
+                                            getMarker(g2, oppG2, handiSum, oppHandiSum, getHiLow(scores, 2), getHiLow(oppScores, 2)),
+                                            getMarker(g3, oppG3, handiSum, oppHandiSum, getHiLow(scores, 3), getHiLow(oppScores, 3))
                                         ];
 
-                                        const isWinner = points !== null && points >= 3;
+                                        const getSeriesTotalRaw = (sList: any[], gameNum: number) => {
+                                            return sList.reduce((sum, s) => sum + (s[`score${gameNum}`] || 0), 0);
+                                        };
+
+                                        const getSeriesHiLow = (sList: any[]) => {
+                                            if (sList.length === 0) return 0;
+                                            const rg1 = getSeriesTotalRaw(sList, 1);
+                                            const rg2 = getSeriesTotalRaw(sList, 2);
+                                            const rg3 = getSeriesTotalRaw(sList, 3);
+                                            return Math.max(rg1, rg2, rg3) - Math.min(rg1, rg2, rg3);
+                                        };
+
+                                        const totalMark = getMarker(
+                                            total,
+                                            oppTotal,
+                                            handiSum,
+                                            oppHandiSum,
+                                            getSeriesHiLow(scores),
+                                            getSeriesHiLow(oppScores)
+                                        );
 
                                         const baseCell: React.CSSProperties = {
                                             border: '1px solid #000000',
@@ -590,7 +630,9 @@ export default function WeeklyResultDownloader({
                                             <div key={isA ? 'A' : 'B'} style={{ border: '3px solid #000000', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' }}>
                                                 <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 100px', borderBottom: '3px solid #000000', fontWeight: 900, height: '40px' }}>
                                                     <div style={{ backgroundColor: '#18181b', color: '#ffffff', textAlign: 'center', lineHeight: '40px', borderRight: '2px solid #000000' }}>{lanes.padStart(2, '0')}레인</div>
-                                                    <div style={{ textAlign: 'center', lineHeight: '40px', fontSize: '16px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px' }}>{teamName}</div>
+                                                    <div style={{ textAlign: 'center', lineHeight: '40px', fontSize: '16px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px' }}>
+                                                        {teamName}{squad ? ` (${squad})` : ''}
+                                                    </div>
                                                     <div style={{ backgroundColor: '#f3f4f6', textAlign: 'center', lineHeight: '40px', borderLeft: '2px solid #000000', color: isWinner ? '#e11d48' : '#000000' }}>
                                                         {points !== null ? `${Math.floor(points)}승${(points % 1) === 0.5 ? '1무' : ''}${4 - Math.ceil(points)}패` : '-'}
                                                     </div>
@@ -613,10 +655,10 @@ export default function WeeklyResultDownloader({
                                                                 <tr key={pIdx} style={{ borderBottom: '1px solid #000000', height: '36px' }}>
                                                                     <td style={{ ...baseCell, textAlign: 'left', paddingLeft: '10px' }}>{s?.playerName || s?.User?.name || ""}</td>
                                                                     <td style={{ ...baseCell, color: '#9ca3af', fontWeight: 400 }}>{s?.handicap || ""}</td>
-                                                                    <td style={{ ...baseCell }}>{s ? s.score1 + s.handicap : ""}</td>
-                                                                    <td style={{ ...baseCell }}>{s ? s.score2 + s.handicap : ""}</td>
-                                                                    <td style={{ ...baseCell }}>{s ? s.score3 + s.handicap : ""}</td>
-                                                                    <td style={{ ...baseCell, backgroundColor: '#f9fafb', fontWeight: 400 }}>{s ? s.score1 + s.score2 + s.score3 + (s.handicap * 3) : ""}</td>
+                                                                    <td style={{ ...baseCell }}>{s ? Math.min(s.score1 + s.handicap, 300) : ""}</td>
+                                                                    <td style={{ ...baseCell }}>{s ? Math.min(s.score2 + s.handicap, 300) : ""}</td>
+                                                                    <td style={{ ...baseCell }}>{s ? Math.min(s.score3 + s.handicap, 300) : ""}</td>
+                                                                    <td style={{ ...baseCell, backgroundColor: '#f9fafb', fontWeight: 400 }}>{s ? Math.min(s.score1 + s.handicap, 300) + Math.min(s.score2 + s.handicap, 300) + Math.min(s.score3 + s.handicap, 300) : ""}</td>
                                                                 </tr>
                                                             );
                                                         })}
@@ -625,10 +667,10 @@ export default function WeeklyResultDownloader({
                                                         <tr style={{ height: '36px', backgroundColor: '#d9ead3' }}>
                                                             <td style={{ ...baseCell }}>종합</td>
                                                             <td style={{ ...baseCell, fontWeight: 400 }}>{handiSum || 0}</td>
-                                                            <td style={{ ...baseCell, ...(markers[0] === 'O' ? winStyle : {}) }}>{g1Total + handiSum}</td>
-                                                            <td style={{ ...baseCell, ...(markers[1] === 'O' ? winStyle : {}) }}>{g2Total + handiSum}</td>
-                                                            <td style={{ ...baseCell, ...(markers[2] === 'O' ? winStyle : {}) }}>{g3Total + handiSum}</td>
-                                                            <td style={{ ...baseCell, backgroundColor: 'rgba(226, 232, 240, 0.5)', ...(isWinner ? winStyle : { fontWeight: 900 }) }}>{total}</td>
+                                                            <td style={{ ...baseCell, ...(markers[0] === 'O' ? winStyle : {}) }}>{g1}</td>
+                                                            <td style={{ ...baseCell, ...(markers[1] === 'O' ? winStyle : {}) }}>{g2}</td>
+                                                            <td style={{ ...baseCell, ...(markers[2] === 'O' ? winStyle : {}) }}>{g3}</td>
+                                                            <td style={{ ...baseCell, backgroundColor: 'rgba(226, 232, 240, 0.5)', ...(isWinner ? winStyle : { fontWeight: 900 }) }}>{g1 + g2 + g3}</td>
                                                         </tr>
                                                         <tr style={{ height: '40px' }}>
                                                             <td style={{ ...baseCell }}>승패</td>
@@ -636,7 +678,7 @@ export default function WeeklyResultDownloader({
                                                             <td style={{ ...baseCell, fontSize: '18px', ...(markers[0] === 'O' ? winStyle : {}) }}>{markers[0]}</td>
                                                             <td style={{ ...baseCell, fontSize: '18px', ...(markers[1] === 'O' ? winStyle : {}) }}>{markers[1]}</td>
                                                             <td style={{ ...baseCell, fontSize: '18px', ...(markers[2] === 'O' ? winStyle : {}) }}>{markers[2]}</td>
-                                                            <td style={{ ...baseCell, fontSize: '18px', fontStyle: 'italic', backgroundColor: '#f1f5f9', ...(isWinner ? winStyle : {}) }}>{getMarker(total, oppTotal)}</td>
+                                                            <td style={{ ...baseCell, fontSize: '18px', fontStyle: 'italic', backgroundColor: '#f1f5f9', ...(isWinner ? winStyle : {}) }}>{totalMark}</td>
                                                         </tr>
                                                     </tfoot>
                                                 </table>
@@ -646,8 +688,8 @@ export default function WeeklyResultDownloader({
 
                                     return (
                                         <React.Fragment key={matchIdx}>
-                                            {renderTeamBox(match.teamAId, match.teamA?.name || "부전승", match.lanes?.split('-')[0] || "1", match.pointsA, true)}
-                                            {renderTeamBox(match.teamBId, match.teamB?.name || "부전승", match.lanes?.split('-')[1] || "2", match.pointsB, false)}
+                                            {renderTeamBox(match.teamAId, match.teamA?.name || "부전승", match.teamASquad, match.lanes?.split('-')[0] || "1", match.pointsA, true)}
+                                            {renderTeamBox(match.teamBId, match.teamB?.name || "부전승", match.teamBSquad, match.lanes?.split('-')[1] || "2", match.pointsB, false)}
                                         </React.Fragment>
                                     );
                                 })}
