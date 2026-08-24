@@ -296,17 +296,16 @@ export default function AboutPageContent({
                                 </div>
 
                                 <div className="grid md:grid-cols-2 gap-6 items-center">
-                                    {/* Simulated Spider Chart Graphic */}
-                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 text-center">
-                                        <div className="text-xs text-slate-400 mb-3 font-bold">오각형 기량 분석 그래프 예시</div>
-                                        <div className="relative w-48 h-48 mx-auto flex items-center justify-center border border-dashed border-slate-700 rounded-full bg-blue-950/20">
-                                            <div className="absolute inset-4 border border-blue-500/30 rounded-full"></div>
-                                            <div className="absolute inset-10 border border-blue-500/20 rounded-full"></div>
-                                            <span className="absolute top-1 text-[10px] text-blue-400 font-bold">기량(에버)</span>
-                                            <span className="absolute right-1 text-[10px] text-blue-400 font-bold">포텐셜</span>
-                                            <span className="absolute bottom-1 text-[10px] text-emerald-400 font-bold">기복(편차)</span>
-                                            <span className="absolute left-1 text-[10px] text-blue-400 font-bold">성실도</span>
-                                            <div className="w-24 h-24 bg-blue-500/30 border-2 border-blue-400 rounded-full shadow-lg"></div>
+                                    {/* Real Profile Radar Chart Guide Image */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 text-center col-span-1 md:col-span-2">
+                                        <div className="text-xs text-blue-400 mb-3 font-bold">오각형 기량 분석 그래프 예시 (실제 플레이어 프로필 레이아웃)</div>
+                                        <div className="flex justify-center border border-blue-900/40 rounded-xl overflow-hidden bg-slate-950 p-4 max-w-xl mx-auto shadow-inner">
+                                            <img 
+                                                src="/images/profile-guide.png" 
+                                                alt="플레이어 프로필 오각형 그래프 가이드 예시" 
+                                                className="w-full h-auto rounded-lg max-w-xl"
+                                                style={{ maxWidth: '100%', height: 'auto' }}
+                                            />
                                         </div>
                                     </div>
 
