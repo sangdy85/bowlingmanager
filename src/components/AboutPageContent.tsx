@@ -77,6 +77,25 @@ export default function AboutPageContent({
                     border-radius: 1rem;
                     padding: 1.5rem;
                 }
+                .mockup-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 0.8rem;
+                }
+                .mockup-table th {
+                    background: #1e293b;
+                    color: #94a3b8;
+                    padding: 0.6rem 0.8rem;
+                    text-align: center;
+                    border-bottom: 1px solid #334155;
+                    font-weight: 700;
+                }
+                .mockup-table td {
+                    padding: 0.6rem 0.8rem;
+                    text-align: center;
+                    border-bottom: 1px solid #1e293b;
+                    color: #e2e8f0;
+                }
             `}} />
 
             {/* Main Header */}
@@ -85,11 +104,11 @@ export default function AboutPageContent({
                     📘 BowlingManager 공식 서비스 종합 가이드북
                 </span>
                 <h1 className="text-4xl md:text-5xl font-black mb-6 text-slate-900 tracking-tight">
-                    BowlingManager <span className="text-blue-600">상세 이용 방법 & 기능 가이드</span>
+                    BowlingManager <span className="text-blue-600">상세 이용 방법 & 화면 예시</span>
                 </h1>
                 <p className="text-lg md:text-xl text-slate-600 font-medium max-w-3xl mx-auto leading-relaxed">
-                    볼링 점수의 정밀 기록 아카이빙부터 동호회 엑셀/OCR 점수 자동 집계, 볼링장 공식 상주리그 및 대회 운영 시스템까지<br />
-                    BowlingManager가 제공하는 모든 기능의 작동 원리와 구체적인 활용법을 안내해 드립니다.
+                    볼링 점수의 정밀 기록 아카이빙부터 동호회 점수 자동 집계, 볼링장 상주리그 및 대회 운영 시스템까지<br />
+                    실제 서비스 화면 예시와 함께 각 기능의 구체적인 활용법을 안내해 드립니다.
                 </p>
             </header>
 
@@ -99,9 +118,9 @@ export default function AboutPageContent({
                     {[
                         { id: 'intro', label: '1. 서비스 개요', icon: '📝' },
                         { id: 'quickstart', label: '2. 빠른 시작 4단계', icon: '🚀' },
-                        { id: 'my-records', label: '3. 나의 기록실 분석', icon: '🎳' },
-                        { id: 'team-mgmt', label: '4. 동호회 팀 운영', icon: '🏆' },
-                        { id: 'center-tournaments', label: '5. 볼링장/대회 규칙', icon: '🏤' },
+                        { id: 'my-records', label: '3. 나의 기록실 (화면 예시)', icon: '🎳' },
+                        { id: 'team-mgmt', label: '4. 동호회 팀 관리 (화면 예시)', icon: '🏆' },
+                        { id: 'center-tournaments', label: '5. 볼링장/대회 (화면 예시)', icon: '🏤' },
                         { id: 'faq', label: '6. 자주 묻는 질문', icon: '❓' },
                     ].map(tab => (
                         <button
@@ -128,7 +147,7 @@ export default function AboutPageContent({
                         <div className="content-card shadow-2xl border-t-8 border-t-blue-500">
                             <h2 className="text-3xl font-black text-white mb-6">1. BowlingManager 개요 및 개발 배경</h2>
                             <p className="text-slate-300 text-lg leading-relaxed mb-6">
-                                기존 오프라인 볼링 활동에서는 종이 점수판 기록 수기 작성, 엑셀 파일 수동 입력 및 분실 문제로 인해
+                                기존 오프라인 볼링 활동에서는 종이 점수판 수기 작성, 엑셀 파일 수동 입력 및 분실 문제로 인해
                                 개인의 장기적인 기량 변화를 객관적으로 파악하거나 동호회/대회를 공정하게 운영하기 어려웠습니다.
                             </p>
                             <p className="text-slate-300 text-base leading-relaxed mb-8">
@@ -227,14 +246,14 @@ export default function AboutPageContent({
                     </div>
                 )}
 
-                {/* TAB 3: 나의 기록실 */}
+                {/* TAB 3: 나의 기록실 (화면 예시) */}
                 {activeTab === 'my-records' && (
                     <div className="max-w-5xl mx-auto space-y-8">
                         <div className="content-card shadow-2xl">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-4 border-b border-slate-800">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-slate-800">
                                 <div>
-                                    <h2 className="text-3xl font-black text-white tracking-tight">3. 나의 기록실 & 오각형 분석 알고리즘</h2>
-                                    <p className="text-slate-400 text-sm mt-1">개인 스코어 아카이빙 및 5대 입체 기량 지표 산출 가이드입니다.</p>
+                                    <h2 className="text-3xl font-black text-white tracking-tight">3. 나의 기록실 & 예시 화면 가이드</h2>
+                                    <p className="text-slate-400 text-sm mt-1">개인 스코어 아카이빙 및 오각형 기량 그래프 실제 서비스 레이아웃입니다.</p>
                                 </div>
                                 <div className="sub-tabs-container">
                                     <button 
@@ -249,173 +268,317 @@ export default function AboutPageContent({
                                         onClick={() => setMyRecordsPage(2)} 
                                         className={`sub-tab-btn ${myRecordsPage === 2 ? 'active' : 'inactive'}`}
                                     >
-                                        2페이지: 최근 10경기 추이 분석
+                                        2페이지: 통계 테이블 예시
                                     </button>
                                 </div>
                             </div>
 
-                            {myRecordsPage === 1 ? (
-                                <div className="space-y-8 animate-in fade-in duration-300">
-                                    <div className="p-6 bg-blue-950/30 border border-blue-900/50 rounded-2xl">
-                                        <h3 className="text-xl font-black text-blue-400 mb-3">📐 오각형 스파이더 그래프 5대 지표 개별 산출 로직</h3>
-                                        <p className="text-slate-300 text-sm leading-relaxed mb-6">
-                                            BowlingManager는 단순히 에버리지 점수 하나만 비교하지 않고, 수비력, 폭발력, 꾸준함(기복)을 입체적으로 수치화합니다.
-                                        </p>
-                                        <div className="flex justify-center border border-blue-900/40 rounded-xl overflow-hidden bg-slate-950/50 p-4 max-w-xl mx-auto shadow-inner mb-6">
-                                            <img 
-                                                src="/images/profile-guide.png" 
-                                                alt="플레이어 프로필 오각형 그래프 가이드" 
-                                                style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem' }} 
-                                            />
+                            {/* EXAMPLE SCREEN UI MOCKUP 1: 나의 기록실 */}
+                            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6 my-6 text-slate-100">
+                                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-blue-600/20 text-blue-400 rounded-xl flex items-center justify-center font-bold text-xl">🎳</div>
+                                        <div>
+                                            <span className="text-xs text-blue-400 font-bold uppercase tracking-wider block">PLAYER PROFILE</span>
+                                            <h4 className="text-xl font-black text-white">홍길동 선수 <span className="text-xs text-slate-400 font-normal">(예시 데이터)</span></h4>
                                         </div>
                                     </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="feature-box">
-                                            <h4 className="font-extrabold text-blue-300 mb-2 text-base">1. 클럽 / 볼링장 기량 (에버리지 지표)</h4>
-                                            <p className="text-xs text-slate-400 leading-relaxed">
-                                                동호회 정기전 및 공식 대회의 평균 점수(에버리지)를 산출합니다. **230점 에버리지가 만점(100%)**으로 세팅되며, 평균이 낮을수록 오각형 축이 중심부로 축소됩니다.
-                                            </p>
+                                    <div className="flex gap-3 text-right">
+                                        <div className="px-3 py-1 bg-slate-900 rounded-lg border border-slate-800">
+                                            <span className="text-[10px] text-slate-400 block">정기전 에버리지</span>
+                                            <span className="text-lg font-black text-blue-400">216.3</span>
                                         </div>
-
-                                        <div className="feature-box">
-                                            <h4 className="font-extrabold text-blue-300 mb-2 text-base">2. 성실도 (클럽 & 볼링장 출석률)</h4>
-                                            <p className="text-xs text-slate-400 leading-relaxed">
-                                                **클럽 성실**: 소속 정기전 참석율 100% 시 만점 적용.<br />
-                                                **볼링장 성실**: 주최 대회 10회 이상 참가 시 만점 적용.
-                                            </p>
-                                        </div>
-
-                                        <div className="feature-box">
-                                            <h4 className="font-extrabold text-blue-300 mb-2 text-base">3. 포텐셜 (최고 하이 평균 지표)</h4>
-                                            <p className="text-xs text-slate-400 leading-relaxed">
-                                                경기 중 기록한 최고 하이 점수의 평균 능력을 진단합니다. **하이 평균 250점 달성 시 만점**으로 수치화됩니다.
-                                            </p>
-                                        </div>
-
-                                        <div className="feature-box">
-                                            <h4 className="font-extrabold text-blue-300 mb-2 text-base">4. 안정감 (최저 로우 방어 지표)</h4>
-                                            <p className="text-xs text-slate-400 leading-relaxed">
-                                                레인 상태가 안 좋거나 미스가 났을 때 최저 점수를 보존하는 수비력 지표입니다. **로우 평균 200점 유지 시 만점** 적용.
-                                            </p>
-                                        </div>
-
-                                        <div className="feature-box col-span-1 md:col-span-2">
-                                            <h4 className="font-extrabold text-emerald-400 mb-2 text-base">5. 기복 (표준편차 지표)</h4>
-                                            <p className="text-xs text-slate-400 leading-relaxed">
-                                                매 경기 스코어 간의 편차를 통계학적 표준 편차 공식으로 산출합니다.<br />
-                                                **게임 당 점수 편차가 20점 이하인 일관된 볼러**일 때 100% 만점 수치가 부여되며, 기복이 심할수록 그래프 축이 작아집니다.
-                                            </p>
+                                        <div className="px-3 py-1 bg-slate-900 rounded-lg border border-slate-800">
+                                            <span className="text-[10px] text-slate-400 block">공식대회 에버리지</span>
+                                            <span className="text-lg font-black text-amber-400">210.3</span>
                                         </div>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="space-y-6 animate-in fade-in duration-300">
-                                    <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl">
-                                        <h3 className="text-xl font-bold text-white mb-3">📊 통계 필터링 및 최근 10경기 트렌드 그래프</h3>
-                                        <p className="text-slate-300 text-sm leading-relaxed mb-4">
-                                            정기전, 벙개, 연습 경기, 공식 대회 기록을 기간별(연도/월별)로 구분하여 에버리지 변화 추이를 선 그래프로 진단할 수 있습니다.
-                                        </p>
+
+                                <div className="grid md:grid-cols-2 gap-6 items-center">
+                                    {/* Simulated Spider Chart Graphic */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 text-center">
+                                        <div className="text-xs text-slate-400 mb-3 font-bold">오각형 기량 분석 그래프 예시</div>
+                                        <div className="relative w-48 h-48 mx-auto flex items-center justify-center border border-dashed border-slate-700 rounded-full bg-blue-950/20">
+                                            <div className="absolute inset-4 border border-blue-500/30 rounded-full"></div>
+                                            <div className="absolute inset-10 border border-blue-500/20 rounded-full"></div>
+                                            <span className="absolute top-1 text-[10px] text-blue-400 font-bold">기량(에버)</span>
+                                            <span className="absolute right-1 text-[10px] text-blue-400 font-bold">포텐셜</span>
+                                            <span className="absolute bottom-1 text-[10px] text-emerald-400 font-bold">기복(편차)</span>
+                                            <span className="absolute left-1 text-[10px] text-blue-400 font-bold">성실도</span>
+                                            <div className="w-24 h-24 bg-blue-500/30 border-2 border-blue-400 rounded-full shadow-lg"></div>
+                                        </div>
+                                    </div>
+
+                                    {/* Stats Table Sample */}
+                                    <div className="space-y-3">
+                                        <h5 className="text-sm font-bold text-white">2026년 개인 통계 STATISTICS 샘플</h5>
+                                        <div className="overflow-x-auto">
+                                            <table className="mockup-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>구분</th>
+                                                        <th>게임수</th>
+                                                        <th>총점</th>
+                                                        <th>하이</th>
+                                                        <th>평균</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td className="text-left font-bold text-blue-400">정기전(공식)</td>
+                                                        <td>61</td>
+                                                        <td>12,829</td>
+                                                        <td>279</td>
+                                                        <td className="font-bold text-blue-300">210.3</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td className="text-left font-bold text-amber-400">볼링장 대회</td>
+                                                        <td>8</td>
+                                                        <td>1,503</td>
+                                                        <td>233</td>
+                                                        <td className="font-bold text-amber-300">187.9</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td className="text-left font-bold text-emerald-400">개인 연습</td>
+                                                        <td>52</td>
+                                                        <td>11,390</td>
+                                                        <td>279</td>
+                                                        <td className="font-bold text-emerald-300">219.0</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
-                            )}
+                            </div>
+
+                            {/* Explanatory Boxes */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                <div className="feature-box">
+                                    <h4 className="font-extrabold text-blue-300 mb-2 text-base">1. 5대 기량 지표 진단 알고리즘</h4>
+                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                        에버리지(230점 만점), 출석 성실도(100%), 하이 포텐셜(250점), 최저 방어 수비력(200점), 표준편차 기복(20점 이하)을 오각형 그래프로 입체 진단합니다.
+                                    </p>
+                                </div>
+                                <div className="feature-box">
+                                    <h4 className="font-extrabold text-emerald-400 mb-2 text-base">2. 일별/대회별 스코어 자동 분류</h4>
+                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                        공식 상주리그, 챔프전, 개인 연습 스코어가 연도별 카테고리로 자동 정리되어 언제든지 엑셀 파일로 출력할 수 있습니다.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
 
-                {/* TAB 4: 동호회 팀 관리 */}
+                {/* TAB 4: 동호회 팀 관리 (화면 예시) */}
                 {activeTab === 'team-mgmt' && (
                     <div className="max-w-5xl mx-auto space-y-8">
                         <div className="content-card shadow-2xl">
-                            <h2 className="text-3xl font-black text-white mb-4 tracking-tight">4. 동호회 팀 관리 및 3대 점수 입력 방식</h2>
-                            <p className="text-slate-400 text-sm mb-8 pb-4 border-b border-slate-800">
-                                동호회 임원진의 번거로운 정기전 집계 및 출석부 관리를 완전 자동화합니다.
-                            </p>
+                            <div className="border-b border-slate-800 pb-4 mb-6">
+                                <h2 className="text-3xl font-black text-white tracking-tight">4. 동호회 팀 관리 예시 화면 가이드</h2>
+                                <p className="text-slate-400 text-sm mt-1">클럽 팀원 출석률, 월별 에버리지 순위표 및 정기전 활동일지 실제 서비스 레이아웃입니다.</p>
+                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                <div className="feature-box">
-                                    <div className="text-2xl mb-2">⌨️</div>
-                                    <h3 className="text-lg font-bold text-white mb-2">1. 수동 빠른 입력 모드</h3>
-                                    <p className="text-xs text-slate-400 leading-relaxed">
-                                        정기전 날짜와 참가자 목록을 선택한 후 키보드로 1~4게임 스코어를 빠르게 기재하는 기초 방식입니다.
-                                    </p>
+                            {/* EXAMPLE SCREEN UI MOCKUP 2: 팀 관리 */}
+                            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6 my-6 text-slate-100">
+                                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                                    <div>
+                                        <span className="text-xs text-emerald-400 font-bold uppercase tracking-wider block">CLUB MANAGEMENT</span>
+                                        <h4 className="text-xl font-black text-white">퍼펙트 볼링 클럽 <span className="text-xs text-slate-400 font-normal">(예시 서비스 화면)</span></h4>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs bg-slate-900 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-800 font-mono">초대코드: BWL-777</span>
+                                        <span className="text-xs bg-blue-600 text-white font-bold px-3 py-1.5 rounded-lg">점수 기록하기</span>
+                                    </div>
                                 </div>
-                                <div className="feature-box">
-                                    <div className="text-2xl mb-2">📊</div>
-                                    <h3 className="text-lg font-bold text-white mb-2">2. 엑셀 일괄 업로드 모드</h3>
-                                    <p className="text-xs text-slate-400 leading-relaxed">
-                                        제공되는 양식 엑셀 파일(.xlsx)에 수십 명의 점수를 입력하고 파일 업로드 버튼을 누르면 일괄 자동 파싱됩니다.
-                                    </p>
+
+                                {/* Team Member Leaderboard Mockup Table */}
+                                <div>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h5 className="text-sm font-bold text-white">2026년 팀원별 출석률 & 에버리지 랭킹 예시</h5>
+                                        <span className="text-xs text-slate-400">총 20명 등록</span>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="mockup-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>순위</th>
+                                                    <th>이름</th>
+                                                    <th>출석률</th>
+                                                    <th>참여게임</th>
+                                                    <th>총점</th>
+                                                    <th>평균 에버</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr className="bg-amber-500/10">
+                                                    <td className="font-bold text-amber-400">🥇 1위</td>
+                                                    <td className="font-bold text-white">김철수 (팀장)</td>
+                                                    <td className="text-emerald-400 font-bold">100% (14/14)</td>
+                                                    <td>56게임</td>
+                                                    <td>12,656</td>
+                                                    <td className="font-bold text-blue-400">226.0</td>
+                                                </tr>
+                                                <tr className="bg-slate-900">
+                                                    <td className="font-bold text-slate-300">🥈 2위</td>
+                                                    <td className="font-bold text-white">이영희</td>
+                                                    <td className="text-emerald-400 font-bold">100% (14/14)</td>
+                                                    <td>56게임</td>
+                                                    <td>12,000</td>
+                                                    <td className="font-bold text-blue-400">214.3</td>
+                                                </tr>
+                                                <tr className="bg-slate-900">
+                                                    <td className="font-bold text-slate-400">🥉 3위</td>
+                                                    <td className="font-bold text-white">박민수</td>
+                                                    <td className="text-slate-400">92.8% (13/14)</td>
+                                                    <td>52게임</td>
+                                                    <td>10,936</td>
+                                                    <td className="font-bold text-blue-400">210.3</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
-                                <div className="feature-box">
-                                    <div className="text-2xl mb-2">📸</div>
-                                    <h3 className="text-lg font-bold text-white mb-2">3. 점수판 모니터 OCR 사진 인식</h3>
-                                    <p className="text-xs text-slate-400 leading-relaxed">
-                                        볼링장 레인 위 모니터 화면을 스마트폰 카메라로 촬영하여 업로드하면 AI가 점수 숫자를 읽어 자동 집계합니다.
-                                    </p>
+
+                                {/* Team Activity Log Table Sample */}
+                                <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h5 className="text-xs font-bold text-blue-400">📅 팀 활동일지 (2026-08-15 정기전 스코어 예시)</h5>
+                                        <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">엑셀 다운로드</span>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="mockup-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>순위</th>
+                                                    <th>성명</th>
+                                                    <th>1G</th>
+                                                    <th>2G</th>
+                                                    <th>3G</th>
+                                                    <th>4G</th>
+                                                    <th>총점</th>
+                                                    <th>평균</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>1</td>
+                                                    <td className="font-bold text-white">김철수</td>
+                                                    <td className="text-blue-400 font-bold">245</td>
+                                                    <td className="text-blue-400 font-bold">235</td>
+                                                    <td className="text-blue-400 font-bold">212</td>
+                                                    <td className="text-blue-400 font-bold">227</td>
+                                                    <td className="font-bold">919</td>
+                                                    <td className="font-bold text-blue-300">229.75</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>2</td>
+                                                    <td className="font-bold text-white">이영희</td>
+                                                    <td>212</td>
+                                                    <td className="text-blue-400 font-bold">237</td>
+                                                    <td>203</td>
+                                                    <td className="text-blue-400 font-bold">266</td>
+                                                    <td className="font-bold">918</td>
+                                                    <td className="font-bold text-blue-300">229.50</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
-                                <h3 className="text-lg font-bold text-white border-l-4 border-blue-500 pl-3">클럽 팀 관리 3대 스마트 리포트</h3>
-                                <div className="grid md:grid-cols-3 gap-4 text-xs text-slate-300">
-                                    <div className="p-4 bg-slate-950 rounded-lg border border-slate-800">
-                                        <h4 className="font-bold text-blue-400 mb-1">팀 활동일지 & 엑셀 내보내기</h4>
-                                        <p className="leading-relaxed">정기전 회차별 기록을 보존하고 원클릭 엑셀 다운로드를 지원합니다.</p>
-                                    </div>
-                                    <div className="p-4 bg-slate-950 rounded-lg border border-slate-800">
-                                        <h4 className="font-bold text-blue-400 mb-1">자동 출석률 및 에버 랭킹</h4>
-                                        <p className="leading-relaxed">팀원들의 월별 정기전 출석 횟수와 에버리지 순위표가 자동으로 업데이트됩니다.</p>
-                                    </div>
-                                    <div className="p-4 bg-slate-950 rounded-lg border border-slate-800">
-                                        <h4 className="font-bold text-blue-400 mb-1">팀 내부 커뮤니티 게시판</h4>
-                                        <p className="leading-relaxed">정기전 공지, 사진 공유, 참가 신청을 팀 전용 공간에서 다룹니다.</p>
-                                    </div>
+                            {/* 3 Methods Overview */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="feature-box">
+                                    <h4 className="font-bold text-white text-sm mb-1">⌨️ 수동 입력</h4>
+                                    <p className="text-xs text-slate-400 leading-relaxed">참가자명과 1~4게임 스코어를 빠르게 키보드로 입력.</p>
+                                </div>
+                                <div className="feature-box">
+                                    <h4 className="font-bold text-white text-sm mb-1">📊 엑셀 파일 업로드</h4>
+                                    <p className="text-xs text-slate-400 leading-relaxed">양식 엑셀 파일(.xlsx)을 업로드하여 수십 명 점수를 일괄 자동 집계.</p>
+                                </div>
+                                <div className="feature-box">
+                                    <h4 className="font-bold text-white text-sm mb-1">📸 점수판 OCR 인식</h4>
+                                    <p className="text-xs text-slate-400 leading-relaxed">볼링장 모니터 화면 사진을 촬영하여 AI가 자동으로 스코어 추출.</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* TAB 5: 볼링장 / 대회 */}
+                {/* TAB 5: 볼링장 / 대회 (화면 예시) */}
                 {activeTab === 'center-tournaments' && (
                     <div className="max-w-5xl mx-auto space-y-8">
                         <div className="content-card shadow-2xl">
-                            <h2 className="text-3xl font-black text-white mb-4 tracking-tight">5. 볼링장 상주리그 & 대회 시스템 규칙</h2>
-                            <p className="text-slate-400 text-sm mb-8 pb-4 border-b border-slate-800">
-                                볼링장 센터에서 주최하는 상주 동호회 리그 및 공식 대회의 규칙과 승점 공식입니다.
-                            </p>
+                            <div className="border-b border-slate-800 pb-4 mb-6">
+                                <h2 className="text-3xl font-black text-white tracking-tight">5. 볼링장 센터 & 대회 예시 화면 가이드</h2>
+                                <p className="text-slate-400 text-sm mt-1">볼링장 프로필, 모집 중인 대회 및 진행 중인 상주리그 실제 서비스 레이아웃입니다.</p>
+                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                <div className="feature-box">
-                                    <h3 className="font-bold text-blue-400 text-base mb-2">🎳 1. 상주리그 (Resident League)</h3>
-                                    <p className="text-xs text-slate-400 leading-relaxed">
-                                        센터 소속 상주 클럽들의 주간 라운드 대진표 자동 매칭.<br />
-                                        **승점 룰**: Game 승점(2점) + Total Pin 승점(4점) = 라운드당 총 10점 승점제.
-                                    </p>
+                            {/* EXAMPLE SCREEN UI MOCKUP 3: 볼링장 & 대회 */}
+                            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6 my-6 text-slate-100">
+                                <div className="border-b border-slate-800 pb-4">
+                                    <span className="text-xs text-amber-400 font-bold uppercase tracking-wider block">CENTER & TOURNAMENT</span>
+                                    <h4 className="text-2xl font-black text-white mt-1">장안 볼링 센터 <span className="text-xs text-slate-400 font-normal">(예시 센터)</span></h4>
+                                    <p className="text-xs text-slate-400 mt-1">📍 서울 동대문구 장한로0길 00 · 📞 02-1234-5678</p>
                                 </div>
-                                <div className="feature-box">
-                                    <h3 className="font-bold text-amber-400 text-base mb-2">👑 2. 챔프전 (Championship)</h3>
-                                    <p className="text-xs text-slate-400 leading-relaxed">
-                                        예선전 4게임 핀수 합산 상위 8명/16명 자동 선발 ➜ 토너먼트 결승 사다리 1:1 대진표 자동 생성.
-                                    </p>
+
+                                {/* 모집 중인 대회 Box */}
+                                <div className="p-5 bg-slate-900 border border-blue-900/50 rounded-xl space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-base">🔥</span>
+                                        <h5 className="text-sm font-bold text-white">모집 중인 대회</h5>
+                                    </div>
+                                    <div className="p-4 bg-blue-950/40 border border-blue-800/40 rounded-lg flex flex-wrap items-center justify-between gap-4">
+                                        <div>
+                                            <span className="text-[10px] bg-blue-600 text-white font-bold px-2 py-0.5 rounded">이벤트전</span>
+                                            <h6 className="text-base font-bold text-white mt-1">2026 상반기 챔프전 왕중왕전 (모집인원 54/54)</h6>
+                                            <p className="text-xs text-slate-400 mt-0.5">📅 2026. 08. 30. 13:30 개최</p>
+                                        </div>
+                                        <button type="button" className="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-lg">
+                                            참가 신청
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="feature-box">
-                                    <h3 className="font-bold text-emerald-400 text-base mb-2">🎉 3. 이벤트전 (스카치/베이커)</h3>
-                                    <p className="text-xs text-slate-400 leading-relaxed">
-                                        **쌍쌍 스카치**: 2인 1조 1구/2구 교대 투구.<br />
-                                        **베이커 포맷**: 5인 1조 1프레임씩 교대 투구.
-                                    </p>
+
+                                {/* 진행 중 대회 탭 & 카테고리 */}
+                                <div className="space-y-4">
+                                    <div className="flex gap-2 border-b border-slate-800 pb-3">
+                                        <span className="bg-blue-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg">진행 중</span>
+                                        <span className="bg-slate-900 text-slate-400 text-xs font-bold px-4 py-1.5 rounded-lg border border-slate-800">종료 됨</span>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <span className="bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">상주리그</span>
+                                        <span className="bg-slate-900 text-slate-400 text-xs font-bold px-3 py-1 rounded-full border border-slate-800">챔프전</span>
+                                        <span className="bg-slate-900 text-slate-400 text-xs font-bold px-3 py-1 rounded-full border border-slate-800">이벤트전</span>
+                                    </div>
+
+                                    <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl border-l-4 border-l-purple-500">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-[10px] bg-purple-900/60 text-purple-300 border border-purple-700/50 px-2 py-0.5 rounded font-bold">상주리그</span>
+                                            <span className="text-xs text-slate-400">📅 2026. 07. 20 ~ 2026. 11. 23</span>
+                                        </div>
+                                        <h6 className="text-lg font-bold text-white">제 20회차 상주 클럽 리그전</h6>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-slate-900 border border-slate-800 rounded-xl space-y-3">
-                                <h3 className="text-lg font-bold text-white border-l-4 border-blue-500 pl-3">⚖️ 표준 자동 핸디캡(Handicap) 계산 공식</h3>
-                                <p className="text-xs text-slate-300 leading-relaxed">
-                                    대회 참가자 간 성별 및 기량 격차를 보완하기 위해 시스템에서 아래 공식으로 핸디 점수를 자동 적용합니다.
-                                </p>
-                                <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 text-xs font-mono text-blue-400">
-                                    개인 핸디캡 = 여성 보너스(+10~15핀) + [(200 - 개인 에버리지) × 80%]
+                            {/* Explanatory Features */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="feature-box">
+                                    <h4 className="font-bold text-blue-400 text-sm mb-1">🎳 1. 상주리그 승점제</h4>
+                                    <p className="text-xs text-slate-400 leading-relaxed">Game 승점(2점) + Total Pin 승점(4점) = 라운드당 총 10점 승점 자동 집계.</p>
+                                </div>
+                                <div className="feature-box">
+                                    <h4 className="font-bold text-amber-400 text-sm mb-1">👑 2. 챔프전 토너먼트</h4>
+                                    <p className="text-xs text-slate-400 leading-relaxed">예선 상위 8/16명 자동 선발 ➜ 결승 1:1 대진표 및 사다리 토너먼트 생성.</p>
+                                </div>
+                                <div className="feature-box">
+                                    <h4 className="font-bold text-emerald-400 text-sm mb-1">⚖️ 3. 자동 핸디캡 공식</h4>
+                                    <p className="text-xs text-slate-400 leading-relaxed">여성 보너스(+10~15핀) 및 에버리지 기반 핸디캡이 실시간 리더보드에 자동 계산 적용.</p>
                                 </div>
                             </div>
                         </div>
