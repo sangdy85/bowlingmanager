@@ -43,7 +43,6 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
         <div className={`${styles.links} ${isOpen ? styles.linksOpen : ''}`}>
           {isLoggedIn ? (
             <>
-              <Link href="/" className={styles.link} onClick={closeMenu}>홈</Link>
               <Link href="/about" className={styles.link} onClick={closeMenu}>이용 방법</Link>
               <Link href="/guide" className={styles.link} onClick={closeMenu}>볼링 가이드</Link>
               {userRole === 'SUPER_ADMIN' ? (
