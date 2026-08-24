@@ -51,10 +51,18 @@ export default function Footer() {
 
         <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <p>© {currentYear} BowlingManager. All rights reserved.</p>
-          <div className="flex gap-6">
-            <Link href="/privacy" className="hover:text-slate-300 no-underline">개인정보처리방침</Link>
-            <Link href="/terms" className="hover:text-slate-300 no-underline">이용약관</Link>
-            <Link href="/guide" className="hover:text-slate-300 no-underline">가이드 센터</Link>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium">
+            <Link href="/privacy" className="hover:text-slate-300 no-underline px-2 py-1 transition-colors">
+              개인정보처리방침
+            </Link>
+            <span className="text-slate-700 hidden sm:inline">|</span>
+            <Link href="/terms" className="hover:text-slate-300 no-underline px-2 py-1 transition-colors">
+              이용약관
+            </Link>
+            <span className="text-slate-700 hidden sm:inline">|</span>
+            <Link href="/guide" className="hover:text-slate-300 no-underline px-2 py-1 transition-colors">
+              가이드 센터
+            </Link>
           </div>
         </div>
       </div>

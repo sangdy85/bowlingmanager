@@ -478,9 +478,13 @@ export default function AboutPageContent({
 
 
             </div>
-            <div className="mt-24 pt-8 border-t border-slate-200 flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm font-medium text-slate-500">
+            <div className="mt-24 pt-8 border-t border-slate-200 flex flex-wrap justify-center items-center gap-x-6 gap-y-3 text-sm font-medium text-slate-500">
                 <Link href="/privacy" className="hover:text-blue-600 transition-colors underline underline-offset-4">개인정보처리방침</Link>
+                <span className="text-slate-300">|</span>
                 <Link href="/terms" className="hover:text-blue-600 transition-colors underline underline-offset-4">이용약관</Link>
+                <span className="text-slate-300">|</span>
+                <Link href="/guide" className="hover:text-blue-600 transition-colors underline underline-offset-4">가이드 센터</Link>
+                <span className="text-slate-300">|</span>
                 <span>© {new Date().getFullYear()} BowlingManager. All rights reserved.</span>
             </div>
         </div>
