@@ -45,6 +45,7 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
             <>
               <Link href="/" className={styles.link} onClick={closeMenu}>홈</Link>
               <Link href="/about" className={styles.link} onClick={closeMenu}>이용 방법</Link>
+              <Link href="/guide" className={styles.link} onClick={closeMenu}>볼링 가이드</Link>
               {userRole === 'SUPER_ADMIN' ? (
                 <>
                   <Link href="/admin" className={styles.link} onClick={closeMenu}>사이트 관리</Link>
@@ -71,6 +72,8 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
             </>
           ) : (
             <>
+              <Link href="/about" className={styles.link} onClick={closeMenu}>이용 방법</Link>
+              <Link href="/guide" className={styles.link} onClick={closeMenu}>볼링 가이드</Link>
               <Link href="/login" className={styles.link} onClick={closeMenu}>로그인</Link>
               <Link href="/register" className="btn btn-primary" onClick={closeMenu}>회원가입</Link>
             </>
