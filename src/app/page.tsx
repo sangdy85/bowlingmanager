@@ -38,7 +38,7 @@ export default async function Home() {
         </Link>
 
         <Link
-          href={session?.user ? "/tournaments" : "/login"}
+          href="/centers"
           prefetch={false}
           className="card text-center hover:bg-secondary/20 transition-colors cursor-pointer block no-underline text-inherit"
         >
