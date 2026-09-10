@@ -19,7 +19,7 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4">서비스 서비스</h4>
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4">서비스 가이드</h4>
             <ul className="space-y-2 text-sm">
               <li><Link href="/about" className="hover:text-white transition-colors no-underline">서비스 소개 & 이용 가이드</Link></li>
               <li><Link href="/guide" className="hover:text-white transition-colors no-underline">볼링 백과사전 & 정보 가이드</Link></li>
@@ -29,39 +29,49 @@ export default function Footer() {
 
           {/* Customer & Policy Links */}
           <div>
-            <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4">고객 지원 & 정책</h4>
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4">고객 지원 & 약관</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/inquiry" className="hover:text-white transition-colors no-underline">고객 문의하기</Link></li>
+              <li><Link href="/inquiry" className="hover:text-white transition-colors no-underline">1:1 고객 문의하기</Link></li>
               <li><Link href="/terms" className="hover:text-white transition-colors no-underline">서비스 이용약관</Link></li>
-              <li><Link href="/privacy" className="hover:text-white transition-colors no-underline">개인정보처리방침</Link></li>
+              <li><Link href="/privacy" className="hover:text-white transition-colors no-underline">개인정보처리방침 (AdSense 고지)</Link></li>
+              <li><Link href="/disclaimer" className="hover:text-white transition-colors no-underline">책임 한계 및 법적 고지</Link></li>
             </ul>
           </div>
 
-          {/* Service Tech Tag */}
+          {/* Service Tech & Contact Tag */}
           <div>
-            <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4">기술 및 문의</h4>
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4">운영 및 기술 문의</h4>
             <p className="text-xs text-slate-400 leading-relaxed mb-2">
-              점수판 모니터 OCR 자동 인식 기술 및 실시간 리더보드 반영 적용.
+              점수판 모니터 OCR 자동 인식 및 실시간 리더보드 연동.<br />
+              문의 이메일: info@bowlingmanager.co.kr
             </p>
             <span className="inline-block text-xs font-mono bg-slate-800 text-blue-400 px-2.5 py-1 rounded">
-              v1.5.0 Official Stable
+              v1.6.0 Official Stable
             </span>
           </div>
         </div>
 
         <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <p>© {currentYear} BowlingManager. All rights reserved.</p>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium">
-            <Link href="/privacy" className="hover:text-slate-300 no-underline px-2 py-1 transition-colors">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-medium">
+            <Link href="/privacy" className="hover:text-slate-300 no-underline px-1.5 py-1 transition-colors">
               개인정보처리방침
             </Link>
             <span className="text-slate-700 hidden sm:inline">|</span>
-            <Link href="/terms" className="hover:text-slate-300 no-underline px-2 py-1 transition-colors">
+            <Link href="/terms" className="hover:text-slate-300 no-underline px-1.5 py-1 transition-colors">
               이용약관
             </Link>
             <span className="text-slate-700 hidden sm:inline">|</span>
-            <Link href="/guide" className="hover:text-slate-300 no-underline px-2 py-1 transition-colors">
+            <Link href="/disclaimer" className="hover:text-slate-300 no-underline px-1.5 py-1 transition-colors">
+              법적고지
+            </Link>
+            <span className="text-slate-700 hidden sm:inline">|</span>
+            <Link href="/guide" className="hover:text-slate-300 no-underline px-1.5 py-1 transition-colors">
               가이드 센터
+            </Link>
+            <span className="text-slate-700 hidden sm:inline">|</span>
+            <Link href="/inquiry" className="hover:text-slate-300 no-underline px-1.5 py-1 transition-colors">
+              고객 문의
             </Link>
           </div>
         </div>
