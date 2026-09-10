@@ -299,7 +299,7 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
                     </section>
 
                     {/* Active Tournaments Section (Recruiting + Ongoing) */}
-                    {(isMember || isManager) && activeTournaments.length > 0 && (
+                    {activeTournaments.length > 0 && (
                         <ActiveTournaments
                             tournaments={activeTournaments}
                             centerId={id}
@@ -307,16 +307,22 @@ export default async function CenterDetailPage({ params }: { params: { id: strin
                         />
                     )}
 
-                    {(isMember || isManager) ? (
-                        <TournamentListManager
-                            tournaments={formattedTournaments}
-                            centerId={id}
-                            isManager={isManager}
-                        />
-                    ) : (
-                        <div className="card p-12 text-center text-secondary-foreground border-dashed">
-                            <h3 className="text-lg font-semibold mb-2">회원 전용 공간</h3>
-                            <p>대회 및 리그 정보는 센터 회원가입 후 확인하실 수 있습니다.</p>
+                    {/* Publicly Viewable Tournament List */}
+                    <TournamentListManager
+                        tournaments={formattedTournaments}
+                        centerId={id}
+                        isManager={isManager}
+                    />
+
+                    {!session?.user?.id && (
+                        <div className="card p-6 mt-8 bg-blue-950/30 border-blue-800/30 text-center">
+                            <h3 className="text-base font-bold text-white mb-1">💡 대회 참가 신청 및 스코어 기록 서비스</h3>
+                            <p className="text-slate-400 text-xs mb-4">
+                                센터 대회 및 상주리그 참가 신청과 실시간 스코어 저장은 회원 로그인 후 이용하실 수 있습니다.
+                            </p>
+                            <Link href="/login" className="btn btn-primary text-xs px-6 py-2">
+                                로그인하고 대회 참가하기
+                            </Link>
                         </div>
                     )}
                     {/* Mobile Spacer */}
