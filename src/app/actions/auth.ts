@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { generateVerificationToken } from "@/lib/tokens";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/mail";
+import { checkCredentials } from "@/lib/credentials-auth";
 
 /**
  * NOTE: We keep these actions in a dedicated "use server" file.
@@ -22,25 +23,21 @@ export async function login(prevState: string | undefined, formData: FormData) {
     }
 
     try {
-        const prisma = getPrisma();
-        const user = await prisma.user.findUnique({
-            where: { email }
-        });
+        const credentialCheck = await checkCredentials(email, password);
 
-        if (!user) {
+        if (!credentialCheck.user) {
             return "존재하지 않는 계정입니다.";
         }
 
-        if (!user.password) {
+        if (!credentialCheck.hasPassword) {
             return "소셜 로그인(구글/네이버)으로 가입된 계정입니다. 소셜 로그인 버튼을 이용해주세요.";
         }
 
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
+        if (!credentialCheck.isPasswordValid) {
             return "비밀번호가 일치하지 않습니다.";
         }
 
-        if (!user.emailVerified) {
+        if (!credentialCheck.isEmailVerified) {
             return "이메일 인증이 완료되지 않은 계정입니다.";
         }
 

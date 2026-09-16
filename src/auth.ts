@@ -4,7 +4,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import Naver from "next-auth/providers/naver";
 import prisma from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { checkCredentials } from "@/lib/credentials-auth";
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
     ...authConfig,
@@ -35,34 +35,25 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                     return null;
                 }
 
-                const user = await prisma.user.findUnique({
-                    where: { email },
-                });
+                const credentialCheck = await checkCredentials(email, password);
 
-                if (!user) {
+                if (!credentialCheck.user) {
                     throw new Error("User not found");
                 }
 
-                if (!user.emailVerified) {
+                if (!credentialCheck.isEmailVerified) {
                     throw new Error("Email not verified");
                 }
 
-                if (!user.password) {
+                if (!credentialCheck.hasPassword) {
                     throw new Error("Social login user");
                 }
 
-                const isPasswordValid = await bcrypt.compare(password, user.password);
-
-                if (!isPasswordValid) {
+                if (!credentialCheck.isPasswordValid) {
                     throw new Error("Invalid password");
                 }
 
-                return {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                    role: user.role,
-                };
+                return credentialCheck.user;
             },
         }),
     ],

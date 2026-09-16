@@ -28,6 +28,7 @@ model User {
   managedCenters               BowlingCenter[]                @relation("CenterManagers")
   Team                         Team[]                         @relation("TeamManagers")
   inquiries                    Inquiry[]
+  mobileRefreshTokens          MobileRefreshToken[]
 }
 
 model VerificationToken {
@@ -36,6 +37,22 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model MobileRefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  familyId  String
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  usedAt    DateTime?
+  revokedAt DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([familyId])
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model BowlingCenter {
