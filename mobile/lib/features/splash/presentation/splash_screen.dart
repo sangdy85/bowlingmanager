@@ -1,35 +1,8 @@
-import 'dart:async';
-
 import 'package:bowlingmanager_mobile/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  Timer? _navigationTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _navigationTimer = Timer(const Duration(seconds: 2), () {
-      if (mounted) {
-        // Phase 4: replace this with an auth bootstrap decision.
-        context.go('/login');
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _navigationTimer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {

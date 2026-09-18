@@ -1,8 +1,12 @@
 import 'package:bowlingmanager_mobile/core/theme/app_colors.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_text_styles.dart';
+import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
+import 'package:bowlingmanager_mobile/features/auth/application/auth_state.dart';
+import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   static const List<_ProfileMenuItem> _items = <_ProfileMenuItem>[
@@ -13,18 +17,23 @@ class ProfileScreen extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AuthState authState = ref.watch(authControllerProvider);
+    final AuthUser? user = authState.user;
+    final bool isLoggingOut =
+        authState.isLoading && authState.operation == AuthOperation.logout;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
       children: <Widget>[
         const Text('프로필', style: AppTextStyles.headline),
         const SizedBox(height: 24),
-        const Card(
+        Card(
           child: Padding(
-            padding: EdgeInsets.all(22),
+            padding: const EdgeInsets.all(22),
             child: Row(
               children: <Widget>[
-                CircleAvatar(
+                const CircleAvatar(
                   radius: 34,
                   backgroundColor: AppColors.surfaceElevated,
                   child: Icon(
@@ -33,16 +42,19 @@ class ProfileScreen extends StatelessWidget {
                     size: 38,
                   ),
                 ),
-                SizedBox(width: 17),
+                const SizedBox(width: 17),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text('볼러님', style: AppTextStyles.title),
-                      SizedBox(height: 5),
                       Text(
-                        'user@example.com',
-                        style: TextStyle(color: AppColors.textSecondary),
+                        user?.displayName ?? '볼러님',
+                        style: AppTextStyles.title,
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        user?.email ?? '',
+                        style: const TextStyle(color: AppColors.textSecondary),
                       ),
                     ],
                   ),
@@ -72,7 +84,9 @@ class ProfileScreen extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         OutlinedButton.icon(
-          onPressed: null,
+          onPressed: isLoggingOut
+              ? null
+              : () => ref.read(authControllerProvider.notifier).logout(),
           style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(52),
             foregroundColor: AppColors.error,
@@ -80,8 +94,13 @@ class ProfileScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
           ),
-          icon: const Icon(Icons.logout_rounded),
-          label: const Text('로그아웃'),
+          icon: isLoggingOut
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.logout_rounded),
+          label: Text(isLoggingOut ? '로그아웃 중' : '로그아웃'),
         ),
       ],
     );
