@@ -2,6 +2,7 @@ import 'package:bowlingmanager_mobile/features/auth/presentation/login_screen.da
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_state.dart';
 import 'package:bowlingmanager_mobile/features/capture/presentation/capture_screen.dart';
+import 'package:bowlingmanager_mobile/features/capture/presentation/capture_review_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dart';
 import 'package:bowlingmanager_mobile/features/home/presentation/home_screen.dart';
 import 'package:bowlingmanager_mobile/features/profile/presentation/profile_screen.dart';
@@ -67,6 +68,11 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
             path: '/capture',
             builder: (BuildContext context, GoRouterState state) =>
                 const CaptureScreen(),
+          ),
+          GoRoute(
+            path: '/capture/review',
+            builder: (BuildContext context, GoRouterState state) =>
+                const CaptureReviewScreen(),
           ),
           GoRoute(
             path: '/club',

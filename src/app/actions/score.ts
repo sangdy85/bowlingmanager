@@ -4,6 +4,11 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
+import {
+    saveBulkScoreRows,
+    ScoreBulkServiceError,
+    type ScoreBulkRow,
+} from "@/lib/score-bulk-service";
 
 export async function addScore(prevState: any, formData: FormData) {
     const session = await auth();
@@ -134,90 +139,40 @@ export async function addBulkScores(
     const session = await auth();
     if (!session?.user?.id) return { success: false, message: "로그인이 필요합니다." };
 
-    console.log("Bulk Save Request:", commonData, rows);
-
     try {
         const gameDate = new Date(commonData.date);
-
-        // Fetch team and members for name matching
-        const team = await prisma.team.findUnique({
-            where: { id: commonData.teamId },
-            include: {
-                members: { include: { user: true } },
-                User: true
-            }
-        });
-
-        if (!team) return { success: false, message: "팀을 찾을 수 없습니다." };
-
-        // Check Permissions
-        const isOwner = team.ownerId === session.user.id;
-        const isManager = (team as any).User.some((m: any) => m.id === session.user.id);
-        const isMember = team.members.some(m => m.userId === session.user.id);
-
-        if (!isOwner && !isManager && !isMember) {
-            return { success: false, message: "팀 구성원만 점수를 등록할 수 있습니다." };
-        }
-
-        if (!isOwner && !isManager) {
-            return { success: false, message: "권한이 없습니다 (팀장/매니저 전용)." };
-        }
-
-        // Prepare records
-        const recordsToCreate: {
-            id: string;
-            score: number;
-            userId: string | null;
-            guestName: string | null;
-            gameDate: Date;
-            teamId: string;
-            gameType: string;
-            memo: string | null;
-        }[] = [];
-
-        for (const row of rows) {
-            const cleanName = row.memberName.trim();
-            // Try to find member by name
-            const matchedMember = team.members.find(m => m.user.name === cleanName || m.alias === cleanName);
-
-            const targetUserId = matchedMember ? matchedMember.userId : null;
-            const guestName = matchedMember ? null : cleanName;
-
-            for (const scoreVal of row.scores) {
-                recordsToCreate.push({
-                    id: uuidv4(),
-                    score: scoreVal,
-                    userId: targetUserId,
-                    guestName: guestName,
-                    gameDate: gameDate,
-                    teamId: commonData.teamId,
-                    gameType: commonData.gameType,
-                    memo: commonData.memo || null
-                });
-            }
-        }
-
-        if (recordsToCreate.length === 0) {
-            return { success: false, message: "저장할 데이터가 없습니다." };
-        }
-
-        await prisma.$transaction(async (tx) => {
-            for (const data of recordsToCreate) {
-                const { userId, teamId, ...rest } = data;
-                await tx.score.create({ 
-                    data: {
-                        ...rest,
-                        User: userId ? { connect: { id: userId } } : undefined,
-                        Team: { connect: { id: teamId } }
-                    }
-                });
-            }
+        const scoreRows: ScoreBulkRow[] = rows.map((row) => ({
+            memberName: row.memberName,
+            scores: row.scores,
+            gameDate,
+            gameType: commonData.gameType,
+            memo: commonData.memo || null,
+        }));
+        const result = await saveBulkScoreRows({
+            actorUserId: session.user.id,
+            teamId: commonData.teamId,
+            rows: scoreRows,
+            requireMembership: true,
+            allowPrivilegedWithoutMembership: true,
+            memberMatchMode: "alias-or-name",
         });
 
         revalidatePath("/dashboard");
-        return { success: true, message: `${recordsToCreate.length}건의 점수가 저장되었습니다.` };
+        return { success: true, message: `${result.createdCount}건의 점수가 저장되었습니다.` };
 
     } catch (e) {
+        if (e instanceof ScoreBulkServiceError) {
+            if (e.code === "TEAM_NOT_FOUND") {
+                return { success: false, message: "팀을 찾을 수 없습니다." };
+            }
+            if (e.code === "EMPTY_SCORES") {
+                return { success: false, message: "저장할 데이터가 없습니다." };
+            }
+            if (e.code === "FORBIDDEN" && e.message.startsWith("권한")) {
+                return { success: false, message: "권한이 없습니다 (팀장/매니저 전용)." };
+            }
+            return { success: false, message: e.message };
+        }
         console.error(e);
         return { success: false, message: "일괄 저장 중 오류가 발생했습니다." };
     }

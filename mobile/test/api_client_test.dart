@@ -196,6 +196,70 @@ void main() {
     client.dio.close(force: true);
     authDio.close(force: true);
   });
+
+  test('a multipart request can be recreated after a 401 refresh', () async {
+    final MemoryTokenStorage storage = MemoryTokenStorage()
+      ..accessToken = 'expired-access'
+      ..refreshToken = 'refresh-1';
+    var refreshCalls = 0;
+    var uploadCalls = 0;
+    final FakeHttpClientAdapter adapter = FakeHttpClientAdapter((
+      options,
+    ) async {
+      if (options.uri.path.endsWith('/auth/refresh')) {
+        refreshCalls += 1;
+        return jsonResponse(200, <String, Object>{
+          'success': true,
+          'data': <String, Object>{
+            'accessToken': 'new-access',
+            'refreshToken': 'refresh-2',
+            'tokenType': 'Bearer',
+            'expiresIn': 900,
+            'refreshTokenExpiresIn': 2592000,
+          },
+        });
+      }
+      uploadCalls += 1;
+      if (options.headers['Authorization'] == 'Bearer expired-access') {
+        return jsonResponse(401, unauthorizedEnvelope);
+      }
+      return jsonResponse(200, <String, Object>{
+        'success': true,
+        'data': <String, Object>{'ok': true},
+      });
+    });
+    final Dio authDio = Dio(createMobileApiOptions(config))
+      ..httpClientAdapter = adapter;
+    final RefreshCoordinator coordinator = RefreshCoordinator(
+      MobileAuthApi(authDio),
+      storage,
+      () {},
+    );
+    final ApiClient client = ApiClient(
+      storage,
+      coordinator,
+      config: config,
+      dio: Dio()..httpClientAdapter = adapter,
+    );
+
+    final Response<dynamic> response = await client.dio.post<dynamic>(
+      '/upload',
+      data: FormData.fromMap(<String, Object>{
+        'teamId': 'team-1',
+        'image': MultipartFile.fromBytes(<int>[
+          1,
+          2,
+          3,
+        ], filename: 'synthetic.jpg'),
+      }),
+    );
+
+    expect(response.statusCode, 200);
+    expect(refreshCalls, 1);
+    expect(uploadCalls, 2);
+    client.dio.close(force: true);
+    authDio.close(force: true);
+  });
 }
 
 const Map<String, Object> unauthorizedEnvelope = <String, Object>{

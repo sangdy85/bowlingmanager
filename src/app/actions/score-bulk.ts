@@ -1,112 +1,75 @@
 'use server';
 
 import { auth } from "@/auth";
-import prisma from "@/lib/prisma";
+import {
+    saveBulkScoreRows,
+    ScoreBulkServiceError,
+    type ScoreBulkRow,
+} from "@/lib/score-bulk-service";
 import { revalidatePath } from "next/cache";
-import { v4 as uuidv4 } from "uuid";
 
 export interface BulkScoreData {
     memberName: string;
     scores: number[];
-    gameDate?: string; // Optional per-record date
-    memo?: string;      // Optional per-record memo
+    gameDate?: string;
+    memo?: string;
 }
 
-export async function bulkAddScores(data: BulkScoreData[], defaultGameDateStr?: string, defaultGameType: string = "정기전", teamId?: string) {
+export async function bulkAddScores(
+    data: BulkScoreData[],
+    defaultGameDateStr?: string,
+    defaultGameType: string = "정기전",
+    teamId?: string,
+) {
     const session = await auth();
     if (!session?.user?.id) {
         return { success: false, message: "로그인이 필요합니다." };
     }
-
-    // Determine target team
-    let currentTeamId = teamId;
-    if (!currentTeamId) {
-        const membership = await prisma.teamMember.findFirst({
-            where: { userId: session.user.id },
-            include: { team: true }
-        });
-        if (!membership) return { success: false, message: "팀에 소속되어 있지 않습니다." };
-        currentTeamId = membership.teamId;
-    }
-
-    // Check permissions: Owner or Manager
-    const teamRecord = await prisma.team.findUnique({
-        where: { id: currentTeamId },
-        include: {
-            User: {
-                where: { id: session.user.id }
-            }
-        }
-    });
-
-    if (!teamRecord) return { success: false, message: "팀 정보를 찾을 수 없습니다." };
-
-    const isOwner = teamRecord.ownerId === session.user.id;
-    const isManager = ((teamRecord as any)?.User?.length ?? 0) > 0;
-
-    if (!isOwner && !isManager) {
-        return { success: false, message: "권한이 없습니다. 팀장 또는 매니저만 일괄 등록할 수 있습니다." };
-    }
-
     if (!data || data.length === 0) {
         return { success: false, message: "등록할 데이터가 없습니다." };
     }
 
-    // Cache team members for lookup (supporting Aliases)
-    const teamMembers = await prisma.teamMember.findMany({
-        where: { teamId: currentTeamId },
-        include: { user: true }
-    });
+    const rows: ScoreBulkRow[] = [];
+    for (const row of data) {
+        const dateString = row.gameDate || defaultGameDateStr;
+        if (!dateString) continue;
+        const gameDate = new Date(dateString);
+        if (Number.isNaN(gameDate.getTime())) continue;
 
-    // Map Name (Alias or Real Name) -> User ID
-    const memberMap = new Map(teamMembers.map(m => [m.alias || m.user.name, m.userId]));
-    let successCount = 0;
+        rows.push({
+            memberName: row.memberName,
+            scores: row.scores
+                .filter((score) => score !== null && score !== undefined)
+                .map(Number)
+                .filter((score) => !Number.isNaN(score) && score >= 0 && score <= 300),
+            gameDate,
+            gameType: defaultGameType,
+            memo: row.memo || null,
+        });
+    }
 
     try {
-        await prisma.$transaction(async (tx) => {
-            for (const row of data) {
-                const dateStr = row.gameDate || defaultGameDateStr;
-                if (!dateStr) continue;
-
-                const gameDate = new Date(dateStr);
-                if (isNaN(gameDate.getTime())) continue;
-
-                let userId: string | null = memberMap.get(row.memberName) || null;
-                const guestName = !userId ? row.memberName : null;
-
-                for (const score of row.scores) {
-                    if (score === null || score === undefined || isNaN(Number(score)) || score < 0 || score > 300) continue;
-
-                    await tx.score.create({
-                        data: {
-                            id: uuidv4(),
-                            User: userId ? { connect: { id: userId } } : undefined,
-                            Team: { connect: { id: currentTeamId as string } },
-                            guestName: guestName,
-                            score: Number(score),
-                            gameDate,
-                            gameType: defaultGameType,
-                            memo: row.memo || null
-                        }
-                    });
-                }
-                successCount++;
-            }
-        }, {
-            timeout: 60000 // Increase timeout to 60 seconds for SQLite
+        const result = await saveBulkScoreRows({
+            actorUserId: session.user.id,
+            teamId,
+            rows,
+            requireMembership: false,
+            memberMatchMode: "preferred-name",
+            allowEmpty: true,
         });
-
         revalidatePath("/dashboard");
         return {
             success: true,
-            message: `${successCount}명의 기록이 성공적으로 저장되었습니다.`
+            message: `${result.playerCount}명의 기록이 성공적으로 저장되었습니다.`,
         };
-
-    } catch (error: any) {
+    } catch (error) {
+        if (error instanceof ScoreBulkServiceError) {
+            return { success: false, message: error.message };
+        }
         console.error("Bulk add error:", error);
-        return { 
-            success: false, 
-            message: `일괄 저장 실패: ${error.message || "알 수 없는 오류"}` 
+        return {
+            success: false,
+            message: `일괄 저장 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
         };
     }
 }

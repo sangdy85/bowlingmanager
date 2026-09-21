@@ -1,9 +1,12 @@
 'use server';
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import prisma from '@/lib/prisma'; // Your prisma client
 import { auth } from '@/auth'; // Your auth (NextAuth/Auth.js)
-import { v4 as uuidv4 } from 'uuid';
+import {
+    analyzeScoreboardImage,
+    type GeminiParsedRow,
+    type ScoreboardOcrResult,
+} from '@/lib/scoreboard-ocr';
 
 import { 
     getKstDate, 
@@ -13,10 +16,7 @@ import {
     handleGeminiError 
 } from '@/lib/gemini-utils';
 
-export type GeminiParsedRow = {
-    memberName: string;
-    scores: number[];
-};
+export type { GeminiParsedRow } from '@/lib/scoreboard-ocr';
 
 
 
@@ -127,110 +127,27 @@ export async function analyzeLeagueRoundExcelWithGemini(
 
 export async function analyzeScoreboardWithGemini(
     formData: FormData
-): Promise<{ success: boolean; data?: GeminiParsedRow[]; message?: string; errorType?: 'QUOTA' | 'GENERAL' }> {
-    console.log("Starting analyzeScoreboardWithGemini...");
-
+): Promise<ScoreboardOcrResult> {
     try {
         const session = await auth();
         if (!session?.user?.id) {
             return { success: false, message: "로그인이 필요합니다." };
         }
 
-        const apiKey = process.env.GOOGLE_API_KEY;
-        if (!apiKey) {
-            return {
-                success: false,
-                message: "API Key 설정이 되지 않았습니다. 서버를 재기동(restart) 해주세요."
-            };
-        }
-
-        const kstDate = await getKstDate();
-
-        // Check Quota
-        const quotaResult = await checkUserAiQuota(session.user.id, kstDate);
-        if (!quotaResult.hasQuota) {
-            return {
-                success: false,
-                message: quotaResult.message,
-                errorType: 'QUOTA'
-            };
-        }
-
         const file = formData.get('image') as File;
-        const knownMembersStr = formData.get('knownMembers') as string;
-
         if (!file) {
             return { success: false, message: "이미지 파일이 없습니다." };
         }
 
+        const knownMembersStr = formData.get('knownMembers') as string;
         const knownMembers = knownMembersStr ? JSON.parse(knownMembersStr) : [];
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const base64Data = buffer.toString('base64');
-        const mimeType = file.type || 'image/jpeg';
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ 
-            model: "gemini-2.5-flash",
-            generationConfig: { 
-                responseMimeType: "application/json",
-                maxOutputTokens: 8192
-            }
+        return analyzeScoreboardImage({
+            userId: session.user.id,
+            image: Buffer.from(await file.arrayBuffer()),
+            mimeType: file.type || 'image/jpeg',
+            knownMembers,
         });
-
-        const prompt = `
-      Analyze this bowling scoreboard image.
-      Task: Extract member names and their bowling scores (0-300).
-      
-      CONTEXT:
-      - This is a bowling score sheet.
-      - Rows contain names and a series of scores.
-      - Handwriting might be messy.
-      - Grid lines might vary.
-
-      KNOWN MEMBERS (for fuzzy matching):
-      ${JSON.stringify(knownMembers)}
-      
-      INSTRUCTIONS:
-      1. Identify each row that represents a player.
-      2. Extract the player's name. Focus EXCLUSIVELY on Korean characters. 
-         - CRITICAL: Ignore any English alphabets (e.g., A, B, C used as score segment separators) or annotations. 
-         - Match it against the 'KNOWN MEMBERS' list if it looks similar. Use the exact name from the list if matched.
-      3. Extract all valid score numbers for that player. Ignore totals or averages.
-         - CRITICAL: If a score cell contains two numbers separated by a slash (e.g., '191/205'), you MUST take only the HIGHER number (e.g., 205). This is very important.
-      4. If a name cannot be read or is not Korean, use "Unknown".
-      5. Return strictly a JSON array. No markdown formatting.
-
-      OUTPUT FORMAT (JSON Array):
-      [
-        { "memberName": "Target Name", "scores": [150, 180, 200] },
-        ...
-      ]
-    `;
-
-        const result = await model.generateContent([
-            prompt,
-            {
-                inlineData: {
-                    data: base64Data,
-                    mimeType: mimeType,
-                },
-            },
-        ]);
-
-        const response = await result.response;
-
-        // 3. Track Global & User Usage
-        const usageMetadata = result.response.usageMetadata;
-        const inputTokens = usageMetadata?.promptTokenCount || 0;
-        const outputTokens = usageMetadata?.candidatesTokenCount || 0;
-        await incrementUserAiUsage(session.user.id, kstDate, inputTokens, outputTokens);
-
-        const text = response.text();
-        const jsonString = extractJson(text);
-        const parsedData = JSON.parse(jsonString);
-
-        return { success: true, data: parsedData };
     } catch (error: any) {
         const handled = handleGeminiError(error);
         return { success: false, message: handled.message, errorType: handled.errorType };

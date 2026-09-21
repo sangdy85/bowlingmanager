@@ -63,6 +63,9 @@ class ApiClient {
       final AuthTokens tokens = await _refreshCoordinator.refreshSingleFlight();
       request.extra[_retryMarker] = true;
       request.headers['Authorization'] = 'Bearer ${tokens.accessToken}';
+      if (request.data is FormData) {
+        request.data = (request.data as FormData).clone();
+      }
       final Response<dynamic> response = await dio.fetch<dynamic>(request);
       handler.resolve(response);
     } on Object {
