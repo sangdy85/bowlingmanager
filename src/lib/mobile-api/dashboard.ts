@@ -1,43 +1,28 @@
 import prisma from "@/lib/prisma";
-import {
-    mobileScoreOrderBy,
-    mobileScoreSelect,
-    mobileScoreWhere,
-    toMobileScoreItem,
-} from "@/lib/mobile-api/score-record";
+import { getPersonalStatisticsData, summarizeIntegratedRecords } from "@/lib/personal-statistics";
 
-function roundAverage(value: number) {
-    return Math.round(value * 100) / 100;
+// Fixed range accepts historic records and planned future years.
+export function parseDashboardYear(params: URLSearchParams, now = new Date()): number | null {
+    if (!params.has("year")) return now.getFullYear();
+    const values = params.getAll("year");
+    if (values.length !== 1 || !/^\d{4}$/.test(values[0])) return null;
+    const year = Number(values[0]);
+    return year >= 1900 && year <= 2100 ? year : null;
 }
 
-export async function getMobileDashboard(userId: string) {
-    const where = mobileScoreWhere(userId);
-
-    const [summary, recentScoreRecords] = await Promise.all([
-        prisma.score.aggregate({
-            where,
-            _avg: { score: true },
-            _max: { score: true },
-            _count: { _all: true },
-        }),
-        prisma.score.findMany({
-            where,
-            orderBy: mobileScoreOrderBy,
-            take: 10,
-            select: mobileScoreSelect,
-        }),
-    ]);
-
-    const recentScores = recentScoreRecords.map(toMobileScoreItem);
-    const recentTotal = recentScores.reduce((total, item) => total + item.score, 0);
-
-    return {
-        average: roundAverage(summary._avg.score ?? 0),
-        highScore: summary._max.score ?? 0,
-        gameCount: summary._count._all,
-        recentScores,
-        recentAverage: recentScores.length > 0
-            ? roundAverage(recentTotal / recentScores.length)
-            : 0,
-    };
+export async function getMobileDashboard(userId: string, year: number) {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+            id: true,
+            name: true,
+            teamMemberships: {
+                where: { team: { isActive: true } },
+                select: { teamId: true, team: { select: { name: true } } },
+            },
+        },
+    });
+    if (!user) return summarizeIntegratedRecords([], year);
+    const { integratedRecords } = await getPersonalStatisticsData(user, year);
+    return summarizeIntegratedRecords(integratedRecords, year);
 }

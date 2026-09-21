@@ -1,66 +1,90 @@
+import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_colors.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_text_styles.dart';
+import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
+import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
+import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
+import 'package:bowlingmanager_mobile/features/home/domain/dashboard.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AuthUser? user = ref.watch(authControllerProvider).user;
+    if (user == null) {
+      return const _HomeLoading(userName: '볼러님');
+    }
+
+    final AsyncValue<Dashboard> dashboard = ref.watch(
+      dashboardProvider(user.id),
+    );
+    return dashboard.when(
+      data: (Dashboard data) =>
+          _DashboardContent(dashboard: data, userName: '볼러님'),
+      error: (Object error, StackTrace stackTrace) => _HomeError(
+        userName: '볼러님',
+        message: _dashboardErrorMessage(error),
+        onRetry: () => ref.invalidate(dashboardProvider(user.id)),
+      ),
+      loading: () => const _HomeLoading(userName: '볼러님'),
+    );
+  }
+}
+
+class _DashboardContent extends StatelessWidget {
+  const _DashboardContent({required this.dashboard, required this.userName});
+
+  final Dashboard dashboard;
+  final String userName;
+
+  @override
   Widget build(BuildContext context) {
+    final Iterable<DashboardScore> recentScores = dashboard.recentScores.take(
+      3,
+    );
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
       children: <Widget>[
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text('안녕하세요, 볼러님', style: AppTextStyles.headline),
-                SizedBox(height: 5),
-                Text(
-                  '오늘도 좋은 게임을 준비해볼까요?',
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceElevated,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.notifications_none_rounded,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
+        _HomeHeader(userName: userName),
         const SizedBox(height: 26),
-        const _AverageCard(),
+        _AverageCard(
+          average: dashboard.average,
+          recentAverage: dashboard.recentAverage,
+        ),
         const SizedBox(height: 14),
-        const Row(
+        Row(
           children: <Widget>[
             Expanded(
-              child: _SummaryCard(label: 'HIGH', value: '245'),
+              child: _SummaryCard(
+                label: 'HIGH',
+                value: '${dashboard.highScore}',
+              ),
             ),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Expanded(
-              child: _SummaryCard(label: 'GAMES', value: '36'),
+              child: _SummaryCard(
+                label: 'GAMES',
+                value: '${dashboard.gameCount}',
+              ),
             ),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Expanded(
-              child: _SummaryCard(label: 'SERIES', value: '612'),
+              child: _SummaryCard(
+                label: 'RECENT AVG',
+                value: _formatAverage(dashboard.recentAverage),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 28),
-        const Text('최근 평균', style: AppTextStyles.title),
+        const Text('최근 점수', style: AppTextStyles.title),
         const SizedBox(height: 12),
-        const _TrendCard(),
+        _TrendCard(scores: dashboard.recentScores),
         const SizedBox(height: 28),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -73,14 +97,126 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        const _RecentGameCard(),
+        if (dashboard.recentScores.isEmpty)
+          const _EmptyRecentCard()
+        else
+          for (final DashboardScore score in recentScores) ...<Widget>[
+            _RecentGameCard(score: score),
+            const SizedBox(height: 10),
+          ],
+      ],
+    );
+  }
+}
+
+class _HomeHeader extends StatelessWidget {
+  const _HomeHeader({required this.userName});
+
+  final String userName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: <Widget>[
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text('안녕하세요, $userName', style: AppTextStyles.headline),
+              const SizedBox(height: 5),
+              const Text(
+                '오늘도 좋은 게임을 준비해볼까요?',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          width: 44,
+          height: 44,
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceElevated,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.notifications_none_rounded,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeLoading extends StatelessWidget {
+  const _HomeLoading({required this.userName});
+
+  final String userName;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+      children: <Widget>[
+        _HomeHeader(userName: userName),
+        const SizedBox(height: 96),
+        const Center(child: CircularProgressIndicator()),
+      ],
+    );
+  }
+}
+
+class _HomeError extends StatelessWidget {
+  const _HomeError({
+    required this.userName,
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String userName;
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+      children: <Widget>[
+        _HomeHeader(userName: userName),
+        const SizedBox(height: 36),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: <Widget>[
+                const Icon(
+                  Icons.cloud_off_rounded,
+                  color: AppColors.textSecondary,
+                  size: 36,
+                ),
+                const SizedBox(height: 14),
+                Text(message, textAlign: TextAlign.center),
+                const SizedBox(height: 18),
+                FilledButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('다시 시도'),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
 }
 
 class _AverageCard extends StatelessWidget {
-  const _AverageCard();
+  const _AverageCard({required this.average, required this.recentAverage});
+
+  final double average;
+  final double recentAverage;
 
   @override
   Widget build(BuildContext context) {
@@ -95,38 +231,41 @@ class _AverageCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: const Color(0xFF27517A)),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: <Widget>[
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text('CURRENT AVG', style: AppTextStyles.label),
-                SizedBox(height: 12),
-                Text('187.4', style: AppTextStyles.displayScore),
+                const Text('CURRENT AVG', style: AppTextStyles.label),
+                const SizedBox(height: 12),
+                Text(
+                  _formatAverage(average),
+                  style: AppTextStyles.displayScore,
+                ),
               ],
             ),
           ),
           DecoratedBox(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Color(0x263FD7A4),
               borderRadius: BorderRadius.all(Radius.circular(20)),
             ),
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Icon(
-                    Icons.trending_up_rounded,
+                  const Icon(
+                    Icons.history_rounded,
                     color: AppColors.success,
                     size: 17,
                   ),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   Text(
-                    '+3.2 이번 달',
-                    style: TextStyle(
+                    '최근 ${_formatAverage(recentAverage)}',
+                    style: const TextStyle(
                       color: AppColors.success,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -152,10 +291,15 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
         child: Column(
           children: <Widget>[
-            Text(label, style: AppTextStyles.label),
+            Text(
+              label,
+              style: AppTextStyles.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             const SizedBox(height: 7),
             Text(
               value,
@@ -173,20 +317,36 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _TrendCard extends StatelessWidget {
-  const _TrendCard();
+  const _TrendCard({required this.scores});
 
-  static const List<double> _values = <double>[
-    0.43,
-    0.62,
-    0.51,
-    0.72,
-    0.68,
-    0.83,
-    0.76,
-  ];
+  final List<DashboardScore> scores;
 
   @override
   Widget build(BuildContext context) {
+    if (scores.isEmpty) {
+      return const Card(
+        child: SizedBox(
+          height: 120,
+          child: Center(
+            child: Text(
+              '최근 기록이 없습니다.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final List<DashboardScore> visibleScores = scores
+        .take(7)
+        .toList(growable: false)
+        .reversed
+        .toList(growable: false);
+    final double chartMaximum = visibleScores.fold<double>(
+      300,
+      (maximum, record) =>
+          record.score > maximum ? record.score.toDouble() : maximum,
+    );
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
@@ -194,10 +354,13 @@ class _TrendCard extends StatelessWidget {
           height: 120,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: _values.asMap().entries.map((
-              MapEntry<int, double> entry,
+            children: visibleScores.asMap().entries.map((
+              MapEntry<int, DashboardScore> entry,
             ) {
-              final bool latest = entry.key == _values.length - 1;
+              final bool latest = entry.key == visibleScores.length - 1;
+              final double heightFactor = (entry.value.score / chartMaximum)
+                  .clamp(0.04, 1.0)
+                  .toDouble();
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 5),
@@ -208,7 +371,7 @@ class _TrendCard extends StatelessWidget {
                         child: Align(
                           alignment: Alignment.bottomCenter,
                           child: FractionallySizedBox(
-                            heightFactor: entry.value,
+                            heightFactor: heightFactor,
                             child: Container(
                               decoration: BoxDecoration(
                                 color: latest
@@ -222,7 +385,7 @@ class _TrendCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${entry.key + 1}',
+                        '${entry.value.score}',
                         style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 10,
@@ -241,61 +404,99 @@ class _TrendCard extends StatelessWidget {
 }
 
 class _RecentGameCard extends StatelessWidget {
-  const _RecentGameCard();
+  const _RecentGameCard({required this.score});
+
+  final DashboardScore score;
 
   @override
   Widget build(BuildContext context) {
+    final List<String> details = <String>[
+      score.source.label,
+      if (score.gameType?.trim().isNotEmpty == true) score.gameType!.trim(),
+      if (score.team?.name.trim().isNotEmpty == true) score.team!.name.trim(),
+    ];
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
-              '2026.09.15',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: <Widget>[
-                for (final String score in <String>[
-                  '201',
-                  '189',
-                  '215',
-                ]) ...<Widget>[
-                  Expanded(
-                    child: Text(
-                      score,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 25,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  if (score != '215')
-                    const SizedBox(
-                      height: 28,
-                      child: VerticalDivider(color: AppColors.divider),
-                    ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                'AVG 201.7',
-                style: TextStyle(
-                  color: AppColors.primaryBright,
-                  fontWeight: FontWeight.w700,
-                ),
+            Text(
+              _formatDate(score.gameDate),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
               ),
             ),
+            const SizedBox(height: 14),
+            Row(
+              children: <Widget>[
+                Text(
+                  '${score.score}',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    details.isEmpty ? '개인 게임' : details.join(' · '),
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+            if (score.memo?.trim().isNotEmpty == true) ...<Widget>[
+              const SizedBox(height: 12),
+              Text(
+                score.memo!.trim(),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+}
+
+class _EmptyRecentCard extends StatelessWidget {
+  const _EmptyRecentCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+        child: Center(
+          child: Text(
+            '최근 기록이 없습니다.',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _dashboardErrorMessage(Object error) {
+  return error is ApiException
+      ? error.userMessage
+      : '대시보드 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.';
+}
+
+String _formatAverage(double value) {
+  return value.toStringAsFixed(1);
+}
+
+String _formatDate(DateTime value) {
+  final DateTime local = value.toLocal();
+  String twoDigits(int number) => number.toString().padLeft(2, '0');
+  return '${local.year}.${twoDigits(local.month)}.${twoDigits(local.day)}';
 }

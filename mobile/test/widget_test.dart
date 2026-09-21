@@ -1,20 +1,27 @@
 import 'package:bowlingmanager_mobile/app/app.dart';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
+import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'support/auth_fakes.dart';
+import 'support/dashboard_fakes.dart';
 
 void main() {
   testWidgets('splash transitions to the login foundation', (
     WidgetTester tester,
   ) async {
     final FakeAuthRepository repository = FakeAuthRepository();
+    final FakeDashboardRepository dashboardRepository =
+        FakeDashboardRepository();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repository),
+          dashboardRepositoryProvider.overrideWithValue(dashboardRepository),
+        ],
         child: const BowlingManagerApp(),
       ),
     );
@@ -33,10 +40,13 @@ void main() {
   ) async {
     final FakeAuthRepository repository = FakeAuthRepository()
       ..bootstrapResult = testUser;
+    final FakeDashboardRepository dashboardRepository =
+        FakeDashboardRepository();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           authRepositoryProvider.overrideWithValue(repository),
+          dashboardRepositoryProvider.overrideWithValue(dashboardRepository),
         ],
         child: const BowlingManagerApp(),
       ),
@@ -54,9 +64,14 @@ void main() {
     WidgetTester tester,
   ) async {
     final FakeAuthRepository repository = FakeAuthRepository();
+    final FakeDashboardRepository dashboardRepository =
+        FakeDashboardRepository();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repository),
+          dashboardRepositoryProvider.overrideWithValue(dashboardRepository),
+        ],
         child: const BowlingManagerApp(),
       ),
     );
@@ -87,9 +102,14 @@ void main() {
         kind: ApiErrorKind.unauthorized,
         userMessage: '이메일 또는 비밀번호를 확인해주세요.',
       );
+    final FakeDashboardRepository dashboardRepository =
+        FakeDashboardRepository();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repository),
+          dashboardRepositoryProvider.overrideWithValue(dashboardRepository),
+        ],
         child: const BowlingManagerApp(),
       ),
     );

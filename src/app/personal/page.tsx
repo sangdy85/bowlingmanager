@@ -6,6 +6,7 @@ import React from "react";
 import YearSelector from "@/components/YearSelector";
 import StatsDisplayRow from "@/components/StatsDisplayRow";
 import RadarChart from "@/components/RadarChart";
+import { getPersonalStatisticsData } from "@/lib/personal-statistics";
 
 export const dynamic = 'force-dynamic';
 
@@ -91,130 +92,12 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         currentYear = Math.max(...activeYears);
     }
 
-    // 해당 연도의 시작과 끝 (KST 기준 처리가 필요할 수 있으나, native Date로 간단히 범위 설정)
-    const startOfYear = new Date(`${currentYear}-01-01T00:00:00.000Z`);
-    const endOfYear = new Date(`${currentYear}-12-31T23:59:59.999Z`);
-
-    // 해당 연도 점수 조회
-    const myYearlyScores = await prisma.score.findMany({
-        where: {
-            userId: user.id,
-            gameDate: {
-                gte: startOfYear,
-                lte: endOfYear
-            }
-        },
-        include: {
-            Team: {
-                select: { id: true, name: true }
-            }
-        },
-        orderBy: {
-            gameDate: 'desc'
-        }
-    });
-
-    // --- 추가: 공식 기록 조회 (상주리그 & 대회) ---
-    const userTeamIds = user.teamMemberships.map((tm: any) => tm.teamId);
-
-    // 1. 상주리그 기록
-    const currentTeamNames = user.teamMemberships.map((tm: any) => tm.team.name);
-
-    const leagueScores = await prisma.leagueMatchupIndividualScore.findMany({
-        where: {
-            OR: [
-                {
-                    AND: [
-                        { userId: user.id },
-                        {
-                            OR: [
-                                { playerName: null },
-                                { playerName: '' },
-                                { playerName: { contains: user.name } }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    AND: [
-                        { playerName: { contains: user.name } },
-                        { teamId: { in: userTeamIds } }
-                    ]
-                },
-                {
-                    AND: [
-                        { playerName: { contains: user.name } },
-                        { Team: { name: { in: currentTeamNames } } }
-                    ]
-                }
-            ],
-            LeagueMatchup: {
-                round: {
-                    date: {
-                        gte: startOfYear,
-                        lte: endOfYear
-                    }
-                }
-            }
-        },
-        include: {
-            Team: { select: { name: true } },
-            LeagueMatchup: {
-                include: {
-                    round: {
-                        include: { tournament: { select: { name: true, type: true } } }
-                    }
-                }
-            }
-        }
-    });
-
-    // 2. 대회 기록 (챔프전/이벤트전)
-    const tournamentScores = await prisma.tournamentScore.findMany({
-        where: {
-            OR: [
-                {
-                    AND: [
-                        { registration: { userId: user.id } },
-                        {
-                            OR: [
-                                { registration: { guestName: null } },
-                                { registration: { guestName: '' } },
-                                { registration: { guestName: { contains: user.name } } }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    AND: [
-                        { registration: { guestName: { contains: user.name } } },
-                        { registration: { teamId: { in: userTeamIds } } }
-                    ]
-                },
-                {
-                    AND: [
-                        { registration: { guestName: { contains: user.name } } },
-                        { registration: { guestTeamName: { in: currentTeamNames } } }
-                    ]
-                }
-            ],
-            round: {
-                date: {
-                    gte: startOfYear,
-                    lte: endOfYear
-                }
-            }
-        },
-        include: {
-            registration: {
-                include: {
-                    tournament: { select: { name: true, type: true } },
-                    team: { select: { name: true } }
-                }
-            },
-            round: true
-        }
-    });
+    const {
+        myYearlyScores, leagueScores, tournamentScores,
+        startOfYear, endOfYear, userTeamIds,
+        officialRecords: officialOnlyStatsScores,
+        integratedRecords: allIntegratedScores,
+    } = await getPersonalStatisticsData(user, currentYear);
 
     // --- 공식 기록 데이터 그룹화 로직 ---
     const groupedOfficialMap = new Map<string, any>();
@@ -314,29 +197,6 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     const globalMatchScores = myYearlyScores.filter((s: any) => s.gameType === '교류전');
     const globalResidentScores = myYearlyScores.filter((s: any) => s.gameType === '상주');
     const globalOtherScores = myYearlyScores.filter((s: any) => !['정기전', '벙개', '교류전', '상주'].includes(s.gameType || ''));
-
-    const officialOnlyScores = [
-        ...leagueScores.flatMap((ls: any) => {
-            const d = ls.LeagueMatchup.round.date || ls.createdAt;
-            return [ls.score1, ls.score2, ls.score3]
-                .filter(s => s > 0)
-                .map(s => ({ score: s + (ls.handicap || 0), gameDate: d }));
-        }),
-        ...tournamentScores.map((ts: any) => ({
-            score: ts.score + (ts.registration.handicap || 0),
-            gameDate: ts.round?.date || ts.createdAt
-        }))
-    ];
-
-    const myYearlyScoresExcludingImpromptu = myYearlyScores.filter((s: any) => s.gameType !== '벙개');
-    const allIntegratedScores = [
-        ...myYearlyScoresExcludingImpromptu.map((s: any) => ({ score: s.score, gameDate: s.gameDate })),
-        ...officialOnlyScores
-    ];
-
-    const officialOnlyStatsScores = [
-        ...officialOnlyScores
-    ];
 
     // 팀별 그룹화 (상주리그 팀 통합 로직 적용)
     const scoresByTeamName = new Map<string, { id: string, name: string, scores: typeof myYearlyScores }>();
