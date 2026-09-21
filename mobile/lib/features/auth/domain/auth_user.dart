@@ -11,7 +11,7 @@ class AuthUser {
   final String? email;
   final String? name;
   final String role;
-  final int handicap;
+  final int? handicap;
 
   String get displayName => name?.trim().isNotEmpty == true ? name! : '볼러님';
 
@@ -27,7 +27,7 @@ class AuthUser {
         (email != null && email is! String) ||
         (name != null && name is! String) ||
         role is! String ||
-        handicap is! int) {
+        (handicap != null && handicap is! int)) {
       throw const FormatException('Invalid user response.');
     }
 
@@ -36,7 +36,7 @@ class AuthUser {
       email: email as String?,
       name: name as String?,
       role: role,
-      handicap: handicap,
+      handicap: handicap as int?,
     );
   }
 }
