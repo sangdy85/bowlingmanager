@@ -40,6 +40,7 @@ void main() {
       final Dio dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
         ..httpClientAdapter = _Adapter((RequestOptions options) {
           expect(options.path, '/ocr/scoreboard');
+          expect(options.receiveTimeout, const Duration(seconds: 90));
           expect(options.data, isA<FormData>());
           final FormData data = options.data as FormData;
           expect(
@@ -137,6 +138,30 @@ void main() {
           (ApiException error) => error.kind,
           'kind',
           ApiErrorKind.malformedResponse,
+        ),
+      ),
+    );
+  });
+
+  test('maps an OCR receive timeout to a timeout API error', () async {
+    final Dio dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
+      ..httpClientAdapter = _Adapter((RequestOptions options) {
+        expect(options.path, '/ocr/scoreboard');
+        expect(options.receiveTimeout, const Duration(seconds: 90));
+        throw DioException(
+          requestOptions: options,
+          type: DioExceptionType.receiveTimeout,
+          message: 'The OCR response exceeded the receive timeout.',
+        );
+      });
+
+    await expectLater(
+      MobileCaptureApi(dio).analyze(teamId: 'team-1', image: testCaptureImage),
+      throwsA(
+        isA<ApiException>().having(
+          (ApiException error) => error.kind,
+          'kind',
+          ApiErrorKind.timeout,
         ),
       ),
     );

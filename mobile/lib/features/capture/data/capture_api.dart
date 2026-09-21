@@ -24,6 +24,8 @@ class MobileCaptureApi implements CaptureApi {
 
   final Dio _dio;
 
+  static const Duration _scoreboardReceiveTimeout = Duration(seconds: 90);
+
   @override
   Future<CaptureOptions> fetchOptions() async {
     try {
@@ -57,6 +59,7 @@ class MobileCaptureApi implements CaptureApi {
       final Response<dynamic> response = await _dio.post<dynamic>(
         '/ocr/scoreboard',
         data: formData,
+        options: Options(receiveTimeout: _scoreboardReceiveTimeout),
       );
       final Map<String, dynamic> data = _readData(response.data);
       final Object? players = data['players'];

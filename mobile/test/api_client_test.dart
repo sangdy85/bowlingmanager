@@ -17,6 +17,14 @@ void main() {
     apiBaseUrl: 'https://example.test/api/mobile/v1',
   );
 
+  test('mobile API base options keep the standard timeout values', () {
+    final BaseOptions options = createMobileApiOptions(config);
+
+    expect(options.connectTimeout, const Duration(seconds: 10));
+    expect(options.sendTimeout, const Duration(seconds: 15));
+    expect(options.receiveTimeout, const Duration(seconds: 15));
+  });
+
   test(
     'concurrent 401 responses perform one refresh and retry every request',
     () async {
@@ -220,6 +228,7 @@ void main() {
         });
       }
       uploadCalls += 1;
+      expect(options.receiveTimeout, const Duration(seconds: 90));
       if (options.headers['Authorization'] == 'Bearer expired-access') {
         return jsonResponse(401, unauthorizedEnvelope);
       }
@@ -243,7 +252,7 @@ void main() {
     );
 
     final Response<dynamic> response = await client.dio.post<dynamic>(
-      '/upload',
+      '/ocr/scoreboard',
       data: FormData.fromMap(<String, Object>{
         'teamId': 'team-1',
         'image': MultipartFile.fromBytes(<int>[
@@ -252,6 +261,7 @@ void main() {
           3,
         ], filename: 'synthetic.jpg'),
       }),
+      options: Options(receiveTimeout: const Duration(seconds: 90)),
     );
 
     expect(response.statusCode, 200);
