@@ -52,7 +52,7 @@ export function filterTeamRecordScores(scores: TeamRecordScore[], filter: TeamRe
 }
 
 const utcDateKey = (value: Date) => value.toISOString().slice(0, 10);
-const kstDateKey = (value: Date) => new Date(value.getTime() + 9 * 60 * 60 * 1000)
+export const teamActivityDateKey = (value: Date) => new Date(value.getTime() + 9 * 60 * 60 * 1000)
     .toISOString().slice(0, 10);
 const oneDecimal = (value: number) => Number(value.toFixed(1));
 
@@ -169,7 +169,7 @@ export function createTeamActivities(
 ) {
     const groups = new Map<string, TeamRecordScore[]>();
     for (const score of filterTeamRecordScores(scores, filter)) {
-        const date = kstDateKey(score.gameDate);
+        const date = teamActivityDateKey(score.gameDate);
         const group = groups.get(date);
         if (group) group.push(score);
         else groups.set(date, [score]);
@@ -197,7 +197,7 @@ export function createTeamActivityDetail(
     filter: TeamRecordFilter,
 ) {
     const matching = filterTeamRecordScores(scores, filter)
-        .filter((score) => kstDateKey(score.gameDate) === date);
+        .filter((score) => teamActivityDateKey(score.gameDate) === date);
     if (matching.length === 0) return null;
 
     const participants = createActivityParticipants(teamId, matching, members);

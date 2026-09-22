@@ -100,22 +100,132 @@ test('group pagination happens after complete rows are grouped, so a boundary ca
         record({ id: 'b1', gameDate: date(21) }), record({ id: 'b2', gameDate: date(21) }),
         record({ id: 'c1', gameDate: date(20) }),
     ].map(({ team, ...item }) => ({ ...item, Team: team }));
-    const prisma = { score: { findMany: async () => rows } };
-    const { getMobileScoreGroups } = loadTs('src/lib/mobile-api/scores.ts', { '@/lib/prisma': prisma });
-    const first = await getMobileScoreGroups('user-1', 1, 2);
-    const second = await getMobileScoreGroups('user-1', 2, 2);
+    const { getMobileScoreGroups } = loadTs('src/lib/mobile-api/scores.ts', { '@/lib/prisma': {} });
+    const dependencies = groupDependencies({ userRows: rows });
+    const first = await getMobileScoreGroups('user-1', 1, 2, dependencies);
+    const second = await getMobileScoreGroups('user-1', 2, 2, dependencies);
     assert.deepEqual(first.items.map(group => group.gameCount), [2, 2]);
     assert.deepEqual(second.items.map(group => group.gameCount), [1]);
     assert.deepEqual(first.pagination, { page: 1, limit: 2, total: 3, totalPages: 2 });
 });
 
 test('empty rows produce empty group pagination', async () => {
-    const prisma = { score: { findMany: async () => [] } };
-    const { getMobileScoreGroups } = loadTs('src/lib/mobile-api/scores.ts', { '@/lib/prisma': prisma });
-    const result = await getMobileScoreGroups('user-1', 1, 20);
+    const { getMobileScoreGroups } = loadTs('src/lib/mobile-api/scores.ts', { '@/lib/prisma': {} });
+    const result = await getMobileScoreGroups('user-1', 1, 20, groupDependencies());
     assert.deepEqual(result, {
         items: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
     });
+});
+
+test('regular team groups use the Phase 12 participant rank for 1st through 4th place', async () => {
+    const { getMobileScoreGroups } = loadTs('src/lib/mobile-api/scores.ts', { '@/lib/prisma': {} });
+    for (const expectedPosition of [1, 2, 3, 4]) {
+        const gameDate = new Date('2026-09-18T15:00:00.000Z');
+        const myTotal = 270 - expectedPosition * 20;
+        const userRows = [userScore({ id: 'mine', score: myTotal, gameDate })];
+        const opponents = Array.from({ length: 4 }, (_, index) => teamScore({
+            id: `other-${index}`, score: 240 - index * 20, gameDate,
+            userId: `other-user-${index}`, userName: `상대 ${index}`,
+        }));
+        const myScore = teamScore({ id: 'mine', score: myTotal, gameDate });
+        const members = [member('membership-me', 'user-1', '내 별명'),
+            ...opponents.map((_, index) => member(`membership-${index}`, `other-user-${index}`, `상대 ${index}`))];
+        const result = await getMobileScoreGroups('user-1', 1, 20, groupDependencies({
+            userRows, teamRows: [myScore, ...opponents], members,
+        }));
+        assert.deepEqual(result.items[0].rank, { position: expectedPosition, participantCount: 5 });
+    }
+});
+
+test('rank identity uses TeamMember user identity, preserves aliases and never name-matches guests', async () => {
+    const { getMobileScoreGroups } = loadTs('src/lib/mobile-api/scores.ts', { '@/lib/prisma': {} });
+    const gameDate = new Date('2026-09-18T15:00:00.000Z');
+    const result = await getMobileScoreGroups('user-1', 1, 20, groupDependencies({
+        userRows: [userScore({ id: 'mine', score: 200, gameDate })],
+        teamRows: [
+            teamScore({ id: 'guest', score: 300, gameDate, userId: null, guestName: '같은 이름', userName: null }),
+            teamScore({ id: 'other', score: 250, gameDate, userId: 'other-user', userName: '같은 이름' }),
+            teamScore({ id: 'mine', score: 200, gameDate, userId: 'user-1', userName: '원래 이름' }),
+        ],
+        members: [
+            member('membership-me', 'user-1', '같은 이름', '원래 이름'),
+            member('membership-other', 'other-user', null, '같은 이름'),
+        ],
+    }));
+    assert.deepEqual(result.items[0].rank, { position: 3, participantCount: 3 });
+    const serialized = JSON.stringify(result.items[0]);
+    assert.equal(serialized.includes('other-user'), false);
+    assert.equal(serialized.includes('membership-other'), false);
+    assert.deepEqual(Object.keys(result.items[0].rank), ['position', 'participantCount']);
+});
+
+test('ties keep the existing sequential Phase 12 ranks', async () => {
+    const { getMobileScoreGroups } = loadTs('src/lib/mobile-api/scores.ts', { '@/lib/prisma': {} });
+    const gameDate = new Date('2026-09-18T15:00:00.000Z');
+    const result = await getMobileScoreGroups('user-1', 1, 20, groupDependencies({
+        userRows: [userScore({ id: 'mine', score: 200, gameDate })],
+        teamRows: [
+            teamScore({ id: 'first', score: 200, gameDate, userId: 'other-user', userName: '먼저' }),
+            teamScore({ id: 'mine', score: 200, gameDate }),
+        ],
+        members: [member('membership-other', 'other-user', '먼저'), member('membership-me', 'user-1', '나')],
+    }));
+    assert.deepEqual(result.items[0].rank, { position: 2, participantCount: 2 });
+});
+
+test('rank is null outside regular team groups and when one UTC group crosses KST dates', async () => {
+    const { getMobileScoreGroups } = loadTs('src/lib/mobile-api/scores.ts', { '@/lib/prisma': {} });
+    const userRows = [
+        userScore({ id: 'casual', gameType: '벙개', gameDate: date(22) }),
+        userScore({ id: 'house', gameType: '상주', gameDate: date(21) }),
+        userScore({ id: 'personal', team: null, gameDate: date(20) }),
+        userScore({ id: 'boundary-a', gameDate: new Date('2026-09-19T14:59:00.000Z') }),
+        userScore({ id: 'boundary-b', gameDate: new Date('2026-09-19T15:01:00.000Z') }),
+    ];
+    const dependencies = groupDependencies({ userRows });
+    const result = await getMobileScoreGroups('user-1', 1, 20, dependencies);
+    assert.equal(result.items.length, 4);
+    assert.equal(result.items.every(item => item.rank === null), true);
+    assert.equal(dependencies.calls.teamScores, 0);
+    assert.equal(dependencies.calls.members, 0);
+});
+
+test('rank maps the UTC Records group to its KST activity and isolates other teams and dates', async () => {
+    const { getMobileScoreGroups } = loadTs('src/lib/mobile-api/scores.ts', { '@/lib/prisma': {} });
+    const gameDate = new Date('2026-09-18T15:00:00.000Z');
+    const dependencies = groupDependencies({
+        userRows: [userScore({ id: 'mine', score: 200, gameDate })],
+        teamRows: [
+            teamScore({ id: 'mine', score: 200, gameDate }),
+            teamScore({ id: 'same-scope', score: 210, gameDate, userId: 'other-user', userName: '상대' }),
+            teamScore({ id: 'other-team', score: 300, gameDate, teamId: 'team-2', userId: 'other-2', userName: '다른 팀' }),
+            teamScore({ id: 'other-date', score: 300, gameDate: new Date('2026-09-19T15:00:00.000Z'), userId: 'other-3', userName: '다른 날짜' }),
+        ],
+        members: [member('membership-me', 'user-1', '나'), member('membership-other', 'other-user', '상대')],
+    });
+    const result = await getMobileScoreGroups('user-1', 1, 20, dependencies);
+    assert.deepEqual(dependencies.scopes, [{ teamId: 'team-1', date: '2026-09-19' }]);
+    assert.deepEqual(result.items[0].rank, { position: 2, participantCount: 2 });
+});
+
+test('rank survives pagination and uses a constant number of batch queries', async () => {
+    const { getMobileScoreGroups } = loadTs('src/lib/mobile-api/scores.ts', { '@/lib/prisma': {} });
+    const userRows = Array.from({ length: 25 }, (_, index) => userScore({
+        id: `mine-${index}`, score: 200, gameDate: new Date(Date.UTC(2026, 8, 25 - index, 15)),
+    }));
+    const teamRows = userRows.map((row) => teamScore({
+        id: row.id, score: row.score, gameDate: row.gameDate,
+    }));
+    const dependencies = groupDependencies({
+        userRows, teamRows, members: [member('membership-me', 'user-1', '나')],
+    });
+    const result = await getMobileScoreGroups('user-1', 2, 20, dependencies);
+    assert.equal(result.items.length, 5);
+    assert.equal(result.items.every(item => item.rank?.position === 1), true);
+    assert.equal(dependencies.calls.userScores, 1);
+    assert.equal(dependencies.calls.teamScores, 1);
+    assert.equal(dependencies.calls.members, 1);
+    assert.equal(dependencies.scopes.length, 5);
 });
 
 test('group route requires auth and scopes the query to the authenticated user', async () => {
@@ -142,3 +252,47 @@ test('group route requires auth and scopes the query to the authenticated user',
         'https://example.test/api/mobile/v1/scores/groups',
     ))).status, 401);
 });
+
+function userScore(changes = {}) {
+    const base = record(changes);
+    const { source, team, ...score } = base;
+    return { ...score, Team: team };
+}
+
+function teamScore({
+    id = 'mine', score = 200, gameDate = new Date('2026-09-18T15:00:00.000Z'),
+    gameType = '정기전', teamId = 'team-1', userId = 'user-1', guestName = null,
+    userName = '나', memo = null,
+} = {}) {
+    return {
+        id, score, gameDate, gameType, teamId, userId, guestName, memo,
+        createdAt: new Date(gameDate.getTime() + 1000),
+        User: userName == null ? null : { name: userName },
+    };
+}
+
+function member(id, userId, alias, name = alias ?? userId) {
+    return { id, teamId: 'team-1', userId, alias, user: { name } };
+}
+
+function groupDependencies({ userRows = [], teamRows = [], members = [] } = {}) {
+    const dependencies = {
+        calls: { userScores: 0, teamScores: 0, members: 0 },
+        scopes: [],
+        async listUserScores() {
+            dependencies.calls.userScores += 1;
+            return userRows;
+        },
+        async listTeamRegularScores(scopes) {
+            dependencies.calls.teamScores += 1;
+            dependencies.scopes = scopes;
+            const keys = new Set(scopes.map(scope => `${scope.teamId}:${scope.date}`));
+            return teamRows.filter(row => keys.has(`${row.teamId}:${new Date(row.gameDate.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)}`));
+        },
+        async listTeamMembers(teamIds) {
+            dependencies.calls.members += 1;
+            return members.filter(row => teamIds.includes(row.teamId));
+        },
+    };
+    return dependencies;
+}

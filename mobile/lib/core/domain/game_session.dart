@@ -9,6 +9,7 @@ class GameSession {
     required this.total,
     required this.average,
     required this.gameCount,
+    this.rank,
   });
 
   final String id;
@@ -20,6 +21,7 @@ class GameSession {
   final int total;
   final double average;
   final int gameCount;
+  final GameSessionRank? rank;
 
   factory GameSession.fromJson(
     Map<String, dynamic> json, {
@@ -34,6 +36,7 @@ class GameSession {
     final Object? total = json['total'];
     final Object? average = json['average'];
     final Object? gameCount = json['gameCount'];
+    final Object? rank = json['rank'];
     final DateTime? parsedDate = gameDate is String
         ? DateTime.tryParse(gameDate)
         : null;
@@ -49,7 +52,8 @@ class GameSession {
         average is! num ||
         !average.isFinite ||
         gameCount is! int ||
-        gameCount != scores.length) {
+        gameCount != scores.length ||
+        (rank != null && rank is! Map)) {
       throw const FormatException('Invalid game session response.');
     }
 
@@ -87,6 +91,35 @@ class GameSession {
       total: total,
       average: average.toDouble(),
       gameCount: gameCount,
+      rank: rank == null
+          ? null
+          : GameSessionRank.fromJson(Map<String, dynamic>.from(rank as Map)),
+    );
+  }
+}
+
+class GameSessionRank {
+  const GameSessionRank({
+    required this.position,
+    required this.participantCount,
+  });
+
+  final int position;
+  final int participantCount;
+
+  factory GameSessionRank.fromJson(Map<String, dynamic> json) {
+    final Object? position = json['position'];
+    final Object? participantCount = json['participantCount'];
+    if (position is! int ||
+        position < 1 ||
+        participantCount is! int ||
+        participantCount < 1 ||
+        position > participantCount) {
+      throw const FormatException('Invalid game session rank response.');
+    }
+    return GameSessionRank(
+      position: position,
+      participantCount: participantCount,
     );
   }
 }

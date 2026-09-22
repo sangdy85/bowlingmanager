@@ -32,6 +32,8 @@ void main() {
         'limit': '20',
       });
       expect(page.items.single.scores.single.score, 215);
+      expect(page.items.single.rank?.position, 2);
+      expect(page.items.single.rank?.participantCount, 13);
       dio.close(force: true);
     },
   );
@@ -105,6 +107,7 @@ const Map<String, Object> _scoresEnvelope = <String, Object>{
         'total': 215,
         'average': 215,
         'gameCount': 1,
+        'rank': <String, int>{'position': 2, 'participantCount': 13},
       },
     ],
     'pagination': <String, Object>{

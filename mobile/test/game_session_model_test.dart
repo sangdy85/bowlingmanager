@@ -18,7 +18,46 @@ void main() {
     expect(session.gameType, '정기전');
     expect(session.team?.name, '테스트 팀');
     expect(session.scores.first.memo, '첫 게임');
+    expect(session.rank, isNull);
     expect(page.pagination.hasNextPage, isTrue);
+  });
+
+  test('parses nullable and valid rank metadata', () {
+    for (final int position in <int>[1, 2, 3, 5]) {
+      final Map<String, Object?> data = _scoresData();
+      final item =
+          (data['items']! as List<Object?>).single! as Map<String, Object?>;
+      item['rank'] = <String, int>{
+        'position': position,
+        'participantCount': 13,
+      };
+      final GameSessionRank? rank = ScoresPage.fromJson(data).items.single.rank;
+      expect(rank?.position, position);
+      expect(rank?.participantCount, 13);
+    }
+
+    final Map<String, Object?> nullable = _scoresData();
+    ((nullable['items']! as List<Object?>).single!
+            as Map<String, Object?>)['rank'] =
+        null;
+    expect(ScoresPage.fromJson(nullable).items.single.rank, isNull);
+  });
+
+  test('rejects malformed rank metadata', () {
+    for (final Object? rank in <Object?>[
+      <String, Object>{'position': 0, 'participantCount': 3},
+      <String, Object>{'position': 4, 'participantCount': 3},
+      <String, Object>{'position': 1, 'participantCount': 0},
+      <String, Object>{'position': '1', 'participantCount': 3},
+      <String, Object>{'position': 1, 'participantCount': 3.0},
+      '1위',
+    ]) {
+      final Map<String, Object?> data = _scoresData();
+      ((data['items']! as List<Object?>).single!
+              as Map<String, Object?>)['rank'] =
+          rank;
+      expect(() => ScoresPage.fromJson(data), throwsFormatException);
+    }
   });
 
   test('allows nullable type, team and score memo', () {

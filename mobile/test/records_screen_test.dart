@@ -28,7 +28,8 @@ void main() {
 
     expect(find.text('2026.09.15'), findsOneWidget);
     expect(find.text('215'), findsOneWidget);
-    expect(find.text('정기전 · 테스트 팀'), findsOneWidget);
+    expect(find.text('정기전'), findsOneWidget);
+    expect(find.text('테스트 팀'), findsOneWidget);
     expect(find.text('synthetic memo'), findsOneWidget);
     expect(find.byType(RefreshIndicator), findsOneWidget);
   });
@@ -66,7 +67,8 @@ void main() {
 
     await _openRecords(tester, repository);
 
-    expect(find.text('정기전 · 배볼러'), findsOneWidget);
+    expect(find.text('정기전'), findsOneWidget);
+    expect(find.text('배볼러'), findsOneWidget);
     expect(find.text('2026.09.22'), findsOneWidget);
     for (final String score in <String>['202', '213', '208', '192']) {
       expect(find.text(score), findsOneWidget);
@@ -76,6 +78,90 @@ void main() {
     expect(find.text('AVG 203.8'), findsOneWidget);
     expect(find.text('202 · 첫 메모'), findsOneWidget);
     expect(find.text('213 · 둘째 메모'), findsOneWidget);
+    expect(find.byKey(const Key('record-rank-1')), findsNothing);
+  });
+
+  testWidgets('Records renders medals for top three and a plain badge after', (
+    WidgetTester tester,
+  ) async {
+    final FakeScoresRepository repository = FakeScoresRepository()
+      ..pages[1] = scoresPage(
+        page: 1,
+        total: 4,
+        items: <GameSession>[
+          for (final int position in <int>[1, 2, 3, 5])
+            _rankedSession(position: position),
+        ],
+      );
+    await _openRecords(tester, repository);
+
+    for (final int position in <int>[1, 2, 3, 5]) {
+      await tester.scrollUntilVisible(
+        find.byKey(Key('record-rank-$position')),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.byKey(Key('record-rank-$position')), findsOneWidget);
+      expect(find.text('$position위'), findsOneWidget);
+      expect(find.text('13명 중'), findsWidgets);
+      expect(
+        find.byKey(Key('record-medal-$position')),
+        position <= 3 ? findsOneWidget : findsNothing,
+      );
+    }
+  });
+
+  testWidgets('casual Records card has no rank badge', (
+    WidgetTester tester,
+  ) async {
+    final GameSession session = _rankedSession(position: null, gameType: '벙개');
+    final FakeScoresRepository repository = FakeScoresRepository()
+      ..pages[1] = scoresPage(page: 1, total: 1, items: <GameSession>[session]);
+    await _openRecords(tester, repository);
+
+    expect(find.text('벙개'), findsOneWidget);
+    expect(find.byKey(const Key('record-rank-1')), findsNothing);
+    expect(find.byType(Icon), findsWidgets);
+  });
+
+  testWidgets('Records card wraps twelve scores on a 360px scaled layout', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 720);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 1.2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final List<GameSessionScore> scores = List<GameSessionScore>.generate(
+      12,
+      (int index) =>
+          GameSessionScore(id: 'score-$index', score: 300, memo: null),
+    );
+    final GameSession session = GameSession(
+      id: 'long-session',
+      source: GameSessionSource.personal,
+      gameDate: DateTime.utc(2026, 9, 22),
+      gameType: '정기전',
+      team: const GameSessionTeam(
+        id: 'team-1',
+        name: '아주 긴 이름을 가진 테스트 볼링 동호회 팀 이름',
+      ),
+      scores: scores,
+      total: 3600,
+      average: 300,
+      gameCount: 12,
+      rank: const GameSessionRank(position: 1, participantCount: 13),
+    );
+    final FakeScoresRepository repository = FakeScoresRepository()
+      ..pages[1] = scoresPage(page: 1, total: 1, items: <GameSession>[session]);
+    await _openRecords(tester, repository);
+
+    expect(find.text('12게임'), findsOneWidget);
+    expect(find.text('총점 3600'), findsOneWidget);
+    expect(find.text('AVG 300.0'), findsOneWidget);
+    expect(find.text('300'), findsNWidgets(12));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Records shows an initial error and retries', (
@@ -156,6 +242,25 @@ void main() {
     expect(find.text(error.userMessage), findsOneWidget);
     expect(find.text('다시 시도'), findsOneWidget);
   });
+}
+
+GameSession _rankedSession({required int? position, String gameType = '정기전'}) {
+  return GameSession(
+    id: 'ranked-$position-$gameType',
+    source: GameSessionSource.personal,
+    gameDate: DateTime.utc(2026, 9, 22),
+    gameType: gameType,
+    team: const GameSessionTeam(id: 'team-1', name: '배볼러'),
+    scores: const <GameSessionScore>[
+      GameSessionScore(id: 's1', score: 202, memo: null),
+    ],
+    total: 202,
+    average: 202,
+    gameCount: 1,
+    rank: position == null
+        ? null
+        : GameSessionRank(position: position, participantCount: 13),
+  );
 }
 
 Future<void> _openRecords(

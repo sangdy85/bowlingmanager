@@ -225,12 +225,10 @@ class _RecordCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<String> details = <String>[
-      session.gameType?.trim().isNotEmpty == true
-          ? session.gameType!.trim()
-          : '개인',
-      if (session.team case final GameSessionTeam team) team.name,
-    ];
+    final String gameType = session.gameType?.trim().isNotEmpty == true
+        ? session.gameType!.trim()
+        : '개인';
+    final String teamName = session.team?.name ?? '개인 기록';
     final List<String> memos = session.scores
         .map((GameSessionScore score) => score.memo?.trim() ?? '')
         .where((String memo) => memo.isNotEmpty)
@@ -238,49 +236,77 @@ class _RecordCard extends StatelessWidget {
         .toList(growable: false);
 
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              details.join(' · '),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              _formatGameDate(session.gameDate),
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: session.scores
-                  .map(
-                    (GameSessionScore item) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 13,
-                        vertical: 9,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceElevated,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${item.score}',
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      _GameTypeChip(label: gameType),
+                      const SizedBox(height: 11),
+                      Text(
+                        teamName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 18,
+                          fontSize: 20,
+                          height: 1.2,
                           fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _formatGameDate(session.gameDate),
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (session.rank case final GameSessionRank rank) ...<Widget>[
+                  const SizedBox(width: 12),
+                  _RecordRankBadge(rank: rank),
+                ],
+              ],
+            ),
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 11,
+              runSpacing: 11,
+              children: session.scores
+                  .map(
+                    (GameSessionScore item) => ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 56),
+                      child: Container(
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 11,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceElevated,
+                          borderRadius: BorderRadius.circular(11),
+                          border: Border.all(color: AppColors.divider),
+                        ),
+                        child: Text(
+                          '${item.score}',
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 20,
+                            height: 1,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ),
@@ -288,15 +314,17 @@ class _RecordCard extends StatelessWidget {
                   .toList(growable: false),
             ),
             const SizedBox(height: 18),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
             Wrap(
-              spacing: 18,
-              runSpacing: 8,
+              spacing: 10,
+              runSpacing: 10,
               children: <Widget>[
-                Text('${session.gameCount}게임'),
-                Text('총점 ${session.total}'),
-                Text(
-                  'AVG ${session.average.toStringAsFixed(1)}',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+                _SummaryBadge(label: '${session.gameCount}게임'),
+                _SummaryBadge(label: '총점 ${session.total}', emphasized: true),
+                _SummaryBadge(
+                  label: 'AVG ${session.average.toStringAsFixed(1)}',
+                  emphasized: true,
                 ),
               ],
             ),
@@ -321,6 +349,119 @@ class _RecordCard extends StatelessWidget {
                     ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GameTypeChip extends StatelessWidget {
+  const _GameTypeChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.65)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.primaryBright,
+          fontSize: 14,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _RecordRankBadge extends StatelessWidget {
+  const _RecordRankBadge({required this.rank});
+
+  static const Color _gold = Color(0xFFFFC857);
+  static const Color _silver = Color(0xFFC6D0DC);
+  static const Color _bronze = Color(0xFFCD7F4A);
+
+  final GameSessionRank rank;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color? medalColor = switch (rank.position) {
+      1 => _gold,
+      2 => _silver,
+      3 => _bronze,
+      _ => null,
+    };
+    return Semantics(
+      label: '${rank.participantCount}명 중 ${rank.position}위',
+      child: Container(
+        key: Key('record-rank-${rank.position}'),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color:
+              medalColor?.withValues(alpha: 0.12) ?? AppColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: medalColor ?? AppColors.divider),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (medalColor != null)
+              Icon(
+                Icons.military_tech_rounded,
+                key: Key('record-medal-${rank.position}'),
+                color: medalColor,
+                size: 25,
+              ),
+            Text(
+              '${rank.position}위',
+              style: TextStyle(
+                color: medalColor ?? AppColors.primaryBright,
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            Text(
+              '${rank.participantCount}명 중',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryBadge extends StatelessWidget {
+  const _SummaryBadge({required this.label, this.emphasized = false});
+
+  final String label;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: emphasized ? AppColors.primaryBright : AppColors.textSecondary,
+          fontSize: emphasized ? 16 : 15,
+          fontWeight: emphasized ? FontWeight.w900 : FontWeight.w700,
         ),
       ),
     );
