@@ -100,11 +100,16 @@ class FakeCurrentUserApi implements CurrentUserApi {
 class FakeAuthRepository implements AuthRepository {
   AuthUser? bootstrapResult;
   AuthUser loginResult = testUser;
+  AuthUser refreshResult = testUser;
+  final List<Future<AuthUser>> pendingRefreshes = <Future<AuthUser>>[];
   Object? bootstrapError;
   Object? loginError;
+  Object? refreshError;
   Object? logoutError;
+  Future<void>? pendingLogout;
   int bootstrapCount = 0;
   int loginCount = 0;
+  int refreshCount = 0;
   int logoutCount = 0;
 
   @override
@@ -122,8 +127,19 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<AuthUser> refreshCurrentUser() async {
+    refreshCount += 1;
+    if (pendingRefreshes.isNotEmpty) {
+      return pendingRefreshes.removeAt(0);
+    }
+    if (refreshError case final Object error) throw error;
+    return refreshResult;
+  }
+
+  @override
   Future<void> logout() async {
     logoutCount += 1;
+    if (pendingLogout case final Future<void> pending) await pending;
     if (logoutError case final Object error) throw error;
   }
 }

@@ -61,6 +61,13 @@ void main() {
     expect(authApi.refreshCount, 0);
   });
 
+  test('refresh current user reuses the protected current-user API', () async {
+    final user = await repository.refreshCurrentUser();
+
+    expect(user, same(testUser));
+    expect(userApi.callCount, 1);
+  });
+
   test(
     'refresh failure clears tokens and reports authentication failure',
     () async {

@@ -11,6 +11,8 @@ abstract interface class AuthRepository {
 
   Future<AuthUser> login(String email, String password);
 
+  Future<AuthUser> refreshCurrentUser();
+
   Future<void> logout();
 }
 
@@ -64,6 +66,9 @@ class MobileAuthRepository implements AuthRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<AuthUser> refreshCurrentUser() => _currentUserApi.me();
 
   @override
   Future<void> logout() async {

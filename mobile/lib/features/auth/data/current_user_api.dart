@@ -24,6 +24,8 @@ class MobileCurrentUserApi implements CurrentUserApi {
       throw ApiException.fromDio(error);
     } on FormatException {
       throw ApiException.malformedResponse();
+    } on TypeError {
+      throw ApiException.malformedResponse();
     }
   }
 }

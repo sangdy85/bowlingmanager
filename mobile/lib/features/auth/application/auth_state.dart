@@ -12,8 +12,8 @@ class AuthState {
     this.errorMessage,
   });
 
-  const AuthState.loading(AuthOperation operation)
-    : this._(status: AuthStatus.loading, operation: operation);
+  const AuthState.loading(AuthOperation operation, {AuthUser? user})
+    : this._(status: AuthStatus.loading, operation: operation, user: user);
 
   const AuthState.authenticated(AuthUser user)
     : this._(status: AuthStatus.authenticated, user: user);

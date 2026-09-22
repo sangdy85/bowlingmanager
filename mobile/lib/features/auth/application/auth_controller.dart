@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class AuthController extends Notifier<AuthState> {
   late AuthRepository _repository;
   bool _bootstrapStarted = false;
+  int _currentUserRefreshGeneration = 0;
 
   @override
   AuthState build() {
@@ -22,6 +23,7 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> bootstrap() async {
+    _currentUserRefreshGeneration += 1;
     state = const AuthState.loading(AuthOperation.bootstrap);
     try {
       final AuthUser? user = await _repository.bootstrap();
@@ -35,6 +37,7 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> login(String email, String password) async {
     if (state.isLoading) return;
+    _currentUserRefreshGeneration += 1;
     state = const AuthState.loading(AuthOperation.login);
     try {
       final AuthUser user = await _repository.login(email.trim(), password);
@@ -46,9 +49,29 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  Future<AuthUser> refreshCurrentUser() async {
+    final AuthUser? currentUser = state.user;
+    if (!state.isAuthenticated || currentUser == null) {
+      throw StateError('An authenticated user is required.');
+    }
+
+    final int generation = ++_currentUserRefreshGeneration;
+    final AuthUser refreshedUser = await _repository.refreshCurrentUser();
+    if (refreshedUser.id != currentUser.id) {
+      throw ApiException.malformedResponse();
+    }
+    if (generation == _currentUserRefreshGeneration &&
+        state.isAuthenticated &&
+        state.user?.id == currentUser.id) {
+      state = AuthState.authenticated(refreshedUser);
+    }
+    return refreshedUser;
+  }
+
   Future<void> logout() async {
     if (state.isLoading) return;
-    state = const AuthState.loading(AuthOperation.logout);
+    _currentUserRefreshGeneration += 1;
+    state = AuthState.loading(AuthOperation.logout, user: state.user);
     try {
       await _repository.logout();
     } finally {
@@ -57,6 +80,7 @@ class AuthController extends Notifier<AuthState> {
   }
 
   void authenticationFailed() {
+    _currentUserRefreshGeneration += 1;
     state = const AuthState.unauthenticated();
   }
 }
