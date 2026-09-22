@@ -5,6 +5,7 @@ import 'package:bowlingmanager_mobile/features/club/data/club_repository.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_records_state.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_management_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 typedef ClubRequest = ({String userId, String teamId});
@@ -78,6 +79,19 @@ final clubActivityProvider = FutureProvider.autoDispose
       return ref
           .watch(clubRepositoryProvider)
           .fetchClubActivity(
+            teamId: request.teamId,
+            activityId: request.activityId,
+          );
+    }, retry: (int retryCount, Object error) => null);
+
+final clubActivityEditProvider = FutureProvider.autoDispose
+    .family<ClubActivityEditEnvelope, ClubActivityRequest>((
+      Ref ref,
+      ClubActivityRequest request,
+    ) {
+      return ref
+          .watch(clubRepositoryProvider)
+          .fetchEditableActivity(
             teamId: request.teamId,
             activityId: request.activityId,
           );

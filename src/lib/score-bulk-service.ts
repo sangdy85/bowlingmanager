@@ -13,6 +13,7 @@ export type ScoreBulkRow = {
 };
 
 type TeamMemberRecord = {
+    id: string;
     userId: string;
     alias: string | null;
     user: { name: string };
@@ -39,7 +40,7 @@ export type ScoreCreateRecord = {
 
 export type ScoreBulkDependencies = {
     findDefaultTeamId: (userId: string) => Promise<string | null>;
-    findTeam: (teamId: string, actorUserId: string) => Promise<TeamRecord | null>;
+    findTeam: (teamId: string, actorUserId: string, requireActive?: boolean) => Promise<TeamRecord | null>;
     createScoresAtomically: (records: ScoreCreateRecord[]) => Promise<void>;
     createId: () => string;
 };
@@ -52,9 +53,9 @@ const defaultDependencies: ScoreBulkDependencies = {
         });
         return membership?.teamId ?? null;
     },
-    async findTeam(teamId, actorUserId) {
+    async findTeam(teamId, actorUserId, requireActive = false) {
         return prisma.team.findUnique({
-            where: { id: teamId },
+            where: { id: teamId, ...(requireActive ? { isActive: true } : {}) },
             select: {
                 id: true,
                 name: true,
@@ -65,6 +66,7 @@ const defaultDependencies: ScoreBulkDependencies = {
                 },
                 members: {
                     select: {
+                        id: true,
                         userId: true,
                         alias: true,
                         user: { select: { name: true } },
@@ -110,6 +112,7 @@ export async function saveBulkScoreRows(
         allowPrivilegedWithoutMembership?: boolean;
         memberMatchMode: "none" | "preferred-name" | "alias-or-name";
         allowEmpty?: boolean;
+        requireActiveTeam?: boolean;
     },
     dependencies: ScoreBulkDependencies = defaultDependencies,
 ) {
@@ -118,7 +121,7 @@ export async function saveBulkScoreRows(
         throw new ScoreBulkServiceError("TEAM_REQUIRED", "팀에 소속되어 있지 않습니다.", 400);
     }
 
-    const team = await dependencies.findTeam(teamId, input.actorUserId);
+    const team = await dependencies.findTeam(teamId, input.actorUserId, input.requireActiveTeam);
     if (!team) {
         throw new ScoreBulkServiceError("TEAM_NOT_FOUND", "팀 정보를 찾을 수 없습니다.", 404);
     }
@@ -178,7 +181,9 @@ function resolveMember(
     mode: "none" | "preferred-name" | "alias-or-name",
 ) {
     if (row.memberId) {
-        const member = members.find((candidate) => candidate.userId === row.memberId);
+        const member = members.find(
+            (candidate) => candidate.id === row.memberId || candidate.userId === row.memberId,
+        );
         if (!member) {
             throw new ScoreBulkServiceError(
                 "INVALID_MEMBER",
@@ -203,6 +208,7 @@ export async function listManageableScoreTeams(userId: string) {
         where: {
             userId,
             team: {
+                isActive: true,
                 OR: [
                     { ownerId: userId },
                     { User: { some: { id: userId } } },
@@ -217,6 +223,7 @@ export async function listManageableScoreTeams(userId: string) {
                     members: {
                         orderBy: { joinedAt: "asc" },
                         select: {
+                            id: true,
                             userId: true,
                             alias: true,
                             user: { select: { name: true } },
@@ -231,7 +238,7 @@ export async function listManageableScoreTeams(userId: string) {
         id: team.id,
         name: team.name,
         members: team.members.map((member) => ({
-            id: member.userId,
+            id: member.id,
             name: member.alias || member.user.name,
         })),
     }));

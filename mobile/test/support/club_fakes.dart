@@ -4,6 +4,7 @@ import 'package:bowlingmanager_mobile/features/club/data/club_api.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_repository.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_management_models.dart';
 
 const ClubSummary testClub = ClubSummary(
   id: 'team-1',
@@ -130,11 +131,72 @@ ClubActivitiesPage testClubActivitiesPage({int page = 1, int totalPages = 1}) =>
       totalPages: totalPages,
     );
 
+const ClubActivityEditEnvelope testEditableActivity = ClubActivityEditEnvelope(
+  role: ClubRole.owner,
+  activity: ClubActivityEdit(
+    id: '2026-09-19~REGULAR',
+    revision: 'revision-1',
+    date: '2026-09-19',
+    gameType: '정기전',
+    memo: null,
+    scoreCount: 1,
+    participants: <ClubParticipantDraft>[
+      ClubParticipantDraft(
+        memberId: 'membership-1',
+        name: '팀원',
+        scores: <ClubScoreDraft>[ClubScoreDraft(id: 'score-1', value: 200)],
+      ),
+    ],
+  ),
+);
+
 class FakeClubApi implements ClubApi {
   List<ClubSummary> clubs = <ClubSummary>[testClub];
   ClubDetail detail = testClubDetail;
   List<ClubMember> members = testClubMembers;
   Object? error;
+
+  @override
+  Future<ClubRole> changeMemberRole({
+    required String teamId,
+    required String memberId,
+    required ClubRole role,
+  }) async => role;
+
+  @override
+  Future<ClubWriteResult> createScores({
+    required String teamId,
+    required String date,
+    required String gameType,
+    required String? memo,
+    required List<ClubParticipantDraft> participants,
+  }) async => const ClubWriteResult(changedCount: 1);
+
+  @override
+  Future<ClubWriteResult> deleteActivity({
+    required String teamId,
+    required String activityId,
+    required String revision,
+  }) async => const ClubWriteResult(changedCount: 1);
+
+  @override
+  Future<ClubActivityEditEnvelope> fetchEditableActivity({
+    required String teamId,
+    required String activityId,
+  }) async => testEditableActivity;
+
+  @override
+  Future<void> removeMember({
+    required String teamId,
+    required String memberId,
+  }) async {}
+
+  @override
+  Future<ClubWriteResult> updateActivity({
+    required String teamId,
+    required ClubActivityEdit activity,
+  }) async =>
+      const ClubWriteResult(activityId: '2026-09-19~ALL', changedCount: 1);
 
   @override
   Future<ClubActivitiesPage> fetchClubActivities({
@@ -211,6 +273,80 @@ class FakeClubRepository implements ClubRepository {
   final Map<int, ClubActivitiesPage> activityPages =
       <int, ClubActivitiesPage>{};
   final Map<int, Object> activityPageErrors = <int, Object>{};
+  int createCalls = 0;
+  int updateCalls = 0;
+  int deleteCalls = 0;
+  int removeCalls = 0;
+  int roleCalls = 0;
+  ClubActivityEditEnvelope editableActivity = testEditableActivity;
+  Completer<ClubWriteResult>? pendingCreate;
+  Object? managementError;
+
+  @override
+  Future<ClubRole> changeMemberRole({
+    required String teamId,
+    required String memberId,
+    required ClubRole role,
+  }) async {
+    roleCalls += 1;
+    if (managementError case final Object error) throw error;
+    return role;
+  }
+
+  @override
+  Future<ClubWriteResult> createScores({
+    required String teamId,
+    required String date,
+    required String gameType,
+    required String? memo,
+    required List<ClubParticipantDraft> participants,
+  }) async {
+    createCalls += 1;
+    if (managementError case final Object error) throw error;
+    if (pendingCreate case final Completer<ClubWriteResult> pending) {
+      return pending.future;
+    }
+    return const ClubWriteResult(changedCount: 1);
+  }
+
+  @override
+  Future<ClubWriteResult> deleteActivity({
+    required String teamId,
+    required String activityId,
+    required String revision,
+  }) async {
+    deleteCalls += 1;
+    if (managementError case final Object error) throw error;
+    return const ClubWriteResult(changedCount: 1);
+  }
+
+  @override
+  Future<ClubActivityEditEnvelope> fetchEditableActivity({
+    required String teamId,
+    required String activityId,
+  }) async {
+    if (managementError case final Object error) throw error;
+    return editableActivity;
+  }
+
+  @override
+  Future<void> removeMember({
+    required String teamId,
+    required String memberId,
+  }) async {
+    removeCalls += 1;
+    if (managementError case final Object error) throw error;
+  }
+
+  @override
+  Future<ClubWriteResult> updateActivity({
+    required String teamId,
+    required ClubActivityEdit activity,
+  }) async {
+    updateCalls += 1;
+    if (managementError case final Object error) throw error;
+    return const ClubWriteResult(activityId: '2026-09-19~ALL', changedCount: 1);
+  }
 
   @override
   Future<ClubActivitiesPage> fetchClubActivities({

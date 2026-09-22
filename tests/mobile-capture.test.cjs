@@ -141,8 +141,8 @@ function bulkDependencies(changes = {}) {
         findTeam: async () => ({
             id: 'team-1', name: 'Fixture Team', ownerId: 'actor', User: [],
             members: [
-                { userId: 'actor', alias: null, user: { name: 'Actor' } },
-                { userId: 'member-1', alias: '별명', user: { name: 'Member' } },
+                { id: 'membership-actor', userId: 'actor', alias: null, user: { name: 'Actor' } },
+                { id: 'membership-1', userId: 'member-1', alias: '별명', user: { name: 'Member' } },
             ],
         }),
         createScoresAtomically: async records => { state.createCalls += 1; state.records = records; },
@@ -156,7 +156,7 @@ test('bulk service validates explicit members and prepares one atomic batch', as
     const result = await bulk.saveBulkScoreRows({
         actorUserId: 'actor', teamId: 'team-1', requireMembership: true, memberMatchMode: 'none',
         rows: [
-            { memberName: '수정된 이름', memberId: 'member-1', scores: [200, 210], gameDate: new Date('2026-09-21Z'), gameType: '정기전', memo: null },
+            { memberName: '수정된 이름', memberId: 'membership-1', scores: [200, 210], gameDate: new Date('2026-09-21Z'), gameType: '정기전', memo: null },
             { memberName: '게스트', memberId: null, scores: [180], gameDate: new Date('2026-09-21Z'), gameType: '정기전', memo: null },
         ],
     }, dependencies);
@@ -176,7 +176,7 @@ test('bulk service rejects invalid team members and insufficient permission befo
 
     const forbidden = bulkDependencies({ findTeam: async () => ({
         id: 'team-1', name: 'Fixture Team', ownerId: 'owner', User: [],
-        members: [{ userId: 'actor', alias: null, user: { name: 'Actor' } }],
+        members: [{ id: 'membership-actor', userId: 'actor', alias: null, user: { name: 'Actor' } }],
     }) });
     await assert.rejects(() => bulk.saveBulkScoreRows({
         actorUserId: 'actor', teamId: 'team-1', requireMembership: true, memberMatchMode: 'none',
@@ -216,6 +216,28 @@ test('bulk service exposes transaction failure without reporting partial success
         actorUserId: 'actor', teamId: 'team-1', requireMembership: true, memberMatchMode: 'none',
         rows: [{ memberName: 'Actor', scores: [200, 210], gameDate: new Date(), gameType: '정기전', memo: null }],
     }, dependencies), /synthetic transaction failure/);
+});
+
+test('manageable score options expose membership IDs instead of user IDs', async () => {
+    let where;
+    const module = loadTs('src/lib/score-bulk-service.ts', {
+        '@/lib/prisma': {
+            teamMember: {
+                findMany: async query => {
+                    where = query.where;
+                    return [{ team: {
+                        id: 'team-1', name: 'Fixture',
+                        members: [{ id: 'membership-1', userId: 'private-user-id', alias: null, user: { name: '회원' } }],
+                    } }];
+                },
+            },
+        },
+        uuid: { v4: () => 'unused' },
+    }, new Map());
+    const result = await module.listManageableScoreTeams('actor');
+    assert.equal(where.team.isActive, true);
+    assert.deepEqual(result[0].members, [{ id: 'membership-1', name: '회원' }]);
+    assert.equal(JSON.stringify(result).includes('private-user-id'), false);
 });
 
 function formRequest(fields) {
@@ -294,6 +316,7 @@ test('bulk save route validates auth/input and returns created counts', async ()
     }));
     assert.equal(response.status, 201);
     assert.equal(captured.memberMatchMode, 'none');
+    assert.equal(captured.requireActiveTeam, true);
     assert.equal(captured.rows.length, 2);
     assert.deepEqual(await response.json(), { success: true, data: { createdCount: 3, playerCount: 2 } });
 

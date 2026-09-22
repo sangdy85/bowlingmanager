@@ -87,6 +87,7 @@ export function parseMobileBulkScoreRequest(value: unknown): {
         throw new MobileCaptureValidationError("INVALID_PLAYERS", "저장할 선수 정보를 확인해주세요.");
     }
 
+    const participantKeys = new Set<string>();
     const rows = payload.players.map((value) => {
         if (!value || typeof value !== "object" || Array.isArray(value)) {
             throw new MobileCaptureValidationError("INVALID_PLAYERS", "저장할 선수 정보를 확인해주세요.");
@@ -96,6 +97,14 @@ export function parseMobileBulkScoreRequest(value: unknown): {
         const memberId = player.memberId == null
             ? null
             : cleanRequiredString(player.memberId, 100);
+        const participantKey = memberId ? `member:${memberId}` : `guest:${memberName}`;
+        if (participantKeys.has(participantKey)) {
+            throw new MobileCaptureValidationError(
+                "DUPLICATE_PARTICIPANT",
+                "같은 참가자를 중복으로 추가할 수 없습니다.",
+            );
+        }
+        participantKeys.add(participantKey);
         if (!Array.isArray(player.scores) || player.scores.length === 0 || player.scores.length > 12) {
             throw new MobileCaptureValidationError("INVALID_SCORES", "선수별 점수를 확인해주세요.");
         }

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:bowlingmanager_mobile/app/app.dart';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_management_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/shared/widgets/bottom_navigation.dart';
@@ -98,6 +101,221 @@ void main() {
     await tester.drag(find.byKey(const Key('club-list')), const Offset(0, 400));
     await tester.pumpAndSettle();
     expect(repository.clubCalls, 2);
+  });
+
+  testWidgets('management entry follows OWNER MANAGER and MEMBER roles', (
+    WidgetTester tester,
+  ) async {
+    for (final ClubRole role in ClubRole.values) {
+      final FakeClubRepository repository = FakeClubRepository()
+        ..detail = ClubDetail(
+          id: 'team-1',
+          name: '테스트 동호회',
+          myRole: role,
+          memberCount: 3,
+        );
+      await _openClubs(tester, repository);
+      await tester.tap(find.byKey(const Key('club-team-1')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('club-management-link')),
+        role == ClubRole.member ? findsNothing : findsOneWidget,
+      );
+      await tester.pumpWidget(const SizedBox());
+    }
+  });
+
+  testWidgets('OWNER directly enters variable scores and prevents empty save', (
+    WidgetTester tester,
+  ) async {
+    final FakeClubRepository repository = FakeClubRepository();
+    await _openClubs(tester, repository);
+    await tester.tap(find.byKey(const Key('club-team-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('club-management-link')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('club-management')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('management-manual-link')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('management-save')));
+    await tester.pump();
+    expect(find.text('참가자를 한 명 이상 추가해주세요.'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('management-add-participant')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('회원').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('participant-0-score-0')),
+      '301',
+    );
+    await tester.tap(find.byKey(const Key('management-save')));
+    await tester.pump();
+    expect(find.text('모든 점수는 0에서 300 사이의 정수여야 합니다.'), findsOneWidget);
+    expect(repository.createCalls, 0);
+    await tester.enterText(
+      find.byKey(const Key('participant-0-score-0')),
+      '200',
+    );
+    await tester.tap(find.byKey(const Key('participant-add-game-0')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('participant-0-score-1')),
+      '300',
+    );
+    await tester.tap(find.byKey(const Key('management-save')));
+    await tester.pumpAndSettle();
+    expect(repository.createCalls, 1);
+  });
+
+  testWidgets('activity admin actions edit and confirm deletion', (
+    WidgetTester tester,
+  ) async {
+    final FakeClubRepository repository = FakeClubRepository();
+    await _openClubs(tester, repository);
+    await tester.tap(find.byKey(const Key('club-team-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('club-records-link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('활동 일지'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('club-activity-${testClubActivity.id}')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('activity-edit')), findsOneWidget);
+    expect(find.byKey(const Key('activity-delete')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('activity-delete')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('1개의 점수가 삭제됩니다.'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('activity-delete-confirm')));
+    await tester.pumpAndSettle();
+    expect(repository.deleteCalls, 1);
+  });
+
+  testWidgets('manual save disables repeat taps while request is pending', (
+    WidgetTester tester,
+  ) async {
+    final pending = Completer<ClubWriteResult>();
+    final FakeClubRepository repository = FakeClubRepository()
+      ..pendingCreate = pending;
+    await _openClubs(tester, repository);
+    await tester.tap(find.byKey(const Key('club-team-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('club-management-link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('management-manual-link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('management-add-participant')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('회원').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('participant-0-score-0')),
+      '200',
+    );
+    await tester.tap(find.byKey(const Key('management-save')));
+    await tester.pump();
+    expect(repository.createCalls, 1);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('management-save')))
+          .onPressed,
+      isNull,
+    );
+    pending.complete(const ClubWriteResult(changedCount: 1));
+    await tester.pumpAndSettle();
+    expect(repository.createCalls, 1);
+  });
+
+  testWidgets('manual save keeps the form and shows a safe API error', (
+    WidgetTester tester,
+  ) async {
+    const error = ApiException(
+      kind: ApiErrorKind.server,
+      userMessage: '점수를 저장하지 못했습니다.',
+    );
+    final FakeClubRepository repository = FakeClubRepository()
+      ..managementError = error;
+    await _openClubs(tester, repository);
+    await tester.tap(find.byKey(const Key('club-team-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('club-management-link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('management-manual-link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('management-add-participant')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('회원').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('participant-0-score-0')),
+      '200',
+    );
+    await tester.tap(find.byKey(const Key('management-save')));
+    await tester.pumpAndSettle();
+    expect(find.text(error.userMessage), findsOneWidget);
+    expect(find.byKey(const Key('club-manual-score')), findsOneWidget);
+  });
+
+  testWidgets('activity edit updates variable participant scores', (
+    WidgetTester tester,
+  ) async {
+    final FakeClubRepository repository = FakeClubRepository();
+    await _openClubs(tester, repository);
+    await tester.tap(find.byKey(const Key('club-team-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('club-records-link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('활동 일지'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('club-activity-${testClubActivity.id}')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('activity-edit')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('club-activity-edit')), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('participant-0-score-0')),
+      '250',
+    );
+    await tester.tap(find.byKey(const Key('management-save')));
+    await tester.pumpAndSettle();
+    expect(repository.updateCalls, 1);
+  });
+
+  testWidgets('member management keeps owner and manager protections in UI', (
+    WidgetTester tester,
+  ) async {
+    final FakeClubRepository repository = FakeClubRepository();
+    await _openClubs(tester, repository);
+    await tester.tap(find.byKey(const Key('club-team-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('club-members-link')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('member-remove-member-1')), findsNothing);
+    expect(find.byKey(const Key('member-role-member-2')), findsOneWidget);
+    expect(find.byKey(const Key('member-remove-member-3')), findsOneWidget);
+  });
+
+  testWidgets('MANAGER can remove only MEMBER and cannot change roles', (
+    WidgetTester tester,
+  ) async {
+    final FakeClubRepository repository = FakeClubRepository()
+      ..detail = const ClubDetail(
+        id: 'team-1',
+        name: '테스트 동호회',
+        myRole: ClubRole.manager,
+        memberCount: 3,
+      );
+    await _openClubs(tester, repository);
+    await tester.tap(find.byKey(const Key('club-team-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('club-members-link')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('member-role-member-3')), findsNothing);
+    expect(find.byKey(const Key('member-remove-member-1')), findsNothing);
+    expect(find.byKey(const Key('member-remove-member-2')), findsNothing);
+    expect(find.byKey(const Key('member-remove-member-3')), findsOneWidget);
   });
 
   testWidgets('Club records shows statistics, filters and activity detail', (

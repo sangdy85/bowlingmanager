@@ -33,6 +33,7 @@ export async function POST(request: Request) {
             teamId: input.teamId,
             rows: input.rows,
             requireMembership: true,
+            requireActiveTeam: true,
             memberMatchMode: "none",
         });
         return mobileApiSuccess({

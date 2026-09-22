@@ -5,6 +5,7 @@ import 'package:bowlingmanager_mobile/features/capture/data/capture_api.dart';
 import 'package:bowlingmanager_mobile/features/capture/data/capture_image_picker.dart';
 import 'package:bowlingmanager_mobile/features/capture/data/capture_repository.dart';
 import 'package:bowlingmanager_mobile/features/capture/domain/capture_models.dart';
+import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -189,6 +190,10 @@ class CaptureController extends AsyncNotifier<CaptureState> {
       );
       ref.invalidate(dashboardProvider(userId));
       ref.invalidate(recordsControllerProvider(userId));
+      ref.invalidate(clubStatisticsProvider);
+      ref.invalidate(clubActivitiesControllerProvider);
+      ref.invalidate(clubActivityProvider);
+      ref.invalidate(clubActivityEditProvider);
       if (ref.mounted) {
         state = AsyncData<CaptureState>(
           current.copyWith(isSaving: false, clearError: true),

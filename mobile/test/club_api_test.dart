@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_api.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_management_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -182,7 +183,123 @@ void main() {
     expect(requests[1].queryParameters['page'], 1);
     expect(requests[2].path, contains('2026-09-19~REGULAR'));
   });
+
+  test(
+    'uses management write contracts without exposing credentials',
+    () async {
+      final List<RequestOptions> requests = <RequestOptions>[];
+      final Dio dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
+        ..httpClientAdapter = _Adapter((RequestOptions options) {
+          requests.add(options);
+          if (options.path == '/scores/bulk') {
+            return _json(201, <String, Object>{
+              'success': true,
+              'data': <String, int>{'createdCount': 2, 'playerCount': 1},
+            });
+          }
+          if (options.path.endsWith('/edit') && options.method == 'GET') {
+            return _json(200, <String, Object>{
+              'success': true,
+              'data': _editableJson,
+            });
+          }
+          if (options.path.endsWith('/edit')) {
+            return _json(200, <String, Object>{
+              'success': true,
+              'data': <String, Object>{
+                'activityId': '2026-09-20~ALL',
+                'updatedCount': 2,
+              },
+            });
+          }
+          if (options.path.contains('/members/')) {
+            return _json(200, <String, Object>{
+              'success': true,
+              'data': options.method == 'PATCH'
+                  ? <String, Object>{
+                      'memberId': 'membership-1',
+                      'role': 'MANAGER',
+                    }
+                  : <String, Object>{'removedMemberId': 'membership-1'},
+            });
+          }
+          return _json(200, <String, Object>{
+            'success': true,
+            'data': <String, int>{'deletedCount': 2},
+          });
+        });
+      final MobileClubApi api = MobileClubApi(dio);
+      const participant = ClubParticipantDraft(
+        memberId: 'membership-1',
+        name: '회원',
+        scores: <ClubScoreDraft>[
+          ClubScoreDraft(value: 0),
+          ClubScoreDraft(value: 300),
+        ],
+      );
+      final created = await api.createScores(
+        teamId: 'team-1',
+        date: '2026-09-20',
+        gameType: '정기전',
+        memo: null,
+        participants: const <ClubParticipantDraft>[participant],
+      );
+      final editable = await api.fetchEditableActivity(
+        teamId: 'team-1',
+        activityId: '2026-09-19~REGULAR',
+      );
+      final updated = await api.updateActivity(
+        teamId: 'team-1',
+        activity: editable.activity,
+      );
+      final deleted = await api.deleteActivity(
+        teamId: 'team-1',
+        activityId: editable.activity.id,
+        revision: editable.activity.revision,
+      );
+      await api.removeMember(teamId: 'team-1', memberId: 'membership-1');
+      final role = await api.changeMemberRole(
+        teamId: 'team-1',
+        memberId: 'membership-1',
+        role: ClubRole.manager,
+      );
+
+      expect(created.changedCount, 2);
+      expect(updated.activityId, '2026-09-20~ALL');
+      expect(deleted.changedCount, 2);
+      expect(role, ClubRole.manager);
+      expect((requests[0].data as Map)['players'], isNotEmpty);
+      expect((requests[2].data as Map)['revision'], 'revision-1');
+      expect((requests[3].data as Map)['revision'], 'revision-1');
+      expect(
+        requests.map((request) => request.path),
+        everyElement(isNot(contains('token'))),
+      );
+    },
+  );
 }
+
+const Map<String, Object> _editableJson = <String, Object>{
+  'role': 'OWNER',
+  'activity': <String, Object?>{
+    'id': '2026-09-19~REGULAR',
+    'revision': 'revision-1',
+    'date': '2026-09-19',
+    'gameType': '정기전',
+    'memo': null,
+    'scoreCount': 2,
+    'participants': <Object>[
+      <String, Object?>{
+        'memberId': 'membership-1',
+        'name': '회원',
+        'scores': <Object>[
+          <String, Object>{'id': 'score-1', 'score': 200},
+          <String, Object>{'id': 'score-2', 'score': 210},
+        ],
+      },
+    ],
+  },
+};
 
 const Map<String, Object> _statisticsJson = <String, Object>{
   'year': 2026,

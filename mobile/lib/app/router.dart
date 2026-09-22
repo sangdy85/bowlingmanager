@@ -5,6 +5,9 @@ import 'package:bowlingmanager_mobile/features/capture/presentation/capture_scre
 import 'package:bowlingmanager_mobile/features/capture/presentation/capture_review_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_detail_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_activity_detail_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_activity_edit_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_management_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_manual_score_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_members_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_records_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dart';
@@ -71,7 +74,9 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
           GoRoute(
             path: '/capture',
             builder: (BuildContext context, GoRouterState state) =>
-                const CaptureScreen(),
+                CaptureScreen(
+                  initialTeamId: state.uri.queryParameters['teamId'],
+                ),
           ),
           GoRoute(
             path: '/capture/review',
@@ -96,6 +101,22 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                         ),
                   ),
                   GoRoute(
+                    path: 'manage',
+                    builder: (BuildContext context, GoRouterState state) =>
+                        ClubManagementScreen(
+                          teamId: state.pathParameters['teamId']!,
+                        ),
+                    routes: <RouteBase>[
+                      GoRoute(
+                        path: 'scores/new',
+                        builder: (BuildContext context, GoRouterState state) =>
+                            ClubManualScoreScreen(
+                              teamId: state.pathParameters['teamId']!,
+                            ),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
                     path: 'records',
                     builder: (BuildContext context, GoRouterState state) =>
                         ClubRecordsScreen(
@@ -109,6 +130,18 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                               teamId: state.pathParameters['teamId']!,
                               activityId: state.pathParameters['activityId']!,
                             ),
+                        routes: <RouteBase>[
+                          GoRoute(
+                            path: 'edit',
+                            builder:
+                                (BuildContext context, GoRouterState state) =>
+                                    ClubActivityEditScreen(
+                                      teamId: state.pathParameters['teamId']!,
+                                      activityId:
+                                          state.pathParameters['activityId']!,
+                                    ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

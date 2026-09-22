@@ -3,13 +3,17 @@ import 'package:bowlingmanager_mobile/core/theme/app_text_styles.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_management_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dart';
+import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
+import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class ClubActivityDetailScreen extends ConsumerWidget {
+class ClubActivityDetailScreen extends ConsumerStatefulWidget {
   const ClubActivityDetailScreen({
     required this.teamId,
     required this.activityId,
@@ -20,16 +24,31 @@ class ClubActivityDetailScreen extends ConsumerWidget {
   final String activityId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ClubActivityDetailScreen> createState() =>
+      _ClubActivityDetailScreenState();
+}
+
+class _ClubActivityDetailScreenState
+    extends ConsumerState<ClubActivityDetailScreen> {
+  bool _deleting = false;
+
+  @override
+  Widget build(BuildContext context) {
     final AuthUser? user = ref.watch(authControllerProvider).user;
     if (user == null) return const Center(child: CircularProgressIndicator());
     final ClubActivityRequest request = (
       userId: user.id,
-      teamId: teamId,
-      activityId: activityId,
+      teamId: widget.teamId,
+      activityId: widget.activityId,
     );
     final provider = clubActivityProvider(request);
     final AsyncValue<ClubActivityDetail> value = ref.watch(provider);
+    final detail = ref.watch(
+      clubDetailProvider((userId: user.id, teamId: widget.teamId)),
+    );
+    final bool canManage =
+        detail.value?.myRole == ClubRole.owner ||
+        detail.value?.myRole == ClubRole.manager;
     return value.when(
       loading: () => const _Frame(child: CircularProgressIndicator()),
       error: (Object error, StackTrace stackTrace) => _Frame(
@@ -45,7 +64,15 @@ class ClubActivityDetailScreen extends ConsumerWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
           children: <Widget>[
-            const _Header(),
+            _Header(
+              canManage: canManage,
+              onEdit: () => context.push(
+                '/club/${Uri.encodeComponent(widget.teamId)}/records/${Uri.encodeComponent(widget.activityId)}/edit',
+              ),
+              onDelete: _deleting
+                  ? null
+                  : () => _deleteActivity(context, user.id, activity),
+            ),
             const SizedBox(height: 18),
             Card(
               child: Padding(
@@ -85,6 +112,73 @@ class ClubActivityDetailScreen extends ConsumerWidget {
       ),
     );
   }
+
+  Future<void> _deleteActivity(
+    BuildContext context,
+    String userId,
+    ClubActivityDetail activity,
+  ) async {
+    if (_deleting) return;
+    setState(() => _deleting = true);
+    try {
+      final ClubActivityEditEnvelope editable = await ref
+          .read(clubRepositoryProvider)
+          .fetchEditableActivity(
+            teamId: widget.teamId,
+            activityId: widget.activityId,
+          );
+      if (!context.mounted) return;
+      final bool confirmed =
+          await showDialog<bool>(
+            context: context,
+            builder: (BuildContext dialogContext) => AlertDialog(
+              title: const Text('활동 기록 삭제'),
+              content: Text(
+                '${_date(activity.date)} ${activity.gameType ?? '기록'} 기록을 삭제할까요?\n'
+                '${editable.activity.scoreCount}개의 점수가 삭제됩니다.',
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('취소'),
+                ),
+                FilledButton(
+                  key: const Key('activity-delete-confirm'),
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: const Text('삭제'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+      if (!confirmed) return;
+      await ref
+          .read(clubRepositoryProvider)
+          .deleteActivity(
+            teamId: widget.teamId,
+            activityId: widget.activityId,
+            revision: editable.activity.revision,
+          );
+      ref.invalidate(clubStatisticsProvider);
+      ref.invalidate(clubActivitiesControllerProvider);
+      ref.invalidate(clubActivityProvider);
+      ref.invalidate(clubActivityEditProvider);
+      ref.invalidate(dashboardProvider(userId));
+      ref.invalidate(recordsControllerProvider(userId));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('활동 기록을 삭제했습니다.')));
+        context.pop();
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(clubErrorMessage(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
+  }
 }
 
 class _Frame extends StatelessWidget {
@@ -106,7 +200,11 @@ class _Frame extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header();
+  const _Header({this.canManage = false, this.onEdit, this.onDelete});
+
+  final bool canManage;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -119,6 +217,21 @@ class _Header extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         const Text('경기 상세', style: AppTextStyles.title),
+        const Spacer(),
+        if (canManage) ...<Widget>[
+          IconButton(
+            key: const Key('activity-edit'),
+            onPressed: onEdit,
+            tooltip: '수정',
+            icon: const Icon(Icons.edit_outlined),
+          ),
+          IconButton(
+            key: const Key('activity-delete'),
+            onPressed: onDelete,
+            tooltip: '삭제',
+            icon: const Icon(Icons.delete_outline_rounded),
+          ),
+        ],
       ],
     );
   }

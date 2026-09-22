@@ -11,15 +11,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class CaptureScreen extends ConsumerWidget {
-  const CaptureScreen({super.key});
+class CaptureScreen extends ConsumerStatefulWidget {
+  const CaptureScreen({this.initialTeamId, super.key});
+
+  final String? initialTeamId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CaptureScreen> createState() => _CaptureScreenState();
+}
+
+class _CaptureScreenState extends ConsumerState<CaptureScreen> {
+  bool _appliedInitialTeam = false;
+
+  @override
+  Widget build(BuildContext context) {
     final AuthUser? user = ref.watch(authControllerProvider).user;
     if (user == null) return const Center(child: CircularProgressIndicator());
     final provider = captureControllerProvider(user.id);
     final AsyncValue<CaptureState> value = ref.watch(provider);
+    final CaptureState? current = value.value;
+    if (!_appliedInitialTeam &&
+        widget.initialTeamId != null &&
+        current != null &&
+        current.options.teams.any((team) => team.id == widget.initialTeamId)) {
+      _appliedInitialTeam = true;
+      if (current.selectedTeamId != widget.initialTeamId) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ref.read(provider.notifier).selectTeam(widget.initialTeamId!);
+          }
+        });
+      }
+    }
     return value.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (Object error, StackTrace stackTrace) => _LoadError(

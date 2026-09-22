@@ -98,6 +98,30 @@ class ClubDetailScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            if (club.myRole == ClubRole.owner ||
+                club.myRole == ClubRole.manager) ...<Widget>[
+              const SizedBox(height: 12),
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: ListTile(
+                  key: const Key('club-management-link'),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  leading: const Icon(
+                    Icons.admin_panel_settings_outlined,
+                    color: AppColors.primaryBright,
+                  ),
+                  title: const Text('관리'),
+                  subtitle: const Text('점수 기록, 기록 관리, 팀원 관리'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(
+                    '/club/${Uri.encodeComponent(teamId)}/manage',
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
