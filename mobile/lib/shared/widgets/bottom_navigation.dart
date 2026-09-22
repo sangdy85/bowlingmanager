@@ -32,7 +32,9 @@ class AppBottomNavigation extends StatelessWidget {
           height: 76,
           child: Row(
             children: _items.map((_NavigationItem item) {
-              final bool selected = currentPath == item.path;
+              final bool selected =
+                  currentPath == item.path ||
+                  currentPath.startsWith('${item.path}/');
               final bool emphasized = item.path == '/capture';
               return Expanded(
                 child: Semantics(

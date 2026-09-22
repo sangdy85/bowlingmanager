@@ -3,6 +3,8 @@ import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.d
 import 'package:bowlingmanager_mobile/features/auth/application/auth_state.dart';
 import 'package:bowlingmanager_mobile/features/capture/presentation/capture_screen.dart';
 import 'package:bowlingmanager_mobile/features/capture/presentation/capture_review_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_detail_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_members_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dart';
 import 'package:bowlingmanager_mobile/features/home/presentation/home_screen.dart';
 import 'package:bowlingmanager_mobile/features/profile/presentation/profile_screen.dart';
@@ -78,6 +80,22 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
             path: '/club',
             builder: (BuildContext context, GoRouterState state) =>
                 const ClubScreen(),
+            routes: <RouteBase>[
+              GoRoute(
+                path: ':teamId',
+                builder: (BuildContext context, GoRouterState state) =>
+                    ClubDetailScreen(teamId: state.pathParameters['teamId']!),
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: 'members',
+                    builder: (BuildContext context, GoRouterState state) =>
+                        ClubMembersScreen(
+                          teamId: state.pathParameters['teamId']!,
+                        ),
+                  ),
+                ],
+              ),
+            ],
           ),
           GoRoute(
             path: '/profile',
