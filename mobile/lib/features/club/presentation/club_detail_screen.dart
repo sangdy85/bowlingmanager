@@ -60,6 +60,27 @@ class ClubDetailScreen extends ConsumerWidget {
             Card(
               clipBehavior: Clip.antiAlias,
               child: ListTile(
+                key: const Key('club-records-link'),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                leading: const Icon(
+                  Icons.query_stats_rounded,
+                  color: AppColors.primaryBright,
+                ),
+                title: const Text('기록 및 활동 일지'),
+                subtitle: const Text('연도별 팀 통계와 경기 결과'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push(
+                  '/club/${Uri.encodeComponent(teamId)}/records',
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: ListTile(
                 key: const Key('club-members-link'),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20,

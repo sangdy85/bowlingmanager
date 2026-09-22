@@ -1,11 +1,28 @@
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
 import 'package:dio/dio.dart';
 
 abstract interface class ClubApi {
   Future<List<ClubSummary>> fetchClubs();
   Future<ClubDetail> fetchClubDetail(String teamId);
   Future<List<ClubMember>> fetchClubMembers(String teamId);
+  Future<ClubStatistics> fetchClubStatistics({
+    required String teamId,
+    required int year,
+    required ClubRecordFilter filter,
+  });
+  Future<ClubActivitiesPage> fetchClubActivities({
+    required String teamId,
+    required int year,
+    required ClubRecordFilter filter,
+    required int page,
+    required int limit,
+  });
+  Future<ClubActivityDetail> fetchClubActivity({
+    required String teamId,
+    required String activityId,
+  });
 }
 
 class MobileClubApi implements ClubApi {
@@ -77,6 +94,81 @@ class MobileClubApi implements ClubApi {
           return ClubMember.fromJson(Map<String, dynamic>.from(value));
         }),
       );
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    } on FormatException {
+      throw ApiException.malformedResponse();
+    } on TypeError {
+      throw ApiException.malformedResponse();
+    }
+  }
+
+  @override
+  Future<ClubStatistics> fetchClubStatistics({
+    required String teamId,
+    required int year,
+    required ClubRecordFilter filter,
+  }) async {
+    try {
+      final Response<dynamic> response = await _dio.get<dynamic>(
+        '/teams/${Uri.encodeComponent(teamId)}/statistics',
+        queryParameters: <String, Object>{
+          'year': year,
+          'type': filter.apiValue,
+        },
+      );
+      return ClubStatistics.fromJson(_readData(response.data));
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    } on FormatException {
+      throw ApiException.malformedResponse();
+    } on TypeError {
+      throw ApiException.malformedResponse();
+    }
+  }
+
+  @override
+  Future<ClubActivitiesPage> fetchClubActivities({
+    required String teamId,
+    required int year,
+    required ClubRecordFilter filter,
+    required int page,
+    required int limit,
+  }) async {
+    try {
+      final Response<dynamic> response = await _dio.get<dynamic>(
+        '/teams/${Uri.encodeComponent(teamId)}/activities',
+        queryParameters: <String, Object>{
+          'year': year,
+          'type': filter.apiValue,
+          'page': page,
+          'limit': limit,
+        },
+      );
+      return ClubActivitiesPage.fromJson(_readData(response.data));
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    } on FormatException {
+      throw ApiException.malformedResponse();
+    } on TypeError {
+      throw ApiException.malformedResponse();
+    }
+  }
+
+  @override
+  Future<ClubActivityDetail> fetchClubActivity({
+    required String teamId,
+    required String activityId,
+  }) async {
+    try {
+      final Response<dynamic> response = await _dio.get<dynamic>(
+        '/teams/${Uri.encodeComponent(teamId)}/activities/${Uri.encodeComponent(activityId)}',
+      );
+      final Object? activity = _readData(response.data)['activity'];
+      if (activity is! Map) {
+        throw const FormatException('Invalid club activity response.');
+      }
+      return ClubActivityDetail.fromJson(Map<String, dynamic>.from(activity));
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     } on FormatException {

@@ -1,5 +1,6 @@
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_repository.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/club_fakes.dart';
@@ -12,6 +13,31 @@ void main() {
     expect(await repository.fetchClubs(), <Object>[testClub]);
     expect(await repository.fetchClubDetail('team-1'), testClubDetail);
     expect(await repository.fetchClubMembers('team-1'), testClubMembers);
+    expect(
+      await repository.fetchClubStatistics(
+        teamId: 'team-1',
+        year: 2026,
+        filter: ClubRecordFilter.regular,
+      ),
+      testClubStatistics,
+    );
+    expect(
+      await repository.fetchClubActivities(
+        teamId: 'team-1',
+        year: 2026,
+        filter: ClubRecordFilter.regular,
+        page: 1,
+        limit: 20,
+      ),
+      isA<ClubActivitiesPage>(),
+    );
+    expect(
+      await repository.fetchClubActivity(
+        teamId: 'team-1',
+        activityId: testClubActivity.id,
+      ),
+      testClubActivityDetail,
+    );
   });
 
   test('repository propagates API errors', () async {

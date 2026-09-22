@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { TEAM_GAME_TYPES } from '@/lib/team-records';
 
 interface ScoreWithUser {
     id: string;
@@ -27,7 +28,7 @@ interface TeamYearlyStatsProps {
     members?: { id: string; name: string }[]; // members with aliases
 }
 
-export const GAME_TYPES = ["정기전", "벙개", "상주", "교류전", "기타"];
+export const GAME_TYPES = [...TEAM_GAME_TYPES];
 
 export default function TeamYearlyStats({ scores, currentYear, teamName, selectedTypes, onToggleType, ownerId, managerIds, aceUserId, recentRankings, members = [] }: TeamYearlyStatsProps) {
     // scores is already filtered by parent container

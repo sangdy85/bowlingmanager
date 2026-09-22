@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_api.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -105,7 +106,146 @@ void main() {
       ),
     );
   });
+
+  test('fetches team statistics, activities and activity detail', () async {
+    final List<RequestOptions> requests = <RequestOptions>[];
+    final Dio dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
+      ..httpClientAdapter = _Adapter((RequestOptions options) {
+        requests.add(options);
+        if (options.path.endsWith('/statistics')) {
+          return _json(200, <String, Object>{
+            'success': true,
+            'data': _statisticsJson,
+          });
+        }
+        if (options.path.endsWith('/activities')) {
+          return _json(200, <String, Object>{
+            'success': true,
+            'data': <String, Object>{
+              'year': 2026,
+              'filter': 'REGULAR',
+              'items': <Object>[_activityJson],
+              'pagination': <String, int>{
+                'page': 1,
+                'limit': 20,
+                'total': 1,
+                'totalPages': 1,
+              },
+            },
+          });
+        }
+        return _json(200, <String, Object>{
+          'success': true,
+          'data': <String, Object>{
+            'activity': <String, Object>{
+              ..._activityJson,
+              'participants': <Object>[
+                <String, Object>{
+                  'rank': 1,
+                  'id': 'membership-1',
+                  'name': '회원',
+                  'scores': <int>[200, 210],
+                  'total': 410,
+                  'average': 205,
+                },
+              ],
+            },
+          },
+        });
+      });
+    final MobileClubApi api = MobileClubApi(dio);
+
+    final ClubStatistics statistics = await api.fetchClubStatistics(
+      teamId: 'team-1',
+      year: 2026,
+      filter: ClubRecordFilter.regular,
+    );
+    final ClubActivitiesPage activities = await api.fetchClubActivities(
+      teamId: 'team-1',
+      year: 2026,
+      filter: ClubRecordFilter.regular,
+      page: 1,
+      limit: 20,
+    );
+    final ClubActivityDetail detail = await api.fetchClubActivity(
+      teamId: 'team-1',
+      activityId: '2026-09-19~REGULAR',
+    );
+
+    expect(statistics.members.single.average, 205);
+    expect(activities.items.single.participantCount, 1);
+    expect(detail.participants.single.scores, <int>[200, 210]);
+    expect(requests[0].queryParameters, <String, Object>{
+      'year': 2026,
+      'type': 'REGULAR',
+    });
+    expect(requests[1].queryParameters['page'], 1);
+    expect(requests[2].path, contains('2026-09-19~REGULAR'));
+  });
 }
+
+const Map<String, Object> _statisticsJson = <String, Object>{
+  'year': 2026,
+  'filter': 'REGULAR',
+  'availableYears': <int>[2026],
+  'summary': <String, Object>{
+    'activityCount': 1,
+    'memberCount': 1,
+    'attendanceRate': 100,
+    'gameCount': 2,
+    'monthlyAverages': <int?>[
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      205,
+      null,
+      null,
+      null,
+    ],
+    'total': 410,
+    'average': 205,
+  },
+  'members': <Object>[
+    <String, Object>{
+      'id': 'membership-1',
+      'name': '회원',
+      'attendanceRate': 100,
+      'attended': 1,
+      'activityCount': 1,
+      'gameCount': 2,
+      'monthlyAverages': <int?>[
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        205,
+        null,
+        null,
+        null,
+      ],
+      'total': 410,
+      'average': 205,
+    },
+  ],
+};
+
+const Map<String, Object> _activityJson = <String, Object>{
+  'id': '2026-09-19~REGULAR',
+  'date': '2026-09-19',
+  'gameType': '정기전',
+  'participantCount': 1,
+  'gameCount': 2,
+  'dailyAverage': 205,
+};
 
 ResponseBody _json(int statusCode, Object body) => ResponseBody.fromString(
   jsonEncode(body),
