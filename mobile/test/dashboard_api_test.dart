@@ -26,6 +26,7 @@ void main() {
     expect(capturedRequest?.uri.path, '/api/mobile/v1/dashboard');
     expect(dashboard.average, 187.4);
     expect(dashboard.recentScores.single.score, 215);
+    expect(dashboard.recentSessions.single.average, 215);
     dio.close(force: true);
   });
 
@@ -99,6 +100,21 @@ const Map<String, Object> _dashboardEnvelope = <String, Object>{
         'gameType': null,
         'memo': null,
         'team': null,
+      },
+    ],
+    'recentSessions': <Object>[
+      <String, Object?>{
+        'id': 'session-1',
+        'source': 'PERSONAL',
+        'gameDate': '2026-09-15T00:00:00.000Z',
+        'gameType': null,
+        'team': null,
+        'scores': <Object>[
+          <String, Object?>{'id': 'score-1', 'score': 215, 'memo': null},
+        ],
+        'total': 215,
+        'average': 215,
+        'gameCount': 1,
       },
     ],
   },

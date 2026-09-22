@@ -1,3 +1,4 @@
+import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart';
 
 const Object _unchanged = Object();
@@ -11,7 +12,7 @@ class RecordsState {
     this.refreshErrorMessage,
   });
 
-  final List<ScoreRecord> items;
+  final List<GameSession> items;
   final ScorePagination pagination;
   final bool isLoadingMore;
   final String? paginationErrorMessage;
@@ -20,7 +21,7 @@ class RecordsState {
   bool get hasNextPage => pagination.hasNextPage;
 
   RecordsState copyWith({
-    List<ScoreRecord>? items,
+    List<GameSession>? items,
     ScorePagination? pagination,
     bool? isLoadingMore,
     Object? paginationErrorMessage = _unchanged,

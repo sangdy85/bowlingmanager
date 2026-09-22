@@ -1,8 +1,8 @@
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
+import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_state.dart';
 import 'package:bowlingmanager_mobile/features/records/data/scores_repository.dart';
-import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -40,12 +40,12 @@ void main() {
         ..pages[1] = scoresPage(
           page: 1,
           total: 21,
-          items: <ScoreRecord>[scoreRecord('score-1', 201)],
+          items: <GameSession>[scoreRecord('score-1', 201)],
         )
         ..pages[2] = scoresPage(
           page: 2,
           total: 21,
-          items: <ScoreRecord>[
+          items: <GameSession>[
             scoreRecord('score-1', 201),
             scoreRecord('score-2', 202),
           ],
@@ -58,7 +58,7 @@ void main() {
       await harness.controller.loadNextPage();
 
       final RecordsState state = harness.state;
-      expect(state.items.map((ScoreRecord item) => item.id), <String>[
+      expect(state.items.map((GameSession item) => item.id), <String>[
         'score-1',
         'score-2',
       ]);
@@ -76,7 +76,7 @@ void main() {
       ..pages[1] = scoresPage(
         page: 1,
         total: 21,
-        items: <ScoreRecord>[scoreRecord('score-1', 201)],
+        items: <GameSession>[scoreRecord('score-1', 201)],
       )
       ..errors[2] = error;
     final _RecordsHarness harness = _RecordsHarness(repository);
@@ -93,7 +93,7 @@ void main() {
     repository.pages[2] = scoresPage(
       page: 2,
       total: 21,
-      items: <ScoreRecord>[scoreRecord('score-2', 202)],
+      items: <GameSession>[scoreRecord('score-2', 202)],
     );
     await harness.controller.loadNextPage();
 
@@ -110,7 +110,7 @@ void main() {
     repository.pages[1] = scoresPage(
       page: 1,
       total: 1,
-      items: <ScoreRecord>[scoreRecord('replacement', 222)],
+      items: <GameSession>[scoreRecord('replacement', 222)],
     );
 
     await harness.controller.refreshRecords();
@@ -143,7 +143,7 @@ void main() {
       ..pages[1] = scoresPage(
         page: 1,
         total: 21,
-        items: <ScoreRecord>[scoreRecord('score-1', 201)],
+        items: <GameSession>[scoreRecord('score-1', 201)],
       )
       ..pendingPages[2] = pending.future;
     final _RecordsHarness harness = _RecordsHarness(repository);
@@ -159,7 +159,7 @@ void main() {
       scoresPage(
         page: 2,
         total: 21,
-        items: <ScoreRecord>[scoreRecord('score-2', 202)],
+        items: <GameSession>[scoreRecord('score-2', 202)],
       ),
     );
     await Future.wait(<Future<void>>[first, second]);

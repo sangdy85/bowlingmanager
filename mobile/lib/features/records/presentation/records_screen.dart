@@ -1,10 +1,10 @@
 import 'package:bowlingmanager_mobile/core/theme/app_colors.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_text_styles.dart';
+import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_state.dart';
-import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -69,8 +69,8 @@ class _RecordsContent extends StatelessWidget {
           if (state.items.isEmpty)
             const _EmptyRecords()
           else
-            for (final ScoreRecord record in state.items) ...<Widget>[
-              _RecordCard(record: record),
+            for (final GameSession session in state.items) ...<Widget>[
+              _RecordCard(session: session),
               const SizedBox(height: 12),
             ],
           if (state.isLoadingMore)
@@ -219,16 +219,23 @@ class _InlineError extends StatelessWidget {
 }
 
 class _RecordCard extends StatelessWidget {
-  const _RecordCard({required this.record});
+  const _RecordCard({required this.session});
 
-  final ScoreRecord record;
+  final GameSession session;
 
   @override
   Widget build(BuildContext context) {
     final List<String> details = <String>[
-      if (record.gameType?.trim().isNotEmpty == true) record.gameType!.trim(),
-      if (record.team case final ScoreTeam team) team.name,
+      session.gameType?.trim().isNotEmpty == true
+          ? session.gameType!.trim()
+          : '개인',
+      if (session.team case final GameSessionTeam team) team.name,
     ];
+    final List<String> memos = session.scores
+        .map((GameSessionScore score) => score.memo?.trim() ?? '')
+        .where((String memo) => memo.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
 
     return Card(
       child: Padding(
@@ -236,60 +243,82 @@ class _RecordCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                Text(
-                  _formatGameDate(record.gameDate),
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (details.isNotEmpty)
-                  Flexible(
-                    child: Text(
-                      details.join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-              ],
+            Text(
+              details.join(' · '),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              _formatGameDate(session.gameDate),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 18),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: session.scores
+                  .map(
+                    (GameSessionScore item) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 13,
+                        vertical: 9,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceElevated,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${item.score}',
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+            const SizedBox(height: 18),
+            Wrap(
+              spacing: 18,
+              runSpacing: 8,
               children: <Widget>[
+                Text('${session.gameCount}게임'),
+                Text('총점 ${session.total}'),
                 Text(
-                  '${record.score}',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 36,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(width: 7),
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 5),
-                  child: Text(
-                    '점',
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
+                  'AVG ${session.average.toStringAsFixed(1)}',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ],
             ),
-            if (record.memo?.trim().isNotEmpty == true) ...<Widget>[
+            if (memos.isNotEmpty) ...<Widget>[
               const SizedBox(height: 14),
               const Divider(height: 1),
               const SizedBox(height: 12),
-              Text(
-                record.memo!.trim(),
-                style: const TextStyle(color: AppColors.textSecondary),
-              ),
+              if (memos.length == 1)
+                Text(
+                  memos.single,
+                  style: const TextStyle(color: AppColors.textSecondary),
+                )
+              else
+                for (final GameSessionScore item in session.scores)
+                  if (item.memo?.trim().isNotEmpty == true)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '${item.score} · ${item.memo!.trim()}',
+                        style: const TextStyle(color: AppColors.textSecondary),
+                      ),
+                    ),
             ],
           ],
         ),

@@ -23,6 +23,10 @@ void main() {
               'team': null,
             },
         ],
+        'recentSessions': <Object>[
+          for (final source in ['PERSONAL', 'LEAGUE', 'TOURNAMENT'])
+            _session(source: source),
+        ],
       });
       expect(dashboard.year, 2026);
       expect(dashboard.highScore, 320);
@@ -60,6 +64,7 @@ void main() {
           'gameCount': 0,
           'recentAverage': 0,
           'recentScores': <Object>[],
+          'recentSessions': <Object>[],
         }),
         throwsA(isA<FormatException>()),
       );
@@ -84,6 +89,7 @@ void main() {
           'team': <String, dynamic>{'id': 'team-1', 'name': '테스트 팀'},
         },
       ],
+      'recentSessions': <Object>[_session()],
     });
 
     expect(dashboard.average, 187.45);
@@ -103,6 +109,7 @@ void main() {
       'gameCount': 0,
       'recentAverage': 0,
       'recentScores': <Object>[],
+      'recentSessions': <Object>[],
     });
 
     expect(dashboard.average, 0);
@@ -120,6 +127,7 @@ void main() {
       'gameCount': 12,
       'recentAverage': 0,
       'recentScores': <Object>[],
+      'recentSessions': <Object>[],
     });
 
     expect(dashboard.recentScores, isEmpty);
@@ -134,6 +142,7 @@ void main() {
         'gameCount': 36,
         'recentAverage': 201.7,
         'recentScores': <Object>[],
+        'recentSessions': <Object>[],
       }),
       throwsA(isA<FormatException>()),
     );
@@ -156,8 +165,24 @@ void main() {
             'team': null,
           },
         ],
+        'recentSessions': <Object>[],
       }),
       throwsA(isA<FormatException>()),
     );
   });
 }
+
+Map<String, Object?> _session({String source = 'PERSONAL'}) =>
+    <String, Object?>{
+      'id': '$source:session',
+      'source': source,
+      'gameDate': '2026-06-01T00:00:00.000Z',
+      'gameType': null,
+      'team': null,
+      'scores': <Object>[
+        <String, Object?>{'id': '$source:score', 'score': 310, 'memo': null},
+      ],
+      'total': 310,
+      'average': 310,
+      'gameCount': 1,
+    };

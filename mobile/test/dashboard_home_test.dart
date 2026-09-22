@@ -1,4 +1,5 @@
 import 'package:bowlingmanager_mobile/app/app.dart';
+import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
@@ -35,6 +36,26 @@ void main() {
               team: null,
             ),
         ],
+        recentSessions: <GameSession>[
+          for (final GameSessionSource source in GameSessionSource.values)
+            GameSession(
+              id: source.apiValue,
+              source: source,
+              gameDate: DateTime.utc(2026, 6, 1),
+              gameType: null,
+              team: null,
+              scores: <GameSessionScore>[
+                GameSessionScore(
+                  id: '${source.apiValue}-1',
+                  score: 310,
+                  memo: null,
+                ),
+              ],
+              total: 310,
+              average: 310,
+              gameCount: 1,
+            ),
+        ],
       );
     await _pumpAuthenticatedApp(tester, repository);
     await tester.pumpAndSettle();
@@ -47,6 +68,8 @@ void main() {
   testWidgets('Home renders dashboard data from the repository', (
     WidgetTester tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(600, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     final FakeDashboardRepository dashboardRepository =
         FakeDashboardRepository();
 
@@ -58,7 +81,11 @@ void main() {
     expect(find.text('245'), findsOneWidget);
     expect(find.text('36'), findsOneWidget);
     expect(find.text('201.7'), findsOneWidget);
-    expect(find.text('215'), findsWidgets);
+    expect(find.text('202.0'), findsWidgets);
+    expect(find.text('최근 경기 AVG'), findsOneWidget);
+    expect(find.text('2게임'), findsOneWidget);
+    expect(find.text('총점 404'), findsOneWidget);
+    expect(find.text('AVG 202.0'), findsOneWidget);
   });
 
   testWidgets('Home shows loading while dashboard request is pending', (

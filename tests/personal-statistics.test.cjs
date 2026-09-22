@@ -48,11 +48,12 @@ const date = new Date('2026-06-01T00:00:00.000Z');
 const personal = (changes = {}) => ({ id: 'p', userId: user.id, score: 200,
     gameDate: date, createdAt: date, gameType: null, memo: null, Team: null, ...changes });
 const league = (changes = {}) => ({ id: 'l', userId: user.id, playerName: null,
-    teamId: 'team-1', Team: { name: 'Fixture Team' }, handicap: 10,
+    matchupId: 'matchup-1', teamId: 'team-1', Team: { name: 'Fixture Team' }, handicap: 10,
     score1: 190, score2: 0, score3: -1, createdAt: date,
     LeagueMatchup: { round: { date, tournament: { name: 'Fixture League', type: 'LEAGUE' } } },
     ...changes });
-const tournament = (changes = {}) => ({ id: 't', score: 195, createdAt: date,
+const tournament = (changes = {}) => ({ id: 't', registrationId: 'registration-1', roundId: 'round-1',
+    gameNumber: 1, score: 195, createdAt: date,
     round: { date }, registration: { userId: user.id, guestName: null,
         teamId: null, guestTeamName: null, handicap: 5, team: null,
         tournament: { name: 'Fixture Event', type: 'EVENT' } }, ...changes });
@@ -135,9 +136,55 @@ test('recent ten use event date then stable ID, without mutating integrated reco
     assert.deepEqual(forward, reverse);
 });
 
+test('adding recentSessions does not change the four legacy dashboard metrics', async () => {
+    const { summary } = await calculate({
+        score: [personal({ id: 'p1', score: 202 }), personal({ id: 'p2', score: 213 })],
+        leagueMatchupIndividualScore: [league({ handicap: 0, score1: 208, score2: 192 })],
+    });
+    assert.deepEqual({
+        average: summary.average,
+        highScore: summary.highScore,
+        gameCount: summary.gameCount,
+        recentAverage: summary.recentAverage,
+    }, {
+        average: 203.8,
+        highScore: 213,
+        gameCount: 4,
+        recentAverage: 203.8,
+    });
+});
+
 test('no records returns zero metrics and an empty list', async () => {
     assert.deepEqual((await calculate({})).summary, { year: 2026, average: 0, highScore: 0,
-        gameCount: 0, recentScores: [], recentAverage: 0 });
+        gameCount: 0, recentScores: [], recentSessions: [], recentAverage: 0 });
+});
+
+test('dashboard sessions keep sources separate and use stable official session identities', async () => {
+    const { summary } = await calculate({
+        score: [personal({ id: 'p1', score: 200 }), personal({ id: 'p2', score: 210 })],
+        leagueMatchupIndividualScore: [league({ score1: 180, score2: 190 })],
+        tournamentScore: [
+            tournament({ id: 't1', gameNumber: 1, score: 170 }),
+            tournament({ id: 't2', gameNumber: 2, score: 180 }),
+        ],
+    });
+    assert.equal(summary.recentSessions.length, 3);
+    assert.deepEqual(summary.recentSessions.map(session => session.source).sort(),
+        ['LEAGUE', 'PERSONAL', 'TOURNAMENT']);
+    assert.deepEqual(summary.recentSessions.find(session => session.source === 'LEAGUE').scores.map(s => s.score),
+        [190, 200]);
+    assert.deepEqual(summary.recentSessions.find(session => session.source === 'TOURNAMENT').scores.map(s => s.score),
+        [175, 185]);
+});
+
+test('dashboard returns at most seven complete recent sessions', async () => {
+    const { summary } = await calculate({ score: Array.from({ length: 9 }, (_, index) => personal({
+        id: `session-${index}`, score: 180 + index,
+        gameDate: new Date(Date.UTC(2026, 0, index + 1)),
+    })) });
+    assert.equal(summary.recentSessions.length, 7);
+    assert.equal(summary.recentSessions[0].scores[0].score, 188);
+    assert.equal(summary.recentSessions[6].scores[0].score, 182);
 });
 
 test('all three sources use UTC inclusive year bounds, not createdAt or KST year', async () => {

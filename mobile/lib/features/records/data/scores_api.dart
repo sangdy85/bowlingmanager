@@ -18,7 +18,7 @@ class MobileScoresApi implements ScoresApi {
   }) async {
     try {
       final Response<dynamic> response = await _dio.get<dynamic>(
-        '/scores',
+        '/scores/groups',
         queryParameters: <String, int>{'page': page, 'limit': limit},
       );
       final Object? body = response.data;

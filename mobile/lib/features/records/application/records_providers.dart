@@ -1,4 +1,5 @@
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
+import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_state.dart';
 import 'package:bowlingmanager_mobile/features/records/data/scores_api.dart';
@@ -100,14 +101,14 @@ class RecordsController extends AsyncNotifier<RecordsState> {
       }
 
       final Set<String> existingIds = current.items
-          .map((ScoreRecord item) => item.id)
+          .map((GameSession item) => item.id)
           .toSet();
-      final List<ScoreRecord> uniqueItems = nextPage.items
-          .where((ScoreRecord item) => existingIds.add(item.id))
+      final List<GameSession> uniqueItems = nextPage.items
+          .where((GameSession item) => existingIds.add(item.id))
           .toList(growable: false);
       state = AsyncData<RecordsState>(
         RecordsState(
-          items: List<ScoreRecord>.unmodifiable(<ScoreRecord>[
+          items: List<GameSession>.unmodifiable(<GameSession>[
             ...current.items,
             ...uniqueItems,
           ]),

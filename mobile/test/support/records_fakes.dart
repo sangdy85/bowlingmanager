@@ -1,38 +1,44 @@
 import 'dart:async';
 
+import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/features/records/data/scores_api.dart';
 import 'package:bowlingmanager_mobile/features/records/data/scores_repository.dart';
 import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart';
 
-final ScoreRecord testScoreRecord = ScoreRecord(
+final GameSession testScoreRecord = GameSession(
   id: 'score-1',
-  score: 215,
+  source: GameSessionSource.personal,
   gameDate: DateTime.utc(2026, 9, 15),
   gameType: '정기전',
-  memo: 'synthetic memo',
-  team: const ScoreTeam(id: 'team-1', name: '테스트 팀'),
+  team: const GameSessionTeam(id: 'team-1', name: '테스트 팀'),
+  scores: const <GameSessionScore>[
+    GameSessionScore(id: 'score-row-1', score: 215, memo: 'synthetic memo'),
+  ],
+  total: 215,
+  average: 215,
+  gameCount: 1,
 );
 
 final ScoresPage testScoresPage = scoresPage(
   page: 1,
   total: 1,
-  items: <ScoreRecord>[testScoreRecord],
+  items: <GameSession>[testScoreRecord],
 );
 
 final ScoresPage emptyScoresPage = scoresPage(
   page: 1,
   total: 0,
-  items: const <ScoreRecord>[],
+  items: const <GameSession>[],
 );
 
 ScoresPage scoresPage({
   required int page,
   required int total,
-  required List<ScoreRecord> items,
+  required List<GameSession> items,
   int limit = 20,
 }) {
   return ScoresPage(
-    items: List<ScoreRecord>.unmodifiable(items),
+    items: List<GameSession>.unmodifiable(items),
     pagination: ScorePagination(
       page: page,
       limit: limit,
@@ -42,14 +48,19 @@ ScoresPage scoresPage({
   );
 }
 
-ScoreRecord scoreRecord(String id, int score, {int day = 15}) {
-  return ScoreRecord(
+GameSession scoreRecord(String id, int score, {int day = 15}) {
+  return GameSession(
     id: id,
-    score: score,
+    source: GameSessionSource.personal,
     gameDate: DateTime.utc(2026, 9, day),
     gameType: null,
-    memo: null,
     team: null,
+    scores: <GameSessionScore>[
+      GameSessionScore(id: '$id-row', score: score, memo: null),
+    ],
+    total: score,
+    average: score.toDouble(),
+    gameCount: 1,
   );
 }
 

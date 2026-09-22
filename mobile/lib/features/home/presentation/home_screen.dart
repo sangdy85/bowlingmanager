@@ -1,4 +1,5 @@
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
+import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_colors.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_text_styles.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
@@ -43,7 +44,7 @@ class _DashboardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Iterable<DashboardScore> recentScores = dashboard.recentScores.take(
+    final Iterable<GameSession> recentSessions = dashboard.recentSessions.take(
       3,
     );
 
@@ -82,9 +83,9 @@ class _DashboardContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 28),
-        const Text('최근 점수', style: AppTextStyles.title),
+        const Text('최근 경기 AVG', style: AppTextStyles.title),
         const SizedBox(height: 12),
-        _TrendCard(scores: dashboard.recentScores),
+        _TrendCard(sessions: dashboard.recentSessions),
         const SizedBox(height: 28),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -97,11 +98,11 @@ class _DashboardContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        if (dashboard.recentScores.isEmpty)
+        if (dashboard.recentSessions.isEmpty)
           const _EmptyRecentCard()
         else
-          for (final DashboardScore score in recentScores) ...<Widget>[
-            _RecentGameCard(score: score),
+          for (final GameSession session in recentSessions) ...<Widget>[
+            _RecentGameCard(session: session),
             const SizedBox(height: 10),
           ],
       ],
@@ -317,13 +318,13 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _TrendCard extends StatelessWidget {
-  const _TrendCard({required this.scores});
+  const _TrendCard({required this.sessions});
 
-  final List<DashboardScore> scores;
+  final List<GameSession> sessions;
 
   @override
   Widget build(BuildContext context) {
-    if (scores.isEmpty) {
+    if (sessions.isEmpty) {
       return const Card(
         child: SizedBox(
           height: 120,
@@ -337,15 +338,15 @@ class _TrendCard extends StatelessWidget {
       );
     }
 
-    final List<DashboardScore> visibleScores = scores
+    final List<GameSession> visibleSessions = sessions
         .take(7)
         .toList(growable: false)
         .reversed
         .toList(growable: false);
-    final double chartMaximum = visibleScores.fold<double>(
+    final double chartMaximum = visibleSessions.fold<double>(
       300,
-      (maximum, record) =>
-          record.score > maximum ? record.score.toDouble() : maximum,
+      (maximum, session) =>
+          session.average > maximum ? session.average : maximum,
     );
     return Card(
       child: Padding(
@@ -354,11 +355,11 @@ class _TrendCard extends StatelessWidget {
           height: 120,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: visibleScores.asMap().entries.map((
-              MapEntry<int, DashboardScore> entry,
+            children: visibleSessions.asMap().entries.map((
+              MapEntry<int, GameSession> entry,
             ) {
-              final bool latest = entry.key == visibleScores.length - 1;
-              final double heightFactor = (entry.value.score / chartMaximum)
+              final bool latest = entry.key == visibleSessions.length - 1;
+              final double heightFactor = (entry.value.average / chartMaximum)
                   .clamp(0.04, 1.0)
                   .toDouble();
               return Expanded(
@@ -385,7 +386,7 @@ class _TrendCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${entry.value.score}',
+                        entry.value.average.toStringAsFixed(1),
                         style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 10,
@@ -404,16 +405,18 @@ class _TrendCard extends StatelessWidget {
 }
 
 class _RecentGameCard extends StatelessWidget {
-  const _RecentGameCard({required this.score});
+  const _RecentGameCard({required this.session});
 
-  final DashboardScore score;
+  final GameSession session;
 
   @override
   Widget build(BuildContext context) {
     final List<String> details = <String>[
-      score.source.label,
-      if (score.gameType?.trim().isNotEmpty == true) score.gameType!.trim(),
-      if (score.team?.name.trim().isNotEmpty == true) score.team!.name.trim(),
+      session.gameType?.trim().isNotEmpty == true
+          ? session.gameType!.trim()
+          : session.source.label,
+      if (session.team?.name.trim().isNotEmpty == true)
+        session.team!.name.trim(),
     ];
 
     return Card(
@@ -423,42 +426,50 @@ class _RecentGameCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              _formatDate(score.gameDate),
+              details.join(' · '),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              _formatDate(session.gameDate),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
               ),
             ),
             const SizedBox(height: 14),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: session.scores
+                  .map(
+                    (GameSessionScore item) => Text(
+                      '${item.score}',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 18,
+              runSpacing: 8,
               children: <Widget>[
+                Text('${session.gameCount}게임'),
+                Text('총점 ${session.total}'),
                 Text(
-                  '${score.score}',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    details.isEmpty ? '개인 게임' : details.join(' · '),
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(color: AppColors.textSecondary),
-                  ),
+                  'AVG ${session.average.toStringAsFixed(1)}',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ],
             ),
-            if (score.memo?.trim().isNotEmpty == true) ...<Widget>[
-              const SizedBox(height: 12),
-              Text(
-                score.memo!.trim(),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: AppColors.textSecondary),
-              ),
-            ],
           ],
         ),
       ),
@@ -496,7 +507,6 @@ String _formatAverage(double value) {
 }
 
 String _formatDate(DateTime value) {
-  final DateTime local = value.toLocal();
   String twoDigits(int number) => number.toString().padLeft(2, '0');
-  return '${local.year}.${twoDigits(local.month)}.${twoDigits(local.day)}';
+  return '${value.year}.${twoDigits(value.month)}.${twoDigits(value.day)}';
 }

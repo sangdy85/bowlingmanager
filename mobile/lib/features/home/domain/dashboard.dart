@@ -1,3 +1,5 @@
+import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
+
 class Dashboard {
   const Dashboard({
     required this.year,
@@ -5,6 +7,7 @@ class Dashboard {
     required this.highScore,
     required this.gameCount,
     required this.recentScores,
+    required this.recentSessions,
     required this.recentAverage,
   });
 
@@ -13,6 +16,7 @@ class Dashboard {
   final int highScore;
   final int gameCount;
   final List<DashboardScore> recentScores;
+  final List<GameSession> recentSessions;
   final double recentAverage;
 
   factory Dashboard.fromJson(Map<String, dynamic> json) {
@@ -21,6 +25,7 @@ class Dashboard {
     final Object? highScore = json['highScore'];
     final Object? gameCount = json['gameCount'];
     final Object? recentScores = json['recentScores'];
+    final Object? recentSessions = json['recentSessions'];
     final Object? recentAverage = json['recentAverage'];
 
     if (year is! int ||
@@ -32,6 +37,8 @@ class Dashboard {
         gameCount < 0 ||
         recentScores is! List ||
         recentScores.length > 10 ||
+        recentSessions is! List ||
+        recentSessions.length > 7 ||
         !_isValidAverage(recentAverage)) {
       throw const FormatException('Invalid dashboard response.');
     }
@@ -44,6 +51,14 @@ class Dashboard {
           return DashboardScore.fromJson(Map<String, dynamic>.from(item));
         })
         .toList(growable: false);
+    final List<GameSession> sessions = recentSessions
+        .map((Object? item) {
+          if (item is! Map) {
+            throw const FormatException('Invalid dashboard session response.');
+          }
+          return GameSession.fromJson(Map<String, dynamic>.from(item));
+        })
+        .toList(growable: false);
 
     return Dashboard(
       year: year,
@@ -51,6 +66,7 @@ class Dashboard {
       highScore: highScore,
       gameCount: gameCount,
       recentScores: List<DashboardScore>.unmodifiable(scores),
+      recentSessions: List<GameSession>.unmodifiable(sessions),
       recentAverage: (recentAverage as num).toDouble(),
     );
   }

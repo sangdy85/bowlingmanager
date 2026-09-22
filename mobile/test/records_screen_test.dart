@@ -1,9 +1,9 @@
 import 'package:bowlingmanager_mobile/app/app.dart';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
+import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
-import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,6 +42,42 @@ void main() {
     expect(find.text('아직 기록이 없습니다.'), findsOneWidget);
   });
 
+  testWidgets('Records groups variable games with total, average and memos', (
+    WidgetTester tester,
+  ) async {
+    final GameSession session = GameSession(
+      id: 'group-1',
+      source: GameSessionSource.personal,
+      gameDate: DateTime.utc(2026, 9, 22),
+      gameType: '정기전',
+      team: const GameSessionTeam(id: 'team-1', name: '배볼러'),
+      scores: const <GameSessionScore>[
+        GameSessionScore(id: 's1', score: 202, memo: '첫 메모'),
+        GameSessionScore(id: 's2', score: 213, memo: '둘째 메모'),
+        GameSessionScore(id: 's3', score: 208, memo: null),
+        GameSessionScore(id: 's4', score: 192, memo: null),
+      ],
+      total: 815,
+      average: 203.8,
+      gameCount: 4,
+    );
+    final FakeScoresRepository repository = FakeScoresRepository()
+      ..pages[1] = scoresPage(page: 1, total: 1, items: <GameSession>[session]);
+
+    await _openRecords(tester, repository);
+
+    expect(find.text('정기전 · 배볼러'), findsOneWidget);
+    expect(find.text('2026.09.22'), findsOneWidget);
+    for (final String score in <String>['202', '213', '208', '192']) {
+      expect(find.text(score), findsOneWidget);
+    }
+    expect(find.text('4게임'), findsOneWidget);
+    expect(find.text('총점 815'), findsOneWidget);
+    expect(find.text('AVG 203.8'), findsOneWidget);
+    expect(find.text('202 · 첫 메모'), findsOneWidget);
+    expect(find.text('213 · 둘째 메모'), findsOneWidget);
+  });
+
   testWidgets('Records shows an initial error and retries', (
     WidgetTester tester,
   ) async {
@@ -71,7 +107,7 @@ void main() {
       ..pages[1] = scoresPage(
         page: 1,
         total: 21,
-        items: <ScoreRecord>[scoreRecord('score-1', 201)],
+        items: <GameSession>[scoreRecord('score-1', 201)],
       )
       ..pendingPages[2] = pending.future;
     await _openRecords(tester, repository);
@@ -86,7 +122,7 @@ void main() {
       scoresPage(
         page: 2,
         total: 21,
-        items: <ScoreRecord>[scoreRecord('score-2', 202)],
+        items: <GameSession>[scoreRecord('score-2', 202)],
       ),
     );
     await tester.pumpAndSettle();
@@ -107,7 +143,7 @@ void main() {
       ..pages[1] = scoresPage(
         page: 1,
         total: 21,
-        items: <ScoreRecord>[scoreRecord('score-1', 201)],
+        items: <GameSession>[scoreRecord('score-1', 201)],
       )
       ..errors[2] = error;
     await _openRecords(tester, repository);

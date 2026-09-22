@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/features/home/data/dashboard_api.dart';
 import 'package:bowlingmanager_mobile/features/home/data/dashboard_repository.dart';
 import 'package:bowlingmanager_mobile/features/home/domain/dashboard.dart';
@@ -30,6 +31,22 @@ final Dashboard testDashboard = Dashboard(
       team: null,
     ),
   ],
+  recentSessions: <GameSession>[
+    GameSession(
+      id: 'session-1',
+      source: GameSessionSource.personal,
+      gameDate: DateTime.utc(2026, 9, 15),
+      gameType: '연습',
+      team: const GameSessionTeam(id: 'team-1', name: '테스트 팀'),
+      scores: const <GameSessionScore>[
+        GameSessionScore(id: 'score-1', score: 215, memo: null),
+        GameSessionScore(id: 'score-2', score: 189, memo: null),
+      ],
+      total: 404,
+      average: 202,
+      gameCount: 2,
+    ),
+  ],
 );
 
 const Dashboard emptyDashboard = Dashboard(
@@ -39,6 +56,7 @@ const Dashboard emptyDashboard = Dashboard(
   gameCount: 0,
   recentAverage: 0,
   recentScores: <DashboardScore>[],
+  recentSessions: <GameSession>[],
 );
 
 class FakeDashboardApi implements DashboardApi {

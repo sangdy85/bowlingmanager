@@ -9,29 +9,32 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('MobileScoresApi calls GET /scores with page and limit', () async {
-    RequestOptions? capturedRequest;
-    final Dio dio =
-        Dio(BaseOptions(baseUrl: 'https://example.test/api/mobile/v1'))
-          ..httpClientAdapter = _FakeHttpClientAdapter((
-            RequestOptions options,
-          ) async {
-            capturedRequest = options;
-            return _jsonResponse(200, _scoresEnvelope);
-          });
+  test(
+    'MobileScoresApi calls grouped scores endpoint with page and limit',
+    () async {
+      RequestOptions? capturedRequest;
+      final Dio dio =
+          Dio(BaseOptions(baseUrl: 'https://example.test/api/mobile/v1'))
+            ..httpClientAdapter = _FakeHttpClientAdapter((
+              RequestOptions options,
+            ) async {
+              capturedRequest = options;
+              return _jsonResponse(200, _scoresEnvelope);
+            });
 
-    final ScoresPage page = await MobileScoresApi(dio)
-        .fetchScores(page: 2, limit: 20);
+      final ScoresPage page = await MobileScoresApi(dio)
+          .fetchScores(page: 2, limit: 20);
 
-    expect(capturedRequest?.method, 'GET');
-    expect(capturedRequest?.uri.path, '/api/mobile/v1/scores');
-    expect(capturedRequest?.uri.queryParameters, <String, String>{
-      'page': '2',
-      'limit': '20',
-    });
-    expect(page.items.single.score, 215);
-    dio.close(force: true);
-  });
+      expect(capturedRequest?.method, 'GET');
+      expect(capturedRequest?.uri.path, '/api/mobile/v1/scores/groups');
+      expect(capturedRequest?.uri.queryParameters, <String, String>{
+        'page': '2',
+        'limit': '20',
+      });
+      expect(page.items.single.scores.single.score, 215);
+      dio.close(force: true);
+    },
+  );
 
   test('MobileScoresApi rejects a malformed envelope', () async {
     final Dio dio =
@@ -91,12 +94,17 @@ const Map<String, Object> _scoresEnvelope = <String, Object>{
   'data': <String, Object>{
     'items': <Object>[
       <String, Object?>{
-        'id': 'score-1',
-        'score': 215,
+        'id': 'session-1',
+        'source': 'PERSONAL',
         'gameDate': '2026-09-15T00:00:00.000Z',
         'gameType': null,
-        'memo': null,
         'team': null,
+        'scores': <Object>[
+          <String, Object?>{'id': 'score-1', 'score': 215, 'memo': null},
+        ],
+        'total': 215,
+        'average': 215,
+        'gameCount': 1,
       },
     ],
     'pagination': <String, Object>{

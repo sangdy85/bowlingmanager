@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import prisma from "@/lib/prisma";
+import { groupScores } from "@/lib/score-groups";
 
 export type PersonalStatisticsUser = {
     id: string;
@@ -142,6 +143,7 @@ export async function getPersonalStatisticsData(user: PersonalStatisticsUser, ye
         .map(s => ({
             id: `PERSONAL:${s.id}`, source: "PERSONAL", score: s.score,
             gameDate: s.gameDate, gameType: s.gameType, memo: s.memo, team: s.Team,
+            createdAt: s.createdAt,
         }));
     const officialRecords: IntegratedRecord[] = [
         ...leagueScores.flatMap(ls =>
@@ -152,6 +154,8 @@ export async function getPersonalStatisticsData(user: PersonalStatisticsUser, ye
                     gameDate: ls.LeagueMatchup.round.date || ls.createdAt,
                     gameType: "상주리그", memo: null,
                     team: { id: ls.teamId, name: ls.Team.name },
+                    createdAt: ls.createdAt, sessionId: `matchup:${ls.matchupId}`,
+                    gameOrder: index + 1,
                 }] : [],
             ),
         ),
@@ -164,6 +168,9 @@ export async function getPersonalStatisticsData(user: PersonalStatisticsUser, ye
             // Guest-only team names have no stable team ID.
             team: ts.registration.team && ts.registration.teamId
                 ? { id: ts.registration.teamId, name: ts.registration.team.name } : null,
+            createdAt: ts.createdAt,
+            sessionId: `registration:${ts.registrationId}:round:${ts.roundId ?? "none"}`,
+            gameOrder: ts.gameNumber,
         })),
     ];
     return {
@@ -181,6 +188,9 @@ export type IntegratedRecord = {
     gameType: string | null;
     memo: string | null;
     team: { id: string; name: string } | null;
+    createdAt?: Date;
+    sessionId?: string | null;
+    gameOrder?: number | null;
 };
 
 export function summarizeIntegratedRecords(records: IntegratedRecord[], year: number) {
@@ -190,6 +200,7 @@ export function summarizeIntegratedRecords(records: IntegratedRecord[], year: nu
         || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
     ).slice(0, 10);
     const recentTotal = recentScores.reduce((sum, record) => sum + record.score, 0);
+    const recentSessions = groupScores(records).slice(0, 7);
     return {
         year,
         // Match StatsDisplayRow's JS toFixed rounding, not Math.round.
@@ -198,6 +209,7 @@ export function summarizeIntegratedRecords(records: IntegratedRecord[], year: nu
             ? records.reduce((max, record) => Math.max(max, record.score), records[0].score) : 0,
         gameCount: records.length,
         recentScores,
+        recentSessions,
         recentAverage: recentScores.length
             ? Number((recentTotal / recentScores.length).toFixed(1)) : 0,
     };
