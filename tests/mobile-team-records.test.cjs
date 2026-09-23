@@ -256,6 +256,100 @@ test('activities paginate complete date groups in latest order', async () => {
     assert.deepEqual(result.pagination, { page: 2, limit: 1, total: 3, totalPages: 3 });
 });
 
+test('expanded feed applies multi-type OR filters and splits same KST date by game type', () => {
+    const mixed = [
+        score('regular-a', 200, '2026-09-19'),
+        score('regular-b', 210, '2026-09-19', { userId: 'user-b', user: { name: '볼러' } }),
+        score('casual-a', 180, '2026-09-19', { gameType: '벙개' }),
+        score('house-a', 190, '2026-09-19', { gameType: '상주' }),
+    ];
+    const feed = records.createTeamActivityFeed('team-1', mixed, members, ['REGULAR', 'CASUAL']);
+    assert.deepEqual(feed.map(item => ({ id: item.id, gameType: item.gameType })), [
+        { id: '2026-09-19~REGULAR', gameType: '정기전' },
+        { id: '2026-09-19~CASUAL', gameType: '벙개' },
+    ]);
+    assert.deepEqual(feed[0].participants.map(item => item.rank), [1, 2]);
+    assert.equal(feed.some(item => item.gameType === '상주'), false);
+});
+
+test('expanded feed preserves aliases, guests, complete variable games, totals and averages', () => {
+    const mixed = [
+        score('a1', 200, '2026-09-19'),
+        score('a2', 220, '2026-09-19'),
+        score('b1', 210, '2026-09-19', { userId: 'user-b', user: { name: '볼러' } }),
+        score('guest', 180, '2026-09-19', { userId: null, user: null, guestName: '손님' }),
+    ];
+    const [activity] = records.createTeamActivityFeed('team-1', mixed, members, ['REGULAR']);
+    assert.deepEqual(activity.participants.map(item => ({
+        name: item.name, scores: item.scores, total: item.total, average: item.average,
+    })), [
+        { name: '에이스 별명', scores: [200, 220], total: 420, average: 210 },
+        { name: '볼러', scores: [210], total: 210, average: 210 },
+        { name: '손님(비)', scores: [180], total: 180, average: 180 },
+    ]);
+    assert.equal(JSON.stringify(activity).includes('user-a'), false);
+});
+
+test('feed query accepts comma and repeated types, normalizes taxonomy order and rejects invalid values', () => {
+    assert.deepEqual(
+        service.parseTeamActivityFeedQuery(new URLSearchParams('year=2026&types=CASUAL,REGULAR&types=HOUSE')),
+        { year: 2026, types: ['REGULAR', 'CASUAL', 'HOUSE'] },
+    );
+    assert.deepEqual(
+        service.parseTeamActivityFeedQuery(new URLSearchParams('year=2026')),
+        { year: 2026, types: ['REGULAR', 'CASUAL', 'HOUSE'] },
+    );
+    assert.equal(service.parseTeamActivityFeedQuery(new URLSearchParams('year=2026&types=ALL')), null);
+    assert.equal(service.parseTeamActivityFeedQuery(new URLSearchParams('year=2026&types=LEAGUE')), null);
+});
+
+test('expanded feed paginates complete activities, exposes only membership identity and computes manager permission', async () => {
+    const calls = { members: 0, scores: 0 };
+    const result = await service.getMobileTeamActivityFeed(
+        'user-a', 'team-1', { year: 2026, types: ['REGULAR', 'CASUAL'] }, 2, 1,
+        dependencies({
+            findAccessibleTeam: async () => ({ id: 'team-1', ownerId: null, User: [{ id: 'user-a' }] }),
+            listMembers: async () => { calls.members += 1; return members.map(member => ({
+                id: member.id, userId: member.userId, alias: member.name, user: { name: member.name },
+            })); },
+            listScores: async () => { calls.scores += 1; return fixture.map(({ user, ...item }) => ({ ...item, User: user })); },
+        }),
+    );
+    assert.deepEqual(calls, { members: 1, scores: 1 });
+    assert.equal(result.items.length, 1);
+    assert.equal(result.items[0].canManage, true);
+    assert.equal(result.currentMemberId, 'membership-a');
+    assert.deepEqual(result.pagination, { page: 2, limit: 1, total: 4, totalPages: 4 });
+    const serialized = JSON.stringify(result);
+    assert.equal(serialized.includes('user-a'), false);
+    assert.equal(serialized.includes('email'), false);
+});
+
+test('expanded feed blocks outsiders before member and score queries and members cannot manage', async () => {
+    let queries = 0;
+    const blocked = await service.getMobileTeamActivityFeed(
+        'outsider', 'team-1', { year: 2026, types: ['REGULAR'] }, 1, 10,
+        dependencies({
+            findAccessibleTeam: async () => null,
+            listMembers: async () => { queries += 1; return []; },
+            listScores: async () => { queries += 1; return []; },
+        }),
+    );
+    assert.equal(blocked, null);
+    assert.equal(queries, 0);
+    const member = await service.getMobileTeamActivityFeed(
+        'user-a', 'team-1', { year: 2026, types: ['REGULAR'] }, 1, 10,
+        dependencies({ findAccessibleTeam: async () => ({ id: 'team-1', ownerId: 'other', User: [] }) }),
+    );
+    assert.equal(member.items.every(item => item.canManage === false), true);
+
+    const owner = await service.getMobileTeamActivityFeed(
+        'user-a', 'team-1', { year: 2026, types: ['REGULAR'] }, 1, 10,
+        dependencies({ findAccessibleTeam: async () => ({ id: 'team-1', ownerId: 'user-a', User: [] }) }),
+    );
+    assert.equal(owner.items.every(item => item.canManage === true), true);
+});
+
 test('activity detail distinguishes invalid, inaccessible, missing and found records', async () => {
     assert.equal((await service.getMobileTeamActivityDetail('user-a', 'team-1', 'bad', dependencies())).kind, 'INVALID_ACTIVITY');
     assert.equal((await service.getMobileTeamActivityDetail('outsider', 'team-1', '2026-01-10~REGULAR', dependencies({ findAccessibleTeam: async () => null }))).kind, 'TEAM_NOT_FOUND');
@@ -313,6 +407,24 @@ test('activities and detail routes return the standard success envelopes', async
     }));
     response = await route.GET(new Request('https://example.test'), context);
     assert.deepEqual(await response.json(), { success: true, data: { activity: { id: 'activity-1' } } });
+});
+
+test('expanded feed route authenticates, validates and returns the standard envelope', async () => {
+    let route = loadTs('src/app/api/mobile/v1/teams/[teamId]/activities/feed/route.ts', routeOverrides({}, null));
+    assert.equal((await route.GET(new Request('https://example.test'), context)).status, 401);
+    route = loadTs('src/app/api/mobile/v1/teams/[teamId]/activities/feed/route.ts', routeOverrides({
+        parseTeamActivityFeedQuery: () => null,
+        parseTeamActivitiesPagination: () => ({ page: 1, limit: 10 }),
+    }));
+    assert.equal((await route.GET(new Request('https://example.test'), context)).status, 400);
+    route = loadTs('src/app/api/mobile/v1/teams/[teamId]/activities/feed/route.ts', routeOverrides({
+        parseTeamActivityFeedQuery: () => ({ year: 2026, types: ['REGULAR'] }),
+        parseTeamActivitiesPagination: () => ({ page: 1, limit: 10 }),
+        getMobileTeamActivityFeed: async () => ({ items: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } }),
+    }));
+    const response = await route.GET(new Request('https://example.test'), context);
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).success, true);
 });
 
 test('mobile helper output matches the legacy web calculation fixture', () => {

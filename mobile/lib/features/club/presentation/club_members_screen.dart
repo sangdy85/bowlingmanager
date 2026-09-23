@@ -10,9 +10,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class ClubMembersScreen extends ConsumerStatefulWidget {
-  const ClubMembersScreen({required this.teamId, super.key});
+  const ClubMembersScreen({
+    required this.teamId,
+    this.managementMode = false,
+    super.key,
+  });
 
   final String teamId;
+  final bool managementMode;
 
   @override
   ConsumerState<ClubMembersScreen> createState() => _ClubMembersScreenState();
@@ -78,12 +83,16 @@ class _ClubMembersScreenState extends ConsumerState<ClubMembersScreen> {
                 _MemberCard(
                   member: member,
                   myRole: myRole,
+                  managementMode: widget.managementMode,
                   busy: _pendingMemberActions.any(
                     (String action) => action.endsWith(':${member.id}'),
                   ),
                   onRemove: () => _removeMember(context, user.id, member),
                   onRoleChange: (ClubRole role) =>
                       _changeRole(context, user.id, member, role),
+                  onOpen: () => context.push(
+                    '/club/${Uri.encodeComponent(widget.teamId)}/members/${Uri.encodeComponent(member.id)}',
+                  ),
                 ),
                 const SizedBox(height: 10),
               ],
@@ -257,16 +266,20 @@ class _MemberCard extends StatelessWidget {
   const _MemberCard({
     required this.member,
     required this.myRole,
+    required this.managementMode,
     required this.busy,
     required this.onRemove,
     required this.onRoleChange,
+    required this.onOpen,
   });
 
   final ClubMember member;
   final ClubRole myRole;
+  final bool managementMode;
   final bool busy;
   final VoidCallback onRemove;
   final ValueChanged<ClubRole> onRoleChange;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -303,9 +316,12 @@ class _MemberCard extends StatelessWidget {
                 ),
               ),
             ),
+            onTap: managementMode ? null : onOpen,
           ),
-          if ((myRole == ClubRole.owner && member.role != ClubRole.owner) ||
-              (myRole == ClubRole.manager && member.role == ClubRole.member))
+          if (managementMode &&
+              ((myRole == ClubRole.owner && member.role != ClubRole.owner) ||
+                  (myRole == ClubRole.manager &&
+                      member.role == ClubRole.member)))
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
               child: Wrap(

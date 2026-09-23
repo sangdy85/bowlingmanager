@@ -161,6 +161,7 @@ class _ClubActivityDetailScreenState
           );
       ref.invalidate(clubStatisticsProvider);
       ref.invalidate(clubActivitiesControllerProvider);
+      ref.invalidate(clubActivityFeedControllerProvider);
       ref.invalidate(clubActivityProvider);
       ref.invalidate(clubActivityEditProvider);
       ref.invalidate(dashboardProvider(userId));

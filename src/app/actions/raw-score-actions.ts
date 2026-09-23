@@ -74,7 +74,6 @@ export async function uploadRawLaneScores(
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
-        console.log("Gemini Raw Response (First 100 chars):", text.substring(0, 100));
 
         // Track Usage
         const usageMetadata = result.response.usageMetadata;
@@ -88,8 +87,7 @@ export async function uploadRawLaneScores(
         try {
             parsed = JSON.parse(jsonStr);
         } catch (parseError) {
-            console.error("JSON Parse Error:", parseError);
-            console.error("Failed JSON String:", jsonStr);
+            console.error("Gemini raw score response parsing failed.");
             // Fallback: try to fix common JSON errors if possible, or fail gracefully
             return { success: false, message: "AI응답 형식이 올바르지 않습니다. (JSON Parse Error)" };
         }

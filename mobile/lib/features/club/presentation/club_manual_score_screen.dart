@@ -114,6 +114,7 @@ class _ClubManualScoreScreenState extends ConsumerState<ClubManualScoreScreen> {
   void _invalidate(String userId) {
     ref.invalidate(clubStatisticsProvider);
     ref.invalidate(clubActivitiesControllerProvider);
+    ref.invalidate(clubActivityFeedControllerProvider);
     ref.invalidate(clubActivityProvider);
     ref.invalidate(clubActivityEditProvider);
     ref.invalidate(

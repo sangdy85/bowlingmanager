@@ -7,6 +7,7 @@ import YearSelector from "@/components/YearSelector";
 import StatsDisplayRow from "@/components/StatsDisplayRow";
 import RadarChart from "@/components/RadarChart";
 import { getPersonalStatisticsData } from "@/lib/personal-statistics";
+import { calculatePersonalProfile } from "@/lib/personal-profile";
 
 export const dynamic = 'force-dynamic';
 
@@ -227,30 +228,6 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         (tm.team as any).User.some((m: any) => m.id === user.id)
     );
 
-    // --- 평가 그래프 데이터 계산 (Radar Chart) ---
-    // 1. 정기전 데이터
-    const regularRoundsMap = new Map<string, { scores: number[], avg: number }>();
-    globalRegularScores.forEach((s: any) => {
-        const d = s.gameDate.toISOString().split('T')[0];
-        if (!regularRoundsMap.has(d)) regularRoundsMap.set(d, { scores: [], avg: 0 });
-        regularRoundsMap.get(d)!.scores.push(s.score);
-    });
-    regularRoundsMap.forEach(v => {
-        v.avg = v.scores.reduce((a, b) => a + b, 0) / v.scores.length;
-    });
-
-    const regularRounds = Array.from(regularRoundsMap.values());
-    const regAvg = regularRounds.length > 0 ? (regularRounds.reduce((a, b) => a + b.scores.reduce((c, d) => c + d, 0), 0) / regularRounds.reduce((a, b) => a + b.scores.length, 0)) : 0;
-    const regMaxRoundAvg = regularRounds.length > 0 ? Math.max(...regularRounds.map(r => r.avg)) : 0;
-    const regMinRoundAvg = regularRounds.length > 0 ? Math.min(...regularRounds.map(r => r.avg)) : 0;
-    const regMaxScore = globalRegularScores.length > 0 ? Math.max(...globalRegularScores.map((s: any) => s.score)) : 0;
-    const regMinScore = globalRegularScores.length > 0 ? Math.min(...globalRegularScores.map((s: any) => s.score)) : 0;
-    
-    // 기복: 회차별 하이로우 평균값으로 변경
-    const regRoundDiffs = regularRounds.map(r => Math.max(...r.scores) - Math.min(...r.scores));
-    const regAvgRoundDiff = regRoundDiffs.length > 0 ? (regRoundDiffs.reduce((a, b) => a + b, 0) / regRoundDiffs.length) : 0;
-    const regHighLow = Math.round(regAvgRoundDiff);
-
     // 정기전 출석률 및 훈장(순위) 계산
     const allTeamRegularScores = await prisma.score.findMany({
         where: {
@@ -303,61 +280,28 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
         else if (myRank === 3) bronzeCount++;
     });
 
-    const totalTeamRoundsCount = roundUserStats.size;
-    const regAttendancePct = totalTeamRoundsCount > 0 ? (regularRounds.length / totalTeamRoundsCount) * 100 : 0;
-
-    const calcRegPoint = (val: number, base: number, step: number) => {
-        const p = 10 - (base - val) * step;
-        return Math.min(10, Math.max(1, p));
-    };
-
-    const datasets = [];
-    if (regularRounds.length >= 3) {
-        datasets.push({
-            label: '정기전',
-            color: '#3b82f6',
-            points: [
-                calcRegPoint(regAvg, 234, 0.1),             // 기량
-                calcRegPoint(regMaxRoundAvg, 250, 0.2),     // 포텐셜
-                Math.min(10, Math.max(0, 10 - (regAvgRoundDiff - 10) * 0.1)), // 기복 (10점 기준, 11점부터 0.1점씩 차감)
-                calcRegPoint(regMinRoundAvg, 200, 0.1),     // 안정감
-                Math.min(10, Math.max(1, regAttendancePct / 10)) // 성실
-            ]
-        });
-    }
-
-    // 2. 볼링장 대회 데이터 및 총평균 계산 (항상 계산하여 프로필에서 사용 가능하게 함)
-    const offMaxScore = officialRecords.length > 0 ? Math.max(...officialRecords.flatMap(r => r.scores)) : 0;
-    const offMinScore = officialRecords.length > 0 ? Math.min(...officialRecords.flatMap(r => r.scores)) : 0;
-    const offRoundDiffs = officialRecords.map(r => Math.max(...r.scores) - Math.min(...r.scores));
-    const offAvgRoundDiff = offRoundDiffs.length > 0 ? (offRoundDiffs.reduce((a, b) => a + b, 0) / offRoundDiffs.length) : 0;
-    const offHighLow = Math.round(offAvgRoundDiff);
-    const offGames = officialSummary.total.pins > 0 ? officialSummary.total.games : 0;
-    const offAvg = offGames > 0 ? (officialSummary.total.pins / offGames) : 0;
-    const offMaxRoundAvg = officialRecords.length > 0 ? Math.max(...officialRecords.map(r => parseFloat(r.avg))) : 0;
-    const offMinRoundAvg = officialRecords.length > 0 ? Math.min(...officialRecords.map(r => parseFloat(r.avg))) : 0;
-
-    // 총평균 계산
-    const regGames = globalRegularScores.length;
-    const regPins = globalRegularScores.reduce((a, s: any) => a + s.score, 0);
-    const totalGames = regGames + offGames;
-    const totalPins = regPins + officialSummary.total.pins;
-    const totalAvg = totalGames > 0 ? totalPins / totalGames : 0;
-
-    if (officialRecords.length >= 3) {
-
-        datasets.push({
-            label: '볼링장 대회',
-            color: '#f59e0b',
-            points: [
-                calcRegPoint(offAvg, 234, 0.1),             // 기량
-                calcRegPoint(offMaxRoundAvg, 250, 0.2),     // 포텐셜
-                Math.min(10, Math.max(0, 10 - (offAvgRoundDiff - 10) * 0.1)), // 기복 (10점 기준, 11점부터 0.1점씩 차감)
-                calcRegPoint(offMinRoundAvg, 200, 0.1),     // 안정감
-                Math.min(10, Math.max(1, officialRecords.length)) // 성실
-            ]
-        });
-    }
+    const profile = calculatePersonalProfile({
+        regularScores: globalRegularScores,
+        officialSessions: officialRecords.map((record) => ({ scores: record.scores })),
+        allTeamRegularScores,
+    });
+    const regAvg = profile.regular.average;
+    const regMaxScore = profile.regular.highScore;
+    const regMinScore = profile.regular.lowScore;
+    const regGames = profile.regular.gameCount;
+    const regAttendancePct = profile.regular.attendanceRate;
+    const regHighLow = profile.regular.roundSpread;
+    const offAvg = profile.official.average;
+    const offMaxScore = profile.official.highScore;
+    const offMinScore = profile.official.lowScore;
+    const offGames = profile.official.gameCount;
+    const offHighLow = profile.official.roundSpread;
+    const totalAvg = profile.totalAverage;
+    const datasets = profile.radar.series.map((series) => ({
+        label: series.label,
+        color: series.color,
+        points: series.values,
+    }));
 
     return (
         <div className="container py-8 max-w-6xl mx-auto">

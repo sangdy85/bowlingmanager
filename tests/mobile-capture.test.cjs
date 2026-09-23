@@ -328,3 +328,24 @@ test('bulk save route validates auth/input and returns created counts', async ()
     assert.equal(response.status, 400);
     assert.equal((await response.json()).error.code, 'INVALID_SCORE');
 });
+
+test('score provenance links only one unambiguous competition event', () => {
+    const service = loadTs('src/lib/score-bulk-service.ts', {
+        '@/lib/prisma': {},
+        '@/lib/mobile-api/event-competition': {
+            assertEventScoresMutable: async () => {},
+            EventCompetitionError: class EventCompetitionError extends Error {},
+        },
+        uuid: { v4: () => 'id' },
+    });
+    const scoreDate = new Date('2026-10-10T00:00:00.000Z');
+    const eventDate = new Date('2026-10-09T15:00:00.000Z');
+    assert.equal(service.competitionEventDateForScore(scoreDate).toISOString(), eventDate.toISOString());
+    const official = { id: 'official', teamId: 'team-1', eventDate, gameType: '정기전', competitionMode: 'OFFICIAL' };
+    let index = service.indexUniqueCompetitionEvents([official]);
+    assert.equal(index.get('team-1|2026-10-10|정기전'), official);
+
+    const mini = { ...official, id: 'mini', competitionMode: 'MINI' };
+    index = service.indexUniqueCompetitionEvents([official, mini]);
+    assert.equal(index.get('team-1|2026-10-10|정기전'), null);
+});

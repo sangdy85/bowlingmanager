@@ -145,7 +145,7 @@ export async function incrementUserAiUsage(userId: string, date: string, inputTo
  */
 export function handleGeminiError(error: any): { message: string; errorType: 'QUOTA' | 'GENERAL' } {
     const msg = error?.message || String(error);
-    console.error("Gemini Utility Error Handler:", error);
+    console.error("Gemini request failed.");
 
     if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
         return {
@@ -155,7 +155,7 @@ export function handleGeminiError(error: any): { message: string; errorType: 'QU
     }
 
     return {
-        message: "AI 분석 중 오류가 발생했습니다: " + msg,
+        message: "AI 분석 중 오류가 발생했습니다.",
         errorType: 'GENERAL'
     };
 }

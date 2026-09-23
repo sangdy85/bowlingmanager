@@ -5,6 +5,7 @@ import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.d
 import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_state.dart';
+import 'package:bowlingmanager_mobile/shared/widgets/bowling_medal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -384,20 +385,11 @@ class _GameTypeChip extends StatelessWidget {
 class _RecordRankBadge extends StatelessWidget {
   const _RecordRankBadge({required this.rank});
 
-  static const Color _gold = Color(0xFFFFC857);
-  static const Color _silver = Color(0xFFC6D0DC);
-  static const Color _bronze = Color(0xFFCD7F4A);
-
   final GameSessionRank rank;
 
   @override
   Widget build(BuildContext context) {
-    final Color? medalColor = switch (rank.position) {
-      1 => _gold,
-      2 => _silver,
-      3 => _bronze,
-      _ => null,
-    };
+    final Color? medalColor = bowlingMedalColor(rank.position);
     return Semantics(
       label: '${rank.participantCount}명 중 ${rank.position}위',
       child: Container(
@@ -413,10 +405,9 @@ class _RecordRankBadge extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             if (medalColor != null)
-              Icon(
-                Icons.military_tech_rounded,
+              BowlingMedalIcon(
                 key: Key('record-medal-${rank.position}'),
-                color: medalColor,
+                position: rank.position,
                 size: 25,
               ),
             Text(

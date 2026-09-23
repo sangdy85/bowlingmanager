@@ -3,10 +3,15 @@ import 'dart:async';
 import 'package:bowlingmanager_mobile/app/app.dart';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_management_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_post_form_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_season_ranking_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_team_settings_screen.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/shared/widgets/bottom_navigation.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +23,123 @@ import 'support/club_fakes.dart';
 import 'support/dashboard_fakes.dart';
 
 void main() {
+  testWidgets('team settings shows a safe error and retries', (
+    WidgetTester tester,
+  ) async {
+    const ApiException error = ApiException(
+      kind: ApiErrorKind.server,
+      userMessage: '서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
+    );
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    int requests = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubTeamProfileProvider.overrideWith((ref, request) async {
+            requests += 1;
+            if (requests == 1) throw error;
+            return _profile;
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: ClubTeamSettingsScreen(teamId: 'team-1')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(error.userMessage), findsOneWidget);
+    expect(find.textContaining("Instance of 'ApiException'"), findsNothing);
+    await tester.tap(find.text('다시 시도'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('club-team-settings')), findsOneWidget);
+    expect(requests, 2);
+  });
+
+  testWidgets('post edit form shows a safe error and retries', (
+    WidgetTester tester,
+  ) async {
+    const ApiException error = ApiException(
+      kind: ApiErrorKind.networkUnavailable,
+      userMessage: '네트워크 연결을 확인해주세요.',
+    );
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    int requests = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubPostProvider.overrideWith((ref, request) async {
+            requests += 1;
+            if (requests == 1) throw error;
+            return ClubPostDetail(
+              id: request.postId,
+              title: '제목',
+              content: '본문',
+              authorName: '작성자',
+              createdAt: DateTime(2026, 9, 23),
+              canEdit: true,
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: ClubPostFormScreen(teamId: 'team-1', postId: 'post-1'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(error.userMessage), findsOneWidget);
+    expect(find.textContaining("Instance of 'ApiException'"), findsNothing);
+    await tester.tap(find.text('다시 시도'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('club-post-form')), findsOneWidget);
+    expect(requests, 2);
+  });
+
+  testWidgets('season ranking shows fixed summary, filters and member ledger', (
+    WidgetTester tester,
+  ) async {
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    await tester.binding.setSurfaceSize(const Size(360, 720));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubSeasonRankingProvider.overrideWith(
+            (ref, request) async => _ranking,
+          ),
+          clubSeasonMemberProvider.overrideWith(
+            (ref, request) async => _ranking.rows.single,
+          ),
+        ],
+        child: const MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(1.2)),
+            child: ClubSeasonRankingScreen(teamId: 'team-1'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('시즌 종합순위'), findsOneWidget);
+    expect(find.text('개인전'), findsOneWidget);
+    expect(find.text('팀장'), findsOneWidget);
+    expect(find.text('5P'), findsOneWidget);
+
+    await tester.tap(find.text('팀장'));
+    await tester.pumpAndSettle();
+    expect(find.text('5P · 1경기'), findsOneWidget);
+    expect(find.text('1월 개인전'), findsOneWidget);
+  });
+
   testWidgets('Club shows an empty state', (WidgetTester tester) async {
     final FakeClubRepository repository = FakeClubRepository()
       ..clubs = const <ClubSummary>[];
@@ -88,8 +210,40 @@ void main() {
     expect(find.text('매니저'), findsWidgets);
     expect(find.text('회원'), findsWidgets);
     expect(find.text('핸디캡 10'), findsOneWidget);
+    expect(find.byKey(const Key('member-role-member-2')), findsNothing);
+    expect(find.byKey(const Key('member-remove-member-3')), findsNothing);
     expect(repository.detailTeamIds, <String>['team-1']);
     expect(repository.memberTeamIds, <String>['team-1']);
+  });
+
+  testWidgets('Club overview and member detail fit a 360px screen', (
+    WidgetTester tester,
+  ) async {
+    final FakeClubRepository repository = FakeClubRepository();
+    await _openClubs(tester, repository, surfaceSize: const Size(360, 720));
+    await tester.tap(find.byKey(const Key('club-team-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('club-overview-link')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('club-overview')), findsOneWidget);
+    expect(find.text('2026 시즌'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded).first);
+    await tester.pumpAndSettle();
+    if (find.byKey(const Key('club-team-1')).evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(const Key('club-team-1')));
+      await tester.pumpAndSettle();
+    }
+    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('club-members-link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('club-member-member-1')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('club-member-detail')), findsOneWidget);
+    expect(find.text('활동 시작일 2026.01.02'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Club pull-to-refresh reloads the current user list', (
@@ -180,15 +334,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('활동 일지'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(Key('club-activity-${testClubActivity.id}')));
+    await tester.tap(
+      find.byKey(Key('club-activity-menu-${testClubActivity.id}')),
+    );
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('activity-edit')), findsOneWidget);
-    expect(find.byKey(const Key('activity-delete')), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('activity-delete')));
+    await tester.tap(find.text('삭제').last);
     await tester.pumpAndSettle();
     expect(find.textContaining('1개의 점수가 삭제됩니다.'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('activity-delete-confirm')));
+    await tester.tap(find.byKey(const Key('activity-feed-delete-confirm')));
     await tester.pumpAndSettle();
     expect(repository.deleteCalls, 1);
   });
@@ -269,9 +422,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('활동 일지'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(Key('club-activity-${testClubActivity.id}')));
+    await tester.tap(
+      find.byKey(Key('club-activity-menu-${testClubActivity.id}')),
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('activity-edit')));
+    await tester.tap(find.text('수정').last);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('club-activity-edit')), findsOneWidget);
     await tester.enterText(
@@ -290,7 +445,9 @@ void main() {
     await _openClubs(tester, repository);
     await tester.tap(find.byKey(const Key('club-team-1')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('club-members-link')));
+    await tester.tap(find.byKey(const Key('club-management-link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('management-members-link')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('member-remove-member-1')), findsNothing);
     expect(find.byKey(const Key('member-role-member-2')), findsOneWidget);
@@ -310,7 +467,9 @@ void main() {
     await _openClubs(tester, repository);
     await tester.tap(find.byKey(const Key('club-team-1')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('club-members-link')));
+    await tester.tap(find.byKey(const Key('club-management-link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('management-members-link')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('member-role-member-3')), findsNothing);
     expect(find.byKey(const Key('member-remove-member-1')), findsNothing);
@@ -318,54 +477,62 @@ void main() {
     expect(find.byKey(const Key('member-remove-member-3')), findsOneWidget);
   });
 
-  testWidgets('Club records shows statistics, filters and activity detail', (
-    WidgetTester tester,
-  ) async {
-    final FakeClubRepository repository = FakeClubRepository();
-    await _openClubs(tester, repository);
+  testWidgets(
+    'Club records shows statistics, multi filters and inline results',
+    (WidgetTester tester) async {
+      final FakeClubRepository repository = FakeClubRepository();
+      await _openClubs(tester, repository);
 
-    await tester.tap(find.byKey(const Key('club-team-1')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('club-records-link')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('club-team-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('club-records-link')));
+      await tester.pumpAndSettle();
 
-    expect(find.text('동호회 기록'), findsOneWidget);
-    expect(find.text('출석 100.0% · 2/2'), findsOneWidget);
-    expect(find.text('1월 -'), findsOneWidget);
-    expect(find.text('9월 210'), findsOneWidget);
+      expect(find.text('동호회 기록'), findsOneWidget);
+      expect(find.text('100.0% (2/2)'), findsOneWidget);
+      expect(find.text('1월'), findsOneWidget);
+      expect(find.text('9월'), findsOneWidget);
+      expect(find.text('210'), findsWidgets);
 
-    await tester.tap(find.byKey(const Key('club-records-year')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('2025년').last);
-    await tester.pumpAndSettle();
-    expect(repository.statisticsCalls, 2);
+      await tester.tap(find.byKey(const Key('club-records-year')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('2025년').last);
+      await tester.pumpAndSettle();
+      expect(repository.statisticsCalls, 2);
 
-    await tester.tap(find.text('전체'));
-    await tester.pumpAndSettle();
-    expect(repository.statisticsCalls, 3);
+      await tester.tap(find.text('전체'));
+      await tester.pumpAndSettle();
+      expect(repository.statisticsCalls, 3);
 
-    await tester.tap(find.text('정기전'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('club-records-year')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('2026년').last);
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('정기전'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('club-records-year')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('2026년').last);
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('활동 일지'));
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(Key('club-activity-${testClubActivity.id}')),
-      findsOneWidget,
-    );
-    await tester.tap(find.byKey(Key('club-activity-${testClubActivity.id}')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('활동 일지'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('club-activity-filter-scroll-hint')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(Key('club-activity-${testClubActivity.id}')),
+        findsOneWidget,
+      );
+      expect(find.text('1G'), findsOneWidget);
+      expect(find.text('2G'), findsOneWidget);
+      expect(find.text('3G'), findsOneWidget);
+      expect(find.text('630'), findsOneWidget);
+      expect(find.text('210.0'), findsOneWidget);
+      expect(find.text('경기 상세'), findsNothing);
 
-    expect(find.text('경기 상세'), findsOneWidget);
-    expect(find.text('1G 200'), findsOneWidget);
-    expect(find.text('2G 210'), findsOneWidget);
-    expect(find.text('3G 220'), findsOneWidget);
-    expect(find.text('총점 630 · AVG 210'), findsOneWidget);
-  });
+      await tester.tap(find.byKey(const Key('club-activity-filter-CASUAL')));
+      await tester.pumpAndSettle();
+      expect(repository.requestedActivityFeedPages.length, 2);
+    },
+  );
 
   testWidgets('Club records handles an empty statistics result', (
     WidgetTester tester,
@@ -409,6 +576,75 @@ void main() {
     expect(find.text('0회'), findsOneWidget);
   });
 
+  testWidgets(
+    'activity filters support empty selection and member feed has no menu',
+    (WidgetTester tester) async {
+      final ClubActivityFeedItem second = ClubActivityFeedItem(
+        id: '2026-09-18~CASUAL',
+        date: DateTime(2026, 9, 18),
+        gameType: '벙개',
+        participantCount: 1,
+        gameCount: 1,
+        dailyAverage: 200,
+        participants: const <ClubActivityParticipant>[
+          ClubActivityParticipant(
+            rank: 1,
+            id: 'member-2',
+            name: '회원',
+            scores: <int>[200],
+            total: 200,
+            average: 200,
+          ),
+        ],
+        canManage: false,
+      );
+      final FakeClubRepository repository = FakeClubRepository()
+        ..activityFeed = ClubActivityFeedPage(
+          year: 2026,
+          types: const <ClubRecordFilter>[
+            ClubRecordFilter.regular,
+            ClubRecordFilter.casual,
+            ClubRecordFilter.house,
+          ],
+          currentMemberId: 'member-2',
+          items: <ClubActivityFeedItem>[
+            ClubActivityFeedItem(
+              id: testClubActivityFeedItem.id,
+              date: testClubActivityFeedItem.date,
+              gameType: testClubActivityFeedItem.gameType,
+              participantCount: testClubActivityFeedItem.participantCount,
+              gameCount: testClubActivityFeedItem.gameCount,
+              dailyAverage: testClubActivityFeedItem.dailyAverage,
+              participants: testClubActivityFeedItem.participants,
+              canManage: false,
+            ),
+            second,
+          ],
+          page: 1,
+          limit: 10,
+          total: 2,
+          totalPages: 1,
+        );
+      await _openClubs(tester, repository, surfaceSize: const Size(360, 720));
+      await tester.tap(find.byKey(const Key('club-team-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('club-records-link')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('활동 일지'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(Key('club-activity-${second.id}')), findsOneWidget);
+      expect(find.byKey(Key('club-activity-menu-${second.id}')), findsNothing);
+
+      for (final String type in <String>['REGULAR', 'CASUAL', 'HOUSE']) {
+        await tester.tap(find.byKey(Key('club-activity-filter-$type')));
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('경기 방식을 하나 이상 선택해주세요.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('Club records retries a statistics error', (
     WidgetTester tester,
   ) async {
@@ -428,7 +664,7 @@ void main() {
     repository.statisticsError = null;
     await tester.tap(find.text('다시 시도'));
     await tester.pumpAndSettle();
-    expect(find.text('출석 100.0% · 2/2'), findsOneWidget);
+    expect(find.text('100.0% (2/2)'), findsOneWidget);
   });
 
   testWidgets('Club records avoids overflow with long names and many scores', (
@@ -492,26 +728,42 @@ void main() {
         ),
         members: members,
       )
-      ..activityDetail = ClubActivityDetail(
-        id: testClubActivity.id,
-        date: testClubActivity.date,
-        gameType: testClubActivity.gameType,
-        participantCount: 23,
-        gameCount: 276,
-        dailyAverage: 205,
-        participants: List<ClubActivityParticipant>.generate(
-          23,
-          (int index) => ClubActivityParticipant(
-            rank: index + 1,
-            id: 'member-$index',
-            name: index == 0 ? longName : '회원 $index',
-            scores: index == 0
-                ? List<int>.generate(12, (int game) => 200 + game)
-                : const <int>[200, 201, 202, 203],
-            total: index == 0 ? 2466 : 806,
-            average: index == 0 ? 205.5 : 201.5,
+      ..activityFeed = ClubActivityFeedPage(
+        year: 2026,
+        types: const <ClubRecordFilter>[
+          ClubRecordFilter.regular,
+          ClubRecordFilter.casual,
+          ClubRecordFilter.house,
+        ],
+        currentMemberId: 'member-0',
+        page: 1,
+        limit: 10,
+        total: 1,
+        totalPages: 1,
+        items: <ClubActivityFeedItem>[
+          ClubActivityFeedItem(
+            id: testClubActivity.id,
+            date: testClubActivity.date,
+            gameType: testClubActivity.gameType,
+            participantCount: 23,
+            gameCount: 276,
+            dailyAverage: 205,
+            participants: List<ClubActivityParticipant>.generate(
+              23,
+              (int index) => ClubActivityParticipant(
+                rank: index + 1,
+                id: 'member-$index',
+                name: index == 0 ? longName : '회원 $index',
+                scores: index == 0
+                    ? List<int>.generate(12, (int game) => 200 + game)
+                    : const <int>[200, 201, 202, 203],
+                total: index == 0 ? 2466 : 806,
+                average: index == 0 ? 205.5 : 201.5,
+              ),
+            ),
+            canManage: true,
           ),
-        ),
+        ],
       );
 
     await _openClubs(tester, repository, surfaceSize: const Size(360, 720));
@@ -524,10 +776,9 @@ void main() {
 
     await tester.tap(find.text('활동 일지'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(Key('club-activity-${testClubActivity.id}')));
-    await tester.pumpAndSettle();
-    expect(find.text('12G 211'), findsOneWidget);
-    expect(find.text('총점 2466 · AVG 205.5'), findsOneWidget);
+    expect(find.text('12G'), findsOneWidget);
+    expect(find.text('2,466'), findsOneWidget);
+    expect(find.text('205.5'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -578,6 +829,13 @@ Future<void> _openClubs(
           FakeDashboardRepository(),
         ),
         clubRepositoryProvider.overrideWithValue(clubRepository),
+        clubTeamProfileProvider.overrideWith((ref, request) async => _profile),
+        clubSeasonRankingProvider.overrideWith(
+          (ref, request) async => _ranking,
+        ),
+        clubMemberProfileProvider.overrideWith(
+          (ref, request) async => _memberProfile,
+        ),
       ],
       child: const BowlingManagerApp(),
     ),
@@ -590,3 +848,133 @@ Future<void> _openClubs(
     await tester.pump();
   }
 }
+
+final ClubSeason _season = ClubSeason(
+  id: 'season-1',
+  name: '2026 시즌',
+  startDate: DateTime(2026),
+  endDate: DateTime(2026, 12, 31),
+  scoringMode: 'PODIUM',
+  points: const <int>[5, 3, 1],
+  individualPoints: const <ClubSeasonRankPoint>[
+    ClubSeasonRankPoint(rank: 1, points: 5),
+  ],
+  teamPoints: const <ClubSeasonRankPoint>[
+    ClubSeasonRankPoint(rank: 1, points: 3),
+  ],
+  eventPoints: const <ClubSeasonRankPoint>[
+    ClubSeasonRankPoint(rank: 1, points: 5),
+  ],
+);
+
+final ClubTeamProfile _profile = ClubTeamProfile(
+  id: 'team-1',
+  name: '테스트 동호회',
+  description: '함께 즐기는 동호회입니다.',
+  notice: '9월 정기전 안내',
+  myRole: ClubRole.owner,
+  seasonRankingEnabled: true,
+  activeSeason: _season,
+);
+
+final ClubSeasonRanking _ranking = ClubSeasonRanking(
+  enabled: true,
+  season: _season,
+  seasons: <ClubSeason>[_season],
+  competitionType: 'ALL',
+  rows: <ClubSeasonRankingRow>[
+    ClubSeasonRankingRow(
+      rank: 1,
+      id: 'member-1',
+      name: '팀장',
+      points: 5,
+      attended: 1,
+      games: 3,
+      average: 210,
+      gold: 1,
+      silver: 0,
+      bronze: 0,
+      individualPoints: 5,
+      competitionsPlayed: 1,
+      individualWins: 1,
+      entries: <ClubSeasonPointEntry>[
+        ClubSeasonPointEntry(
+          id: 'entry-1',
+          eventId: null,
+          competitionType: 'INDIVIDUAL',
+          competitionDate: DateTime(2026, 1, 10),
+          competitionTitle: '1월 개인전',
+          finalRank: 1,
+          points: 5,
+          month: 1,
+        ),
+      ],
+      monthlyHistory: <List<ClubSeasonPointEntry>>[
+        <ClubSeasonPointEntry>[
+          ClubSeasonPointEntry(
+            id: 'entry-1',
+            eventId: null,
+            competitionType: 'INDIVIDUAL',
+            competitionDate: DateTime(2026, 1, 10),
+            competitionTitle: '1월 개인전',
+            finalRank: 1,
+            points: 5,
+            month: 1,
+          ),
+        ],
+        <ClubSeasonPointEntry>[],
+        <ClubSeasonPointEntry>[],
+        <ClubSeasonPointEntry>[],
+        <ClubSeasonPointEntry>[],
+        <ClubSeasonPointEntry>[],
+        <ClubSeasonPointEntry>[],
+        <ClubSeasonPointEntry>[],
+        <ClubSeasonPointEntry>[],
+        <ClubSeasonPointEntry>[],
+        <ClubSeasonPointEntry>[],
+        <ClubSeasonPointEntry>[],
+      ],
+    ),
+  ],
+);
+
+final ClubMemberProfile _memberProfile = ClubMemberProfile(
+  id: 'member-1',
+  name: '팀장',
+  alias: null,
+  role: ClubRole.owner,
+  handicap: 10,
+  joinedAt: DateTime(2025),
+  activityStartDate: DateTime(2026, 1, 2),
+  year: 2026,
+  attendanceRate: 100,
+  attended: 1,
+  activityCount: 1,
+  gameCount: 3,
+  total: 630,
+  average: 210,
+  monthlyAverages: const <int?>[
+    210,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+  ],
+  gold: 1,
+  silver: 0,
+  bronze: 0,
+  recentScores: <ClubRecentRegularScore>[
+    ClubRecentRegularScore(
+      id: 'score-1',
+      date: DateTime(2026, 1, 2),
+      score: 210,
+    ),
+  ],
+);

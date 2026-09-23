@@ -192,6 +192,7 @@ class CaptureController extends AsyncNotifier<CaptureState> {
       ref.invalidate(recordsControllerProvider(userId));
       ref.invalidate(clubStatisticsProvider);
       ref.invalidate(clubActivitiesControllerProvider);
+      ref.invalidate(clubActivityFeedControllerProvider);
       ref.invalidate(clubActivityProvider);
       ref.invalidate(clubActivityEditProvider);
       if (ref.mounted) {

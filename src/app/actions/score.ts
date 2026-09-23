@@ -9,6 +9,7 @@ import {
     ScoreBulkServiceError,
     type ScoreBulkRow,
 } from "@/lib/score-bulk-service";
+import { assertEventScoresMutable } from "@/lib/mobile-api/event-competition";
 
 export async function addScore(prevState: any, formData: FormData) {
     const session = await auth();
@@ -98,6 +99,12 @@ export async function addScore(prevState: any, formData: FormData) {
         const memo = formData.get("memo") as string || null;
 
         await prisma.$transaction(async (tx) => {
+            await assertEventScoresMutable([{
+                teamId: currentTeam.id,
+                userId: targetUserId === "guest" ? null : targetUserId,
+                gameDate,
+                gameType,
+            }], tx);
             for (const score of validScores) {
                 const isGuest = targetUserId === 'guest';
 

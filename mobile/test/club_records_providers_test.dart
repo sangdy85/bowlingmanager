@@ -153,4 +153,106 @@ void main() {
       expect(state.hasNextPage, isFalse);
     },
   );
+
+  test('expanded feed is isolated by user and multi-filter key', () async {
+    final FakeClubRepository repository = FakeClubRepository();
+    final ProviderContainer container = ProviderContainer(
+      overrides: [clubRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    for (final ClubActivityFeedRequest request in <ClubActivityFeedRequest>[
+      (
+        userId: 'user-1',
+        teamId: 'team-1',
+        year: 2026,
+        typesKey: 'REGULAR,CASUAL,HOUSE',
+      ),
+      (
+        userId: 'user-2',
+        teamId: 'team-1',
+        year: 2026,
+        typesKey: 'REGULAR,CASUAL,HOUSE',
+      ),
+      (userId: 'user-1', teamId: 'team-1', year: 2026, typesKey: 'REGULAR'),
+    ]) {
+      repository.activityFeed = ClubActivityFeedPage(
+        year: 2026,
+        types: request.typesKey
+            .split(',')
+            .map(ClubRecordFilter.fromJson)
+            .toList(),
+        currentMemberId: 'member-1',
+        items: <ClubActivityFeedItem>[testClubActivityFeedItem],
+        page: 1,
+        limit: 10,
+        total: 1,
+        totalPages: 1,
+      );
+      await container.read(clubActivityFeedControllerProvider(request).future);
+    }
+    expect(repository.requestedActivityFeedPages, <int>[1, 1, 1]);
+  });
+
+  test(
+    'expanded feed pagination de-duplicates and retains rows on failure',
+    () async {
+      final ClubActivityFeedItem second = ClubActivityFeedItem(
+        id: '2026-09-18~REGULAR',
+        date: DateTime(2026, 9, 18),
+        gameType: '정기전',
+        participantCount: 1,
+        gameCount: 1,
+        dailyAverage: 200,
+        participants: testClubActivityDetail.participants,
+        canManage: false,
+      );
+      final FakeClubRepository repository = FakeClubRepository()
+        ..activityFeedPages[1] = ClubActivityFeedPage(
+          year: 2026,
+          types: const <ClubRecordFilter>[ClubRecordFilter.regular],
+          currentMemberId: 'member-1',
+          items: <ClubActivityFeedItem>[testClubActivityFeedItem],
+          page: 1,
+          limit: 10,
+          total: 2,
+          totalPages: 2,
+        )
+        ..activityPageErrors[2] = const ApiException(
+          kind: ApiErrorKind.networkUnavailable,
+          userMessage: '네트워크 연결을 확인해주세요.',
+        );
+      final ProviderContainer container = ProviderContainer(
+        overrides: [clubRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+      const ClubActivityFeedRequest request = (
+        userId: 'user-1',
+        teamId: 'team-1',
+        year: 2026,
+        typesKey: 'REGULAR',
+      );
+      final provider = clubActivityFeedControllerProvider(request);
+      await container.read(provider.future);
+      await container.read(provider.notifier).loadNextPage();
+      expect(container.read(provider).value!.items.length, 1);
+      expect(container.read(provider).value!.paginationErrorMessage, isNotNull);
+
+      repository.activityPageErrors.remove(2);
+      repository.activityFeedPages[2] = ClubActivityFeedPage(
+        year: 2026,
+        types: const <ClubRecordFilter>[ClubRecordFilter.regular],
+        currentMemberId: 'member-1',
+        items: <ClubActivityFeedItem>[testClubActivityFeedItem, second],
+        page: 2,
+        limit: 10,
+        total: 2,
+        totalPages: 2,
+      );
+      await container.read(provider.notifier).loadNextPage();
+      expect(
+        container.read(provider).value!.items.map((item) => item.id),
+        <String>[testClubActivity.id, second.id],
+      );
+    },
+  );
 }

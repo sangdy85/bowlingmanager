@@ -3,9 +3,12 @@ import {
     calculateTeamStatistics,
     createTeamActivities,
     createTeamActivityDetail,
+    createTeamActivityFeed,
     isTeamRecordFilter,
     parseTeamActivityId,
+    TEAM_RECORD_SPECIFIC_FILTERS,
     type TeamRecordFilter,
+    type TeamRecordSpecificFilter,
     type TeamRecordMember,
     type TeamRecordScore,
 } from "@/lib/team-records";
@@ -13,7 +16,11 @@ import {
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
-type AccessRecord = { id: string };
+type AccessRecord = {
+    id: string;
+    ownerId?: string | null;
+    User?: { id: string }[];
+};
 type MemberRecord = { id: string; userId: string; alias: string | null; user: { name: string } };
 type ScoreRecord = Omit<TeamRecordScore, "user"> & { User: { name: string | null } | null };
 
@@ -32,7 +39,11 @@ const defaultDependencies: TeamRecordsDependencies = {
                 isActive: true,
                 members: { some: { userId } },
             },
-            select: { id: true },
+            select: {
+                id: true,
+                ownerId: true,
+                User: { select: { id: true } },
+            },
         });
     },
     listMembers(teamId) {
@@ -78,6 +89,11 @@ export type TeamRecordsQuery = {
     filter: TeamRecordFilter;
 };
 
+export type TeamActivityFeedQuery = {
+    year: number;
+    types: TeamRecordSpecificFilter[];
+};
+
 export function parseTeamRecordsQuery(searchParams: URLSearchParams): TeamRecordsQuery | null {
     const rawYear = searchParams.get("year");
     const year = rawYear === null ? new Date().getFullYear() : Number(rawYear);
@@ -96,6 +112,22 @@ export function parseTeamActivitiesPagination(searchParams: URLSearchParams) {
         return null;
     }
     return { page: parsedPage, limit: Math.min(parsedLimit, MAX_LIMIT) };
+}
+
+export function parseTeamActivityFeedQuery(searchParams: URLSearchParams): TeamActivityFeedQuery | null {
+    const rawYear = searchParams.get("year");
+    const year = rawYear === null ? new Date().getFullYear() : Number(rawYear);
+    if (!Number.isSafeInteger(year) || year < 1900 || year > 2100) return null;
+
+    const values = searchParams.getAll("types")
+        .flatMap((value) => value.split(","))
+        .map((value) => value.trim())
+        .filter(Boolean);
+    const requested = values.length > 0 ? values : ["REGULAR", "CASUAL", "HOUSE"];
+    if (requested.some((value) => value === "ALL" || !isTeamRecordFilter(value))) return null;
+    const requestedSet = new Set(requested as TeamRecordSpecificFilter[]);
+    const types = TEAM_RECORD_SPECIFIC_FILTERS.filter((filter) => requestedSet.has(filter));
+    return types.length > 0 ? { year, types } : null;
 }
 
 export async function getMobileTeamStatistics(
@@ -131,6 +163,49 @@ export async function getMobileTeamActivities(
         year: query.year,
         filter: query.filter,
         items: allItems.slice(start, start + limit),
+        pagination: {
+            page,
+            limit,
+            total: allItems.length,
+            totalPages: Math.ceil(allItems.length / limit),
+        },
+    };
+}
+
+export async function getMobileTeamActivityFeed(
+    userId: string,
+    teamId: string,
+    query: TeamActivityFeedQuery,
+    page: number,
+    limit: number,
+    dependencies: TeamRecordsDependencies = defaultDependencies,
+) {
+    const access = await dependencies.findAccessibleTeam(userId, teamId);
+    if (!access) return null;
+    const start = new Date(`${query.year}-01-01T00:00:00+09:00`);
+    const end = new Date(`${query.year}-12-31T23:59:59.999+09:00`);
+    const [memberRows, scoreRows] = await Promise.all([
+        dependencies.listMembers(teamId),
+        dependencies.listScores(teamId, start, end),
+    ]);
+    const allItems = createTeamActivityFeed(
+        teamId,
+        mapScores(scoreRows),
+        mapMembers(memberRows),
+        query.types,
+    );
+    const startIndex = (page - 1) * limit;
+    const canManage = access.ownerId === userId
+        || access.User?.some((manager) => manager.id === userId) === true;
+    const currentMemberId = memberRows.find((member) => member.userId === userId)?.id ?? null;
+    return {
+        year: query.year,
+        types: query.types,
+        currentMemberId,
+        items: allItems.slice(startIndex, startIndex + limit).map((item) => ({
+            ...item,
+            canManage,
+        })),
         pagination: {
             page,
             limit,

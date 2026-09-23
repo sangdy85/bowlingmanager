@@ -337,6 +337,111 @@ class ClubActivityDetail extends ClubActivity {
   }
 }
 
+class ClubActivityFeedItem extends ClubActivityDetail {
+  const ClubActivityFeedItem({
+    required super.id,
+    required super.date,
+    required super.gameType,
+    required super.participantCount,
+    required super.gameCount,
+    required super.dailyAverage,
+    required super.participants,
+    required this.canManage,
+  });
+
+  final bool canManage;
+
+  factory ClubActivityFeedItem.fromJson(Map<String, dynamic> json) {
+    final ClubActivityDetail activity = ClubActivityDetail.fromJson(json);
+    final Object? canManage = json['canManage'];
+    if (canManage is! bool) {
+      throw const FormatException('Invalid club activity permissions.');
+    }
+    return ClubActivityFeedItem(
+      id: activity.id,
+      date: activity.date,
+      gameType: activity.gameType,
+      participantCount: activity.participantCount,
+      gameCount: activity.gameCount,
+      dailyAverage: activity.dailyAverage,
+      participants: activity.participants,
+      canManage: canManage,
+    );
+  }
+}
+
+class ClubActivityFeedPage {
+  const ClubActivityFeedPage({
+    required this.year,
+    required this.types,
+    required this.currentMemberId,
+    required this.items,
+    required this.page,
+    required this.limit,
+    required this.total,
+    required this.totalPages,
+  });
+
+  final int year;
+  final List<ClubRecordFilter> types;
+  final String? currentMemberId;
+  final List<ClubActivityFeedItem> items;
+  final int page;
+  final int limit;
+  final int total;
+  final int totalPages;
+
+  bool get hasNextPage => page < totalPages;
+
+  factory ClubActivityFeedPage.fromJson(Map<String, dynamic> json) {
+    final Object? year = json['year'];
+    final Object? types = json['types'];
+    final Object? currentMemberId = json['currentMemberId'];
+    final Object? items = json['items'];
+    final Object? pagination = json['pagination'];
+    if (year is! int ||
+        types is! List ||
+        (currentMemberId != null && currentMemberId is! String) ||
+        items is! List ||
+        pagination is! Map) {
+      throw const FormatException('Invalid club activity feed response.');
+    }
+    final Map<String, dynamic> pageData = Map<String, dynamic>.from(pagination);
+    final Object? page = pageData['page'];
+    final Object? limit = pageData['limit'];
+    final Object? total = pageData['total'];
+    final Object? totalPages = pageData['totalPages'];
+    if (page is! int || limit is! int || total is! int || totalPages is! int) {
+      throw const FormatException('Invalid club activity feed pagination.');
+    }
+    final List<ClubRecordFilter> parsedTypes = types
+        .map(ClubRecordFilter.fromJson)
+        .toList(growable: false);
+    if (parsedTypes.contains(ClubRecordFilter.all)) {
+      throw const FormatException('Invalid club activity feed filters.');
+    }
+    return ClubActivityFeedPage(
+      year: year,
+      types: List<ClubRecordFilter>.unmodifiable(parsedTypes),
+      currentMemberId: currentMemberId as String?,
+      items: List<ClubActivityFeedItem>.unmodifiable(
+        items.map((Object? value) {
+          if (value is! Map) {
+            throw const FormatException('Invalid club activity feed item.');
+          }
+          return ClubActivityFeedItem.fromJson(
+            Map<String, dynamic>.from(value),
+          );
+        }),
+      ),
+      page: page,
+      limit: limit,
+      total: total,
+      totalPages: totalPages,
+    );
+  }
+}
+
 class ClubActivityParticipant {
   const ClubActivityParticipant({
     required this.rank,
@@ -378,7 +483,7 @@ class ClubActivityParticipant {
       name: name,
       scores: List<int>.unmodifiable(
         scores.map((Object? value) {
-          if (value is! int) {
+          if (value is! int || value < 0 || value > 300) {
             throw const FormatException('Invalid participant score.');
           }
           return value;

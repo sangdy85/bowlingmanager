@@ -2327,7 +2327,6 @@ function RoundLuckyDrawTab({ round }: { round: any }) {
                 }
             } catch (e) {
                 console.error("Failed to parse lucky draw result. Malformed JSON:", e);
-                console.log("Raw result:", round.luckyDrawResult);
             }
         }
     }, [round.luckyDrawResult]);

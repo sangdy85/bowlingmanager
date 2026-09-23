@@ -131,6 +131,35 @@ ClubActivitiesPage testClubActivitiesPage({int page = 1, int totalPages = 1}) =>
       totalPages: totalPages,
     );
 
+final ClubActivityFeedItem testClubActivityFeedItem = ClubActivityFeedItem(
+  id: testClubActivityDetail.id,
+  date: testClubActivityDetail.date,
+  gameType: testClubActivityDetail.gameType,
+  participantCount: testClubActivityDetail.participantCount,
+  gameCount: testClubActivityDetail.gameCount,
+  dailyAverage: testClubActivityDetail.dailyAverage,
+  participants: testClubActivityDetail.participants,
+  canManage: true,
+);
+
+ClubActivityFeedPage testClubActivityFeedPage({
+  int page = 1,
+  int totalPages = 1,
+}) => ClubActivityFeedPage(
+  year: 2026,
+  types: const <ClubRecordFilter>[
+    ClubRecordFilter.regular,
+    ClubRecordFilter.casual,
+    ClubRecordFilter.house,
+  ],
+  currentMemberId: 'member-1',
+  items: <ClubActivityFeedItem>[testClubActivityFeedItem],
+  page: page,
+  limit: 10,
+  total: 1,
+  totalPages: totalPages,
+);
+
 const ClubActivityEditEnvelope testEditableActivity = ClubActivityEditEnvelope(
   role: ClubRole.owner,
   activity: ClubActivityEdit(
@@ -211,6 +240,18 @@ class FakeClubApi implements ClubApi {
   }
 
   @override
+  Future<ClubActivityFeedPage> fetchClubActivityFeed({
+    required String teamId,
+    required int year,
+    required List<ClubRecordFilter> types,
+    required int page,
+    required int limit,
+  }) async {
+    if (error case final Object currentError) throw currentError;
+    return testClubActivityFeedPage(page: page);
+  }
+
+  @override
   Future<ClubActivityDetail> fetchClubActivity({
     required String teamId,
     required String activityId,
@@ -263,6 +304,7 @@ class FakeClubRepository implements ClubRepository {
   final List<String> memberTeamIds = <String>[];
   ClubStatistics statistics = testClubStatistics;
   ClubActivitiesPage activities = testClubActivitiesPage();
+  ClubActivityFeedPage activityFeed = testClubActivityFeedPage();
   ClubActivityDetail activityDetail = testClubActivityDetail;
   Object? statisticsError;
   Object? activitiesError;
@@ -272,7 +314,10 @@ class FakeClubRepository implements ClubRepository {
   final List<int> requestedActivityPages = <int>[];
   final Map<int, ClubActivitiesPage> activityPages =
       <int, ClubActivitiesPage>{};
+  final Map<int, ClubActivityFeedPage> activityFeedPages =
+      <int, ClubActivityFeedPage>{};
   final Map<int, Object> activityPageErrors = <int, Object>{};
+  final List<int> requestedActivityFeedPages = <int>[];
   int createCalls = 0;
   int updateCalls = 0;
   int deleteCalls = 0;
@@ -360,6 +405,30 @@ class FakeClubRepository implements ClubRepository {
     if (activityPageErrors[page] case final Object error) throw error;
     if (activitiesError case final Object error) throw error;
     return activityPages[page] ?? activities;
+  }
+
+  @override
+  Future<ClubActivityFeedPage> fetchClubActivityFeed({
+    required String teamId,
+    required int year,
+    required List<ClubRecordFilter> types,
+    required int page,
+    required int limit,
+  }) async {
+    requestedActivityFeedPages.add(page);
+    if (activityPageErrors[page] case final Object error) throw error;
+    if (activitiesError case final Object error) throw error;
+    final ClubActivityFeedPage source = activityFeedPages[page] ?? activityFeed;
+    return ClubActivityFeedPage(
+      year: source.year,
+      types: types,
+      currentMemberId: source.currentMemberId,
+      items: source.items,
+      page: source.page,
+      limit: source.limit,
+      total: source.total,
+      totalPages: source.totalPages,
+    );
   }
 
   @override

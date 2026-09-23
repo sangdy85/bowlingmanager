@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { assertEventScoresMutable, EventCompetitionError } from "@/lib/mobile-api/event-competition";
 import { v4 as uuidv4 } from "uuid";
 
 export const SCORE_GAME_TYPES = ["정기전", "벙개", "상주", "교류전", "기타"] as const;
@@ -36,6 +37,8 @@ export type ScoreCreateRecord = {
     teamId: string;
     gameType: string;
     memo: string | null;
+    competitionMode?: string | null;
+    teamEventId?: string | null;
 };
 
 export type ScoreBulkDependencies = {
@@ -44,6 +47,37 @@ export type ScoreBulkDependencies = {
     createScoresAtomically: (records: ScoreCreateRecord[]) => Promise<void>;
     createId: () => string;
 };
+
+export type CompetitionEventProvenance = {
+    id: string;
+    teamId: string;
+    eventDate: Date;
+    gameType: string | null;
+    competitionMode: string | null;
+};
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+function competitionDateKey(date: Date) {
+    return new Date(date.getTime() + KST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+export function competitionEventDateForScore(scoreDate: Date) {
+    return new Date(`${competitionDateKey(scoreDate)}T00:00:00+09:00`);
+}
+
+function competitionEventKey(teamId: string, date: Date, gameType: string | null) {
+    return `${teamId}|${competitionDateKey(date)}|${gameType ?? ""}`;
+}
+
+export function indexUniqueCompetitionEvents(events: readonly CompetitionEventProvenance[]) {
+    const eventByKey = new Map<string, CompetitionEventProvenance | null>();
+    for (const event of events) {
+        const key = competitionEventKey(event.teamId, event.eventDate, event.gameType);
+        eventByKey.set(key, eventByKey.has(key) ? null : event);
+    }
+    return eventByKey;
+}
 
 const defaultDependencies: ScoreBulkDependencies = {
     async findDefaultTeamId(userId) {
@@ -76,18 +110,36 @@ const defaultDependencies: ScoreBulkDependencies = {
         });
     },
     async createScoresAtomically(records) {
-        await prisma.$transaction(async (tx) => {
-            for (const record of records) {
-                const { userId, teamId, ...data } = record;
-                await tx.score.create({
-                    data: {
-                        ...data,
-                        User: userId ? { connect: { id: userId } } : undefined,
-                        Team: { connect: { id: teamId } },
-                    },
+        try {
+            await prisma.$transaction(async (tx) => {
+                await assertEventScoresMutable(records.map((record) => ({
+                    teamId: record.teamId, userId: record.userId,
+                    gameDate: record.gameDate, gameType: record.gameType,
+                })), tx);
+                const events = await tx.teamEvent.findMany({
+                    where: { competitionEnabled: true, OR: records.map((record) => ({ teamId: record.teamId, eventDate: competitionEventDateForScore(record.gameDate), gameType: record.gameType })) },
+                    select: { id: true, teamId: true, eventDate: true, gameType: true, competitionMode: true },
                 });
+                const eventByKey = indexUniqueCompetitionEvents(events);
+                for (const record of records) {
+                    const { userId, teamId, ...data } = record;
+                    const event = eventByKey.get(competitionEventKey(teamId, record.gameDate, record.gameType)) ?? null;
+                    await tx.score.create({
+                        data: {
+                            ...data, competitionMode: event?.competitionMode ?? null,
+                            User: userId ? { connect: { id: userId } } : undefined,
+                            Team: { connect: { id: teamId } },
+                            TeamEvent: event ? { connect: { id: event.id } } : undefined,
+                        },
+                    });
+                }
+            }, { timeout: 60000 });
+        } catch (error) {
+            if (error instanceof EventCompetitionError) {
+                throw new ScoreBulkServiceError(error.code, error.message, error.status);
             }
-        }, { timeout: 60000 });
+            throw error;
+        }
     },
     createId: uuidv4,
 };

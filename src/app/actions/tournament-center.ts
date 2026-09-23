@@ -150,13 +150,11 @@ export async function deleteTournament(tournamentId: string) {
         centerId = tournament.centerId;
         await verifyCenterAdmin(tournament.centerId);
 
-        console.log(`[DeleteTournament] Deleting tournament: ${tournament.name} (${tournamentId})`);
-
         await prisma.tournament.delete({
             where: { id: tournamentId },
         });
     } catch (error: any) {
-        console.error(`[DeleteTournament] Failed to delete tournament ${tournamentId}:`, error);
+        console.error("Tournament deletion failed.");
         throw error;
     }
 

@@ -42,7 +42,9 @@ function matches(row, where) {
 }
 
 const user = { id: 'fixture-user', name: 'Fixture Bowler', teamMemberships: [
-    { teamId: 'team-1', team: { name: 'Fixture Team' } },
+    { id: 'member-1', teamId: 'team-1', team: {
+        id: 'team-1', name: 'Fixture Team', ownerId: null, User: [],
+    } },
 ] };
 const date = new Date('2026-06-01T00:00:00.000Z');
 const personal = (changes = {}) => ({ id: 'p', userId: user.id, score: 200,
@@ -72,6 +74,10 @@ function database(rows = {}) {
         assert.deepEqual(args.select.teamMemberships.where, { team: { isActive: true } });
         return user;
     } };
+    db.teamMember = { findMany: async () => [{
+        id: 'member-1', teamId: 'team-1', userId: user.id, alias: null,
+        user: { name: user.name },
+    }] };
     return { db, calls };
 }
 const shared = loadTs('src/lib/personal-statistics.ts', { '@/lib/prisma': {} });

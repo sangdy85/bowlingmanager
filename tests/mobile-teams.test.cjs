@@ -28,7 +28,7 @@ function loadTs(relative, overrides = {}, cache = new Map()) {
 function team(changes = {}) {
     return {
         id: 'team-1', name: 'Fixture Club', ownerId: 'owner-1',
-        User: [{ id: 'manager-1' }], _count: { members: 3 }, ...changes,
+        User: [{ id: 'manager-1' }], _count: { members: 3 }, bowlerHiddenEnabled: false, ...changes,
     };
 }
 
@@ -55,8 +55,8 @@ test('team list returns one or multiple active memberships with current roles', 
         ],
     }));
     assert.deepEqual(result, [
-        { id: 'team-1', name: 'Fixture Club', myRole: 'OWNER', memberCount: 3 },
-        { id: 'team-2', name: 'Second Club', myRole: 'MANAGER', memberCount: 5 },
+        { id: 'team-1', name: 'Fixture Club', myRole: 'OWNER', memberCount: 3, bowlerHiddenEnabled: false },
+        { id: 'team-2', name: 'Second Club', myRole: 'MANAGER', memberCount: 5, bowlerHiddenEnabled: false },
     ]);
 });
 
@@ -87,7 +87,7 @@ test('detail requires an active membership and supports an ordinary member', asy
         },
     }));
     assert.deepEqual(seen, [{ userId: 'member-1', teamId: 'team-1' }]);
-    assert.deepEqual(result, { id: 'team-1', name: 'Fixture Club', myRole: 'MEMBER', memberCount: 3 });
+    assert.deepEqual(result, { id: 'team-1', name: 'Fixture Club', myRole: 'MEMBER', memberCount: 3, bowlerHiddenEnabled: false });
 });
 
 test('detail hides missing teams and teams belonging to another user', async () => {

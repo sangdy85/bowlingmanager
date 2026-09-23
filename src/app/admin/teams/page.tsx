@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { deleteTeam } from "@/app/actions/admin";
+import { deleteTeam, setTeamBowlerHiddenEnabled } from "@/app/actions/admin";
 import Link from 'next/link';
 
 export default async function AdminTeamsPage() {
@@ -35,8 +35,16 @@ export default async function AdminTeamsPage() {
                                 <p className="text-secondary-foreground text-sm">
                                     팀원 {team._count.members}명 · 생성일 {team.createdAt.toLocaleDateString('ko-KR')}
                                 </p>
+                                <p className="mt-2 text-sm font-medium">
+                                    Bowler Hidden: {team.bowlerHiddenEnabled ? "ON" : "OFF"}
+                                </p>
                             </div>
                             <div className="flex gap-2">
+                                <form action={setTeamBowlerHiddenEnabled.bind(null, team.id, !team.bowlerHiddenEnabled)}>
+                                    <button className="btn btn-secondary text-xs px-3 h-8">
+                                        {team.bowlerHiddenEnabled ? "고급 기능 끄기" : "고급 기능 켜기"}
+                                    </button>
+                                </form>
                                 <Link
                                     href={`/team/${team.id}`}
                                     className="btn btn-secondary text-xs px-3 h-8 flex items-center"

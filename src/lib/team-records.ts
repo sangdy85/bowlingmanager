@@ -10,6 +10,11 @@ export const TEAM_RECORD_FILTERS = [
 ] as const;
 
 export type TeamRecordFilter = typeof TEAM_RECORD_FILTERS[number];
+export type TeamRecordSpecificFilter = Exclude<TeamRecordFilter, "ALL">;
+
+export const TEAM_RECORD_SPECIFIC_FILTERS = TEAM_RECORD_FILTERS.filter(
+    (filter): filter is TeamRecordSpecificFilter => filter !== "ALL",
+);
 
 export type TeamRecordScore = {
     id: string;
@@ -49,6 +54,11 @@ export function normalizeTeamGameType(value: string | null) {
 export function filterTeamRecordScores(scores: TeamRecordScore[], filter: TeamRecordFilter) {
     const allowed = filterTypes[filter];
     return scores.filter((score) => allowed.includes(normalizeTeamGameType(score.gameType)));
+}
+
+export function teamRecordFilterForGameType(value: string | null): TeamRecordSpecificFilter | null {
+    const normalized = normalizeTeamGameType(value);
+    return TEAM_RECORD_SPECIFIC_FILTERS.find((filter) => filterTypes[filter].includes(normalized)) ?? null;
 }
 
 const utcDateKey = (value: Date) => value.toISOString().slice(0, 10);
@@ -211,6 +221,51 @@ export function createTeamActivityDetail(
         dailyAverage: oneDecimal(total / matching.length),
         participants,
     };
+}
+
+export function createTeamActivityFeed(
+    teamId: string,
+    scores: TeamRecordScore[],
+    members: TeamRecordMember[],
+    filters: readonly TeamRecordSpecificFilter[],
+) {
+    const selected = new Set(filters);
+    const groups = new Map<string, {
+        date: string;
+        filter: TeamRecordSpecificFilter;
+        scores: TeamRecordScore[];
+    }>();
+
+    for (const score of scores) {
+        const filter = teamRecordFilterForGameType(score.gameType);
+        if (!filter || !selected.has(filter)) continue;
+        const date = teamActivityDateKey(score.gameDate);
+        const key = createTeamActivityId(date, filter);
+        const existing = groups.get(key);
+        if (existing) existing.scores.push(score);
+        else groups.set(key, { date, filter, scores: [score] });
+    }
+
+    return [...groups.values()].map((group) => {
+        const participants = createActivityParticipants(teamId, group.scores, members);
+        const total = group.scores.reduce((sum, score) => sum + score.score, 0);
+        return {
+            id: createTeamActivityId(group.date, group.filter),
+            date: group.date,
+            gameType: filterTypes[group.filter][0],
+            participantCount: participants.length,
+            gameCount: group.scores.length,
+            dailyAverage: group.scores.length > 0 ? oneDecimal(total / group.scores.length) : 0,
+            participants,
+        };
+    }).sort((left, right) => {
+        const dateOrder = right.date.localeCompare(left.date);
+        if (dateOrder !== 0) return dateOrder;
+        const leftFilter = parseTeamActivityId(left.id)?.filter as TeamRecordSpecificFilter;
+        const rightFilter = parseTeamActivityId(right.id)?.filter as TeamRecordSpecificFilter;
+        return TEAM_RECORD_SPECIFIC_FILTERS.indexOf(leftFilter)
+            - TEAM_RECORD_SPECIFIC_FILTERS.indexOf(rightFilter);
+    });
 }
 
 function createActivityParticipants(

@@ -1,10 +1,11 @@
 
 import { v4 as uuidv4 } from 'uuid';
+import { randomInt } from 'node:crypto';
 import prisma from '@/lib/prisma';
 
 export async function generateVerificationToken(email: string) {
     // Generate 6 digit code
-    const token = Math.floor(100000 + Math.random() * 900000).toString();
+    const token = randomInt(100_000, 1_000_000).toString();
     const expires = new Date(new Date().getTime() + 10 * 60 * 1000); // 10 minutes
 
     const existingToken = await prisma.verificationToken.findFirst({

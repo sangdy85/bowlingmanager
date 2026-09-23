@@ -96,7 +96,6 @@ export async function analyzeLeagueRoundExcelWithGemini(
 
         const response = await result.response;
         const text = response.text();
-        console.log("Gemini Raw Response (First 100 chars):", text.substring(0, 100));
 
         // 3. Track Global & User Usage
         const usageMetadata = result.response.usageMetadata;
@@ -112,12 +111,11 @@ export async function analyzeLeagueRoundExcelWithGemini(
             const rawArray = Array.isArray(parsed) ? parsed : (parsed.raw || parsed.data || []);
             return { success: true, data: rawArray };
         } catch (parseError) {
-            console.error("League Round AI JSON Parse Error:", parseError, "JSON string:", jsonString);
+            console.error("League Round AI response parsing failed.");
             return { success: false, message: "AI응답 형식이 올바르지 않습니다. (Truncation error at pos " + (parseError instanceof Error ? (parseError as any).pos : "?") + ")" };
         }
 
     } catch (error: any) {
-        console.error("League Round AI Error:", error);
         const handled = handleGeminiError(error);
         return { success: false, message: handled.message, errorType: handled.errorType };
     }
@@ -245,7 +243,7 @@ export async function analyzeExcelWithGemini(
             const parsedData = JSON.parse(jsonString);
             return { success: true, data: parsedData };
         } catch (perr) {
-            console.error("Gemini JSON parse failed even after extraction:", perr, "JSON String:", jsonString);
+            console.error("Gemini response parsing failed.");
             return { success: false, message: "AI응답 형식이 올바르지 않습니다. (Truncation error at pos " + (perr instanceof Error ? (perr as any).pos : "?") + ")" };
         }
     } catch (error: any) {

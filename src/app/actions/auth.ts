@@ -25,16 +25,12 @@ export async function login(prevState: string | undefined, formData: FormData) {
     try {
         const credentialCheck = await checkCredentials(email, password);
 
-        if (!credentialCheck.user) {
-            return "존재하지 않는 계정입니다.";
-        }
-
-        if (!credentialCheck.hasPassword) {
-            return "소셜 로그인(구글/네이버)으로 가입된 계정입니다. 소셜 로그인 버튼을 이용해주세요.";
-        }
-
-        if (!credentialCheck.isPasswordValid) {
-            return "비밀번호가 일치하지 않습니다.";
+        if (
+            !credentialCheck.user
+            || !credentialCheck.hasPassword
+            || !credentialCheck.isPasswordValid
+        ) {
+            return "이메일 또는 비밀번호를 확인해주세요.";
         }
 
         if (!credentialCheck.isEmailVerified) {
@@ -114,62 +110,63 @@ export async function register(prevState: string | undefined, formData: FormData
         return redirect("/login?message=registered");
     } catch (error: any) {
         if (error.digest?.startsWith("NEXT_REDIRECT")) throw error;
-        console.error("Registration error:", error);
+        console.error("Registration failed.");
         return "회원가입 중 오류가 발생했습니다.";
     }
+}
+
+function maskEmail(email: string) {
+    const separator = email.lastIndexOf("@");
+    if (separator <= 0 || separator === email.length - 1) return "***";
+    const local = email.slice(0, separator);
+    const domain = email.slice(separator + 1);
+    const visiblePrefix = local.length > 2 ? local.slice(0, 1) : "";
+    return `${visiblePrefix}***@${domain}`;
 }
 
 export async function findEmail(name: string) {
     try {
         const prisma = getPrisma();
-        const user = await prisma.user.findFirst({
+        const users = await prisma.user.findMany({
             where: { name },
+            select: { email: true, createdAt: true },
+            orderBy: { createdAt: "asc" },
         });
-        if (user) {
-            return { success: true, email: user.email };
+        if (users.length > 0) {
+            return {
+                success: true,
+                data: users.map((user) => ({
+                    email: maskEmail(user.email),
+                    createdAt: user.createdAt,
+                })),
+            };
         }
-        return { success: false, message: "사용자를 찾을 수 없습니다." };
-    } catch (error) {
+        return { success: false, message: "일치하는 계정 정보를 찾을 수 없습니다." };
+    } catch {
         return { success: false, message: "오류가 발생했습니다." };
     }
 }
 
 export async function sendCode(email: string) {
-    console.log("[SERVER ACTION] sendCode started for:", email);
-    console.log("[SERVER ACTION] DATABASE_URL check:", process.env.DATABASE_URL?.substring(0, 20) + "...");
     try {
         const prisma = getPrisma();
-        console.log("[SERVER ACTION] Prisma initialized. Testing query...");
-
-        // Simple query to verify DB connection within the action
-        await prisma.$queryRaw`SELECT 1`;
-        console.log("[SERVER ACTION] DB Test Query success");
-
-        console.log("[SERVER ACTION] Checking existing user...");
         const existingUser = await prisma.user.findUnique({
             where: { email },
         });
 
         if (existingUser) {
-            console.log("[SERVER ACTION] User already exists:", email);
-            return { success: false, message: "이미 가입된 이메일입니다." };
+            return { success: true, message: "인증 코드가 발송되었습니다." };
         }
 
-        console.log("[SERVER ACTION] Generating verification token...");
         const verificationToken = await generateVerificationToken(email);
-        console.log("[SERVER ACTION] Token generated:", verificationToken.token);
-
-        console.log("[SERVER ACTION] Sending verification email...");
         await sendVerificationEmail(verificationToken.identifier, verificationToken.token);
-        console.log("[SERVER ACTION] Email sent successfully via sendVerificationEmail");
 
         return { success: true, message: "인증 코드가 발송되었습니다." };
-    } catch (error: any) {
-        console.error("[SERVER ACTION] sendCode CRITICAL ERROR:", error);
-        // We log the detailed error here, but return a clean message to the user
+    } catch {
+        console.error("Verification email request failed.");
         return {
             success: false,
-            message: "인증 코드 발송 중 오류가 발생했습니다: " + (error.message || "알 수 없는 오류")
+            message: "인증 코드 발송 중 오류가 발생했습니다."
         };
     }
 }
@@ -181,23 +178,19 @@ export async function requestPasswordReset(email: string) {
             where: { email },
         });
 
-        if (!existingUser) {
-            return { success: false, message: "존재하지 않는 계정입니다." };
-        }
-
-        if (!existingUser.password) {
-            return { success: false, message: "소셜 로그인으로 가입된 계정은 비밀번호를 재설정할 수 없습니다." };
+        if (!existingUser?.password) {
+            return { success: true, message: "비밀번호 재설정 인증 코드가 발송되었습니다." };
         }
 
         const verificationToken = await generateVerificationToken(email);
         await sendPasswordResetEmail(verificationToken.identifier, verificationToken.token);
 
         return { success: true, message: "비밀번호 재설정 인증 코드가 발송되었습니다." };
-    } catch (error: any) {
-        console.error("[SERVER ACTION] requestPasswordReset CRITICAL ERROR:", error);
+    } catch {
+        console.error("Password reset email request failed.");
         return {
             success: false,
-            message: "인증 코드 발송 중 오류가 발생했습니다: " + (error.message || "알 수 없는 오류")
+            message: "인증 코드 발송 중 오류가 발생했습니다."
         };
     }
 }
@@ -242,9 +235,9 @@ export async function resetPassword(email: string, code: string, newPassword: st
         });
 
         return { success: true, message: "비밀번호가 성공적으로 변경되었습니다." };
-    } catch (error: any) {
-        console.error("[SERVER ACTION] resetPassword CRITICAL ERROR:", error);
-        return { success: false, message: "비밀번호 재설정 중 오류가 발생했습니다: " + (error.message || "알 수 없는 오류") };
+    } catch {
+        console.error("Password reset failed.");
+        return { success: false, message: "비밀번호 재설정 중 오류가 발생했습니다." };
     }
 }
 

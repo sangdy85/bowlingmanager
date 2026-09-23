@@ -121,7 +121,9 @@ class _ClubActivityEditScreenState
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('활동 기록을 수정했습니다.')));
-        context.go('/club/${Uri.encodeComponent(widget.teamId)}/records');
+        context.go(
+          '/club/${Uri.encodeComponent(widget.teamId)}/records?section=activities',
+        );
       }
     } catch (error) {
       if (error is ApiException && error.code == 'ACTIVITY_CONFLICT') {
@@ -142,6 +144,7 @@ class _ClubActivityEditScreenState
   void _invalidate(String userId) {
     ref.invalidate(clubStatisticsProvider);
     ref.invalidate(clubActivitiesControllerProvider);
+    ref.invalidate(clubActivityFeedControllerProvider);
     ref.invalidate(clubActivityProvider);
     ref.invalidate(clubActivityEditProvider);
     ref.invalidate(

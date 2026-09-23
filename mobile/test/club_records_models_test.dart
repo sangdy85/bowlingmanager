@@ -61,6 +61,46 @@ void main() {
     expect(detail.participants.single.rank, 1);
   });
 
+  test('parses an expanded multi-filter activity feed', () {
+    final ClubActivityFeedPage feed = ClubActivityFeedPage.fromJson(
+      <String, Object?>{
+        'year': 2026,
+        'types': <String>['REGULAR', 'CASUAL'],
+        'currentMemberId': 'membership-1',
+        'items': <Object>[
+          <String, Object>{
+            ..._activityJson,
+            'canManage': true,
+            'participants': <Object>[
+              <String, Object>{
+                'rank': 1,
+                'id': 'membership-1',
+                'name': '회원',
+                'scores': <int>[190, 200, 210, 220],
+                'total': 820,
+                'average': 205,
+              },
+            ],
+          },
+        ],
+        'pagination': const <String, int>{
+          'page': 1,
+          'limit': 10,
+          'total': 1,
+          'totalPages': 1,
+        },
+      },
+    );
+
+    expect(feed.types, <ClubRecordFilter>[
+      ClubRecordFilter.regular,
+      ClubRecordFilter.casual,
+    ]);
+    expect(feed.currentMemberId, 'membership-1');
+    expect(feed.items.single.participants.single.scores.length, 4);
+    expect(feed.items.single.canManage, isTrue);
+  });
+
   test(
     'rejects malformed monthly, filter, activity and participant fields',
     () {
@@ -89,6 +129,21 @@ void main() {
           'scores': <Object>[200, 'bad'],
           'total': 200,
           'average': 200,
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => ClubActivityFeedPage.fromJson(<String, Object?>{
+          'year': 2026,
+          'types': <String>['ALL'],
+          'currentMemberId': null,
+          'items': const <Object>[],
+          'pagination': const <String, int>{
+            'page': 1,
+            'limit': 10,
+            'total': 0,
+            'totalPages': 0,
+          },
         }),
         throwsFormatException,
       );

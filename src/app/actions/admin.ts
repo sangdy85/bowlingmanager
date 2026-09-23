@@ -6,9 +6,15 @@ import { revalidatePath } from "next/cache";
 
 async function verifySuperAdmin() {
     const session = await auth();
-    if (session?.user?.role !== "SUPER_ADMIN") {
+    if (!session?.user?.id || session.user.role !== "SUPER_ADMIN") {
         throw new Error("Unauthorized");
     }
+    const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true },
+    });
+    if (user?.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    return session.user.id;
 }
 
 // Bowling Center Actions
@@ -60,8 +66,11 @@ export async function updateUserRole(userId: string, role: string) {
 export async function deleteUser(userId: string) {
     await verifySuperAdmin();
     // Protection for super admin
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (user?.email === 'sangdy85') throw new Error("Cannot delete Super Admin");
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true },
+    });
+    if (user?.role === "SUPER_ADMIN") throw new Error("Cannot delete Super Admin");
 
     await prisma.user.delete({
         where: { id: userId },
@@ -76,6 +85,15 @@ export async function deleteTeam(teamId: string) {
     await prisma.team.update({
         where: { id: teamId },
         data: { isActive: false } as any
+    });
+    revalidatePath("/admin/teams");
+}
+
+export async function setTeamBowlerHiddenEnabled(teamId: string, enabled: boolean) {
+    await verifySuperAdmin();
+    await prisma.team.update({
+        where: { id: teamId },
+        data: { bowlerHiddenEnabled: enabled },
     });
     revalidatePath("/admin/teams");
 }

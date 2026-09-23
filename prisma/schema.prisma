@@ -29,6 +29,7 @@ model User {
   Team                         Team[]                         @relation("TeamManagers")
   inquiries                    Inquiry[]
   mobileRefreshTokens          MobileRefreshToken[]
+  createdTeamEvents            TeamEvent[]                    @relation("TeamEventCreator")
 }
 
 model VerificationToken {
@@ -56,20 +57,20 @@ model MobileRefreshToken {
 }
 
 model BowlingCenter {
-  id                  String         @id @default(cuid())
-  name                String
-  code                String         @unique
-  address             String
-  phone               String?
-  description         String?
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
-  ownerId             String
-  owner               User           @relation("CenterOwner", fields: [ownerId], references: [id])
-  CenterMember        CenterMember[]
-  teams               Team[]
-  tournaments         Tournament[]
-  managers            User[]         @relation("CenterManagers")
+  id           String         @id @default(cuid())
+  name         String
+  code         String         @unique
+  address      String
+  phone        String?
+  description  String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  ownerId      String
+  owner        User           @relation("CenterOwner", fields: [ownerId], references: [id])
+  CenterMember CenterMember[]
+  teams        Team[]
+  tournaments  Tournament[]
+  managers     User[]         @relation("CenterManagers")
 }
 
 model Team {
@@ -91,18 +92,489 @@ model Team {
   registrations                TournamentRegistration[]
   User                         User[]                         @relation("TeamManagers")
   centerMembers                CenterMember[]
+  events                       TeamEvent[]
+  description                  String?
+  notice                       String?
+  seasonRankingEnabled         Boolean                        @default(false)
+  bowlerHiddenEnabled          Boolean                        @default(false)
+  seasons                      TeamSeason[]
+  seasonFinals                 SeasonFinalTournament[]
+  seasonFinalTemplates         SeasonFinalTemplate[]
+}
+
+model TeamSeason {
+  id                     String                   @id @default(cuid())
+  teamId                 String
+  name                   String
+  startDate              DateTime
+  endDate                DateTime
+  enabled                Boolean                  @default(true)
+  status                 String                   @default("DRAFT")
+  scoringMode            String                   @default("PODIUM")
+  pointsConfig           String                   @default("[5,3,1]")
+  individualPointsConfig String                   @default("{}")
+  teamPointsConfig       String                   @default("{}")
+  eventPointsConfig      String                   @default("{}")
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  team                   Team                     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  events                 TeamEvent[]
+  publications           SeasonPointPublication[]
+  pointEntries           SeasonPointEntry[]
+  finals                 SeasonFinalTournament[]
+
+  @@index([teamId, enabled])
+  @@index([teamId, status])
+  @@index([teamId, startDate, endDate])
 }
 
 model TeamMember {
-  id       String   @id @default(cuid())
-  joinedAt DateTime @default(now())
-  alias    String?
-  userId   String
-  teamId   String
-  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                           String                        @id @default(cuid())
+  joinedAt                     DateTime                      @default(now())
+  alias                        String?
+  userId                       String
+  teamId                       String
+  team                         Team                          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user                         User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventAttendances             TeamEventAttendance[]
+  eventAssignments             TeamEventLaneAssignment[]
+  competitionCaptainTeams      TeamCompetitionTeam[]         @relation("CompetitionCaptain")
+  competitionParticipants      TeamCompetitionParticipant[]
+  competitionCaptainPicks      TeamCompetitionDraftPick[]    @relation("CompetitionPickCaptain")
+  eventCompetitionParticipants EventCompetitionParticipant[]
+  seasonFinalParticipants      SeasonFinalParticipant[]
 
   @@unique([userId, teamId])
+}
+
+model SeasonFinalTournament {
+  id                String                   @id @default(cuid())
+  teamId            String
+  seasonId          String
+  name              String
+  status            String                   @default("DRAFT")
+  competitionMode   String                   @default("OFFICIAL")
+  tiePolicy         String                   @default("SEED_ASC")
+  eligibilityConfig String                   @default("{}")
+  lockedAt          DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  team              Team                     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season            TeamSeason               @relation(fields: [seasonId], references: [id], onDelete: Restrict)
+  divisions         SeasonFinalDivision[]
+  participants      SeasonFinalParticipant[]
+  nodes             SeasonFinalNode[]
+  transitions       SeasonFinalTransition[]
+
+  @@unique([seasonId])
+  @@index([teamId, status])
+}
+
+model SeasonFinalDivision {
+  id           String                @id @default(cuid())
+  tournamentId String
+  code         String
+  name         String
+  sortOrder    Int
+  tournament   SeasonFinalTournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  nodes        SeasonFinalNode[]
+
+  @@unique([tournamentId, code])
+  @@unique([tournamentId, sortOrder])
+}
+
+model SeasonFinalParticipant {
+  id                   String                  @id @default(cuid())
+  tournamentId         String
+  memberId             String
+  displayNameSnapshot  String
+  seed                 Int
+  seasonPointsSnapshot Int
+  selectionSource      String                  @default("SEASON_RANK")
+  selectionReason      String?
+  finalPlacement       Int?
+  createdAt            DateTime                @default(now())
+  tournament           SeasonFinalTournament   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  member               TeamMember              @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  entries              SeasonFinalNodeEntry[]
+  scores               SeasonFinalScore[]
+  results              SeasonFinalNodeResult[]
+
+  @@unique([tournamentId, memberId])
+  @@unique([tournamentId, seed])
+  @@index([memberId])
+}
+
+model SeasonFinalNode {
+  id             String                  @id @default(cuid())
+  tournamentId   String
+  divisionId     String?
+  key            String
+  name           String
+  type           String
+  sortOrder      Int
+  gameCount      Int
+  status         String                  @default("DRAFT")
+  scoringMode    String                  @default("TOTAL_PINS")
+  placementStart Int?
+  placementEnd   Int?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  tournament     SeasonFinalTournament   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  division       SeasonFinalDivision?    @relation(fields: [divisionId], references: [id], onDelete: SetNull)
+  entries        SeasonFinalNodeEntry[]
+  scores         SeasonFinalScore[]
+  results        SeasonFinalNodeResult[]
+  outgoing       SeasonFinalTransition[] @relation("SeasonFinalTransitionSource")
+  incoming       SeasonFinalTransition[] @relation("SeasonFinalTransitionDestination")
+  sourcedEntries SeasonFinalNodeEntry[]  @relation("SeasonFinalEntrySourceNode")
+
+  @@unique([tournamentId, key])
+  @@unique([tournamentId, sortOrder])
+  @@index([divisionId, sortOrder])
+}
+
+model SeasonFinalTransition {
+  id                String                @id @default(cuid())
+  tournamentId      String
+  sourceNodeId      String
+  destinationNodeId String
+  conditionType     String
+  rankStart         Int?
+  rankEnd           Int?
+  sortOrder         Int
+  entrySource       String
+  tournament        SeasonFinalTournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  sourceNode        SeasonFinalNode       @relation("SeasonFinalTransitionSource", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  destinationNode   SeasonFinalNode       @relation("SeasonFinalTransitionDestination", fields: [destinationNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceNodeId, sortOrder])
+  @@index([tournamentId])
+  @@index([destinationNodeId])
+}
+
+model SeasonFinalNodeEntry {
+  id            String                 @id @default(cuid())
+  nodeId        String
+  participantId String
+  sourceType    String
+  sourceNodeId  String?
+  createdAt     DateTime               @default(now())
+  node          SeasonFinalNode        @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  participant   SeasonFinalParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  sourceNode    SeasonFinalNode?       @relation("SeasonFinalEntrySourceNode", fields: [sourceNodeId], references: [id], onDelete: SetNull)
+
+  @@unique([nodeId, participantId])
+  @@index([participantId])
+  @@index([sourceNodeId])
+}
+
+model SeasonFinalScore {
+  id            String                 @id @default(cuid())
+  nodeId        String
+  participantId String
+  gameNumber    Int
+  score         Int
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  node          SeasonFinalNode        @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  participant   SeasonFinalParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([nodeId, participantId, gameNumber])
+  @@index([participantId])
+}
+
+model SeasonFinalNodeResult {
+  id            String                 @id @default(cuid())
+  nodeId        String
+  participantId String
+  totalPins     Int
+  average       Float
+  rank          Int
+  confirmedAt   DateTime
+  node          SeasonFinalNode        @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  participant   SeasonFinalParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([nodeId, participantId])
+  @@unique([nodeId, rank])
+  @@index([participantId])
+}
+
+model SeasonFinalTemplate {
+  id            String   @id @default(cuid())
+  teamId        String
+  name          String
+  structureJson String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  team          Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, name])
+  @@index([teamId, createdAt])
+}
+
+model TeamEvent {
+  id                           String                        @id @default(cuid())
+  teamId                       String
+  createdById                  String
+  title                        String
+  eventDate                    DateTime
+  eventTime                    String
+  location                     String
+  gameType                     String?
+  attendanceEnabled            Boolean                       @default(true)
+  laneDrawEnabled              Boolean                       @default(false)
+  laneDrawMode                 String                        @default("BULK")
+  laneDrawStatus               String                        @default("NOT_STARTED")
+  competitionEnabled           Boolean                       @default(false)
+  competitionType              String?
+  competitionMode              String?
+  competitionStatus            String                        @default("DRAFT")
+  rankPoints                   String                        @default("{}")
+  draftGeneration              Int                           @default(1)
+  currentPickNumber            Int                           @default(1)
+  competitionStartAt           DateTime?
+  votingDurationMinutes        Int                           @default(30)
+  competitionGameCount         Int?
+  eventNonVoterPolicy          String?
+  eventTieBreakPolicy          String?
+  eventRevealIndex             Int                           @default(0)
+  eventPublishedAt             DateTime?
+  eventPublishedSnapshot       String?
+  seasonId                     String?
+  seasonPublicationRevision    Int                           @default(1)
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime                      @updatedAt
+  team                         Team                          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season                       TeamSeason?                   @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  createdBy                    User                          @relation("TeamEventCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  attendances                  TeamEventAttendance[]
+  guests                       TeamEventGuest[]
+  laneSlots                    TeamEventLaneSlot[]
+  laneAssignments              TeamEventLaneAssignment[]
+  competitionTeams             TeamCompetitionTeam[]
+  competitionParticipants      TeamCompetitionParticipant[]
+  competitionDraftPicks        TeamCompetitionDraftPick[]
+  eventCompetitionParticipants EventCompetitionParticipant[]
+  eventCompetitionBallots      EventCompetitionBallot[]
+  seasonPublications           SeasonPointPublication[]
+  seasonPointEntries           SeasonPointEntry[]
+  scores                       Score[]
+
+  @@index([teamId, eventDate])
+  @@index([seasonId, eventDate])
+  @@index([createdById])
+}
+
+model SeasonPointPublication {
+  id                 String             @id @default(cuid())
+  seasonId           String
+  eventId            String?
+  sourceKey          String
+  revision           Int
+  competitionType    String
+  competitionDate    DateTime
+  competitionTitle   String
+  pointTableSnapshot String
+  resultSnapshot     String
+  publishedAt        DateTime           @default(now())
+  revokedAt          DateTime?
+  season             TeamSeason         @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  event              TeamEvent?         @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  entries            SeasonPointEntry[]
+
+  @@unique([seasonId, sourceKey, revision])
+  @@index([seasonId, revokedAt, competitionDate])
+  @@index([eventId, revokedAt])
+}
+
+model SeasonPointEntry {
+  id                String                 @id @default(cuid())
+  publicationId     String
+  seasonId          String
+  eventId           String?
+  memberId          String
+  memberDisplayName String
+  competitionTeamId String?
+  competitionType   String
+  competitionDate   DateTime
+  competitionTitle  String
+  finalRank         Int?
+  points            Int
+  createdAt         DateTime               @default(now())
+  publication       SeasonPointPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  season            TeamSeason             @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  event             TeamEvent?             @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@unique([publicationId, memberId])
+  @@index([seasonId, competitionType, competitionDate])
+  @@index([seasonId, memberId, competitionDate])
+  @@index([eventId])
+}
+
+model TeamCompetitionTeam {
+  id              String                       @id @default(cuid())
+  eventId         String
+  generation      Int
+  name            String
+  captainMemberId String
+  draftOrder      Int
+  lanePriority    Int?
+  teamHandicap    Int                          @default(0)
+  createdAt       DateTime                     @default(now())
+  event           TeamEvent                    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  captain         TeamMember                   @relation("CompetitionCaptain", fields: [captainMemberId], references: [id], onDelete: Restrict)
+  participants    TeamCompetitionParticipant[]
+  draftPicks      TeamCompetitionDraftPick[]
+
+  @@unique([eventId, generation, draftOrder])
+  @@unique([eventId, generation, captainMemberId])
+  @@unique([eventId, generation, lanePriority])
+  @@index([eventId, generation])
+}
+
+model TeamCompetitionParticipant {
+  id                String                     @id @default(cuid())
+  eventId           String
+  generation        Int
+  memberId          String
+  competitionTeamId String?
+  assignmentType    String?
+  assignmentOrder   Int?
+  createdAt         DateTime                   @default(now())
+  event             TeamEvent                  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member            TeamMember                 @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  competitionTeam   TeamCompetitionTeam?       @relation(fields: [competitionTeamId], references: [id], onDelete: SetNull)
+  selectedInPicks   TeamCompetitionDraftPick[]
+
+  @@unique([eventId, generation, memberId])
+  @@index([competitionTeamId])
+}
+
+model TeamCompetitionDraftPick {
+  id                          String                     @id @default(cuid())
+  eventId                     String
+  generation                  Int
+  pickNumber                  Int
+  roundNumber                 Int
+  direction                   String
+  captainMemberId             String?
+  competitionTeamId           String
+  selectedParticipantId       String
+  selectedDisplayNameSnapshot String
+  pickType                    String
+  createdAt                   DateTime                   @default(now())
+  event                       TeamEvent                  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  captain                     TeamMember?                @relation("CompetitionPickCaptain", fields: [captainMemberId], references: [id], onDelete: SetNull)
+  competitionTeam             TeamCompetitionTeam        @relation(fields: [competitionTeamId], references: [id], onDelete: Cascade)
+  selectedParticipant         TeamCompetitionParticipant @relation(fields: [selectedParticipantId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, generation, pickNumber])
+  @@index([eventId, generation, createdAt])
+}
+
+model EventCompetitionParticipant {
+  id          String                     @id @default(cuid())
+  eventId     String
+  memberId    String
+  revealOrder Int
+  revealedAt  DateTime?
+  createdAt   DateTime                   @default(now())
+  event       TeamEvent                  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member      TeamMember                 @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  ballot      EventCompetitionBallot?
+  selectedIn  EventCompetitionVotePick[]
+
+  @@unique([eventId, memberId])
+  @@unique([eventId, revealOrder])
+  @@index([memberId])
+}
+
+model EventCompetitionBallot {
+  id                 String                      @id @default(cuid())
+  eventId            String
+  voterParticipantId String                      @unique
+  submittedAt        DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  event              TeamEvent                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  voter              EventCompetitionParticipant @relation(fields: [voterParticipantId], references: [id], onDelete: Cascade)
+  selections         EventCompetitionVotePick[]
+
+  @@index([eventId])
+}
+
+model EventCompetitionVotePick {
+  id                    String                      @id @default(cuid())
+  ballotId              String
+  selectedParticipantId String
+  selectionOrder        Int
+  ballot                EventCompetitionBallot      @relation(fields: [ballotId], references: [id], onDelete: Cascade)
+  selectedParticipant   EventCompetitionParticipant @relation(fields: [selectedParticipantId], references: [id], onDelete: Cascade)
+
+  @@unique([ballotId, selectedParticipantId])
+  @@unique([ballotId, selectionOrder])
+  @@index([selectedParticipantId])
+}
+
+model TeamEventAttendance {
+  id                String      @id @default(cuid())
+  eventId           String
+  memberId          String?
+  memberDisplayName String
+  status            String      @default("UNANSWERED")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  event             TeamEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member            TeamMember? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@unique([eventId, memberId])
+  @@index([eventId, status])
+  @@index([memberId])
+}
+
+model TeamEventGuest {
+  id         String                   @id @default(cuid())
+  eventId    String
+  name       String
+  createdAt  DateTime                 @default(now())
+  event      TeamEvent                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  assignment TeamEventLaneAssignment?
+
+  @@index([eventId])
+}
+
+model TeamEventLaneSlot {
+  id         String                   @id @default(cuid())
+  eventId    String
+  laneNumber Int
+  position   Int
+  createdAt  DateTime                 @default(now())
+  event      TeamEvent                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  assignment TeamEventLaneAssignment?
+
+  @@unique([eventId, laneNumber, position])
+  @@index([eventId])
+}
+
+model TeamEventLaneAssignment {
+  id                     String            @id @default(cuid())
+  eventId                String
+  slotId                 String            @unique
+  memberId               String?
+  guestId                String?           @unique
+  participantKind        String
+  participantDisplayName String
+  createdAt              DateTime          @default(now())
+  event                  TeamEvent         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  slot                   TeamEventLaneSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  member                 TeamMember?       @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  guest                  TeamEventGuest?   @relation(fields: [guestId], references: [id], onDelete: SetNull)
+
+  @@unique([eventId, memberId])
+  @@index([eventId])
+  @@index([memberId])
 }
 
 model Post {
@@ -140,7 +612,7 @@ model Tournament {
   updatedAt              DateTime                 @updatedAt
   centerId               String
   reportNotice           String?
-  settings               String?                  // JSON: { "startDateText": "...", "gameMethod": "...", ... }
+  settings               String? // JSON: { "startDateText": "...", "gameMethod": "...", ... }
   leagueRounds           LeagueRound[]
   center                 BowlingCenter            @relation(fields: [centerId], references: [id])
   attachments            TournamentAttachment[]
@@ -167,11 +639,11 @@ model LeagueRound {
   registrationStart DateTime?
   startLane         Int?
   endLane           Int?
-  laneConfig        String?            // JSON: { "1": [1,2,3], "2": [1,2,3] }
-  moveLaneType      String?            // "RIGHT", "LEFT", "CROSS"
-  moveLaneCount     Int?               // Number of tables to move
+  laneConfig        String? // JSON: { "1": [1,2,3], "2": [1,2,3] }
+  moveLaneType      String? // "RIGHT", "LEFT", "CROSS"
+  moveLaneCount     Int? // Number of tables to move
   hasFemaleChamp    Boolean            @default(false)
-  luckyDrawResult   String?            // JSON: { "winners": [...], "winnerCount": 5, "excludeRankers": true, "isFinalized": true }
+  luckyDrawResult   String? // JSON: { "winners": [...], "winnerCount": 5, "excludeRankers": true, "isFinalized": true }
   matchups          LeagueMatchup[]
   tournament        Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   participants      RoundParticipant[]
@@ -213,26 +685,26 @@ model RoundParticipant {
 }
 
 model LeagueMatchup {
-  id                           String                         @id @default(cuid())
-  roundId                      String
-  teamAId                      String?
-  teamASquad                   String?
-  teamBId                      String?
-  teamBSquad                   String?
-  lanes                        String?
-  status                       String                         @default("PENDING")
-  pointsA                      Float?
-  pointsB                      Float?
-  scoreA1                      Int?
-  scoreA2                      Int?
-  scoreA3                      Int?
-  scoreB1                      Int?
-  scoreB2                      Int?
-  scoreB3                      Int?
-  teamB                        Team?                          @relation("TeamB", fields: [teamBId], references: [id])
-  teamA                        Team?                          @relation("TeamA", fields: [teamAId], references: [id])
-  round                        LeagueRound                    @relation(fields: [roundId], references: [id], onDelete: Cascade)
-  individualScores            LeagueMatchupIndividualScore[]
+  id               String                         @id @default(cuid())
+  roundId          String
+  teamAId          String?
+  teamASquad       String?
+  teamBId          String?
+  teamBSquad       String?
+  lanes            String?
+  status           String                         @default("PENDING")
+  pointsA          Float?
+  pointsB          Float?
+  scoreA1          Int?
+  scoreA2          Int?
+  scoreA3          Int?
+  scoreB1          Int?
+  scoreB2          Int?
+  scoreB3          Int?
+  teamB            Team?                          @relation("TeamB", fields: [teamBId], references: [id])
+  teamA            Team?                          @relation("TeamA", fields: [teamAId], references: [id])
+  round            LeagueRound                    @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  individualScores LeagueMatchupIndividualScore[]
 }
 
 model TournamentRegistration {
@@ -246,7 +718,7 @@ model TournamentRegistration {
   handicap            Int?
   laneAssignment      Int?
   paymentStatus       String             @default("PENDING")
-  entryGroupId        String?            // To group ad-hoc teams in Event tournaments
+  entryGroupId        String? // To group ad-hoc teams in Event tournaments
   createdAt           DateTime           @default(now())
   roundParticipations RoundParticipant[]
   team                Team?              @relation(fields: [teamId], references: [id])
@@ -321,17 +793,23 @@ model PostImage {
 }
 
 model Score {
-  id        String   @id
-  score     Int
-  gameDate  DateTime
-  gameType  String?
-  userId    String?
-  teamId    String?
-  memo      String?
-  guestName String?
-  createdAt DateTime @default(now())
-  Team      Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  User      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String     @id
+  score           Int
+  gameDate        DateTime
+  gameType        String?
+  userId          String?
+  teamId          String?
+  memo            String?
+  guestName       String?
+  competitionMode String?
+  teamEventId     String?
+  createdAt       DateTime   @default(now())
+  Team            Team?      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  User            User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  TeamEvent       TeamEvent? @relation(fields: [teamEventId], references: [id], onDelete: SetNull)
+
+  @@index([teamEventId])
+  @@index([competitionMode])
 }
 
 model UserApiUsage {

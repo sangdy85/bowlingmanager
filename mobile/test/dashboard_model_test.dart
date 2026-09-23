@@ -170,7 +170,102 @@ void main() {
       throwsA(isA<FormatException>()),
     );
   });
+
+  test(
+    'Dashboard.fromJson parses radar, medals, personal and team sections',
+    () {
+      final Dashboard dashboard = Dashboard.fromJson(<String, dynamic>{
+        ..._coreDashboard(),
+        'profileRadar': <String, Object?>{
+          'axes': <Object>[
+            for (final String label in <String>[
+              '기량(에버)',
+              '포텐셜',
+              '기복',
+              '안정감',
+              '성실',
+            ])
+              <String, Object?>{'key': label, 'label': label},
+          ],
+          'series': <Object>[
+            <String, Object?>{
+              'key': 'REGULAR',
+              'label': '정기전',
+              'color': '#3B82F6',
+              'values': <Object>[8, 7.5, 9, 6, 10],
+            },
+          ],
+        },
+        'medals': <String, Object?>{
+          'goldCount': 3,
+          'silverCount': 2,
+          'bronzeCount': 1,
+        },
+        'personalStats': <String, Object?>{
+          'regular': _categoryStats(210.5, 250, 150, 30),
+          'official': _categoryStats(205, 240, 160, 12),
+        },
+        'teamSummaries': <Object>[
+          <String, Object?>{
+            'id': 'team-1',
+            'name': '배볼러',
+            'myRole': 'MANAGER',
+            'attended': 15,
+            'activityCount': 16,
+            'attendanceRate': 93.8,
+            'gameCount': 60,
+            'average': 218.5,
+          },
+        ],
+      });
+
+      expect(dashboard.profileRadar.axes, hasLength(5));
+      expect(dashboard.profileRadar.series.single.values, hasLength(5));
+      expect(dashboard.medals.goldCount, 3);
+      expect(dashboard.personalStats.regular.average, 210.5);
+      expect(dashboard.teamSummaries.single.myRole, DashboardTeamRole.manager);
+    },
+  );
+
+  test('malformed optional sections do not hide the core dashboard', () {
+    final Dashboard dashboard = Dashboard.fromJson(<String, dynamic>{
+      ..._coreDashboard(),
+      'profileRadar': <String, Object?>{'axes': <Object>[], 'series': 'bad'},
+      'medals': <String, Object?>{'goldCount': 'bad'},
+      'personalStats': <String, Object?>{'regular': null},
+      'teamSummaries': <Object>['bad'],
+    });
+
+    expect(dashboard.average, 180);
+    expect(dashboard.profileRadar, same(DashboardRadar.empty));
+    expect(dashboard.medals.goldCount, 0);
+    expect(dashboard.personalStats.regular.gameCount, 0);
+    expect(dashboard.teamSummaries, isEmpty);
+  });
 }
+
+Map<String, Object?> _coreDashboard() => <String, Object?>{
+  'year': 2026,
+  'average': 180,
+  'highScore': 220,
+  'gameCount': 10,
+  'recentAverage': 190,
+  'recentScores': <Object>[],
+  'recentSessions': <Object>[],
+};
+
+Map<String, Object?> _categoryStats(
+  double average,
+  int high,
+  int low,
+  int games,
+) => <String, Object?>{
+  'average': average,
+  'highScore': high,
+  'lowScore': low,
+  'gameCount': games,
+  'roundSpread': 12,
+};
 
 Map<String, Object?> _session({String source = 'PERSONAL'}) =>
     <String, Object?>{

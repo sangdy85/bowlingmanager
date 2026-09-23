@@ -68,7 +68,7 @@ class ClubManagementScreen extends ConsumerWidget {
                   title: '기록 관리',
                   subtitle: '활동 상세에서 기록을 수정하거나 삭제합니다.',
                   onTap: () => context.push(
-                    '/club/${Uri.encodeComponent(teamId)}/records',
+                    '/club/${Uri.encodeComponent(teamId)}/records?section=activities',
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -80,7 +80,19 @@ class ClubManagementScreen extends ConsumerWidget {
                       ? '팀원 제거와 매니저 권한을 관리합니다.'
                       : '일반 팀원을 관리합니다.',
                   onTap: () => context.push(
-                    '/club/${Uri.encodeComponent(teamId)}/members',
+                    '/club/${Uri.encodeComponent(teamId)}/manage/members',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _ManagementLink(
+                  key: const Key('management-team-link'),
+                  icon: Icons.settings_outlined,
+                  title: '팀 관리',
+                  subtitle: club.myRole == ClubRole.owner
+                      ? '팀 소개, 공지와 시즌 순위표를 설정합니다.'
+                      : '팀 소개와 공지를 설정합니다.',
+                  onTap: () => context.push(
+                    '/club/${Uri.encodeComponent(teamId)}/manage/team',
                   ),
                 ),
               ],

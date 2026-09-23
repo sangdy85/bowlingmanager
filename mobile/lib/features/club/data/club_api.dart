@@ -20,6 +20,13 @@ abstract interface class ClubApi {
     required int page,
     required int limit,
   });
+  Future<ClubActivityFeedPage> fetchClubActivityFeed({
+    required String teamId,
+    required int year,
+    required List<ClubRecordFilter> types,
+    required int page,
+    required int limit,
+  });
   Future<ClubActivityDetail> fetchClubActivity({
     required String teamId,
     required String activityId,
@@ -173,6 +180,36 @@ class MobileClubApi implements ClubApi {
         },
       );
       return ClubActivitiesPage.fromJson(_readData(response.data));
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    } on FormatException {
+      throw ApiException.malformedResponse();
+    } on TypeError {
+      throw ApiException.malformedResponse();
+    }
+  }
+
+  @override
+  Future<ClubActivityFeedPage> fetchClubActivityFeed({
+    required String teamId,
+    required int year,
+    required List<ClubRecordFilter> types,
+    required int page,
+    required int limit,
+  }) async {
+    try {
+      final Response<dynamic> response = await _dio.get<dynamic>(
+        '/teams/${Uri.encodeComponent(teamId)}/activities/feed',
+        queryParameters: <String, Object>{
+          'year': year,
+          'types': types
+              .map((ClubRecordFilter type) => type.apiValue)
+              .join(','),
+          'page': page,
+          'limit': limit,
+        },
+      );
+      return ClubActivityFeedPage.fromJson(_readData(response.data));
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     } on FormatException {

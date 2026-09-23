@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
+import { assertEventScoresMutable } from "@/lib/mobile-api/event-competition";
 
 export async function saveDailyScores(
     teamId: string,
@@ -86,6 +87,18 @@ export async function saveDailyScores(
             }));
             const sessionGameType = sessionTemplate?.gameType || null;
             const sessionMemo = sessionTemplate?.memo || null;
+            await assertEventScoresMutable(existingScores.map((score) => ({
+                teamId,
+                userId: score.userId,
+                gameDate: score.gameDate,
+                gameType: score.gameType,
+            })), tx);
+            await assertEventScoresMutable([{
+                teamId,
+                userId: targetGuestName ? null : targetUserId,
+                gameDate: targetDate,
+                gameType: sessionGameType,
+            }], tx);
 
             // Delete removed scores (if scores array is empty, this handles "Delete All")
             const toDelete = existingIds.filter(id => !incomingIds.includes(id));
@@ -167,6 +180,14 @@ export async function updateDailyGroupInfo(
     const targetDate = new Date(newDateStr);
 
     try {
+        const affected = await prisma.score.findMany({
+            where: { teamId, gameDate: { gte: startOfCurrentDay, lte: endOfCurrentDay } },
+            select: { userId: true, gameDate: true, gameType: true },
+        });
+        await assertEventScoresMutable(affected.map((score) => ({ teamId, ...score })));
+        await assertEventScoresMutable(affected.map((score) => ({
+            teamId, userId: score.userId, gameDate: targetDate, gameType: newGameType || null,
+        })));
         await prisma.score.updateMany({
             where: {
                 teamId: teamId,

@@ -28,7 +28,7 @@ async function migrateUserRecordsToTeam(userId: string, teamId: string) {
                 data: { teamId }
             })
         ]);
-        console.log(`Migrated records for user ${userId} to team ${teamId}`);
+        console.log("Team record migration completed.");
     } catch (error) {
         console.error("Migration failed:", error);
     }

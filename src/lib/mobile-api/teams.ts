@@ -8,6 +8,7 @@ type TeamRecord = {
     ownerId: string | null;
     User: { id: string }[];
     _count: { members: number };
+    bowlerHiddenEnabled?: boolean;
 };
 
 type MembershipRecord = {
@@ -46,6 +47,7 @@ const defaultDependencies: MobileTeamsDependencies = {
                         ownerId: true,
                         User: { select: { id: true } },
                         _count: { select: { members: true } },
+                        bowlerHiddenEnabled: true,
                     },
                 },
             },
@@ -64,6 +66,7 @@ const defaultDependencies: MobileTeamsDependencies = {
                 ownerId: true,
                 User: { select: { id: true } },
                 _count: { select: { members: true } },
+                bowlerHiddenEnabled: true,
             },
         });
     },
@@ -96,6 +99,7 @@ export async function listMobileTeams(
         name: team.name,
         myRole: teamRole(team, userId),
         memberCount: team._count.members,
+        bowlerHiddenEnabled: team.bowlerHiddenEnabled === true,
     }));
 }
 
@@ -112,6 +116,7 @@ export async function getMobileTeamDetail(
         name: team.name,
         myRole: teamRole(team, userId),
         memberCount: team._count.members,
+        bowlerHiddenEnabled: team.bowlerHiddenEnabled === true,
     };
 }
 

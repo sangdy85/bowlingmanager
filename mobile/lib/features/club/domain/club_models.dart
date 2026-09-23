@@ -22,23 +22,27 @@ class ClubSummary {
     required this.name,
     required this.myRole,
     required this.memberCount,
+    this.bowlerHiddenEnabled = false,
   });
 
   final String id;
   final String name;
   final ClubRole myRole;
   final int memberCount;
+  final bool bowlerHiddenEnabled;
 
   factory ClubSummary.fromJson(Map<String, dynamic> json) {
     final Object? id = json['id'];
     final Object? name = json['name'];
     final Object? memberCount = json['memberCount'];
+    final Object? bowlerHiddenEnabled = json['bowlerHiddenEnabled'] ?? false;
     if (id is! String ||
         id.isEmpty ||
         name is! String ||
         name.isEmpty ||
         memberCount is! int ||
-        memberCount < 0) {
+        memberCount < 0 ||
+        bowlerHiddenEnabled is! bool) {
       throw const FormatException('Invalid club summary response.');
     }
     return ClubSummary(
@@ -46,6 +50,7 @@ class ClubSummary {
       name: name,
       myRole: ClubRole.fromJson(json['myRole']),
       memberCount: memberCount,
+      bowlerHiddenEnabled: bowlerHiddenEnabled,
     );
   }
 }
@@ -56,12 +61,14 @@ class ClubDetail {
     required this.name,
     required this.myRole,
     required this.memberCount,
+    this.bowlerHiddenEnabled = false,
   });
 
   final String id;
   final String name;
   final ClubRole myRole;
   final int memberCount;
+  final bool bowlerHiddenEnabled;
 
   factory ClubDetail.fromJson(Map<String, dynamic> json) {
     final ClubSummary summary = ClubSummary.fromJson(json);
@@ -70,6 +77,7 @@ class ClubDetail {
       name: summary.name,
       myRole: summary.myRole,
       memberCount: summary.memberCount,
+      bowlerHiddenEnabled: summary.bowlerHiddenEnabled,
     );
   }
 }

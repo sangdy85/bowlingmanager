@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { v4 as uuidv4 } from "uuid";
 import prisma from "@/lib/prisma";
+import { assertEventScoresMutable, EventCompetitionError } from "@/lib/mobile-api/event-competition";
 import {
     createTeamActivityId,
     filterTeamRecordScores,
@@ -125,6 +126,10 @@ const defaultDependencies: TeamManagementDependencies = {
                     409,
                 );
             }
+            await assertEventScoresMutable(current.map((score) => ({
+                teamId: input.teamId, userId: score.userId,
+                gameDate: score.gameDate, gameType: score.gameType,
+            })), tx);
 
             const requestedMemberIds = [...new Set(input.participants
                 .map((participant) => participant.memberId)
@@ -142,6 +147,10 @@ const defaultDependencies: TeamManagementDependencies = {
             await tx.score.deleteMany({ where: { id: { in: input.expectedIds }, teamId: input.teamId } });
             const memberById = new Map(currentMembers.map((member) => [member.id, member]));
             const gameDate = parseCalendarDate(input.date);
+            await assertEventScoresMutable(input.participants.flatMap((participant) => {
+                const member = participant.memberId ? currentMembers.find((item) => item.id === participant.memberId) : null;
+                return participant.scores.map(() => ({ teamId: input.teamId, userId: member?.userId ?? null, gameDate, gameType: input.gameType }));
+            }), tx);
             let createdCount = 0;
             for (const participant of input.participants) {
                 const member = participant.memberId ? memberById.get(participant.memberId) : null;
@@ -187,6 +196,10 @@ const defaultDependencies: TeamManagementDependencies = {
                     409,
                 );
             }
+            await assertEventScoresMutable(current.map((score) => ({
+                teamId: input.teamId, userId: score.userId,
+                gameDate: score.gameDate, gameType: score.gameType,
+            })), tx);
             const deleted = await tx.score.deleteMany({
                 where: { id: { in: input.expectedIds }, teamId: input.teamId },
             });

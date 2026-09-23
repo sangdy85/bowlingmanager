@@ -3,6 +3,8 @@ import 'package:bowlingmanager_mobile/core/theme/app_text_styles.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dart';
 import 'package:flutter/material.dart';
@@ -21,6 +23,9 @@ class ClubDetailScreen extends ConsumerWidget {
     final ClubRequest request = (userId: user.id, teamId: teamId);
     final provider = clubDetailProvider(request);
     final AsyncValue<ClubDetail> detail = ref.watch(provider);
+    final AsyncValue<ClubTeamProfile> profile = ref.watch(
+      clubTeamProfileProvider((userId: user.id, teamId: teamId)),
+    );
     Future<void> refresh() => ref.refresh(provider.future);
 
     return detail.when(
@@ -52,6 +57,19 @@ class ClubDetailScreen extends ConsumerWidget {
                     _DetailRow(label: '내 역할', value: club.myRole.label),
                     const SizedBox(height: 12),
                     _DetailRow(label: '회원 수', value: '${club.memberCount}명'),
+                    if (profile.value?.notice
+                        case final String notice) ...<Widget>[
+                      const SizedBox(height: 16),
+                      Text('공지 · $notice'),
+                    ],
+                    if (profile.value?.description
+                        case final String description) ...<Widget>[
+                      const SizedBox(height: 10),
+                      Text(
+                        description,
+                        style: const TextStyle(color: AppColors.textSecondary),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -60,7 +78,7 @@ class ClubDetailScreen extends ConsumerWidget {
             Card(
               clipBehavior: Clip.antiAlias,
               child: ListTile(
-                key: const Key('club-records-link'),
+                key: const Key('club-overview-link'),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 10,
@@ -69,12 +87,64 @@ class ClubDetailScreen extends ConsumerWidget {
                   Icons.query_stats_rounded,
                   color: AppColors.primaryBright,
                 ),
-                title: const Text('기록 및 활동 일지'),
-                subtitle: const Text('연도별 팀 통계와 경기 결과'),
+                title: const Text('종합'),
+                subtitle: const Text('시즌 순위와 팀 핵심 지표'),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => context.push(
-                  '/club/${Uri.encodeComponent(teamId)}/records',
+                  '/club/${Uri.encodeComponent(teamId)}/records?section=overview',
                 ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                key: const Key('club-records-link'),
+                leading: const Icon(
+                  Icons.table_chart_outlined,
+                  color: AppColors.primaryBright,
+                ),
+                title: const Text('기록'),
+                subtitle: const Text('팀원 통계와 월별 평균'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push(
+                  '/club/${Uri.encodeComponent(teamId)}/records?section=statistics',
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                key: const Key('club-activities-link'),
+                leading: const Icon(
+                  Icons.scoreboard_outlined,
+                  color: AppColors.primaryBright,
+                ),
+                title: const Text('활동일지'),
+                subtitle: const Text('경기별 전체 결과표'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push(
+                  '/club/${Uri.encodeComponent(teamId)}/records?section=activities',
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: ListTile(
+                key: const Key('club-events-link'),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                leading: const Icon(
+                  Icons.event_note_rounded,
+                  color: AppColors.primaryBright,
+                ),
+                title: const Text('일정 및 레인 추첨'),
+                subtitle: const Text('참석 조사, 게스트, 레인 좌석 추첨'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () =>
+                    context.push('/club/${Uri.encodeComponent(teamId)}/events'),
               ),
             ),
             const SizedBox(height: 12),
@@ -96,6 +166,21 @@ class ClubDetailScreen extends ConsumerWidget {
                 onTap: () => context.push(
                   '/club/${Uri.encodeComponent(teamId)}/members',
                 ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                key: const Key('club-board-link'),
+                leading: const Icon(
+                  Icons.forum_outlined,
+                  color: AppColors.primaryBright,
+                ),
+                title: const Text('게시판'),
+                subtitle: const Text('동호회 게시글'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () =>
+                    context.push('/club/${Uri.encodeComponent(teamId)}/board'),
               ),
             ),
             if (club.myRole == ClubRole.owner ||

@@ -20,8 +20,24 @@ typedef ClubActivityRequest = ({
   String teamId,
   String activityId,
 });
+typedef ClubActivityFeedRequest = ({
+  String userId,
+  String teamId,
+  int year,
+  String typesKey,
+});
 
 const int clubActivitiesPageLimit = 20;
+const int clubActivityFeedPageLimit = 10;
+
+String clubActivityTypesKey(Iterable<ClubRecordFilter> filters) =>
+    ClubRecordFilter.values
+        .where(
+          (ClubRecordFilter filter) =>
+              filter != ClubRecordFilter.all && filters.contains(filter),
+        )
+        .map((ClubRecordFilter filter) => filter.apiValue)
+        .join(',');
 
 final Provider<ClubApi> clubApiProvider = Provider<ClubApi>(
   (Ref ref) => MobileClubApi(ref.watch(apiClientProvider).dio),
@@ -68,6 +84,16 @@ final clubActivitiesControllerProvider = AsyncNotifierProvider.autoDispose
       ClubStatisticsRequest
     >(
       ClubActivitiesController.new,
+      retry: (int retryCount, Object error) => null,
+    );
+
+final clubActivityFeedControllerProvider = AsyncNotifierProvider.autoDispose
+    .family<
+      ClubActivityFeedController,
+      ClubActivityFeedState,
+      ClubActivityFeedRequest
+    >(
+      ClubActivityFeedController.new,
       retry: (int retryCount, Object error) => null,
     );
 
@@ -190,6 +216,128 @@ class ClubActivitiesController extends AsyncNotifier<ClubActivitiesState> {
     } on Object catch (error) {
       if (!ref.mounted) return;
       state = AsyncData<ClubActivitiesState>(
+        current.copyWith(
+          isLoadingMore: false,
+          paginationErrorMessage: clubErrorMessage(error),
+          refreshErrorMessage: null,
+        ),
+      );
+    }
+  }
+}
+
+class ClubActivityFeedController extends AsyncNotifier<ClubActivityFeedState> {
+  ClubActivityFeedController(this.request);
+
+  final ClubActivityFeedRequest request;
+  late ClubRepository _repository;
+
+  List<ClubRecordFilter> get _types => request.typesKey
+      .split(',')
+      .where((String value) => value.isNotEmpty)
+      .map(ClubRecordFilter.fromJson)
+      .where((ClubRecordFilter filter) => filter != ClubRecordFilter.all)
+      .toList(growable: false);
+
+  @override
+  Future<ClubActivityFeedState> build() {
+    _repository = ref.watch(clubRepositoryProvider);
+    return _fetchPage(1);
+  }
+
+  Future<ClubActivityFeedState> _fetchPage(int page) async {
+    final List<ClubRecordFilter> types = _types;
+    if (types.isEmpty) {
+      return const ClubActivityFeedState(
+        items: <ClubActivityFeedItem>[],
+        currentMemberId: null,
+        page: 1,
+        totalPages: 0,
+      );
+    }
+    final ClubActivityFeedPage result = await _repository.fetchClubActivityFeed(
+      teamId: request.teamId,
+      year: request.year,
+      types: types,
+      page: page,
+      limit: clubActivityFeedPageLimit,
+    );
+    if (result.page != page ||
+        result.year != request.year ||
+        clubActivityTypesKey(result.types) != request.typesKey) {
+      throw ApiException.malformedResponse();
+    }
+    return ClubActivityFeedState(
+      items: result.items,
+      currentMemberId: result.currentMemberId,
+      page: result.page,
+      totalPages: result.totalPages,
+    );
+  }
+
+  Future<void> retryInitial() async {
+    state = const AsyncLoading<ClubActivityFeedState>();
+    final AsyncValue<ClubActivityFeedState> result = await AsyncValue.guard(
+      () => _fetchPage(1),
+    );
+    if (ref.mounted) state = result;
+  }
+
+  Future<void> refreshActivities() async {
+    final ClubActivityFeedState? current = state.value;
+    try {
+      final ClubActivityFeedState refreshed = await _fetchPage(1);
+      if (ref.mounted) state = AsyncData<ClubActivityFeedState>(refreshed);
+    } on Object catch (error, stackTrace) {
+      if (!ref.mounted) return;
+      if (current == null) {
+        state = AsyncError<ClubActivityFeedState>(error, stackTrace);
+      } else {
+        state = AsyncData<ClubActivityFeedState>(
+          current.copyWith(
+            refreshErrorMessage: clubErrorMessage(error),
+            paginationErrorMessage: null,
+            isLoadingMore: false,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> loadNextPage() async {
+    final ClubActivityFeedState? current = state.value;
+    if (current == null || current.isLoadingMore || !current.hasNextPage) {
+      return;
+    }
+    state = AsyncData<ClubActivityFeedState>(
+      current.copyWith(
+        isLoadingMore: true,
+        paginationErrorMessage: null,
+        refreshErrorMessage: null,
+      ),
+    );
+    try {
+      final ClubActivityFeedState next = await _fetchPage(current.page + 1);
+      if (!ref.mounted) return;
+      final Set<String> ids = current.items
+          .map((ClubActivityFeedItem item) => item.id)
+          .toSet();
+      state = AsyncData<ClubActivityFeedState>(
+        ClubActivityFeedState(
+          items: List<ClubActivityFeedItem>.unmodifiable(<ClubActivityFeedItem>[
+            ...current.items,
+            ...next.items.where(
+              (ClubActivityFeedItem item) => ids.add(item.id),
+            ),
+          ]),
+          currentMemberId: next.currentMemberId ?? current.currentMemberId,
+          page: next.page,
+          totalPages: next.totalPages,
+        ),
+      );
+    } on Object catch (error) {
+      if (!ref.mounted) return;
+      state = AsyncData<ClubActivityFeedState>(
         current.copyWith(
           isLoadingMore: false,
           paginationErrorMessage: clubErrorMessage(error),

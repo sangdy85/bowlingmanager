@@ -135,6 +135,38 @@ void main() {
             },
           });
         }
+        if (options.path.endsWith('/activities/feed')) {
+          return _json(200, <String, Object?>{
+            'success': true,
+            'data': <String, Object?>{
+              'year': 2026,
+              'types': <String>['REGULAR', 'CASUAL'],
+              'currentMemberId': 'membership-1',
+              'items': <Object>[
+                <String, Object>{
+                  ..._activityJson,
+                  'canManage': true,
+                  'participants': <Object>[
+                    <String, Object>{
+                      'rank': 1,
+                      'id': 'membership-1',
+                      'name': '회원',
+                      'scores': <int>[200, 210],
+                      'total': 410,
+                      'average': 205,
+                    },
+                  ],
+                },
+              ],
+              'pagination': <String, int>{
+                'page': 1,
+                'limit': 10,
+                'total': 1,
+                'totalPages': 1,
+              },
+            },
+          });
+        }
         return _json(200, <String, Object>{
           'success': true,
           'data': <String, Object>{
@@ -172,16 +204,34 @@ void main() {
       teamId: 'team-1',
       activityId: '2026-09-19~REGULAR',
     );
+    final ClubActivityFeedPage feed = await api.fetchClubActivityFeed(
+      teamId: 'team-1',
+      year: 2026,
+      types: const <ClubRecordFilter>[
+        ClubRecordFilter.regular,
+        ClubRecordFilter.casual,
+      ],
+      page: 1,
+      limit: 10,
+    );
 
     expect(statistics.members.single.average, 205);
     expect(activities.items.single.participantCount, 1);
     expect(detail.participants.single.scores, <int>[200, 210]);
+    expect(feed.items.single.canManage, isTrue);
+    expect(feed.currentMemberId, 'membership-1');
     expect(requests[0].queryParameters, <String, Object>{
       'year': 2026,
       'type': 'REGULAR',
     });
     expect(requests[1].queryParameters['page'], 1);
     expect(requests[2].path, contains('2026-09-19~REGULAR'));
+    expect(requests[3].queryParameters, <String, Object>{
+      'year': 2026,
+      'types': 'REGULAR,CASUAL',
+      'page': 1,
+      'limit': 10,
+    });
   });
 
   test(
