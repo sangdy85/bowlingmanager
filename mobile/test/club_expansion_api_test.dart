@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
+import 'package:bowlingmanager_mobile/features/capture/domain/capture_models.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_expansion_api.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,6 +25,7 @@ void main() {
           ) => <String, Object?>{'profile': _profileJson()},
           ('GET', '/teams/team-1/season-ranking') => <String, Object?>{
             'enabled': false,
+            'bowlerHiddenEnabled': false,
             'season': null,
             'seasons': <Object>[],
             'competitionType': 'TEAM',
@@ -118,6 +121,82 @@ void main() {
       ),
     );
   });
+
+  test('post save sends retained and new images as multipart data', () async {
+    FormData? sent;
+    final dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
+      ..httpClientAdapter = _Adapter((options) {
+        sent = options.data as FormData;
+        return _json(201, <String, Object?>{
+          'success': true,
+          'data': <String, String>{'postId': 'post-1'},
+        });
+      });
+    final postId = await ClubExpansionApi(dio).savePost(
+      'team-1',
+      title: '제목',
+      content: '본문',
+      existingImages: const <ClubPostImage>[ClubPostImage(id: 'image-old')],
+      newImages: <CaptureImageData>[
+        CaptureImageData(
+          bytes: Uint8List.fromList(<int>[1, 2, 3]),
+          fileName: 'score.png',
+          mimeType: 'image/png',
+        ),
+      ],
+    );
+
+    expect(postId, 'post-1');
+    expect(
+      sent?.fields.any((entry) => entry.key == 'title' && entry.value == '제목'),
+      isTrue,
+    );
+    expect(
+      sent?.fields.any(
+        (entry) =>
+            entry.key == 'existingImageIds' && entry.value == '["image-old"]',
+      ),
+      isTrue,
+    );
+    expect(sent?.files.single.key, 'images');
+    expect(sent?.files.single.value.filename, 'score.png');
+  });
+
+  test(
+    'post upload failure maps to ApiException without a success result',
+    () async {
+      final dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
+        ..httpClientAdapter = _Adapter(
+          (_) => _json(400, <String, Object?>{
+            'success': false,
+            'error': <String, String>{
+              'code': 'INVALID_IMAGE_TYPE',
+              'message': 'JPEG, PNG, WebP 이미지만 첨부할 수 있습니다.',
+            },
+          }),
+        );
+
+      await expectLater(
+        ClubExpansionApi(dio).savePost(
+          'team-1',
+          title: '제목',
+          content: '본문',
+          newImages: <CaptureImageData>[
+            CaptureImageData(
+              bytes: Uint8List.fromList(<int>[1]),
+              fileName: 'bad.gif',
+              mimeType: 'image/gif',
+            ),
+          ],
+        ),
+        throwsA(
+          isA<ApiException>()
+              .having((error) => error.kind, 'kind', ApiErrorKind.badRequest)
+              .having((error) => error.code, 'code', 'INVALID_IMAGE_TYPE'),
+        ),
+      );
+    },
+  );
 }
 
 Map<String, dynamic> _memberJson() => <String, dynamic>{
@@ -147,6 +226,7 @@ Map<String, dynamic> _profileJson() => <String, dynamic>{
   'notice': null,
   'myRole': 'OWNER',
   'seasonRankingEnabled': false,
+  'bowlerHiddenEnabled': false,
   'activeSeason': null,
 };
 

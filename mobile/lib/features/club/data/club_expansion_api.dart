@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
+import 'package:bowlingmanager_mobile/features/capture/domain/capture_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_season_final_models.dart';
 import 'package:dio/dio.dart';
@@ -116,19 +120,43 @@ class ClubExpansionApi {
     String? postId,
     required String title,
     required String content,
+    List<ClubPostImage> existingImages = const <ClubPostImage>[],
+    List<CaptureImageData> newImages = const <CaptureImageData>[],
   }) async => _guard(() async {
     final path =
         '/teams/${Uri.encodeComponent(teamId)}/posts${postId == null ? '' : '/${Uri.encodeComponent(postId)}'}';
-    final response = postId == null
-        ? await _dio.post<dynamic>(
-            path,
-            data: <String, String>{'title': title, 'content': content},
+    final form = FormData.fromMap(<String, dynamic>{
+      'title': title,
+      'content': content,
+      'existingImageIds': jsonEncode(
+        existingImages.map((image) => image.id).toList(growable: false),
+      ),
+      'images': newImages
+          .map(
+            (image) => MultipartFile.fromBytes(
+              image.bytes,
+              filename: image.fileName,
+              contentType: DioMediaType.parse(image.mimeType),
+            ),
           )
-        : await _dio.patch<dynamic>(
-            path,
-            data: <String, String>{'title': title, 'content': content},
-          );
+          .toList(growable: false),
+    });
+    final response = postId == null
+        ? await _dio.post<dynamic>(path, data: form)
+        : await _dio.patch<dynamic>(path, data: form);
     return _data(response.data)['postId'] as String;
+  });
+  Future<Uint8List> fetchPostImage(
+    String teamId,
+    String imageId,
+  ) async => _guard(() async {
+    final response = await _dio.get<List<int>>(
+      '/teams/${Uri.encodeComponent(teamId)}/posts/images/${Uri.encodeComponent(imageId)}',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    final bytes = response.data;
+    if (bytes == null) throw const FormatException('Invalid image.');
+    return Uint8List.fromList(bytes);
   });
   Future<void> deletePost(
     String teamId,

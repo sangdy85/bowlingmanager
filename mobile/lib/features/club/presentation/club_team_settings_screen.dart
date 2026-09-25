@@ -74,7 +74,9 @@ class _ClubTeamSettingsScreenState
                 _start.text = _date(season.startDate);
                 _end.text = _date(season.endDate);
                 _mode = season.scoringMode;
-                _individualPoints.text = _formatPoints(season.individualPoints);
+                _individualPoints.text = profile.bowlerHiddenEnabled
+                    ? _formatPoints(season.individualPoints)
+                    : season.points.join(',');
                 _teamPoints.text = _formatPoints(season.teamPoints);
                 _eventPoints.text = _formatPoints(season.eventPoints);
               }
@@ -144,6 +146,7 @@ class _ClubTeamSettingsScreenState
                       ],
                     ),
                     DropdownButtonFormField<String>(
+                      key: const Key('season-scoring-mode'),
                       initialValue: _mode,
                       items: const <DropdownMenuItem<String>>[
                         DropdownMenuItem(
@@ -161,23 +164,34 @@ class _ClubTeamSettingsScreenState
                       decoration: const InputDecoration(labelText: '점수 방식'),
                     ),
                     TextField(
+                      key: Key(
+                        profile.bowlerHiddenEnabled
+                            ? 'season-individual-points'
+                            : 'season-general-points',
+                      ),
                       controller: _individualPoints,
-                      decoration: const InputDecoration(
-                        labelText: '개인전 순위별 포인트 (예: 50,40,30)',
+                      decoration: InputDecoration(
+                        labelText: profile.bowlerHiddenEnabled
+                            ? '개인전 순위별 포인트 (예: 50,40,30)'
+                            : '순위별 포인트 (예: 5,3,1)',
                       ),
                     ),
-                    TextField(
-                      controller: _teamPoints,
-                      decoration: const InputDecoration(
-                        labelText: '팀전 순위별 포인트 (예: 35,20,10,5)',
+                    if (profile.bowlerHiddenEnabled) ...<Widget>[
+                      TextField(
+                        key: const Key('season-team-points'),
+                        controller: _teamPoints,
+                        decoration: const InputDecoration(
+                          labelText: '팀전 순위별 포인트 (예: 35,20,10,5)',
+                        ),
                       ),
-                    ),
-                    TextField(
-                      controller: _eventPoints,
-                      decoration: const InputDecoration(
-                        labelText: '이벤트전 순위별 포인트 (예: 50,40,30)',
+                      TextField(
+                        key: const Key('season-event-points'),
+                        controller: _eventPoints,
+                        decoration: const InputDecoration(
+                          labelText: '이벤트전 순위별 포인트 (예: 50,40,30)',
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ],
                 const SizedBox(height: 18),
@@ -212,11 +226,14 @@ class _ClubTeamSettingsScreenState
             'startDate': _start.text.trim(),
             'endDate': _end.text.trim(),
             'scoringMode': _mode,
-            'pointTables': <String, Object>{
-              'individual': _parsePoints(_individualPoints.text),
-              'team': _parsePoints(_teamPoints.text),
-              'event': _parsePoints(_eventPoints.text),
-            },
+            if (profile.bowlerHiddenEnabled)
+              'pointTables': <String, Object>{
+                'individual': _parsePoints(_individualPoints.text),
+                'team': _parsePoints(_teamPoints.text),
+                'event': _parsePoints(_eventPoints.text),
+              }
+            else
+              'points': _parsePoints(_individualPoints.text),
           };
         }
       }

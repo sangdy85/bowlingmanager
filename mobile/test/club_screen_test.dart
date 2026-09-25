@@ -1,15 +1,21 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:bowlingmanager_mobile/app/app.dart';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
+import 'package:bowlingmanager_mobile/features/capture/domain/capture_models.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/data/club_expansion_api.dart';
+import 'package:bowlingmanager_mobile/features/club/data/club_post_image_picker.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_management_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_post_form_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_post_detail_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_season_ranking_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_team_settings_screen.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
@@ -17,12 +23,154 @@ import 'package:bowlingmanager_mobile/shared/widgets/bottom_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:dio/dio.dart';
 
 import 'support/auth_fakes.dart';
 import 'support/club_fakes.dart';
 import 'support/dashboard_fakes.dart';
 
 void main() {
+  testWidgets(
+    'Hidden OFF overview keeps general statistics and season ranking',
+    (WidgetTester tester) async {
+      final profile = _profileWithHidden(false);
+      final ranking = _rankingWithHidden(false);
+      await _openClubs(
+        tester,
+        FakeClubRepository(),
+        profile: profile,
+        ranking: ranking,
+      );
+      await tester.tap(find.byKey(const Key('club-team-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('club-overview-link')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('club-overview')), findsOneWidget);
+      expect(find.text('2026 시즌'), findsOneWidget);
+      expect(find.textContaining('Bowler Hidden 기능이'), findsNothing);
+      expect(find.text('다시 시도'), findsNothing);
+    },
+  );
+
+  testWidgets('season settings separate general and Hidden controls', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(600, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    Future<void> pumpSettings(bool hidden) async {
+      final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+      await tester.pumpWidget(
+        ProviderScope(
+          key: ValueKey<bool>(hidden),
+          overrides: [
+            authRepositoryProvider.overrideWithValue(authRepository),
+            clubTeamProfileProvider.overrideWith(
+              (ref, request) async => _profileWithHidden(hidden),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: ClubTeamSettingsScreen(
+                key: ValueKey<bool>(hidden),
+                teamId: 'team-1',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    await pumpSettings(false);
+    expect(find.byKey(const Key('season-general-points')), findsOneWidget);
+    expect(find.byKey(const Key('season-individual-points')), findsNothing);
+    expect(find.byKey(const Key('season-team-points')), findsNothing);
+    expect(find.byKey(const Key('season-event-points')), findsNothing);
+
+    await pumpSettings(true);
+    expect(find.byKey(const Key('season-general-points')), findsNothing);
+    expect(find.byKey(const Key('season-individual-points')), findsOneWidget);
+    expect(find.byKey(const Key('season-team-points')), findsOneWidget);
+    expect(find.byKey(const Key('season-event-points')), findsOneWidget);
+  });
+
+  testWidgets('post detail displays all protected attachment images', (
+    WidgetTester tester,
+  ) async {
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    final bytes = Uint8List.fromList(
+      base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubPostProvider.overrideWith(
+            (ref, request) async => ClubPostDetail(
+              id: request.postId,
+              title: '첨부 게시글',
+              content: '본문',
+              authorName: '작성자',
+              createdAt: DateTime(2026, 9, 23),
+              canEdit: false,
+              images: const <ClubPostImage>[
+                ClubPostImage(id: 'image-1'),
+                ClubPostImage(id: 'image-2'),
+              ],
+            ),
+          ),
+          clubPostImageProvider.overrideWith((ref, request) async => bytes),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: ClubPostDetailScreen(teamId: 'team-1', postId: 'post-1'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('post-image-image-1')), findsOneWidget);
+    expect(find.byKey(const Key('post-image-image-2')), findsOneWidget);
+  });
+
+  testWidgets('post image upload failure keeps the unsaved form', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(600, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubExpansionApiProvider.overrideWithValue(_FailingPostUploadApi()),
+          clubPostImagePickerProvider.overrideWithValue(_TestPostImagePicker()),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: ClubPostFormScreen(teamId: 'team-1')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), '첨부 글');
+    await tester.enterText(find.byType(TextField).at(1), '본문');
+    await tester.tap(find.byKey(const Key('post-add-images')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('new-post-image-0')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('post-save')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('club-post-form')), findsOneWidget);
+    expect(find.byKey(const Key('new-post-image-0')), findsOneWidget);
+    expect(find.byKey(const Key('post-save-error')), findsOneWidget);
+  });
+
   testWidgets('team settings shows a safe error and retries', (
     WidgetTester tester,
   ) async {
@@ -80,6 +228,7 @@ void main() {
               content: '본문',
               authorName: '작성자',
               createdAt: DateTime(2026, 9, 23),
+              images: const <ClubPostImage>[],
               canEdit: true,
             );
           }),
@@ -130,6 +279,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('시즌 종합순위'), findsOneWidget);
+    expect(find.byKey(const Key('season-finals-link')), findsOneWidget);
+    expect(find.byKey(const Key('hidden-competition-filter')), findsOneWidget);
     expect(find.text('개인전'), findsOneWidget);
     expect(find.text('팀장'), findsOneWidget);
     expect(find.text('5P'), findsOneWidget);
@@ -138,6 +289,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('5P · 1경기'), findsOneWidget);
     expect(find.text('1월 개인전'), findsOneWidget);
+  });
+
+  testWidgets('general season ranking hides Hidden filters and finals', (
+    WidgetTester tester,
+  ) async {
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubSeasonRankingProvider.overrideWith(
+            (ref, request) async => _rankingWithHidden(false),
+          ),
+        ],
+        child: const MaterialApp(
+          home: ClubSeasonRankingScreen(teamId: 'team-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('시즌 순위'), findsOneWidget);
+    expect(find.byKey(const Key('season-finals-link')), findsNothing);
+    expect(find.byKey(const Key('hidden-competition-filter')), findsNothing);
   });
 
   testWidgets('Club shows an empty state', (WidgetTester tester) async {
@@ -816,6 +991,8 @@ Future<void> _openClubs(
   FakeClubRepository clubRepository, {
   bool settleClubs = true,
   Size surfaceSize = const Size(600, 1200),
+  ClubTeamProfile? profile,
+  ClubSeasonRanking? ranking,
 }) async {
   await tester.binding.setSurfaceSize(surfaceSize);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -829,9 +1006,11 @@ Future<void> _openClubs(
           FakeDashboardRepository(),
         ),
         clubRepositoryProvider.overrideWithValue(clubRepository),
-        clubTeamProfileProvider.overrideWith((ref, request) async => _profile),
+        clubTeamProfileProvider.overrideWith(
+          (ref, request) async => profile ?? _profile,
+        ),
         clubSeasonRankingProvider.overrideWith(
-          (ref, request) async => _ranking,
+          (ref, request) async => ranking ?? _ranking,
         ),
         clubMemberProfileProvider.overrideWith(
           (ref, request) async => _memberProfile,
@@ -874,11 +1053,13 @@ final ClubTeamProfile _profile = ClubTeamProfile(
   notice: '9월 정기전 안내',
   myRole: ClubRole.owner,
   seasonRankingEnabled: true,
+  bowlerHiddenEnabled: true,
   activeSeason: _season,
 );
 
 final ClubSeasonRanking _ranking = ClubSeasonRanking(
   enabled: true,
+  bowlerHiddenEnabled: true,
   season: _season,
   seasons: <ClubSeason>[_season],
   competitionType: 'ALL',
@@ -938,6 +1119,26 @@ final ClubSeasonRanking _ranking = ClubSeasonRanking(
   ],
 );
 
+ClubTeamProfile _profileWithHidden(bool enabled) => ClubTeamProfile(
+  id: _profile.id,
+  name: _profile.name,
+  description: _profile.description,
+  notice: _profile.notice,
+  myRole: _profile.myRole,
+  seasonRankingEnabled: true,
+  bowlerHiddenEnabled: enabled,
+  activeSeason: _season,
+);
+
+ClubSeasonRanking _rankingWithHidden(bool enabled) => ClubSeasonRanking(
+  enabled: true,
+  bowlerHiddenEnabled: enabled,
+  season: _season,
+  seasons: <ClubSeason>[_season],
+  competitionType: 'ALL',
+  rows: _ranking.rows,
+);
+
 final ClubMemberProfile _memberProfile = ClubMemberProfile(
   id: 'member-1',
   name: '팀장',
@@ -978,3 +1179,38 @@ final ClubMemberProfile _memberProfile = ClubMemberProfile(
     ),
   ],
 );
+
+class _TestPostImagePicker implements ClubPostImagePicker {
+  @override
+  Future<List<CaptureImageData>> pickImages() async => <CaptureImageData>[
+    CaptureImageData(
+      bytes: Uint8List.fromList(
+        base64Decode(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        ),
+      ),
+      fileName: 'score.png',
+      mimeType: 'image/png',
+    ),
+  ];
+}
+
+class _FailingPostUploadApi extends ClubExpansionApi {
+  _FailingPostUploadApi() : super(Dio());
+
+  @override
+  Future<String> savePost(
+    String teamId, {
+    String? postId,
+    required String title,
+    required String content,
+    List<ClubPostImage> existingImages = const <ClubPostImage>[],
+    List<CaptureImageData> newImages = const <CaptureImageData>[],
+  }) async {
+    throw const ApiException(
+      kind: ApiErrorKind.badRequest,
+      code: 'INVALID_IMAGE_TYPE',
+      userMessage: '이미지를 업로드하지 못했습니다.',
+    );
+  }
+}

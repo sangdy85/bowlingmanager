@@ -14,6 +14,16 @@ import {
     serializeSeasonSummary,
     UnifiedSeasonError,
 } from "@/lib/mobile-api/unified-season";
+import {
+    PostImageStorageError,
+    readStoredPostImage,
+    removeStoredPostImages,
+    removeStoredPostImagesStrict,
+    storePostImages,
+    storedPostImagePath,
+    TEAM_POST_IMAGE_MAX_BYTES,
+    type PostImageUpload,
+} from "@/lib/post-image-storage";
 
 export type SeasonScoringMode = "FULL_RANK" | "PODIUM";
 export type PublishedEventAward = {
@@ -36,6 +46,7 @@ const accessSelect = {
     description: true,
     notice: true,
     seasonRankingEnabled: true,
+    bowlerHiddenEnabled: true,
     User: { select: { id: true } },
     members: {
         orderBy: [{ joinedAt: "asc" as const }, { id: "asc" as const }],
@@ -174,7 +185,7 @@ export async function getMobileTeamPost(actorUserId: string, teamId: string, pos
         where: { id: postId, teamId },
         select: {
             id: true, title: true, content: true, authorId: true, createdAt: true, updatedAt: true,
-            author: { select: { name: true } }, images: { orderBy: { createdAt: "asc" }, select: { id: true, url: true } },
+            author: { select: { name: true } }, images: { orderBy: { createdAt: "asc" }, select: { id: true } },
         },
     });
     if (!post) throw new ClubExpansionError("POST_NOT_FOUND", "게시글을 찾을 수 없습니다.", 404);
@@ -195,31 +206,140 @@ function parsePostInput(value: unknown) {
         ? { title, content } : null;
 }
 
-export async function createMobileTeamPost(actorUserId: string, teamId: string, input: unknown) {
-    await requireTeam(actorUserId, teamId);
-    const data = parsePostInput(input);
-    if (!data) throw new ClubExpansionError("INVALID_POST", "제목과 내용을 확인해주세요.", 400);
-    const post = await prisma.post.create({ data: { ...data, teamId, authorId: actorUserId }, select: { id: true } });
-    return { postId: post.id };
+async function assertPostImageCapacity(teamId: string, addedSize: number, removedSize = 0) {
+    const aggregate = await prisma.postImage.aggregate({
+        where: { post: { teamId } },
+        _sum: { size: true },
+    });
+    if ((aggregate._sum.size ?? 0) - removedSize + addedSize > TEAM_POST_IMAGE_MAX_BYTES) {
+        throw new ClubExpansionError("IMAGE_STORAGE_LIMIT", "팀 게시판 이미지 저장 용량(10MB)을 초과했습니다.", 400);
+    }
 }
 
-export async function updateMobileTeamPost(actorUserId: string, teamId: string, postId: string, input: unknown) {
+function mapStorageError(error: unknown): never {
+    if (error instanceof PostImageStorageError) {
+        throw new ClubExpansionError(error.code, error.message, error.status);
+    }
+    throw error;
+}
+
+export async function createMobileTeamPost(
+    actorUserId: string,
+    teamId: string,
+    input: unknown,
+    files: readonly PostImageUpload[] = [],
+) {
     await requireTeam(actorUserId, teamId);
     const data = parsePostInput(input);
     if (!data) throw new ClubExpansionError("INVALID_POST", "제목과 내용을 확인해주세요.", 400);
-    const post = await prisma.post.findFirst({ where: { id: postId, teamId }, select: { authorId: true } });
+    if (files.length === 0) {
+        const post = await prisma.post.create({
+            data: { ...data, teamId, authorId: actorUserId },
+            select: { id: true },
+        });
+        return { postId: post.id };
+    }
+    await assertPostImageCapacity(teamId, files.reduce((sum, file) => sum + file.size, 0));
+    let stored: Awaited<ReturnType<typeof storePostImages>>;
+    try { stored = await storePostImages(files); } catch (error) { mapStorageError(error); }
+    try {
+        const post = await prisma.post.create({
+            data: {
+                ...data, teamId, authorId: actorUserId,
+                images: { create: stored.map((image) => ({ url: image.url, size: image.size })) },
+            },
+            select: { id: true },
+        });
+        return { postId: post.id };
+    } catch (error) {
+        await removeStoredPostImages(stored);
+        throw error;
+    }
+}
+
+export async function updateMobileTeamPost(
+    actorUserId: string,
+    teamId: string,
+    postId: string,
+    input: unknown,
+    files: readonly PostImageUpload[] = [],
+    retainedImageIds?: readonly string[],
+) {
+    await requireTeam(actorUserId, teamId);
+    const data = parsePostInput(input);
+    if (!data) throw new ClubExpansionError("INVALID_POST", "제목과 내용을 확인해주세요.", 400);
+    const post = await prisma.post.findFirst({
+        where: { id: postId, teamId },
+        select: { authorId: true, images: { select: { id: true, url: true, size: true } } },
+    });
     if (!post) throw new ClubExpansionError("POST_NOT_FOUND", "게시글을 찾을 수 없습니다.", 404);
     if (post.authorId !== actorUserId) throw new ClubExpansionError("FORBIDDEN", "작성자만 게시글을 수정할 수 있습니다.", 403);
-    await prisma.post.update({ where: { id: postId }, data });
+    if (files.length === 0 && retainedImageIds === undefined) {
+        await prisma.post.update({ where: { id: postId }, data });
+        return { postId };
+    }
+    const retained = retainedImageIds === undefined ? post.images.map((image) => image.id) : [...new Set(retainedImageIds)];
+    if (retained.length !== (retainedImageIds?.length ?? retained.length)
+        || retained.some((id) => !post.images.some((image) => image.id === id))) {
+        throw new ClubExpansionError("INVALID_POST_IMAGES", "유지할 첨부 이미지를 확인해주세요.", 400);
+    }
+    const removed = post.images.filter((image) => !retained.includes(image.id));
+    await assertPostImageCapacity(
+        teamId,
+        files.reduce((sum, file) => sum + file.size, 0),
+        removed.reduce((sum, image) => sum + image.size, 0),
+    );
+    let stored: Awaited<ReturnType<typeof storePostImages>>;
+    try { stored = await storePostImages(files); } catch (error) { mapStorageError(error); }
+    try {
+        await prisma.$transaction(async (tx) => {
+            await tx.post.update({ where: { id: postId }, data });
+            if (removed.length > 0) await tx.postImage.deleteMany({ where: { postId, id: { in: removed.map((image) => image.id) } } });
+            if (stored.length > 0) {
+                await tx.postImage.createMany({
+                    data: stored.map((image) => ({ postId, url: image.url, size: image.size })),
+                });
+            }
+        });
+    } catch (error) {
+        await removeStoredPostImages(stored);
+        throw error;
+    }
+    await removeStoredPostImages(removed.flatMap((image) => {
+        const path = storedPostImagePath(image.url);
+        return path ? [{ path }] : [];
+    }));
     return { postId };
+}
+
+export async function getMobilePostImage(actorUserId: string, teamId: string, imageId: string) {
+    await requireTeam(actorUserId, teamId);
+    const image = await prisma.postImage.findFirst({
+        where: { id: imageId, post: { teamId } },
+        select: { url: true },
+    });
+    if (!image) throw new ClubExpansionError("IMAGE_NOT_FOUND", "첨부 이미지를 찾을 수 없습니다.", 404);
+    try { return await readStoredPostImage(image.url); } catch (error) { mapStorageError(error); }
 }
 
 export async function deleteMobileTeamPost(actorUserId: string, teamId: string, postId: string) {
     await requireTeam(actorUserId, teamId);
-    const post = await prisma.post.findFirst({ where: { id: postId, teamId }, select: { authorId: true } });
+    const post = await prisma.post.findFirst({
+        where: { id: postId, teamId },
+        select: { authorId: true, images: { select: { url: true } } },
+    });
     if (!post) throw new ClubExpansionError("POST_NOT_FOUND", "게시글을 찾을 수 없습니다.", 404);
     if (post.authorId !== actorUserId) throw new ClubExpansionError("FORBIDDEN", "작성자만 게시글을 삭제할 수 있습니다.", 403);
     await prisma.post.delete({ where: { id: postId } });
+    const storedImages = post.images.flatMap((image) => {
+        const path = storedPostImagePath(image.url);
+        return path ? [{ path }] : [];
+    });
+    try {
+        await removeStoredPostImagesStrict(storedImages);
+    } catch (error) {
+        mapStorageError(error);
+    }
     return { deletedPostId: postId };
 }
 
@@ -231,6 +351,7 @@ export async function getMobileTeamProfile(actorUserId: string, teamId: string) 
     return {
         id: team.id, name: team.name, description: team.description, notice: team.notice,
         myRole: roleOf(team, actorUserId), seasonRankingEnabled: team.seasonRankingEnabled,
+        bowlerHiddenEnabled: team.bowlerHiddenEnabled,
         activeSeason: activeSeason ? serializeSeason(activeSeason) : null,
     };
 }
@@ -276,9 +397,16 @@ export async function updateMobileTeamProfile(actorUserId: string, teamId: strin
         let teamPoints: { rank: number; points: number }[];
         let eventPoints: { rank: number; points: number }[];
         try {
-            individualPoints = parsePointInput(tables?.individual ?? legacy);
-            teamPoints = parsePointInput(tables?.team ?? legacy);
-            eventPoints = parsePointInput(tables?.event ?? legacy);
+            if (team.bowlerHiddenEnabled) {
+                individualPoints = parsePointInput(tables?.individual ?? legacy);
+                teamPoints = parsePointInput(tables?.team ?? legacy);
+                eventPoints = parsePointInput(tables?.event ?? legacy);
+            } else {
+                if (tables) throw new Error("hidden tables disabled");
+                individualPoints = parsePointInput(legacy);
+                teamPoints = individualPoints;
+                eventPoints = individualPoints;
+            }
         } catch {
             throw new ClubExpansionError("INVALID_SETTINGS", "시즌 유형별 포인트를 확인해주세요.", 400);
         }
@@ -364,12 +492,46 @@ export function calculateSeasonRanking(
         .map((row, index) => ({ rank: index + 1, ...row }));
 }
 
-export async function getMobileSeasonRanking(actorUserId: string, teamId: string) {
-    try { return await getUnifiedSeasonRanking(actorUserId, teamId); }
-    catch (error) {
-        if (error instanceof UnifiedSeasonError) throw new ClubExpansionError(error.code, error.message, error.status);
-        throw error;
+export async function getMobileSeasonRanking(
+    actorUserId: string,
+    teamId: string,
+    options: { seasonId?: string | null; competitionType?: "ALL" | "INDIVIDUAL" | "TEAM" | "EVENT" } = {},
+) {
+    const team = await requireTeam(actorUserId, teamId);
+    if (team.bowlerHiddenEnabled) {
+        try {
+            const result = await getUnifiedSeasonRanking(actorUserId, teamId, options);
+            return { ...result, bowlerHiddenEnabled: true };
+        } catch (error) {
+            if (error instanceof UnifiedSeasonError) throw new ClubExpansionError(error.code, error.message, error.status);
+            throw error;
+        }
     }
+    if ((options.competitionType ?? "ALL") !== "ALL") {
+        throw new ClubExpansionError("FEATURE_DISABLED", "Bowler Hidden 기능이 활성화되지 않은 팀입니다.", 404);
+    }
+    const seasons = await prisma.teamSeason.findMany({ where: { teamId }, orderBy: [{ startDate: "desc" }, { id: "asc" }] });
+    if (!team.seasonRankingEnabled) {
+        return { enabled: false, bowlerHiddenEnabled: false, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [] };
+    }
+    const season = options.seasonId
+        ? seasons.find((item) => item.id === options.seasonId) ?? null
+        : seasons.find((item) => item.status === "ACTIVE") ?? null;
+    if (options.seasonId && !season) throw new ClubExpansionError("SEASON_NOT_FOUND", "시즌을 찾을 수 없습니다.", 404);
+    if (!season) return { enabled: true, bowlerHiddenEnabled: false, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [] };
+    const scores = mappedScores(await listTeamScores(teamId, season.startDate, season.endDate));
+    const pointTable = readSeasonPointTable(season.individualPointsConfig);
+    const rankings = calculateSeasonRanking(
+        teamId,
+        scores,
+        displayMembers(team.members),
+        season.scoringMode === "FULL_RANK" ? "FULL_RANK" : "PODIUM",
+        pointTable.map((item) => item.points),
+    );
+    return {
+        enabled: true, bowlerHiddenEnabled: false, season: serializeSeasonSummary(season),
+        seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings,
+    };
 }
 
 function parsePointInput(value: unknown) {

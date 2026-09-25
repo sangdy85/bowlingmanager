@@ -1,6 +1,9 @@
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
+import 'package:bowlingmanager_mobile/features/capture/domain/capture_models.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_post_image.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +22,9 @@ class _ClubPostFormScreenState extends ConsumerState<ClubPostFormScreen> {
   final _content = TextEditingController();
   bool _loaded = false;
   bool _saving = false;
+  List<ClubPostImage> _existingImages = <ClubPostImage>[];
+  List<CaptureImageData> _newImages = <CaptureImageData>[];
+  String? _errorMessage;
   @override
   void dispose() {
     _title.dispose();
@@ -58,6 +64,7 @@ class _ClubPostFormScreenState extends ConsumerState<ClubPostFormScreen> {
       final post = value.requireValue;
       _title.text = post.title;
       _content.text = post.content;
+      _existingImages = List<ClubPostImage>.of(post.images);
       _loaded = true;
     }
     return ListView(
@@ -87,6 +94,60 @@ class _ClubPostFormScreenState extends ConsumerState<ClubPostFormScreen> {
           maxLines: 16,
           decoration: const InputDecoration(labelText: '내용'),
         ),
+        const SizedBox(height: 12),
+        if (_existingImages.isNotEmpty || _newImages.isNotEmpty)
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: <Widget>[
+              for (final image in _existingImages)
+                _AttachmentPreview(
+                  key: Key('existing-post-image-${image.id}'),
+                  onRemove: () => setState(() => _existingImages.remove(image)),
+                  child: ClubPostImageView(
+                    teamId: widget.teamId,
+                    image: image,
+                    height: 96,
+                  ),
+                ),
+              for (int index = 0; index < _newImages.length; index++)
+                _AttachmentPreview(
+                  key: Key('new-post-image-$index'),
+                  onRemove: () => setState(() => _newImages.removeAt(index)),
+                  child: Image.memory(
+                    _newImages[index].bytes,
+                    height: 96,
+                    width: 96,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+            ],
+          ),
+        OutlinedButton.icon(
+          key: const Key('post-add-images'),
+          onPressed: _saving
+              ? null
+              : () async {
+                  final images = await ref
+                      .read(clubPostImagePickerProvider)
+                      .pickImages();
+                  if (!mounted || images.isEmpty) return;
+                  setState(() {
+                    _newImages = <CaptureImageData>[..._newImages, ...images];
+                    _errorMessage = null;
+                  });
+                },
+          icon: const Icon(Icons.add_photo_alternate_outlined),
+          label: const Text('이미지 추가'),
+        ),
+        if (_errorMessage != null) ...<Widget>[
+          const SizedBox(height: 8),
+          Text(
+            _errorMessage!,
+            key: const Key('post-save-error'),
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ],
         const SizedBox(height: 18),
         FilledButton(
           key: const Key('post-save'),
@@ -96,7 +157,10 @@ class _ClubPostFormScreenState extends ConsumerState<ClubPostFormScreen> {
                   final title = _title.text.trim();
                   final content = _content.text.trim();
                   if (title.isEmpty || content.isEmpty) return;
-                  setState(() => _saving = true);
+                  setState(() {
+                    _saving = true;
+                    _errorMessage = null;
+                  });
                   try {
                     await ref
                         .read(clubExpansionApiProvider)
@@ -105,9 +169,15 @@ class _ClubPostFormScreenState extends ConsumerState<ClubPostFormScreen> {
                           postId: widget.postId,
                           title: title,
                           content: content,
+                          existingImages: _existingImages,
+                          newImages: _newImages,
                         );
                     ref.invalidate(clubPostsProvider);
                     if (context.mounted) context.pop();
+                  } catch (error) {
+                    if (mounted) {
+                      setState(() => _errorMessage = clubErrorMessage(error));
+                    }
                   } finally {
                     if (mounted) setState(() => _saving = false);
                   }
@@ -117,4 +187,36 @@ class _ClubPostFormScreenState extends ConsumerState<ClubPostFormScreen> {
       ],
     );
   }
+}
+
+class _AttachmentPreview extends StatelessWidget {
+  const _AttachmentPreview({
+    required this.child,
+    required this.onRemove,
+    super.key,
+  });
+  final Widget child;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 108,
+    height: 108,
+    child: Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        ClipRRect(borderRadius: BorderRadius.circular(10), child: child),
+        Positioned(
+          top: 0,
+          right: 0,
+          child: IconButton.filledTonal(
+            visualDensity: VisualDensity.compact,
+            tooltip: '첨부 삭제',
+            onPressed: onRemove,
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ),
+      ],
+    ),
+  );
 }

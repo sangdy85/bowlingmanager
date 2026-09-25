@@ -122,6 +122,83 @@ test('migration has participant and slot uniqueness plus participant-kind check'
   assert.match(sql, /ON DELETE SET NULL/);
 });
 
+test('BULK and INDIVIDUAL lane flows assign every attending member and guest exactly once', async () => {
+  function harness(mode) {
+    const members = [1, 2, 3, 4].map(number => ({
+      id: `member-${number}`, userId: `user-${number}`, alias: null, user: { name: `회원${number}` },
+    }));
+    const event = {
+      id: `event-${mode}`, teamId: 'team-1', eventDate: new Date('2026-09-21T15:00:00.000Z'),
+      eventTime: '19:00', title: '레인 테스트', location: '테스트 볼링장', gameType: '정기전',
+      attendanceEnabled: true, laneDrawEnabled: true, laneDrawMode: mode, laneDrawStatus: 'NOT_STARTED',
+      competitionEnabled: false, competitionType: null, competitionStatus: 'DRAFT',
+      attendances: [
+        ...members.slice(0, 3).map(item => ({ memberId: item.id, memberDisplayName: item.user.name, status: 'ATTENDING' })),
+        { memberId: members[3].id, memberDisplayName: members[3].user.name, status: 'NOT_ATTENDING' },
+      ],
+      guests: [{ id: 'guest-1', name: '게스트' }],
+      laneSlots: Array.from({ length: 4 }, (_, index) => ({ id: `slot-${index + 1}`, laneNumber: 9 + index, position: 1 })),
+      laneAssignments: [], team: { members }, createdAt: new Date(), updatedAt: new Date(),
+    };
+    let nextAssignment = 1;
+    const prisma = {
+      team: { findFirst: async args => {
+        const member = members.find(item => item.userId === args.where.members.some.userId);
+        return member ? { ownerId: 'user-1', bowlerHiddenEnabled: false, User: [], members: [member] } : null;
+      } },
+      teamEvent: {
+        findFirst: async args => args.where.id === event.id && args.where.teamId === event.teamId
+          ? { ...event, laneAssignments: [...event.laneAssignments] }
+          : null,
+        updateMany: async args => {
+          if (event.laneDrawStatus !== args.where.laneDrawStatus) return { count: 0 };
+          event.laneDrawStatus = args.data.laneDrawStatus;
+          return { count: 1 };
+        },
+        update: async args => { event.laneDrawStatus = args.data.laneDrawStatus; return event; },
+      },
+      teamEventLaneAssignment: {
+        create: async args => {
+          assert.equal(event.laneAssignments.some(item => item.slotId === args.data.slotId), false, 'slot reuse');
+          assert.equal(event.laneAssignments.some(item => item.memberId && item.memberId === args.data.memberId), false, 'member duplicate');
+          assert.equal(event.laneAssignments.some(item => item.guestId && item.guestId === args.data.guestId), false, 'guest duplicate');
+          const assignment = {
+            id: `assignment-${nextAssignment++}`, ...args.data,
+            slot: event.laneSlots.find(slot => slot.id === args.data.slotId),
+          };
+          event.laneAssignments.push(assignment);
+          return assignment;
+        },
+      },
+    };
+    prisma.$transaction = async callback => callback(prisma);
+    return { event, prisma };
+  }
+
+  const bulk = harness('BULK');
+  let service = loadTs('src/lib/mobile-api/team-events.ts', { '@/lib/prisma': bulk.prisma });
+  assert.equal((await service.startEventDraw('user-1', 'team-1', bulk.event.id, new Date('2026-09-22T03:00:00.000Z'))).status, 'COMPLETED');
+  assert.equal(bulk.event.laneAssignments.length, 4);
+  assert.equal(new Set(bulk.event.laneAssignments.map(item => item.slotId)).size, 4);
+  assert.deepEqual(new Set(bulk.event.laneAssignments.map(item => item.memberId ?? item.guestId)), new Set(['member-1', 'member-2', 'member-3', 'guest-1']));
+
+  const individual = harness('INDIVIDUAL');
+  service = loadTs('src/lib/mobile-api/team-events.ts', { '@/lib/prisma': individual.prisma });
+  assert.equal((await service.startEventDraw('user-1', 'team-1', individual.event.id, new Date('2026-09-22T03:00:00.000Z'))).status, 'OPEN');
+  const first = await service.drawMyEventLane('user-1', 'team-1', individual.event.id);
+  const repeated = await service.drawMyEventLane('user-1', 'team-1', individual.event.id);
+  assert.equal(repeated.id, first.id);
+  assert.equal(individual.event.laneAssignments.length, 1);
+  await service.drawMyEventLane('user-2', 'team-1', individual.event.id);
+  await service.drawGuestEventLane('user-1', 'team-1', individual.event.id, 'guest-1');
+  assert.equal(individual.event.laneAssignments.length, 3);
+  assert.equal((await service.assignRemainingEventLanes('user-1', 'team-1', individual.event.id)).status, 'COMPLETED');
+  assert.equal(individual.event.laneAssignments.length, 4);
+  assert.equal(new Set(individual.event.laneAssignments.map(item => item.slotId)).size, 4);
+  assert.equal(new Set(individual.event.laneAssignments.map(item => item.memberId ?? item.guestId)).size, 4);
+  assert.equal(individual.event.laneAssignments.some(item => item.memberId === 'member-4'), false, 'non-attendee assigned');
+});
+
 test('event routes require authentication and keep actor/team/event scope', async () => {
   let call = null;
   const fakes = {

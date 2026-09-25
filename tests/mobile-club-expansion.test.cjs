@@ -200,6 +200,7 @@ test('additive migration preserves Team and constrains season mode and dates', (
 
 test('board route requires auth and scopes the actor and team through the service', async () => {
   let call = null;
+  let createCall = null;
   const route = loadTs('src/app/api/mobile/v1/teams/[teamId]/posts/route.ts', {
     '@/lib/mobile-api/auth': {
       getMobileApiUserId: async request => request.headers.get('x-user'),
@@ -209,7 +210,10 @@ test('board route requires auth and scopes the actor and team through the servic
         call = { userId, teamId, page, limit };
         return { items: [], pagination: { page, limit, total: 0, totalPages: 0 } };
       },
-      createMobileTeamPost: async () => ({ postId: 'post-1' }),
+      createMobileTeamPost: async (userId, teamId, body, files) => {
+        createCall = { userId, teamId, body, files };
+        return { postId: 'post-1' };
+      },
       ClubExpansionError: service.ClubExpansionError,
     },
   });
@@ -223,6 +227,21 @@ test('board route requires auth and scopes the actor and team through the servic
   }), { params: Promise.resolve({ teamId: 'team-1' }) });
   assert.equal(response.status, 200);
   assert.deepEqual(call, { userId: 'user-a', teamId: 'team-1', page: 2, limit: 10 });
+
+  const form = new FormData();
+  form.set('title', '첨부 글');
+  form.set('content', '본문');
+  form.append('images', new Blob([Buffer.from('image')], { type: 'image/png' }), 'score.png');
+  response = await route.POST(new Request('https://example.test/posts', {
+    method: 'POST', headers: { 'x-user': 'user-a' }, body: form,
+  }), { params: Promise.resolve({ teamId: 'team-1' }) });
+  assert.equal(response.status, 201);
+  assert.deepEqual(
+    { userId: createCall.userId, teamId: createCall.teamId, body: createCall.body },
+    { userId: 'user-a', teamId: 'team-1', body: { title: '첨부 글', content: '본문' } },
+  );
+  assert.equal(createCall.files.length, 1);
+  assert.equal(createCall.files[0].type, 'image/png');
 });
 
 test('board service rejects outsiders and keeps edit/delete author-only', async () => {
@@ -234,7 +253,7 @@ test('board service rejects outsiders and keeps edit/delete author-only', async 
       findFirst: async () => member ? fakeTeam() : null,
     },
     post: {
-      findFirst: async () => ({ authorId: 'author' }),
+      findFirst: async () => ({ authorId: 'author', images: [] }),
       update: async () => { updated += 1; },
       delete: async () => { deleted += 1; },
     },
@@ -259,6 +278,73 @@ test('board service rejects outsiders and keeps edit/delete author-only', async 
   await isolated.deleteMobileTeamPost('author', 'team-1', 'post-1');
   assert.equal(updated, 1);
   assert.equal(deleted, 1);
+});
+
+test('deleting a post removes only its stored images after the database delete', async () => {
+  const uploadDirectory = path.resolve(__dirname, '../public/uploads');
+  const prefix = `post-delete-${process.pid}-${Date.now()}`;
+  const imageNames = [`${prefix}-a.webp`, `${prefix}-b.webp`, `${prefix}-c.webp`, `${prefix}-d.webp`];
+  const imagePaths = imageNames.map(name => path.join(uploadDirectory, name));
+  fs.mkdirSync(uploadDirectory, { recursive: true });
+  for (const imagePath of imagePaths) fs.writeFileSync(imagePath, Buffer.from('fixture'));
+
+  const posts = new Map([
+    ['post-ab', { authorId: 'author', images: imageNames.slice(0, 2).map(name => ({ url: `/api/images/${name}` })) }],
+    ['post-c', { authorId: 'other-author', images: [{ url: `/api/images/${imageNames[2]}` }] }],
+    ['post-missing', { authorId: 'author', images: [{ url: `/api/images/${prefix}-missing.webp` }] }],
+    ['post-db-fail', { authorId: 'author', images: [{ url: `/api/images/${imageNames[3]}` }] }],
+  ]);
+  const postImages = new Map([
+    ['post-ab', ['image-a', 'image-b']], ['post-c', ['image-c']], ['post-missing', ['image-missing']],
+    ['post-db-fail', ['image-d']],
+  ]);
+  let deleteCalls = 0;
+  const fakePrisma = {
+    team: { findFirst: async args => args.where.id === 'team-1' && args.where.members.some.userId !== 'outsider' ? fakeTeam() : null },
+    post: {
+      findFirst: async args => posts.get(args.where.id) ?? null,
+      delete: async args => {
+        if (args.where.id === 'post-db-fail') throw new Error('database delete failed');
+        deleteCalls += 1;
+        posts.delete(args.where.id);
+        postImages.delete(args.where.id);
+        return {};
+      },
+    },
+  };
+  const isolated = loadTs('src/lib/mobile-api/club-expansion.ts', { '@/lib/prisma': fakePrisma });
+
+  try {
+    await isolated.deleteMobileTeamPost('author', 'team-1', 'post-ab');
+    assert.equal(posts.has('post-ab'), false);
+    assert.equal(postImages.has('post-ab'), false);
+    assert.equal(fs.existsSync(imagePaths[0]), false);
+    assert.equal(fs.existsSync(imagePaths[1]), false);
+    assert.equal(fs.existsSync(imagePaths[2]), true);
+
+    await isolated.deleteMobileTeamPost('author', 'team-1', 'post-missing');
+    assert.equal(posts.has('post-missing'), false);
+
+    await assert.rejects(
+      isolated.deleteMobileTeamPost('author', 'team-1', 'post-c'),
+      error => error.code === 'FORBIDDEN',
+    );
+    await assert.rejects(
+      isolated.deleteMobileTeamPost('outsider', 'team-1', 'post-c'),
+      error => error.code === 'TEAM_NOT_FOUND',
+    );
+    assert.equal(posts.has('post-c'), true);
+    assert.equal(postImages.has('post-c'), true);
+    assert.equal(fs.existsSync(imagePaths[2]), true);
+
+    await assert.rejects(isolated.deleteMobileTeamPost('author', 'team-1', 'post-db-fail'), /database delete failed/);
+    assert.equal(posts.has('post-db-fail'), true);
+    assert.equal(postImages.has('post-db-fail'), true);
+    assert.equal(fs.existsSync(imagePaths[3]), true);
+    assert.equal(deleteCalls, 2);
+  } finally {
+    for (const imagePath of imagePaths) fs.rmSync(imagePath, { force: true });
+  }
 });
 
 test('board list, detail and create reuse Post data without exposing author ids', async () => {
@@ -382,6 +468,129 @@ test('season ranking reads active publication ledger in one batch and supports f
   assert.equal(result.rankings.find(row => row.id === 'member-owner').teamPoints, 35);
   assert.equal(result.rankings.find(row => row.id === 'member-owner').monthlyHistory[1].length, 1);
   assert.equal(entryCalls, 1);
+});
+
+test('Hidden OFF uses the general season ranking and rejects Hidden competition filters', async () => {
+  let pointEntryCalls = 0;
+  const season = {
+    id: 'season-general', teamId: 'team-1', name: '일반 시즌', enabled: true, status: 'ACTIVE',
+    startDate: new Date('2026-01-01T00:00:00+09:00'),
+    endDate: new Date('2026-12-31T23:59:59.999+09:00'),
+    scoringMode: 'PODIUM', pointsConfig: '[5,3,1]',
+    individualPointsConfig: '{"1":5,"2":3,"3":1}',
+    teamPointsConfig: '{"1":5,"2":3,"3":1}',
+    eventPointsConfig: '{"1":5,"2":3,"3":1}',
+  };
+  const fakePrisma = {
+    team: {
+      findFirst: async () => ({
+        ...fakeTeam(), bowlerHiddenEnabled: false, seasonRankingEnabled: true,
+      }),
+    },
+    teamSeason: { findMany: async () => [season] },
+    score: {
+      findMany: async () => [
+        { ...score('owner-score', 220, '2026-03-10', 'owner'), User: { name: '팀장' } },
+        { ...score('member-score', 180, '2026-03-10', 'member'), User: { name: '회원' } },
+      ],
+    },
+    seasonPointEntry: { findMany: async () => { pointEntryCalls += 1; return []; } },
+  };
+  const isolated = loadTs('src/lib/mobile-api/club-expansion.ts', {
+    '@/lib/prisma': fakePrisma,
+  });
+  const result = await isolated.getMobileSeasonRanking('owner', 'team-1');
+  assert.equal(result.enabled, true);
+  assert.equal(result.bowlerHiddenEnabled, false);
+  assert.equal(result.rankings[0].id, 'member-owner');
+  assert.equal(result.rankings[0].points, 5);
+  assert.equal(pointEntryCalls, 0);
+  await assert.rejects(
+    isolated.getMobileSeasonRanking('owner', 'team-1', { competitionType: 'EVENT' }),
+    error => error.code === 'FEATURE_DISABLED',
+  );
+});
+
+test('Hidden OFF profile accepts general points and rejects Hidden point tables', async () => {
+  let created = null;
+  const fakePrisma = {
+    team: {
+      findFirst: async () => ({
+        ...fakeTeam(), bowlerHiddenEnabled: false, seasonRankingEnabled: true,
+      }),
+    },
+    teamSeason: { findFirst: async () => null },
+    $transaction: async callback => callback({
+      team: { update: async () => ({}) },
+      teamSeason: {
+        updateMany: async () => ({ count: 0 }),
+        create: async args => { created = args.data; return {}; },
+      },
+    }),
+  };
+  const isolated = loadTs('src/lib/mobile-api/club-expansion.ts', {
+    '@/lib/prisma': fakePrisma,
+  });
+  const season = {
+    name: '일반 시즌', startDate: '2026-01-01', endDate: '2026-12-31',
+    scoringMode: 'PODIUM', points: [5, 3, 1],
+  };
+  await isolated.updateMobileTeamProfile('owner', 'team-1', {
+    seasonRankingEnabled: true, season,
+  });
+  assert.equal(created.individualPointsConfig, '{"1":5,"2":3,"3":1}');
+  assert.equal(created.teamPointsConfig, created.individualPointsConfig);
+  await assert.rejects(
+    isolated.updateMobileTeamProfile('owner', 'team-1', {
+      seasonRankingEnabled: true,
+      season: { ...season, pointTables: { individual: [5], team: [3], event: [1] } },
+    }),
+    error => error.code === 'INVALID_SETTINGS',
+  );
+});
+
+test('mobile post image lookup is team-scoped and upload failure does not create a post', async () => {
+  class StorageError extends Error {
+    constructor(code, message, status = 400) {
+      super(message); this.code = code; this.status = status;
+    }
+  }
+  let imageWhere = null;
+  let creates = 0;
+  const fakePrisma = {
+    team: { findFirst: async () => fakeTeam() },
+    postImage: {
+      aggregate: async () => ({ _sum: { size: 0 } }),
+      findFirst: async args => {
+        imageWhere = args.where;
+        return args.where.post.teamId === 'team-1' ? { url: '/api/images/safe.webp' } : null;
+      },
+    },
+    post: { create: async () => { creates += 1; return { id: 'post-1' }; } },
+  };
+  const isolated = loadTs('src/lib/mobile-api/club-expansion.ts', {
+    '@/lib/prisma': fakePrisma,
+    '@/lib/post-image-storage': {
+      PostImageStorageError: StorageError,
+      TEAM_POST_IMAGE_MAX_BYTES: 10 * 1024 * 1024,
+      storePostImages: async () => { throw new StorageError('INVALID_IMAGE_TYPE', 'bad'); },
+      removeStoredPostImages: async () => {},
+      removeStoredPostImagesStrict: async () => {},
+      storedPostImagePath: () => null,
+      readStoredPostImage: async () => ({ bytes: Buffer.from('image'), contentType: 'image/webp' }),
+    },
+  });
+  const image = await isolated.getMobilePostImage('owner', 'team-1', 'image-1');
+  assert.equal(image.contentType, 'image/webp');
+  assert.deepEqual(imageWhere, { id: 'image-1', post: { teamId: 'team-1' } });
+  await assert.rejects(
+    isolated.createMobileTeamPost(
+      'owner', 'team-1', { title: '제목', content: '본문' },
+      [{ name: 'bad.gif', size: 10, type: 'image/gif', arrayBuffer: async () => new ArrayBuffer(0) }],
+    ),
+    error => error.code === 'INVALID_IMAGE_TYPE',
+  );
+  assert.equal(creates, 0);
 });
 
 function fakeTeam(ownerId = 'owner') {

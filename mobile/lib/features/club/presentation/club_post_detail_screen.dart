@@ -3,6 +3,7 @@ import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.d
 import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_post_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -69,6 +70,16 @@ class ClubPostDetailScreen extends ConsumerWidget {
               Text('${post.authorName} · ${post.createdAt.toLocal()}'),
               const Divider(height: 32),
               Text(post.content),
+              if (post.images.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 20),
+                for (final image in post.images) ...<Widget>[
+                  Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: ClubPostImageView(teamId: teamId, image: image),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ],
             ],
           ),
         );

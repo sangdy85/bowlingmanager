@@ -45,6 +45,7 @@ void main() {
   test('season ranking parses enabled and disabled contracts', () {
     final disabled = ClubSeasonRanking.fromJson(<String, dynamic>{
       'enabled': false,
+      'bowlerHiddenEnabled': false,
       'season': null,
       'rankings': <Object>[],
     });
@@ -53,6 +54,7 @@ void main() {
 
     final enabled = ClubSeasonRanking.fromJson(<String, dynamic>{
       'enabled': true,
+      'bowlerHiddenEnabled': true,
       'season': _seasonJson(),
       'seasons': <Object>[_seasonJson()],
       'competitionType': 'ALL',

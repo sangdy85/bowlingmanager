@@ -292,6 +292,7 @@ class ClubTeamProfile {
     required this.notice,
     required this.myRole,
     required this.seasonRankingEnabled,
+    required this.bowlerHiddenEnabled,
     required this.activeSeason,
   });
   final String id;
@@ -300,13 +301,15 @@ class ClubTeamProfile {
   final String? notice;
   final ClubRole myRole;
   final bool seasonRankingEnabled;
+  final bool bowlerHiddenEnabled;
   final ClubSeason? activeSeason;
   factory ClubTeamProfile.fromJson(Map<String, dynamic> json) {
     if (json['id'] is! String ||
         json['name'] is! String ||
         (json['description'] != null && json['description'] is! String) ||
         (json['notice'] != null && json['notice'] is! String) ||
-        json['seasonRankingEnabled'] is! bool) {
+        json['seasonRankingEnabled'] is! bool ||
+        json['bowlerHiddenEnabled'] is! bool) {
       throw const FormatException('Invalid team profile.');
     }
     return ClubTeamProfile(
@@ -316,6 +319,7 @@ class ClubTeamProfile {
       notice: json['notice'] as String?,
       myRole: ClubRole.fromJson(json['myRole']),
       seasonRankingEnabled: json['seasonRankingEnabled'] as bool,
+      bowlerHiddenEnabled: json['bowlerHiddenEnabled'] as bool,
       activeSeason: json['activeSeason'] == null
           ? null
           : ClubSeason.fromJson(_map(json['activeSeason'], 'Invalid season.')),
@@ -429,12 +433,14 @@ class ClubSeasonRanking {
     required this.enabled,
     required this.season,
     required this.rows,
+    required this.bowlerHiddenEnabled,
     this.seasons = const <ClubSeason>[],
     this.competitionType = 'ALL',
   });
   final bool enabled;
   final ClubSeason? season;
   final List<ClubSeasonRankingRow> rows;
+  final bool bowlerHiddenEnabled;
   final List<ClubSeason> seasons;
   final String competitionType;
   factory ClubSeasonRanking.fromJson(Map<String, dynamic> json) {
@@ -442,6 +448,7 @@ class ClubSeasonRanking {
     final seasons = json['seasons'] ?? const <Object>[];
     final competitionType = json['competitionType'] ?? 'ALL';
     if (json['enabled'] is! bool ||
+        json['bowlerHiddenEnabled'] is! bool ||
         rows is! List ||
         seasons is! List ||
         !const <String>{
@@ -454,6 +461,7 @@ class ClubSeasonRanking {
     }
     return ClubSeasonRanking(
       enabled: json['enabled'] as bool,
+      bowlerHiddenEnabled: json['bowlerHiddenEnabled'] as bool,
       season: json['season'] == null
           ? null
           : ClubSeason.fromJson(_map(json['season'], 'Invalid season.')),
@@ -534,6 +542,18 @@ class ClubPostsPage {
   }
 }
 
+class ClubPostImage {
+  const ClubPostImage({required this.id});
+  final String id;
+
+  factory ClubPostImage.fromJson(Map<String, dynamic> json) {
+    if (json['id'] is! String || (json['id'] as String).isEmpty) {
+      throw const FormatException('Invalid post image.');
+    }
+    return ClubPostImage(id: json['id'] as String);
+  }
+}
+
 class ClubPostDetail {
   const ClubPostDetail({
     required this.id,
@@ -542,6 +562,7 @@ class ClubPostDetail {
     required this.authorName,
     required this.createdAt,
     required this.canEdit,
+    required this.images,
   });
   final String id;
   final String title;
@@ -549,6 +570,7 @@ class ClubPostDetail {
   final String authorName;
   final DateTime createdAt;
   final bool canEdit;
+  final List<ClubPostImage> images;
   factory ClubPostDetail.fromJson(Map<String, dynamic> json) {
     final date = DateTime.tryParse(json['createdAt'] as String? ?? '');
     if (json['id'] is! String ||
@@ -556,7 +578,8 @@ class ClubPostDetail {
         json['content'] is! String ||
         json['authorName'] is! String ||
         date == null ||
-        json['canEdit'] is! bool) {
+        json['canEdit'] is! bool ||
+        json['images'] is! List) {
       throw const FormatException('Invalid post detail.');
     }
     return ClubPostDetail(
@@ -566,6 +589,11 @@ class ClubPostDetail {
       authorName: json['authorName'] as String,
       createdAt: date,
       canEdit: json['canEdit'] as bool,
+      images: List<ClubPostImage>.unmodifiable(
+        (json['images'] as List).map(
+          (value) => ClubPostImage.fromJson(_map(value, 'Invalid post image.')),
+        ),
+      ),
     );
   }
 }

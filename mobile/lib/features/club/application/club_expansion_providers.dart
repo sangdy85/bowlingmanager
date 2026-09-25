@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_expansion_api.dart';
+import 'package:bowlingmanager_mobile/features/club/data/club_post_image_picker.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_season_final_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +14,7 @@ typedef ClubMemberProfileRequest = ({
   int year,
 });
 typedef ClubPostRequest = ({String userId, String teamId, String postId});
+typedef ClubPostImageRequest = ({String userId, String teamId, String imageId});
 typedef ClubExpansionRequest = ({String userId, String teamId});
 typedef ClubSeasonRankingRequest = ({
   String userId,
@@ -33,6 +37,9 @@ typedef ClubSeasonFinalRequest = ({
 
 final clubExpansionApiProvider = Provider<ClubExpansionApi>(
   (ref) => ClubExpansionApi(ref.watch(apiClientProvider).dio),
+);
+final clubPostImagePickerProvider = Provider<ClubPostImagePicker>(
+  (ref) => MobileClubPostImagePicker(),
 );
 final clubSeasonFinalsProvider = FutureProvider.autoDispose
     .family<ClubSeasonFinals, ClubExpansionRequest>(
@@ -94,5 +101,12 @@ final clubPostProvider = FutureProvider.autoDispose
       (ref, request) => ref
           .watch(clubExpansionApiProvider)
           .fetchPost(request.teamId, request.postId),
+      retry: (_, _) => null,
+    );
+final clubPostImageProvider = FutureProvider.autoDispose
+    .family<Uint8List, ClubPostImageRequest>(
+      (ref, request) => ref
+          .watch(clubExpansionApiProvider)
+          .fetchPostImage(request.teamId, request.imageId),
       retry: (_, _) => null,
     );

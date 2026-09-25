@@ -33,15 +33,19 @@ class _ClubSeasonRankingScreenState
     final value = ref.watch(clubSeasonRankingProvider(request));
     return Scaffold(
       appBar: AppBar(
-        title: const Text('시즌 종합순위'),
+        title: Text(
+          value.value?.bowlerHiddenEnabled == false ? '시즌 순위' : '시즌 종합순위',
+        ),
         actions: <Widget>[
-          IconButton(
-            tooltip: '시즌 최종전',
-            onPressed: () => context.push(
-              '/club/${Uri.encodeComponent(widget.teamId)}/records/season-finals',
+          if (value.value?.bowlerHiddenEnabled == true)
+            IconButton(
+              key: const Key('season-finals-link'),
+              tooltip: '시즌 최종전',
+              onPressed: () => context.push(
+                '/club/${Uri.encodeComponent(widget.teamId)}/records/season-finals',
+              ),
+              icon: const Icon(Icons.emoji_events_outlined),
             ),
-            icon: const Icon(Icons.emoji_events_outlined),
-          ),
         ],
       ),
       body: value.when(
@@ -97,17 +101,19 @@ class _ClubSeasonRankingScreenState
             onChanged: (value) => setState(() => _seasonId = value),
           ),
           const SizedBox(height: 12),
-          SegmentedButton<String>(
-            segments: const <ButtonSegment<String>>[
-              ButtonSegment(value: 'ALL', label: Text('전체')),
-              ButtonSegment(value: 'INDIVIDUAL', label: Text('개인전')),
-              ButtonSegment(value: 'TEAM', label: Text('팀전')),
-              ButtonSegment(value: 'EVENT', label: Text('이벤트전')),
-            ],
-            selected: <String>{_competitionType},
-            onSelectionChanged: (value) =>
-                setState(() => _competitionType = value.single),
-          ),
+          if (ranking.bowlerHiddenEnabled)
+            SegmentedButton<String>(
+              key: const Key('hidden-competition-filter'),
+              segments: const <ButtonSegment<String>>[
+                ButtonSegment(value: 'ALL', label: Text('전체')),
+                ButtonSegment(value: 'INDIVIDUAL', label: Text('개인전')),
+                ButtonSegment(value: 'TEAM', label: Text('팀전')),
+                ButtonSegment(value: 'EVENT', label: Text('이벤트전')),
+              ],
+              selected: <String>{_competitionType},
+              onSelectionChanged: (value) =>
+                  setState(() => _competitionType = value.single),
+            ),
           const SizedBox(height: 16),
           if (ranking.season == null)
             const _Empty(message: '조회할 시즌이 없습니다.')
@@ -121,7 +127,9 @@ class _ClubSeasonRankingScreenState
             const SizedBox(height: 10),
             _RankingGrid(
               rows: ranking.rows,
-              onMember: (row) => _showMember(userId, ranking, row),
+              onMember: ranking.bowlerHiddenEnabled
+                  ? (row) => _showMember(userId, ranking, row)
+                  : null,
             ),
           ],
         ],
@@ -151,7 +159,7 @@ class _ClubSeasonRankingScreenState
 class _RankingGrid extends StatelessWidget {
   const _RankingGrid({required this.rows, required this.onMember});
   final List<ClubSeasonRankingRow> rows;
-  final ValueChanged<ClubSeasonRankingRow> onMember;
+  final ValueChanged<ClubSeasonRankingRow>? onMember;
 
   @override
   Widget build(BuildContext context) {
@@ -168,7 +176,7 @@ class _RankingGrid extends StatelessWidget {
                 const _GridCell(height: 46, child: Text('순위  이름  포인트')),
                 for (final row in rows)
                   InkWell(
-                    onTap: () => onMember(row),
+                    onTap: onMember == null ? null : () => onMember!(row),
                     child: _GridCell(
                       height: rowHeight,
                       child: Row(

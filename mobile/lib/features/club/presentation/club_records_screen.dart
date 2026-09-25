@@ -273,14 +273,13 @@ class _OverviewBody extends ConsumerWidget {
       seasonId: null as String?,
       competitionType: 'ALL',
     );
-    final ranking = ref.watch(clubSeasonRankingProvider(rankingRequest));
     final recentFeed = ref.watch(
       clubActivityFeedControllerProvider(feedRequest),
     );
-    if (profile.isLoading || ranking.isLoading || statistics.isLoading) {
+    if (profile.isLoading || statistics.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    final error = profile.error ?? ranking.error ?? statistics.error;
+    final error = profile.error ?? statistics.error;
     if (error != null) {
       return ListView(
         padding: const EdgeInsets.all(20),
@@ -289,25 +288,44 @@ class _OverviewBody extends ConsumerWidget {
             message: clubErrorMessage(error),
             onRetry: () async {
               ref.invalidate(clubTeamProfileProvider(request));
-              ref.invalidate(clubSeasonRankingProvider(rankingRequest));
               await ref.read(clubTeamProfileProvider(request).future);
-              await ref.read(clubSeasonRankingProvider(rankingRequest).future);
             },
           ),
         ],
       );
     }
     final ClubTeamProfile team = profile.requireValue;
-    final ClubSeasonRanking season = ranking.requireValue;
+    final AsyncValue<ClubSeasonRanking>? ranking = team.seasonRankingEnabled
+        ? ref.watch(clubSeasonRankingProvider(rankingRequest))
+        : null;
+    if (ranking?.isLoading == true) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (ranking?.hasError == true) {
+      return ListView(
+        padding: const EdgeInsets.all(20),
+        children: <Widget>[
+          ClubErrorCard(
+            message: clubErrorMessage(ranking!.error!),
+            onRetry: () =>
+                ref.refresh(clubSeasonRankingProvider(rankingRequest).future),
+          ),
+        ],
+      );
+    }
+    final ClubSeasonRanking? season = ranking?.requireValue;
     final ClubStatisticsSummary summary = statistics.requireValue.summary;
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(clubTeamProfileProvider(request));
-        ref.invalidate(clubSeasonRankingProvider(rankingRequest));
+        if (team.seasonRankingEnabled) {
+          ref.invalidate(clubSeasonRankingProvider(rankingRequest));
+        }
         ref.invalidate(clubActivityFeedControllerProvider(feedRequest));
         await Future.wait(<Future<Object?>>[
           ref.read(clubTeamProfileProvider(request).future),
-          ref.read(clubSeasonRankingProvider(rankingRequest).future),
+          if (team.seasonRankingEnabled)
+            ref.read(clubSeasonRankingProvider(rankingRequest).future),
           ref.read(clubActivityFeedControllerProvider(feedRequest).future),
         ]);
       },
@@ -335,12 +353,12 @@ class _OverviewBody extends ConsumerWidget {
           const SizedBox(height: 16),
           _RecentRegularCard(value: recentFeed),
           const SizedBox(height: 16),
-          if (!season.enabled)
+          if (!team.seasonRankingEnabled)
             const _EmptyCard(message: '시즌 순위표가 비활성화되어 있습니다.')
-          else if (season.season == null)
+          else if (season?.season == null)
             const _EmptyCard(message: '활성 시즌 설정이 없습니다.')
           else ...<Widget>[
-            Text(season.season!.name, style: AppTextStyles.headline),
+            Text(season!.season!.name, style: AppTextStyles.headline),
             Text(
               '${_date(season.season!.startDate)} ~ ${_date(season.season!.endDate)}',
               style: const TextStyle(color: AppColors.textSecondary),

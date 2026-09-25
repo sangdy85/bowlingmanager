@@ -343,11 +343,27 @@ test('mobile authentication and authorization hold at a real SQLite and HTTP bou
       assert.equal((await request(`/teams/${ids.normalTeam}/events/${eventId}`, { method: 'PATCH', token: tokens.manager.accessToken, body: { ...baseEvent, title: 'Manager Update' } })).status, 200);
       assert.equal((await request(`/teams/${ids.normalTeam}/events/${eventId}`, { method: 'DELETE', token: tokens.owner.accessToken })).status, 200);
       assert.equal((await request(`/teams/${ids.normalTeam}/events`, { method: 'POST', token: tokens.owner.accessToken, body: { ...baseEvent, competitionEnabled: true, competitionType: 'INDIVIDUAL', competitionMode: 'OFFICIAL', rankPoints: [] } })).status, 403);
-      assert.equal((await request(`/teams/${ids.normalTeam}/season-ranking`, { token: tokens.owner.accessToken })).status, 404);
+      // Season OFF + Hidden OFF is a normal empty state rather than an API error.
+      const disabledSeason = await request(`/teams/${ids.normalTeam}/season-ranking`, { token: tokens.owner.accessToken });
+      assert.equal(disabledSeason.status, 200);
+      assert.equal(disabledSeason.json.data.enabled, false);
+      assert.equal(disabledSeason.json.data.bowlerHiddenEnabled, false);
       assert.equal((await request(`/teams/${ids.normalTeam}/season-finals`, { token: tokens.owner.accessToken })).status, 404);
 
+      // Season ON + Hidden OFF exposes the general ranking without enabling Hidden competition APIs.
+      await prisma.team.update({ where: { id: ids.normalTeam }, data: { seasonRankingEnabled: true } });
+      const generalSeason = await request(`/teams/${ids.normalTeam}/season-ranking`, { token: tokens.owner.accessToken });
+      assert.equal(generalSeason.status, 200);
+      assert.equal(generalSeason.json.data.enabled, true);
+      assert.equal(generalSeason.json.data.bowlerHiddenEnabled, false);
+      assert.equal((await request(`/teams/${ids.normalTeam}/season-finals`, { token: tokens.owner.accessToken })).status, 404);
+
+      // Season ON + Hidden ON exposes the unified Hidden ranking to active members.
       for (const role of ['owner', 'manager', 'member']) {
-        assert.equal((await request(`/teams/${ids.hiddenTeam}/season-ranking`, { token: tokens[role].accessToken })).status, 200);
+        const hiddenSeason = await request(`/teams/${ids.hiddenTeam}/season-ranking`, { token: tokens[role].accessToken });
+        assert.equal(hiddenSeason.status, 200);
+        assert.equal(hiddenSeason.json.data.enabled, true);
+        assert.equal(hiddenSeason.json.data.bowlerHiddenEnabled, true);
       }
       assert.equal((await request(`/teams/${ids.hiddenTeam}/season-ranking`, { token: tokens.superadmin.accessToken })).status, 404);
     });

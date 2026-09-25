@@ -163,6 +163,54 @@ test('ranking batches mixed ledgers, multiple monthly events and zero points wit
   }
 });
 
+test('exact unified season fixture totals 50 + 20 + 30 while MINI contributes no ledger or monthly points', async () => {
+  const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': {} });
+  let miniWrites = 0;
+  const miniResult = await service.createSeasonPointPublication({
+    teamSeason: { findFirst: async () => { throw new Error('MINI must not resolve a season'); } },
+    teamEvent: {},
+    seasonPointPublication: { findFirst: async () => { miniWrites += 1; }, create: async () => { miniWrites += 1; } },
+    seasonPointEntry: { createMany: async () => { miniWrites += 1; } },
+  }, {
+    event: {
+      id: 'mini-individual', teamId: 'team-a', title: 'MINI 개인전',
+      eventDate: new Date('2026-04-01T03:00:00.000Z'), seasonId: null,
+      competitionType: 'INDIVIDUAL', competitionMode: 'MINI', seasonPublicationRevision: 1,
+    },
+    pointTable: [{ rank: 1, points: 999 }],
+    awards: [{ memberId: 'member-a', memberDisplayName: 'A', finalRank: 1, points: 999 }],
+    resultSnapshot: {}, publishedAt: new Date('2026-04-01T04:00:00.000Z'),
+  });
+  assert.equal(miniResult.pointsAwarded, false);
+  assert.equal(miniWrites, 0);
+
+  const officialEntries = [
+    entry('individual-50', 'member-a', 'INDIVIDUAL', '2026-01-10T03:00:00.000Z', 1, 50),
+    entry('team-20', 'member-a', 'TEAM', '2026-02-10T03:00:00.000Z', 2, 20),
+    entry('event-30', 'member-a', 'EVENT', '2026-03-10T03:00:00.000Z', 3, 30),
+  ];
+  const rankingService = loadTs('src/lib/mobile-api/unified-season.ts', {
+    '@/lib/prisma': {
+      team: { findFirst: async () => ({
+        id: 'team-a', bowlerHiddenEnabled: true, seasonRankingEnabled: true,
+        members: [member('member-a', 'A')],
+      }) },
+      teamSeason: { findMany: async () => [season] },
+      seasonPointEntry: { findMany: async () => officialEntries },
+    },
+  });
+  const result = await rankingService.getUnifiedSeasonRanking('viewer', 'team-a');
+  const memberA = result.rankings[0];
+  assert.deepEqual({
+    total: memberA.totalPoints,
+    individual: memberA.individualPoints,
+    team: memberA.teamPoints,
+    event: memberA.eventPoints,
+  }, { total: 100, individual: 50, team: 20, event: 30 });
+  assert.equal(memberA.monthlyHistory.flat().reduce((sum, item) => sum + item.points, 0), 100);
+  assert.equal(new Set(officialEntries.map(item => item.id)).size, officialEntries.length);
+});
+
 test('competition type and season filters remain isolated', async () => {
   let where = null;
   const fakePrisma = {
