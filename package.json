@@ -9,7 +9,8 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:test": "node scripts/seed-test-fixtures.cjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

@@ -178,39 +178,93 @@ class ClubCompetitionRankingRow {
 
 class ClubCompetitionPreview {
   const ClubCompetitionPreview({
+    required this.participantKind,
+    required this.participantId,
     required this.memberId,
+    required this.guestId,
     required this.name,
     required this.gameSampleCount,
     required this.recent50Average,
     required this.recent12Average,
+    required this.regularExpectedScore,
+    required this.manualGroupingScore,
+    required this.groupingScore,
+    required this.groupingSource,
     required this.ratingStatus,
+    required this.baseTier,
+    required this.finalGroup,
   });
-  final String memberId;
+  final String participantKind;
+  final String participantId;
+  final String? memberId;
+  final String? guestId;
   final String name;
   final int gameSampleCount;
   final num? recent50Average;
   final num? recent12Average;
+  final num? regularExpectedScore;
+  final int? manualGroupingScore;
+  final num? groupingScore;
+  final String groupingSource;
   final String ratingStatus;
+  final String? baseTier;
+  final String? finalGroup;
 
   factory ClubCompetitionPreview.fromJson(Map<String, dynamic> json) {
     final Object? count = json['gameSampleCount'];
     final Object? recent50 = json['recent50Average'];
     final Object? recent12 = json['recent12Average'];
+    final Object? expected =
+        json['regularExpectedScore'] ?? json['expectedScore'];
+    final Object? manual = json['manualGroupingScore'];
+    final Object? grouping = json['groupingScore'];
     final Object? status = json['ratingStatus'];
+    final String kind = (json['participantKind'] ?? 'MEMBER') as String;
+    final String source =
+        (json['groupingSource'] ??
+                (status == 'DATA_INSUFFICIENT' ? 'MANUAL_REQUIRED' : 'AUTO'))
+            as String;
     if (count is! int ||
         count < 0 ||
         (recent50 != null && recent50 is! num) ||
         (recent12 != null && recent12 is! num) ||
-        status is! String) {
+        (expected != null && expected is! num) ||
+        (manual != null && (manual is! int || manual < 0)) ||
+        (grouping != null && grouping is! num) ||
+        !const <String>{'MEMBER', 'GUEST'}.contains(kind) ||
+        !const <String>{'AUTO', 'MANUAL', 'MANUAL_REQUIRED'}.contains(source) ||
+        status is! String ||
+        (json['baseTier'] != null &&
+            !const <String>{
+              'A',
+              'B',
+              'C',
+              'D',
+              'E',
+            }.contains(json['baseTier'])) ||
+        (json['finalGroup'] != null && json['finalGroup'] is! String)) {
       throw const FormatException('Invalid competition preview.');
     }
+    final String? memberId = json['memberId'] as String?;
+    final String? guestId = json['guestId'] as String?;
     return ClubCompetitionPreview(
-      memberId: _requiredString(json['memberId']),
+      participantKind: kind,
+      participantId: _requiredString(
+        json['participantId'] ?? memberId ?? guestId,
+      ),
+      memberId: memberId,
+      guestId: guestId,
       name: _requiredString(json['name']),
       gameSampleCount: count,
       recent50Average: recent50 as num?,
       recent12Average: recent12 as num?,
+      regularExpectedScore: expected as num?,
+      manualGroupingScore: manual as int?,
+      groupingScore: grouping as num?,
+      groupingSource: source,
       ratingStatus: status,
+      baseTier: json['baseTier'] as String?,
+      finalGroup: json['finalGroup'] as String?,
     );
   }
 }
@@ -232,6 +286,7 @@ class ClubCompetitionResult {
     if (json['enabled'] != true ||
         status is! String ||
         (json['groupingPolicy'] != 'PENDING_PRODUCT_DECISION' &&
+            json['groupingPolicy'] != 'WEIGHTED_30_40_30_MANUAL_FALLBACK' &&
             json['groupingPolicy'] != 'PUBLISHED_IMMUTABLE_SNAPSHOT')) {
       throw const FormatException('Invalid competition result.');
     }

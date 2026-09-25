@@ -159,7 +159,7 @@ class _ClubTeamCompetitionCardState
       ],
       if (state.teams.isNotEmpty) ...<Widget>[
         const Divider(height: 28),
-        ...state.teams.map(_teamTile),
+        ...state.teams.map((team) => _teamTile(team, state.canManage)),
       ],
       if (state.history.isNotEmpty) ...<Widget>[
         const Divider(height: 28),
@@ -195,8 +195,6 @@ class _ClubTeamCompetitionCardState
     return <Widget>[
       const Text('팀 결과', style: TextStyle(fontWeight: FontWeight.w700)),
       if (!results.complete) const Text('일부 경기 점수가 없어 순위를 확정하지 않았습니다.'),
-      if (results.requiresPinTieBreakPolicy)
-        const Text('포인트 동점의 핀 타이브레이크 정책 확정이 필요합니다.'),
       if (results.effectivePlayerCount != null)
         Text('게임별 유효 인원 ${results.effectivePlayerCount}명'),
       ...results.teams.expand((summary) {
@@ -230,7 +228,8 @@ class _ClubTeamCompetitionCardState
             ),
             title: Text(summary.name),
             subtitle: Text(
-              'Raw ${summary.rawPins} · Effective ${summary.effectivePins}',
+              'Raw ${summary.rawPins} · Effective ${summary.effectivePins} · '
+              '핸디 ${summary.teamHandicap} · 적용 ${summary.appliedPins}',
             ),
             trailing: Text(
               '게임 ${summary.totalPoints}P'
@@ -286,7 +285,9 @@ class _ClubTeamCompetitionCardState
                 : ' · 제외 ${game.excludedScores.join(', ')}';
             return Text(
               '${row.game}G · Raw ${game.rawTeamTotal ?? '-'} · '
-              'Effective ${game.normalizedTeamTotal ?? '-'}$excluded · '
+              'Effective ${game.normalizedTeamTotal ?? '-'} · '
+              '핸디 ${game.teamHandicap ?? '-'} · 적용 ${game.handicapAppliedTotal ?? '-'}'
+              '$excluded · '
               '${game.rank == null ? '미확정' : '${game.rank}위 / ${game.points}P'}',
             );
           }),
@@ -333,7 +334,7 @@ class _ClubTeamCompetitionCardState
       case 'LANES_ASSIGNED':
         actions.add(
           FilledButton(
-            onPressed: _working ? null : () => _publish(state),
+            onPressed: _working ? null : _publish,
             child: const Text('최종 TEAM 결과 발표'),
           ),
         );
@@ -359,7 +360,7 @@ class _ClubTeamCompetitionCardState
     return Wrap(spacing: 8, runSpacing: 8, children: actions);
   }
 
-  Widget _teamTile(ClubCompetitionTeam team) {
+  Widget _teamTile(ClubCompetitionTeam team, bool canManage) {
     final bool mine =
         team.id ==
         ref.read(clubTeamCompetitionProvider(_request)).value?.myTeam;
@@ -368,8 +369,16 @@ class _ClubTeamCompetitionCardState
       tilePadding: EdgeInsets.zero,
       title: Text(mine ? '${team.name} · 내 팀' : team.name),
       subtitle: Text(
-        '팀장 ${team.captainName}${team.lanePriority == null ? '' : ' · 레인 우선 ${team.lanePriority}'}',
+        '팀장 ${team.captainName} · 핸디 ${team.teamHandicap}'
+        '${team.lanePriority == null ? '' : ' · 레인 우선 ${team.lanePriority}'}',
       ),
+      trailing: canManage
+          ? IconButton(
+              tooltip: '팀 핸디캡 수정',
+              onPressed: _working ? null : () => _editHandicap(team),
+              icon: const Icon(Icons.edit_outlined),
+            )
+          : null,
       children: team.members
           .map(
             (member) => ListTile(
@@ -604,35 +613,42 @@ class _ClubTeamCompetitionCardState
     }
   }
 
-  Future<void> _publish(ClubTeamCompetitionState state) async {
-    String tiePolicy = 'EFFECTIVE_PINS_THEN_ID';
-    if (state.results.requiresPinTieBreakPolicy) {
-      final selected = await showDialog<String>(
-        context: context,
-        builder: (context) => SimpleDialog(
-          title: const Text('TEAM 동점 처리 정책'),
-          children: <Widget>[
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, 'EFFECTIVE_PINS_THEN_ID'),
-              child: const Text('유효 핀 우선'),
-            ),
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, 'RAW_PINS_THEN_ID'),
-              child: const Text('원점수 핀 우선'),
-            ),
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, 'STABLE_ID_ONLY'),
-              child: const Text('고정 팀 ID 순서'),
-            ),
-          ],
+  Future<void> _publish() async {
+    await _run(<String, dynamic>{'action': 'PUBLISH'});
+  }
+
+  Future<void> _editHandicap(ClubCompetitionTeam team) async {
+    final controller = TextEditingController(text: '${team.teamHandicap}');
+    final int? value = await showDialog<int>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text('${team.name} 핸디캡'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: '0 이상의 정수'),
         ),
-      );
-      if (selected == null) return;
-      tiePolicy = selected;
-    }
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final int? parsed = int.tryParse(controller.text.trim());
+              if (parsed != null && parsed >= 0) Navigator.pop(context, parsed);
+            },
+            child: const Text('저장'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null) return;
     await _run(<String, dynamic>{
-      'action': 'PUBLISH',
-      'tieBreakPolicy': tiePolicy,
+      'action': 'SET_HANDICAP',
+      'competitionTeamId': team.id,
+      'teamHandicap': value,
     });
   }
 

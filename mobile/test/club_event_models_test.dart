@@ -81,7 +81,7 @@ void main() {
       <String, dynamic>{
         'enabled': true,
         'status': 'DRAFT',
-        'groupingPolicy': 'PENDING_PRODUCT_DECISION',
+        'groupingPolicy': 'WEIGHTED_30_40_30_MANUAL_FALLBACK',
         'overall': <Object>[
           <String, Object>{
             'rank': 1,
@@ -97,13 +97,19 @@ void main() {
         'participantPreview': <Object>[],
         'myPreview': <String, Object?>{
           'memberId': 'member-1',
+          'participantKind': 'MEMBER',
+          'participantId': 'member-1',
+          'guestId': null,
           'name': '회원',
           'gameSampleCount': 2,
           'recent50Average': 205.0,
           'recent12Average': 205.0,
-          'ratingStatus': 'POLICY_PENDING',
+          'ratingStatus': 'DATA_INSUFFICIENT',
           'expectedScore': null,
+          'regularExpectedScore': null,
+          'manualGroupingScore': null,
           'groupingScore': null,
+          'groupingSource': 'MANUAL_REQUIRED',
           'baseTier': null,
           'finalGroup': null,
         },
@@ -111,6 +117,41 @@ void main() {
     );
     expect(result.overall.single.total, 410);
     expect(result.myPreview?.recent12Average, 205.0);
+    expect(result.myPreview?.groupingSource, 'MANUAL_REQUIRED');
+  });
+
+  test('parses automatic and manual grouping sources without hiding insufficient data', () {
+    Map<String, dynamic> preview(
+      String source,
+      Object? score,
+      Object? manual,
+    ) => <String, dynamic>{
+      'participantKind': 'MEMBER',
+      'participantId': 'member-1',
+      'memberId': 'member-1',
+      'guestId': null,
+      'name': '회원',
+      'gameSampleCount': 50,
+      'recent50Average': 190.0,
+      'recent12Average': 195.0,
+      'regularExpectedScore': source == 'AUTO' ? 185.0 : null,
+      'manualGroupingScore': manual,
+      'groupingScore': score,
+      'groupingSource': source,
+      'ratingStatus': 'READY',
+      'baseTier': 'B',
+      'finalGroup': 'B조',
+    };
+    final automatic = ClubCompetitionPreview.fromJson(
+      preview('AUTO', 190.5, null),
+    );
+    final manual = ClubCompetitionPreview.fromJson(preview('MANUAL', 191, 191));
+    expect(automatic.groupingSource, 'AUTO');
+    expect(manual.manualGroupingScore, 191);
+    expect(
+      () => ClubCompetitionPreview.fromJson(preview('MANUAL', 191, -1)),
+      throwsFormatException,
+    );
   });
 
   test('parses gated team competition configuration', () {

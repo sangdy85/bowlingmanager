@@ -86,9 +86,9 @@ export async function getTeamCompetitionState(actorUserId: string, teamId: strin
     const actorMember = event.team.members.find((item) => item.userId === actorUserId)!;
     const isManager = event.team.ownerId === actorUserId || event.team.User.some((item) => item.id === actorUserId);
     let result = event.competitionStatus === "PUBLISHED" ? publishedTeamResult(event) : await calculateResults(event);
-    if (event.competitionStatus !== "PUBLISHED" && result.complete && !result.requiresPinTieBreakPolicy) {
+    if (event.competitionStatus !== "PUBLISHED" && result.complete) {
         const seasonPoints = await getSeasonPointPreview(prisma, event);
-        const ranked = rankFinalTeams(result.teams, "STABLE_ID_ONLY");
+        const ranked = rankFinalTeams(result.teams);
         result = { ...result, teams: ranked.map((team) => ({
             ...team, finalRankPreview: team.finalRank,
             seasonPointPreview: seasonPointsForRank(seasonPoints, team.finalRank),
@@ -120,8 +120,8 @@ export async function getTeamCompetitionState(actorUserId: string, teamId: strin
         policies: {
             guests: "EXCLUDED_V1_NO_STABLE_SCORE_IDENTITY",
             memberSlotOrder: "MANAGER_EXPLICIT_ORDER",
-            finalPinTieBreak: "PENDING_RAW_OR_EFFECTIVE_DECISION",
-            teamHandicapApplication: "PENDING_PRODUCT_DECISION",
+            finalPinTieBreak: "POINTS_EFFECTIVE_PINS_MEMBER_COUNT_HANDICAP_STABLE_ID",
+            teamHandicapApplication: "EFFECTIVE_PIN_PLUS_TEAM_HANDICAP_PER_GAME",
         },
     };
 }
@@ -135,10 +135,33 @@ export async function updateTeamCompetition(actorUserId: string, teamId: string,
         case "PICK": return pickParticipant(actorUserId, teamId, eventId, body.memberId);
         case "RESET": return resetDraft(actorUserId, teamId, eventId);
         case "ASSIGN_LANES": return assignTeamLanes(actorUserId, teamId, eventId, body.teams);
+        case "SET_HANDICAP": return setTeamHandicap(actorUserId, teamId, eventId, body.competitionTeamId, body.teamHandicap);
         case "PUBLISH": return publishTeamCompetition(actorUserId, teamId, eventId, body.tieBreakPolicy);
         case "REOPEN": return reopenTeamCompetition(actorUserId, teamId, eventId);
         default: throw new TeamCompetitionError("INVALID_ACTION", "TEAM 대회 작업을 확인해주세요.", 400);
     }
+}
+
+async function setTeamHandicap(
+    actorUserId: string,
+    teamId: string,
+    eventId: string,
+    competitionTeamId: unknown,
+    teamHandicap: unknown,
+) {
+    if (typeof competitionTeamId !== "string" || !competitionTeamId ||
+        !Number.isSafeInteger(teamHandicap) || (teamHandicap as number) < 0) {
+        throw new TeamCompetitionError("INVALID_TEAM_HANDICAP", "팀 핸디캡은 0 이상의 정수여야 합니다.", 400);
+    }
+    const event = await loadEvent(actorUserId, teamId, eventId);
+    requireManager(event, actorUserId); requireTeamCompetition(event);
+    if (event.competitionStatus === "PUBLISHED") throw stateError();
+    const result = await prisma.teamCompetitionTeam.updateMany({
+        where: { id: competitionTeamId, eventId, generation: event.draftGeneration },
+        data: { teamHandicap: teamHandicap as number },
+    });
+    if (result.count !== 1) throw new TeamCompetitionError("TEAM_NOT_FOUND", "대회 팀을 찾을 수 없습니다.", 404);
+    return { competitionTeamId, teamHandicap };
 }
 
 async function lockAttendance(actorUserId: string, teamId: string, eventId: string) {
@@ -324,10 +347,7 @@ async function assignTeamLanes(actorUserId: string, teamId: string, eventId: str
     })) };
 }
 
-const TEAM_FINAL_TIE_POLICIES = ["EFFECTIVE_PINS_THEN_ID", "RAW_PINS_THEN_ID", "STABLE_ID_ONLY"] as const;
-type TeamFinalTiePolicy = typeof TEAM_FINAL_TIE_POLICIES[number];
-
-async function publishTeamCompetition(actorUserId: string, teamId: string, eventId: string, rawPolicy: unknown) {
+async function publishTeamCompetition(actorUserId: string, teamId: string, eventId: string, _rawPolicy: unknown) {
     const existing = await loadEvent(actorUserId, teamId, eventId); requireManager(existing, actorUserId); requireTeamCompetition(existing);
     if (existing.competitionStatus === "PUBLISHED") return { status: "PUBLISHED", alreadyPublished: true };
     if (existing.competitionStatus !== "TEAMS_FINALIZED" && existing.competitionStatus !== "LANES_ASSIGNED") throw stateError();
@@ -339,11 +359,8 @@ async function publishTeamCompetition(actorUserId: string, teamId: string, event
         if (!event) throw stateError(); requireManager(event, actorUserId); requireTeamCompetition(event);
         const result = await calculateResults(event, tx);
         if (!result.complete) throw new TeamCompetitionError("SCORES_INCOMPLETE", "모든 TEAM 참가자의 점수 입력을 완료해주세요.", 409);
-        const tiePolicy = result.requiresPinTieBreakPolicy
-            ? TEAM_FINAL_TIE_POLICIES.includes(rawPolicy as TeamFinalTiePolicy) ? rawPolicy as TeamFinalTiePolicy : null
-            : "STABLE_ID_ONLY";
-        if (!tiePolicy) throw new TeamCompetitionError("TIE_POLICY_REQUIRED", "TEAM 동점 처리 정책을 선택해주세요.", 400);
-        const rankedTeams = rankFinalTeams(result.teams, tiePolicy);
+        const tiePolicy = "POINTS_EFFECTIVE_PINS_MEMBER_COUNT_HANDICAP_STABLE_ID";
+        const rankedTeams = rankFinalTeams(result.teams);
         const pointTable = await getPublicationPointTable(tx, event);
         const publishedTeams = rankedTeams.map((team) => ({
             ...team, seasonPoint: seasonPointsForRank(pointTable, team.finalRank),
@@ -383,13 +400,18 @@ async function reopenTeamCompetition(actorUserId: string, teamId: string, eventI
     return { status: previousStatus, publicationRevoked: true };
 }
 
-export function rankFinalTeams<T extends { competitionTeamId: string; totalPoints: number; effectivePins: number; rawPins: number }>(
-    values: readonly T[], policy: TeamFinalTiePolicy,
-) {
+export function rankFinalTeams<T extends {
+    competitionTeamId: string;
+    totalPoints: number;
+    effectivePins: number;
+    memberCount: number;
+    teamHandicap: number;
+}>(values: readonly T[]) {
     return [...values].sort((left, right) => {
         const points = right.totalPoints - left.totalPoints; if (points !== 0) return points;
-        if (policy === "EFFECTIVE_PINS_THEN_ID") { const pins = right.effectivePins - left.effectivePins; if (pins !== 0) return pins; }
-        if (policy === "RAW_PINS_THEN_ID") { const pins = right.rawPins - left.rawPins; if (pins !== 0) return pins; }
+        const pins = right.effectivePins - left.effectivePins; if (pins !== 0) return pins;
+        const members = left.memberCount - right.memberCount; if (members !== 0) return members;
+        const handicap = left.teamHandicap - right.teamHandicap; if (handicap !== 0) return handicap;
         return left.competitionTeamId.localeCompare(right.competitionTeamId);
     }).map((team, index) => ({ ...team, finalRank: index + 1 }));
 }
@@ -496,7 +518,7 @@ async function calculateResults(event: CompetitionEvent, db: ScoreReader = prism
     const complete = gameCount > 0 && participants.every((item) => (scoresByUser.get(item.member.userId)?.length ?? 0) === gameCount);
     const effectivePlayerCount = Math.min(...teams.map((team) => team.participants.length));
     const points = new Map(readRankPoints(event.rankPoints).map((item) => [item.rank, item.points]));
-    const teamTotals = new Map(teams.map((team) => [team.id, { points: 0, raw: 0, effective: 0 }]));
+    const teamTotals = new Map(teams.map((team) => [team.id, { points: 0, raw: 0, effective: 0, applied: 0 }]));
     const games = Array.from({ length: gameCount }, (_, gameIndex) => {
         const values = teams.map((team) => {
             const teamScores = team.participants.map((item) => scoresByUser.get(item.member.userId)?.[gameIndex] ?? null);
@@ -504,13 +526,22 @@ async function calculateResults(event: CompetitionEvent, db: ScoreReader = prism
             const numeric = teamScores as number[]; const sorted = [...numeric].sort((a, b) => a - b);
             const excludedScores = sorted.slice(0, Math.max(0, sorted.length - effectivePlayerCount));
             const raw = numeric.reduce((sum, score) => sum + score, 0); const normalized = sorted.slice(sorted.length - effectivePlayerCount).reduce((sum, score) => sum + score, 0);
-            return { teamId: team.id, teamName: team.name, complete: true, rawTeamTotal: raw, excludedScores, normalizedTeamTotal: normalized, handicapAppliedTotal: null, rank: null as number | null, points: null as number | null };
+            return {
+                teamId: team.id, teamName: team.name, complete: true,
+                rawTeamTotal: raw, excludedScores, normalizedTeamTotal: normalized,
+                teamHandicap: team.teamHandicap, handicapAppliedTotal: normalized + team.teamHandicap,
+                rank: null as number | null, points: null as number | null,
+            };
         });
         if (values.every((item) => item.complete)) {
-            values.sort((a, b) => b.normalizedTeamTotal! - a.normalizedTeamTotal! || a.teamId.localeCompare(b.teamId));
+            values.sort((a, b) => b.handicapAppliedTotal! - a.handicapAppliedTotal! || a.teamId.localeCompare(b.teamId));
             values.forEach((item, index) => {
                 item.rank = index + 1; item.points = points.get(index + 1) ?? 0;
-                const total = teamTotals.get(item.teamId)!; total.points += item.points; total.raw += item.rawTeamTotal!; total.effective += item.normalizedTeamTotal!;
+                const total = teamTotals.get(item.teamId)!;
+                total.points += item.points;
+                total.raw += item.rawTeamTotal!;
+                total.effective += item.normalizedTeamTotal!;
+                total.applied += item.handicapAppliedTotal!;
             });
         }
         return { gameNumber: gameIndex + 1, complete: values.every((item) => item.complete), teams: values };
@@ -519,16 +550,20 @@ async function calculateResults(event: CompetitionEvent, db: ScoreReader = prism
         const scores = scoresByUser.get(item.member.userId) ?? []; const total = scores.reduce((sum, score) => sum + score, 0);
         return { memberId: item.memberId, name: displayName(item.member), competitionTeamId: item.competitionTeamId!, scores, total, average: scores.length ? Number((total / scores.length).toFixed(1)) : null };
     }).sort((a, b) => b.total - a.total || a.memberId.localeCompare(b.memberId)).map((item, index) => ({ rank: index + 1, ...item }));
-    const teamResults = teams.map((team) => ({ competitionTeamId: team.id, name: team.name, memberCount: team.participants.length, teamHandicap: team.teamHandicap, totalPoints: teamTotals.get(team.id)!.points, rawPins: teamTotals.get(team.id)!.raw, effectivePins: teamTotals.get(team.id)!.effective }))
+    const teamResults = teams.map((team) => ({
+        competitionTeamId: team.id, name: team.name, memberCount: team.participants.length,
+        teamHandicap: team.teamHandicap, totalPoints: teamTotals.get(team.id)!.points,
+        rawPins: teamTotals.get(team.id)!.raw, effectivePins: teamTotals.get(team.id)!.effective,
+        appliedPins: teamTotals.get(team.id)!.applied,
+    }))
         .sort((a, b) => b.totalPoints - a.totalPoints || a.competitionTeamId.localeCompare(b.competitionTeamId));
     const pointCounts = new Map<number, number>(); teamResults.forEach((item) => pointCounts.set(item.totalPoints, (pointCounts.get(item.totalPoints) ?? 0) + 1));
-    const hasPointTie = teamResults.some((item) => (pointCounts.get(item.totalPoints) ?? 0) > 1);
     return {
         complete, effectivePlayerCount, individual, games,
         teams: teamResults.map((item, index) => ({
             ...item,
             finalRank: complete && pointCounts.get(item.totalPoints) === 1 ? index + 1 : null,
         })),
-        requiresPinTieBreakPolicy: complete && hasPointTie,
+        requiresPinTieBreakPolicy: false,
     };
 }

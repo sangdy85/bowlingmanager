@@ -61,6 +61,26 @@ test('recent averages use game scores rather than session averages', () => {
   assert.equal(hidden.recentAverage(scores, 50), 124.5);
 });
 
+test('grouping score keeps precision and applies the fixed 30/40/30 weights', () => {
+  assert.equal(hidden.calculateGroupingScore({ recent50Average: 180, recent12Average: 210, regularExpectedScore: 190 }), 195);
+  assert.equal(hidden.calculateGroupingScore({ recent50Average: 199.99, recent12Average: 199.99, regularExpectedScore: 199.99 }), 199.99);
+  assert.equal(hidden.calculateGroupingScore({ recent50Average: null, recent12Average: 200, regularExpectedScore: 200 }), null);
+  assert.deepEqual([199.99, 200, 189.99, 190, 179.99, 180, 169.99, 170].map(hidden.tierForGroupingScore),
+    ['B', 'A', 'C', 'B', 'D', 'C', 'E', 'D']);
+});
+
+test('grouping preview requires every automatic component and distinguishes manual overrides', () => {
+  assert.deepEqual(hidden.createGroupingPreview({
+    recent50Average: 200, recent12Average: 200, regularExpectedScore: null, manualGroupingScore: null,
+  }), { groupingScore: null, groupingSource: 'MANUAL_REQUIRED', ratingStatus: 'DATA_INSUFFICIENT', baseTier: null });
+  assert.deepEqual(hidden.createGroupingPreview({
+    recent50Average: null, recent12Average: null, regularExpectedScore: null, manualGroupingScore: 190,
+  }), { groupingScore: 190, groupingSource: 'MANUAL', ratingStatus: 'READY', baseTier: 'B' });
+  assert.deepEqual(hidden.createGroupingPreview({
+    recent50Average: 200, recent12Average: 190, regularExpectedScore: 180, manualGroupingScore: null,
+  }), { groupingScore: 190, groupingSource: 'AUTO', ratingStatus: 'READY', baseTier: 'B' });
+});
+
 test('event parser gates competitions and accepts implemented individual/team/event types', () => {
   const events = loadTs('src/lib/mobile-api/team-events.ts', {
     '@/lib/prisma': {}, '@/lib/mobile-api/bowler-hidden': hidden,
@@ -97,13 +117,14 @@ test('competition service derives totals and points with constant-batch record q
       calls.event += 1;
       return {
         id: 'event-1', eventDate: new Date('2026-09-22T00:00:00+09:00'), gameType: '정기전',
-        competitionEnabled: true, competitionType: 'INDIVIDUAL', competitionStatus: 'DRAFT',
+        competitionEnabled: true, competitionType: 'INDIVIDUAL', competitionMode: 'OFFICIAL', competitionStatus: 'DRAFT',
         rankPoints: '{"1":20,"2":17}',
         team: { id: 'team-1', ownerId: 'owner-1', bowlerHiddenEnabled: true, User: [] },
         attendances: [
           { memberId: 'member-a', memberDisplayName: '가', member: { userId: 'user-a' } },
           { memberId: 'member-b', memberDisplayName: '나', member: { userId: 'user-b' } },
         ],
+        guests: [],
       };
     } },
     score: { findMany: async args => {
@@ -130,6 +151,59 @@ test('competition service derives totals and points with constant-batch record q
   assert.equal(result.participantPreview.length, 2);
   assert.equal(result.participantPreview[0].expectedScore, null);
   assert.deepEqual(calls, { event: 1, eventScores: 1, personal: 1, league: 1, tournament: 1 });
+});
+
+test('manual grouping permits managers and same-event captains while preserving event/team scope', async () => {
+  const updates = [];
+  const baseEvent = {
+    draftGeneration: 1, competitionEnabled: true,
+    team: {
+      ownerId: 'owner', bowlerHiddenEnabled: true, User: [{ id: 'manager' }],
+      members: [{ id: 'captain-member' }],
+    },
+    attendances: [{ memberId: 'target-member' }], guests: [{ id: 'guest-1' }],
+    competitionTeams: [{
+      generation: 1, captainMemberId: 'captain-member',
+      participants: [{ memberId: 'target-member' }],
+    }],
+  };
+  let actor = 'owner';
+  const prisma = {
+    teamEvent: { findFirst: async args => {
+      assert.equal(args.where.id, 'event-1'); assert.equal(args.where.teamId, 'team-1');
+      const event = structuredClone(baseEvent);
+      event.team.members = actor === 'captain' ? [{ id: 'captain-member' }] : [{ id: `member-${actor}` }];
+      return event;
+    } },
+    teamEventAttendance: { updateMany: async args => { updates.push(args); return { count: 1 }; } },
+    teamEventGuest: { updateMany: async args => { updates.push(args); return { count: 1 }; } },
+  };
+  const service = loadTs('src/lib/mobile-api/bowler-hidden.ts', { '@/lib/prisma': prisma });
+  await service.updateBowlerHiddenCompetition('owner', 'team-1', 'event-1', {
+    action: 'SET_MANUAL_GROUPING', participantKind: 'MEMBER', participantId: 'target-member', manualGroupingScore: 200,
+  });
+  actor = 'manager';
+  await service.updateBowlerHiddenCompetition('manager', 'team-1', 'event-1', {
+    action: 'SET_MANUAL_GROUPING', participantKind: 'GUEST', participantId: 'guest-1', manualGroupingScore: 189,
+  });
+  actor = 'captain';
+  await service.updateBowlerHiddenCompetition('captain', 'team-1', 'event-1', {
+    action: 'SET_MANUAL_GROUPING', participantKind: 'MEMBER', participantId: 'target-member', manualGroupingScore: 170,
+  });
+  assert.equal(updates.length, 3);
+  assert.deepEqual(updates.map(item => item.data.manualGroupingScore), [200, 189, 170]);
+
+  actor = 'ordinary';
+  await assert.rejects(() => service.updateBowlerHiddenCompetition('ordinary', 'team-1', 'event-1', {
+    action: 'SET_MANUAL_GROUPING', participantKind: 'MEMBER', participantId: 'target-member', manualGroupingScore: 180,
+  }), error => error.code === 'FORBIDDEN');
+  actor = 'captain';
+  await assert.rejects(() => service.updateBowlerHiddenCompetition('captain', 'team-1', 'event-1', {
+    action: 'SET_MANUAL_GROUPING', participantKind: 'GUEST', participantId: 'guest-1', manualGroupingScore: 180,
+  }), error => error.code === 'FORBIDDEN');
+  await assert.rejects(() => service.updateBowlerHiddenCompetition('owner', 'team-1', 'event-1', {
+    action: 'SET_MANUAL_GROUPING', participantKind: 'MEMBER', participantId: 'target-member', manualGroupingScore: -1,
+  }), error => error.code === 'INVALID_MANUAL_GROUPING');
 });
 
 test('migration is additive and defaults all existing teams to off', () => {

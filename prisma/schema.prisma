@@ -524,6 +524,7 @@ model TeamEventAttendance {
   memberId          String?
   memberDisplayName String
   status            String      @default("UNANSWERED")
+  manualGroupingScore  Int?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
   event             TeamEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -538,6 +539,7 @@ model TeamEventGuest {
   id         String                   @id @default(cuid())
   eventId    String
   name       String
+  manualGroupingScore Int?
   createdAt  DateTime                 @default(now())
   event      TeamEvent                @relation(fields: [eventId], references: [id], onDelete: Cascade)
   assignment TeamEventLaneAssignment?

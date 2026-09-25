@@ -307,15 +307,21 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                 ),
                 const SizedBox(height: 6),
                 ...result.participantPreview!.map(
-                  (ClubCompetitionPreview item) => Text(
-                    '${item.name} · 최근50 ${item.recent50Average ?? '-'} · '
-                    '최근12 ${item.recent12Average ?? '-'}',
+                  (ClubCompetitionPreview item) => ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(item.name),
+                    subtitle: Text(_groupingDescription(item)),
+                    trailing: event.canManage
+                        ? IconButton(
+                            tooltip: '수동 그룹 점수 지정',
+                            onPressed: _working
+                                ? null
+                                : () => _setManualGrouping(userId, item),
+                            icon: const Icon(Icons.edit_outlined),
+                          )
+                        : null,
                   ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '기대점수와 그룹점수 공식은 정책 확정 후 적용됩니다.',
-                  style: TextStyle(color: Colors.orangeAccent),
                 ),
               ],
               if (event.canManage) ...<Widget>[
@@ -345,11 +351,70 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
   ) async {
     await _action(
       userId,
-      () => ref
-          .read(clubEventsRepositoryProvider)
-          .individualCompetitionAction(widget.teamId, widget.eventId, action),
+      () => ref.read(clubEventsRepositoryProvider).individualCompetitionAction(
+        widget.teamId,
+        widget.eventId,
+        <String, dynamic>{'action': action},
+      ),
     );
     ref.invalidate(clubSeasonRankingProvider);
+  }
+
+  String _groupingDescription(ClubCompetitionPreview item) {
+    if (item.ratingStatus == 'DATA_INSUFFICIENT') {
+      return '그룹 산정을 위한 기록이 부족합니다.';
+    }
+    final String source = item.groupingSource == 'MANUAL' ? '수동 지정' : '자동 산정';
+    return '${item.groupingScore?.toStringAsFixed(2) ?? '-'} · '
+        '${item.baseTier ?? '-'}등급 · ${item.finalGroup ?? '-'} · $source';
+  }
+
+  Future<void> _setManualGrouping(
+    String userId,
+    ClubCompetitionPreview item,
+  ) async {
+    final controller = TextEditingController(
+      text: item.manualGroupingScore?.toString() ?? '',
+    );
+    final int? score = await showDialog<int>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text('${item.name} 수동 그룹 점수'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: '0 이상의 정수'),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final int? value = int.tryParse(controller.text.trim());
+              if (value != null && value >= 0) Navigator.pop(context, value);
+            },
+            child: const Text('저장'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (score == null) return;
+    await _action(
+      userId,
+      () => ref.read(clubEventsRepositoryProvider).individualCompetitionAction(
+        widget.teamId,
+        widget.eventId,
+        <String, dynamic>{
+          'action': 'SET_MANUAL_GROUPING',
+          'participantKind': item.participantKind,
+          'participantId': item.participantId,
+          'manualGroupingScore': score,
+        },
+      ),
+    );
   }
 
   Widget _adminCard(ClubEvent event, String userId) => Card(

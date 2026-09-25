@@ -108,12 +108,45 @@ export function recentAverage(values: readonly number[], limit: number): number 
         : Number((selected.reduce((sum, value) => sum + value, 0) / selected.length).toFixed(1));
 }
 
+export function calculateGroupingScore(input: {
+    recent50Average: number | null;
+    recent12Average: number | null;
+    regularExpectedScore: number | null;
+}) {
+    const { recent50Average, recent12Average, regularExpectedScore } = input;
+    if (recent50Average === null || recent12Average === null || regularExpectedScore === null) return null;
+    if (![recent50Average, recent12Average, regularExpectedScore].every(Number.isFinite)) {
+        throw new BowlerHiddenError("INVALID_GROUPING_COMPONENT", "그룹 점수 구성값을 확인해주세요.", 400);
+    }
+    return recent50Average * 0.30 + recent12Average * 0.40 + regularExpectedScore * 0.30;
+}
+
+export function createGroupingPreview(input: {
+    recent50Average: number | null;
+    recent12Average: number | null;
+    regularExpectedScore: number | null;
+    manualGroupingScore: number | null;
+}) {
+    if (input.manualGroupingScore !== null) {
+        return {
+            groupingScore: input.manualGroupingScore,
+            groupingSource: "MANUAL" as const,
+            ratingStatus: "READY" as const,
+            baseTier: tierForGroupingScore(input.manualGroupingScore),
+        };
+    }
+    const groupingScore = calculateGroupingScore(input);
+    return groupingScore === null
+        ? { groupingScore: null, groupingSource: "MANUAL_REQUIRED" as const, ratingStatus: "DATA_INSUFFICIENT" as const, baseTier: null }
+        : { groupingScore, groupingSource: "AUTO" as const, ratingStatus: "READY" as const, baseTier: tierForGroupingScore(groupingScore) };
+}
+
 export async function getBowlerHiddenCompetition(actorUserId: string, teamId: string, eventId: string) {
     const event = await prisma.teamEvent.findFirst({
         where: { id: eventId, teamId, team: { isActive: true, members: { some: { userId: actorUserId } } } },
         select: {
             id: true, eventDate: true, gameType: true, competitionEnabled: true,
-            competitionType: true, competitionStatus: true, rankPoints: true,
+            competitionType: true, competitionMode: true, competitionStatus: true, rankPoints: true,
             team: {
                 select: {
                     id: true, ownerId: true, bowlerHiddenEnabled: true,
@@ -124,9 +157,13 @@ export async function getBowlerHiddenCompetition(actorUserId: string, teamId: st
                 where: { status: "ATTENDING", memberId: { not: null } },
                 orderBy: [{ createdAt: "asc" }, { id: "asc" }],
                 select: {
-                    memberId: true, memberDisplayName: true,
+                    memberId: true, memberDisplayName: true, manualGroupingScore: true,
                     member: { select: { userId: true } },
                 },
+            },
+            guests: {
+                orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+                select: { id: true, name: true, manualGroupingScore: true },
             },
             seasonPublications: {
                 where: { revokedAt: null }, orderBy: { revision: "desc" }, take: 1,
@@ -221,33 +258,129 @@ export async function getBowlerHiddenCompetition(actorUserId: string, teamId: st
     tournamentScores.forEach((row) => append(row.registration.userId, {
         score: row.score, date: row.round?.date ?? row.createdAt, order: row.gameNumber, id: `T:${row.id}`,
     }));
-    const previews = participants.map((participant) => {
+    const memberPreviews = participants.map((participant) => {
         const values = (recentByUser.get(participant.userId) ?? []).sort((left, right) =>
             right.date.getTime() - left.date.getTime() || right.order - left.order || right.id.localeCompare(left.id),
         ).map((item) => item.score);
+        const attendance = event.attendances.find((item) => item.memberId === participant.memberId)!;
+        const recent50Average = recentAverage(values, 50);
+        const recent12Average = recentAverage(values, 12);
+        const regularExpectedScore = null;
+        const grouping = createGroupingPreview({
+            recent50Average, recent12Average, regularExpectedScore,
+            manualGroupingScore: attendance.manualGroupingScore ?? null,
+        });
         return {
-            memberId: participant.memberId, name: participant.name, gameSampleCount: values.length,
-            recent50Average: recentAverage(values, 50), recent12Average: recentAverage(values, 12),
-            expectedScore: null, groupingScore: null, baseTier: null, finalGroup: null,
-            ratingStatus: values.length === 0 ? "UNRATED" : "POLICY_PENDING",
+            participantKind: "MEMBER" as const, participantId: participant.memberId,
+            memberId: participant.memberId, guestId: null, name: participant.name, gameSampleCount: values.length,
+            recent50Average, recent12Average, regularExpectedScore, expectedScore: regularExpectedScore,
+            manualGroupingScore: attendance.manualGroupingScore ?? null, ...grouping, finalGroup: null as string | null,
         };
     });
+    const guestPreviews = event.guests.map((guest) => ({
+        participantKind: "GUEST" as const, participantId: guest.id,
+        memberId: null, guestId: guest.id, name: guest.name, gameSampleCount: 0,
+        recent50Average: null, recent12Average: null, regularExpectedScore: null,
+        expectedScore: null,
+        manualGroupingScore: guest.manualGroupingScore ?? null,
+        ...createGroupingPreview({
+            recent50Average: null, recent12Average: null, regularExpectedScore: null,
+            manualGroupingScore: guest.manualGroupingScore ?? null,
+        }),
+        finalGroup: null as string | null,
+    }));
+    const previews = [...memberPreviews, ...guestPreviews];
+    const merged = mergeAdjacentSkillTiers(previews.reduce<Partial<Record<Tier, number>>>((counts, item) => {
+        if (item.baseTier) counts[item.baseTier] = (counts[item.baseTier] ?? 0) + 1;
+        return counts;
+    }, {}));
+    const displayGroupByTier = new Map<Tier, string>();
+    merged.forEach((group) => group.sourceTiers.forEach((tier) => displayGroupByTier.set(tier, group.displayGroup)));
+    previews.forEach((item) => { item.finalGroup = item.baseTier ? displayGroupByTier.get(item.baseTier) ?? null : null; });
     const isManager = event.team.ownerId === actorUserId || event.team.User.some((item) => item.id === actorUserId);
     return {
         enabled: true, competitionType: event.competitionType, competitionMode: event.competitionMode, status: event.competitionStatus,
         rankPoints: seasonPointTable, overall,
         participantPreview: isManager ? previews : null,
         myPreview: previews.find((item) => participants.find((participant) => participant.memberId === item.memberId)?.userId === actorUserId) ?? null,
-        groupingPolicy: "PENDING_PRODUCT_DECISION",
+        groupingPolicy: "WEIGHTED_30_40_30_MANUAL_FALLBACK",
     };
 }
 
 export async function updateBowlerHiddenCompetition(actorUserId: string, teamId: string, eventId: string, value: unknown) {
     if (!value || typeof value !== "object" || Array.isArray(value)) throw new BowlerHiddenError("INVALID_REQUEST", "요청 내용을 확인해주세요.", 400);
     const action = (value as Record<string, unknown>).action;
+    if (action === "SET_MANUAL_GROUPING") return setManualGroupingScore(actorUserId, teamId, eventId, value as Record<string, unknown>);
     if (action === "PUBLISH") return publishIndividual(actorUserId, teamId, eventId);
     if (action === "REOPEN") return reopenIndividual(actorUserId, teamId, eventId);
     throw new BowlerHiddenError("INVALID_ACTION", "개인전 작업을 확인해주세요.", 400);
+}
+
+async function setManualGroupingScore(
+    actorUserId: string,
+    teamId: string,
+    eventId: string,
+    body: Record<string, unknown>,
+) {
+    const participantKind = body.participantKind;
+    const participantId = body.participantId;
+    const manualGroupingScore = body.manualGroupingScore;
+    if ((participantKind !== "MEMBER" && participantKind !== "GUEST") ||
+        typeof participantId !== "string" || !participantId ||
+        !Number.isSafeInteger(manualGroupingScore) || (manualGroupingScore as number) < 0) {
+        throw new BowlerHiddenError("INVALID_MANUAL_GROUPING", "수동 그룹 점수는 0 이상의 정수여야 합니다.", 400);
+    }
+    const event = await prisma.teamEvent.findFirst({
+        where: { id: eventId, teamId, team: { isActive: true, members: { some: { userId: actorUserId } } } },
+        select: {
+            draftGeneration: true, competitionEnabled: true,
+            team: {
+                select: {
+                    ownerId: true, bowlerHiddenEnabled: true, User: { select: { id: true } },
+                    members: { where: { userId: actorUserId }, take: 1, select: { id: true } },
+                },
+            },
+            attendances: { where: { memberId: participantKind === "MEMBER" ? participantId : undefined }, select: { memberId: true } },
+            guests: { where: { id: participantKind === "GUEST" ? participantId : undefined }, select: { id: true } },
+            competitionTeams: {
+                select: {
+                    generation: true, captainMemberId: true,
+                    participants: { select: { memberId: true } },
+                },
+            },
+        },
+    });
+    if (!event) throw new BowlerHiddenError("EVENT_NOT_FOUND", "일정을 찾을 수 없습니다.", 404);
+    if (!event.team.bowlerHiddenEnabled || !event.competitionEnabled) {
+        throw new BowlerHiddenError("FEATURE_DISABLED", "Bowler Hidden 기능이 활성화되지 않은 팀입니다.", 404);
+    }
+    const isManager = event.team.ownerId === actorUserId || event.team.User.some((item) => item.id === actorUserId);
+    const actorMemberId = event.team.members[0]?.id ?? null;
+    const isOwnCaptainParticipant = participantKind === "MEMBER" && actorMemberId !== null && event.competitionTeams.some((team) =>
+        team.generation === event.draftGeneration && team.captainMemberId === actorMemberId &&
+        team.participants.some((participant) => participant.memberId === participantId),
+    );
+    if (!isManager && !isOwnCaptainParticipant) {
+        throw new BowlerHiddenError("FORBIDDEN", "그룹 점수 지정 권한이 없습니다.", 403);
+    }
+    if (participantKind === "MEMBER") {
+        if (!event.attendances.some((item) => item.memberId === participantId)) {
+            throw new BowlerHiddenError("PARTICIPANT_NOT_FOUND", "참가자를 찾을 수 없습니다.", 404);
+        }
+        const result = await prisma.teamEventAttendance.updateMany({
+            where: { eventId, memberId: participantId }, data: { manualGroupingScore: manualGroupingScore as number },
+        });
+        if (result.count !== 1) throw new BowlerHiddenError("PARTICIPANT_NOT_FOUND", "참가자를 찾을 수 없습니다.", 404);
+    } else {
+        if (!event.guests.some((guest) => guest.id === participantId)) {
+            throw new BowlerHiddenError("PARTICIPANT_NOT_FOUND", "게스트를 찾을 수 없습니다.", 404);
+        }
+        const result = await prisma.teamEventGuest.updateMany({
+            where: { id: participantId, eventId }, data: { manualGroupingScore: manualGroupingScore as number },
+        });
+        if (result.count !== 1) throw new BowlerHiddenError("PARTICIPANT_NOT_FOUND", "게스트를 찾을 수 없습니다.", 404);
+    }
+    return { participantKind, participantId, manualGroupingScore, groupingSource: "MANUAL" };
 }
 
 const individualPublishInclude = {

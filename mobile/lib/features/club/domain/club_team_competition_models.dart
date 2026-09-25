@@ -38,6 +38,7 @@ class ClubCompetitionTeam {
     required this.name,
     required this.draftOrder,
     required this.lanePriority,
+    required this.teamHandicap,
     required this.captainMemberId,
     required this.captainName,
     required this.members,
@@ -46,6 +47,7 @@ class ClubCompetitionTeam {
   final String name;
   final int draftOrder;
   final int? lanePriority;
+  final int teamHandicap;
   final String captainMemberId;
   final String captainName;
   final List<ClubTeamCompetitionParticipant> members;
@@ -58,6 +60,7 @@ class ClubCompetitionTeam {
         lanePriority: json['lanePriority'] == null
             ? null
             : _positiveInt(json['lanePriority']),
+        teamHandicap: _nonNegativeInt(json['teamHandicap']),
         captainMemberId: _string(json['captainMemberId']),
         captainName: _string(json['captainName']),
         members: _list(
@@ -132,6 +135,9 @@ class ClubTeamResult {
     required this.totalPoints,
     required this.rawPins,
     required this.effectivePins,
+    required this.memberCount,
+    required this.teamHandicap,
+    required this.appliedPins,
     this.seasonPoint,
   });
   final String competitionTeamId;
@@ -140,6 +146,9 @@ class ClubTeamResult {
   final int totalPoints;
   final int rawPins;
   final int effectivePins;
+  final int memberCount;
+  final int teamHandicap;
+  final int appliedPins;
   final int? seasonPoint;
   factory ClubTeamResult.fromJson(Map<String, dynamic> json) => ClubTeamResult(
     competitionTeamId: _string(json['competitionTeamId']),
@@ -150,6 +159,9 @@ class ClubTeamResult {
     totalPoints: _nonNegativeInt(json['totalPoints']),
     rawPins: _nonNegativeInt(json['rawPins']),
     effectivePins: _nonNegativeInt(json['effectivePins']),
+    memberCount: _positiveInt(json['memberCount']),
+    teamHandicap: _nonNegativeInt(json['teamHandicap']),
+    appliedPins: _nonNegativeInt(json['appliedPins'] ?? json['effectivePins']),
     seasonPoint: _nullableNonNegativeInt(
       json['seasonPoint'] ?? json['seasonPointPreview'],
     ),
@@ -202,6 +214,8 @@ class ClubTeamGameResult {
     required this.rawTeamTotal,
     required this.excludedScores,
     required this.normalizedTeamTotal,
+    required this.teamHandicap,
+    required this.handicapAppliedTotal,
     required this.rank,
     required this.points,
   });
@@ -211,6 +225,8 @@ class ClubTeamGameResult {
   final int? rawTeamTotal;
   final List<int> excludedScores;
   final int? normalizedTeamTotal;
+  final int? teamHandicap;
+  final int? handicapAppliedTotal;
   final int? rank;
   final int? points;
 
@@ -228,6 +244,10 @@ class ClubTeamGameResult {
       rawTeamTotal: _nullableNonNegativeInt(json['rawTeamTotal']),
       excludedScores: List<int>.unmodifiable(excluded.cast<int>()),
       normalizedTeamTotal: _nullableNonNegativeInt(json['normalizedTeamTotal']),
+      teamHandicap: _nullableNonNegativeInt(json['teamHandicap']),
+      handicapAppliedTotal: _nullableNonNegativeInt(
+        json['handicapAppliedTotal'],
+      ),
       rank: _nullablePositiveInt(json['rank']),
       points: _nullableNonNegativeInt(json['points']),
     );

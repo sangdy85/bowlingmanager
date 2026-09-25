@@ -142,6 +142,16 @@ void main() {
         'team-1',
         'event-1',
       );
+      await api.individualCompetitionAction(
+        'team-1',
+        'event-1',
+        <String, dynamic>{
+          'action': 'SET_MANUAL_GROUPING',
+          'participantKind': 'GUEST',
+          'participantId': 'guest-1',
+          'manualGroupingScore': 190,
+        },
+      );
       expect(result.overall, isEmpty);
       final Map<String, dynamic> payload = Map<String, dynamic>.from(
         requests.first.data as Map,
@@ -149,6 +159,7 @@ void main() {
       expect(payload['competitionEnabled'], isTrue);
       expect(payload['competitionType'], 'INDIVIDUAL');
       expect(requests.last.path, '/teams/team-1/events/event-1/competition');
+      expect((requests.last.data as Map)['manualGroupingScore'], 190);
     },
   );
 
@@ -170,13 +181,16 @@ void main() {
       'event-1',
     );
     await api.teamCompetitionAction('team-1', 'event-1', <String, dynamic>{
-      'action': 'LOCK_ATTENDANCE',
+      'action': 'SET_HANDICAP',
+      'competitionTeamId': 'competition-team-1',
+      'teamHandicap': 15,
     });
     expect(state.status, 'ATTENDANCE_OPEN');
     expect(requests.map((item) => '${item.method} ${item.path}'), <String>[
       'GET /teams/team-1/events/event-1/competition/team',
       'POST /teams/team-1/events/event-1/competition/team',
     ]);
+    expect((requests.last.data as Map)['teamHandicap'], 15);
   });
 
   test('uses protected EVENT competition state and action endpoint', () async {

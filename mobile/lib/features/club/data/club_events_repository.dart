@@ -18,7 +18,7 @@ class ClubEventsRepository {
   Future<void> individualCompetitionAction(
     String teamId,
     String eventId,
-    String action,
+    Map<String, dynamic> action,
   ) => _api.individualCompetitionAction(teamId, eventId, action);
   Future<ClubTeamCompetitionState> fetchTeamCompetition(
     String teamId,

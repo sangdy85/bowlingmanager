@@ -38,12 +38,12 @@ class ClubEventsApi {
   Future<void> individualCompetitionAction(
     String teamId,
     String eventId,
-    String action,
+    Map<String, dynamic> action,
   ) => _request(() async {
     _data(
       (await _dio.post<dynamic>(
         '${_eventPath(teamId, eventId)}/competition',
-        data: <String, String>{'action': action},
+        data: action,
       )).data,
     );
   });

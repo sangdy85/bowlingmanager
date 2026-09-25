@@ -236,7 +236,7 @@ test('team results drop each larger team game lowest score and are recalculated 
   ]);
   assert.equal(result.results.complete, true);
   assert.equal(result.results.teams[0].totalPoints, 10);
-  assert.equal(result.policies.teamHandicapApplication, 'PENDING_PRODUCT_DECISION');
+  assert.equal(result.policies.teamHandicapApplication, 'EFFECTIVE_PIN_PLUS_TEAM_HANDICAP_PER_GAME');
   assert.equal(JSON.stringify(result).includes('user-'), false);
 });
 
@@ -271,7 +271,7 @@ test('5/5/5/4 scoring excludes each game own lowest player and accumulates game 
     }
     teams.push({
       id: `team-${teamIndex + 1}`, generation: 1, name: `TEAM ${teamIndex + 1}`,
-      draftOrder: teamIndex + 1, lanePriority: null, teamHandicap: 0,
+      draftOrder: teamIndex + 1, lanePriority: null, teamHandicap: teamIndex * 5,
       captainMemberId: teamParticipants[0].memberId, captain: teamParticipants[0].member,
       participants: teamParticipants,
     });
@@ -299,19 +299,20 @@ test('5/5/5/4 scoring excludes each game own lowest player and accumulates game 
   assert.equal(result.results.effectivePlayerCount, 4);
   assert.deepEqual(result.results.games.map(game => game.teams.map(team => ({
     id: team.teamId, raw: team.rawTeamTotal, normalized: team.normalizedTeamTotal,
+    handicap: team.teamHandicap, applied: team.handicapAppliedTotal,
     excluded: team.excludedScores, rank: team.rank, points: team.points,
   }))), [
     [
-      { id: 'team-1', raw: 840, normalized: 740, excluded: [100], rank: 1, points: 5 },
-      { id: 'team-2', raw: 804, normalized: 714, excluded: [90], rank: 2, points: 3 },
-      { id: 'team-3', raw: 714, normalized: 634, excluded: [80], rank: 3, points: 2 },
-      { id: 'team-4', raw: 594, normalized: 594, excluded: [], rank: 4, points: 1 },
+      { id: 'team-1', raw: 840, normalized: 740, handicap: 0, applied: 740, excluded: [100], rank: 1, points: 5 },
+      { id: 'team-2', raw: 804, normalized: 714, handicap: 5, applied: 719, excluded: [90], rank: 2, points: 3 },
+      { id: 'team-3', raw: 714, normalized: 634, handicap: 10, applied: 644, excluded: [80], rank: 3, points: 2 },
+      { id: 'team-4', raw: 594, normalized: 594, handicap: 15, applied: 609, excluded: [], rank: 4, points: 1 },
     ],
     [
-      { id: 'team-1', raw: 860, normalized: 760, excluded: [100], rank: 1, points: 5 },
-      { id: 'team-2', raw: 804, normalized: 714, excluded: [90], rank: 2, points: 3 },
-      { id: 'team-3', raw: 714, normalized: 634, excluded: [80], rank: 3, points: 2 },
-      { id: 'team-4', raw: 594, normalized: 594, excluded: [], rank: 4, points: 1 },
+      { id: 'team-1', raw: 860, normalized: 760, handicap: 0, applied: 760, excluded: [100], rank: 1, points: 5 },
+      { id: 'team-2', raw: 804, normalized: 714, handicap: 5, applied: 719, excluded: [90], rank: 2, points: 3 },
+      { id: 'team-3', raw: 714, normalized: 634, handicap: 10, applied: 644, excluded: [80], rank: 3, points: 2 },
+      { id: 'team-4', raw: 594, normalized: 594, handicap: 15, applied: 609, excluded: [], rank: 4, points: 1 },
     ],
   ]);
   assert.deepEqual(result.results.teams.map(team => ({ id: team.competitionTeamId, points: team.totalPoints, rank: team.finalRank })), [
@@ -320,8 +321,37 @@ test('5/5/5/4 scoring excludes each game own lowest player and accumulates game 
     { id: 'team-3', points: 4, rank: 3 },
     { id: 'team-4', points: 2, rank: 4 },
   ]);
+  assert.deepEqual(result.results.teams.map(team => ({ id: team.competitionTeamId, effective: team.effectivePins, applied: team.appliedPins })), [
+    { id: 'team-1', effective: 1500, applied: 1500 },
+    { id: 'team-2', effective: 1428, applied: 1438 },
+    { id: 'team-3', effective: 1268, applied: 1288 },
+    { id: 'team-4', effective: 1188, applied: 1218 },
+  ]);
   assert.deepEqual(scoreMatrix[0][4], [100, 220]);
   assert.deepEqual(scoreMatrix[0][0], [200, 100]);
+});
+
+test('fixed team tie-break uses points, effective pins, member count, handicap, then stable id', () => {
+  const service = loadTs('src/lib/mobile-api/team-competition.ts', {
+    '@/lib/prisma': {}, '@/lib/mobile-api/bowler-hidden': { readRankPoints: () => [] },
+  });
+  const base = { totalPoints: 10, effectivePins: 1000, memberCount: 5, teamHandicap: 20 };
+  assert.deepEqual(service.rankFinalTeams([
+    { ...base, competitionTeamId: 'B', effectivePins: 1001 },
+    { ...base, competitionTeamId: 'A' },
+  ]).map(item => item.competitionTeamId), ['B', 'A']);
+  assert.deepEqual(service.rankFinalTeams([
+    { ...base, competitionTeamId: 'B', memberCount: 4 },
+    { ...base, competitionTeamId: 'A' },
+  ]).map(item => item.competitionTeamId), ['B', 'A']);
+  assert.deepEqual(service.rankFinalTeams([
+    { ...base, competitionTeamId: 'B', teamHandicap: 10 },
+    { ...base, competitionTeamId: 'A' },
+  ]).map(item => item.competitionTeamId), ['B', 'A']);
+  assert.deepEqual(service.rankFinalTeams([
+    { ...base, competitionTeamId: 'B' },
+    { ...base, competitionTeamId: 'A' },
+  ]).map(item => item.competitionTeamId), ['A', 'B']);
 });
 
 test('missing score never becomes zero and prevents the affected game ranking', async () => {
@@ -371,6 +401,30 @@ test('feature flag and manager permissions are rechecked by team competition act
     () => service.getTeamCompetitionState('user-1', 'team-1', 'event-1'),
     error => error.code === 'FEATURE_DISABLED' && error.status === 404,
   );
+});
+
+test('team handicap is manager-only, non-negative, and scoped to the current event generation', async () => {
+  const fixture = eventFixture();
+  let updateArgs = null;
+  const prisma = {
+    teamEvent: { findFirst: async () => fixture.event },
+    teamCompetitionTeam: { updateMany: async args => { updateArgs = args; return { count: 1 }; } },
+  };
+  const service = loadTs('src/lib/mobile-api/team-competition.ts', {
+    '@/lib/prisma': prisma, '@/lib/mobile-api/bowler-hidden': { readRankPoints: () => [] },
+  });
+  await service.updateTeamCompetition('user-1', 'team-1', 'event-1', {
+    action: 'SET_HANDICAP', competitionTeamId: 'competition-team-1', teamHandicap: 12,
+  });
+  assert.deepEqual(updateArgs, {
+    where: { id: 'competition-team-1', eventId: 'event-1', generation: 1 }, data: { teamHandicap: 12 },
+  });
+  await assert.rejects(() => service.updateTeamCompetition('user-4', 'team-1', 'event-1', {
+    action: 'SET_HANDICAP', competitionTeamId: 'competition-team-1', teamHandicap: 12,
+  }), error => error.code === 'FORBIDDEN');
+  await assert.rejects(() => service.updateTeamCompetition('user-1', 'team-1', 'event-1', {
+    action: 'SET_HANDICAP', competitionTeamId: 'competition-team-1', teamHandicap: -1,
+  }), error => error.code === 'INVALID_TEAM_HANDICAP');
 });
 
 test('migration keeps reset generations and conflict-prevention uniqueness', () => {
