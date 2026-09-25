@@ -85,13 +85,61 @@ test('group IDs are stable and blank game types normalize to null', () => {
 });
 
 test('group pagination defaults invalid values and caps limit at 100', () => {
-    const { parseMobileScorePagination } = loadTs('src/lib/mobile-api/scores.ts', {
+    const { parseMobileScorePagination, parseMobileScoreFilters } = loadTs('src/lib/mobile-api/scores.ts', {
         '@/lib/prisma': { score: {} },
     });
     assert.deepEqual(parseMobileScorePagination(new URLSearchParams('page=bad&limit=0')),
         { page: 1, limit: 20 });
     assert.deepEqual(parseMobileScorePagination(new URLSearchParams('page=2&limit=1000')),
         { page: 2, limit: 100 });
+    assert.deepEqual(parseMobileScoreFilters(new URLSearchParams(
+        'year=2025&category=OFFICIAL&officialType=STANDING_LEAGUE&minAverage=180&maxAverage=220',
+    )), {
+        year: 2025, category: 'OFFICIAL', officialType: 'STANDING_LEAGUE', minAverage: 180, maxAverage: 220,
+    });
+    assert.throws(() => parseMobileScoreFilters(new URLSearchParams('category=REGULAR&officialType=EVENT')),
+        error => error.code === 'INVALID_FILTER');
+});
+
+test('integrated record filters combine year, taxonomy and session average before pagination', async () => {
+    const { getMobileScoreGroups } = loadTs('src/lib/mobile-api/scores.ts', { '@/lib/prisma': {} });
+    const integratedRows = [
+        record({ id: 'regular', score: 200, gameType: '정기전', gameDate: new Date('2025-01-01Z') }),
+        record({ id: 'meetup', score: 210, gameType: '벙개', gameDate: new Date('2025-02-01Z') }),
+        record({ id: 'exchange', score: 220, gameType: '교류전', gameDate: new Date('2025-03-01Z') }),
+        record({ id: 'league', source: 'LEAGUE', score: 190, gameType: '상주리그', gameDate: new Date('2025-04-01Z') }),
+        record({ id: 'champ', source: 'TOURNAMENT', score: 230, gameType: '챔프전', gameDate: new Date('2026-04-01Z') }),
+        record({ id: 'event', source: 'TOURNAMENT', score: 180, gameType: '이벤트전', gameDate: new Date('2025-05-01Z') }),
+        record({ id: 'other', score: 170, gameType: null, gameDate: new Date('2025-06-01Z') }),
+    ];
+    const result = await getMobileScoreGroups('user-1', 1, 20,
+        groupDependencies({ integratedRows }), {
+            year: 2025, category: 'OFFICIAL', officialType: 'STANDING_LEAGUE',
+            minAverage: 180, maxAverage: 200,
+        });
+    assert.deepEqual(result.availableYears, [2026, 2025]);
+    assert.equal(result.pagination.total, 1);
+    assert.deepEqual(result.items.map(item => ({
+        id: item.scores[0].id, year: item.year, category: item.category, subcategory: item.subcategory,
+    })), [{ id: 'league', year: 2025, category: 'OFFICIAL', subcategory: 'STANDING_LEAGUE' }]);
+});
+
+test('record taxonomy retains every club, official and unknown category', () => {
+    const { recordTaxonomy } = loadTs('src/lib/mobile-api/scores.ts', { '@/lib/prisma': {} });
+    const cases = [
+        [{ source: 'PERSONAL', gameType: '정기전' }, ['REGULAR', null]],
+        [{ source: 'PERSONAL', gameType: '벙개' }, ['MEETUP', null]],
+        [{ source: 'PERSONAL', gameType: '교류전' }, ['EXCHANGE', null]],
+        [{ source: 'LEAGUE', gameType: '상주리그' }, ['OFFICIAL', 'STANDING_LEAGUE']],
+        [{ source: 'TOURNAMENT', gameType: '챔프전' }, ['OFFICIAL', 'CHAMPIONSHIP']],
+        [{ source: 'TOURNAMENT', gameType: '이벤트전' }, ['OFFICIAL', 'EVENT']],
+        [{ source: 'PERSONAL', gameType: '연습' }, ['OTHER', null]],
+        [{ source: 'PERSONAL', gameType: null }, ['OTHER', null]],
+    ];
+    for (const [input, expected] of cases) {
+        const result = recordTaxonomy(input);
+        assert.deepEqual([result.category, result.subcategory], expected);
+    }
 });
 
 test('group pagination happens after complete rows are grouped, so a boundary cannot split a session', async () => {
@@ -113,7 +161,7 @@ test('empty rows produce empty group pagination', async () => {
     const { getMobileScoreGroups } = loadTs('src/lib/mobile-api/scores.ts', { '@/lib/prisma': {} });
     const result = await getMobileScoreGroups('user-1', 1, 20, groupDependencies());
     assert.deepEqual(result, {
-        items: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+        items: [], availableYears: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
     });
 });
 
@@ -230,7 +278,7 @@ test('rank survives pagination and uses a constant number of batch queries', asy
 
 test('group route requires auth and scopes the query to the authenticated user', async () => {
     let capturedWhere;
-    const prisma = { score: { findMany: async args => {
+    const prisma = { user: { findUnique: async () => null }, score: { findMany: async args => {
         capturedWhere = args.where;
         return [];
     } } };
@@ -275,7 +323,7 @@ function member(id, userId, alias, name = alias ?? userId) {
     return { id, teamId: 'team-1', userId, alias, user: { name } };
 }
 
-function groupDependencies({ userRows = [], teamRows = [], members = [] } = {}) {
+function groupDependencies({ userRows = [], teamRows = [], members = [], integratedRows } = {}) {
     const dependencies = {
         calls: { userScores: 0, teamScores: 0, members: 0 },
         scopes: [],
@@ -294,5 +342,6 @@ function groupDependencies({ userRows = [], teamRows = [], members = [] } = {}) 
             return members.filter(row => teamIds.includes(row.teamId));
         },
     };
+    if (integratedRows) dependencies.listIntegratedRecords = async () => integratedRows;
     return dependencies;
 }

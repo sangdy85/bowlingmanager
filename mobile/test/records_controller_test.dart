@@ -3,6 +3,7 @@ import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_state.dart';
 import 'package:bowlingmanager_mobile/features/records/data/scores_repository.dart';
+import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -164,6 +165,39 @@ void main() {
     );
     await Future.wait(<Future<void>>[first, second]);
     expect(harness.state.items.length, 2);
+  });
+
+  test('applies combined filters and resets pagination to page one', () async {
+    final FakeScoresRepository repository = FakeScoresRepository()
+      ..pages[1] = scoresPage(
+        page: 1,
+        total: 1,
+        items: <GameSession>[scoreRecord('official', 220, year: 2025)],
+        availableYears: const <int>[2026, 2025],
+      );
+    final _RecordsHarness harness = _RecordsHarness(repository);
+    addTearDown(harness.dispose);
+    await harness.initialState();
+
+    const RecordsFilter filter = RecordsFilter(
+      year: 2025,
+      category: RecordCategory.official,
+      officialCategory: OfficialRecordCategory.standingLeague,
+      minAverage: 200,
+      maxAverage: 230,
+    );
+    await harness.controller.applyFilter(filter);
+
+    expect(repository.requestedPages, <int>[1, 1]);
+    final RecordsFilter requested = repository.requestedFilters.last;
+    expect(requested.year, 2025);
+    expect(requested.category, RecordCategory.official);
+    expect(requested.officialCategory, OfficialRecordCategory.standingLeague);
+    expect(requested.minAverage, 200);
+    expect(requested.maxAverage, 230);
+    expect(harness.state.pagination.page, 1);
+    expect(harness.state.filter.year, 2025);
+    expect(harness.state.availableYears, <int>[2026, 2025]);
   });
 }
 

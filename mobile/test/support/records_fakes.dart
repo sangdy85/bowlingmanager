@@ -23,6 +23,7 @@ final ScoresPage testScoresPage = scoresPage(
   page: 1,
   total: 1,
   items: <GameSession>[testScoreRecord],
+  availableYears: const <int>[2026],
 );
 
 final ScoresPage emptyScoresPage = scoresPage(
@@ -36,9 +37,11 @@ ScoresPage scoresPage({
   required int total,
   required List<GameSession> items,
   int limit = 20,
+  List<int> availableYears = const <int>[],
 }) {
   return ScoresPage(
     items: List<GameSession>.unmodifiable(items),
+    availableYears: List<int>.unmodifiable(availableYears),
     pagination: ScorePagination(
       page: page,
       limit: limit,
@@ -48,11 +51,11 @@ ScoresPage scoresPage({
   );
 }
 
-GameSession scoreRecord(String id, int score, {int day = 15}) {
+GameSession scoreRecord(String id, int score, {int year = 2026, int day = 15}) {
   return GameSession(
     id: id,
     source: GameSessionSource.personal,
-    gameDate: DateTime.utc(2026, 9, day),
+    gameDate: DateTime.utc(year, 9, day),
     gameType: null,
     team: null,
     scores: <GameSessionScore>[
@@ -70,15 +73,18 @@ class FakeScoresApi implements ScoresApi {
   int callCount = 0;
   int? requestedPage;
   int? requestedLimit;
+  RecordsFilter? requestedFilter;
 
   @override
   Future<ScoresPage> fetchScores({
     required int page,
     required int limit,
+    RecordsFilter filter = const RecordsFilter(),
   }) async {
     callCount += 1;
     requestedPage = page;
     requestedLimit = limit;
+    requestedFilter = filter;
     if (error case final Object currentError) throw currentError;
     return result;
   }
@@ -90,14 +96,17 @@ class FakeScoresRepository implements ScoresRepository {
   final Map<int, Future<ScoresPage>> pendingPages = <int, Future<ScoresPage>>{};
   final List<int> requestedPages = <int>[];
   final List<int> requestedLimits = <int>[];
+  final List<RecordsFilter> requestedFilters = <RecordsFilter>[];
 
   @override
   Future<ScoresPage> fetchScores({
     required int page,
     required int limit,
+    RecordsFilter filter = const RecordsFilter(),
   }) async {
     requestedPages.add(page);
     requestedLimits.add(limit);
+    requestedFilters.add(filter);
     if (errors[page] case final Object error) throw error;
     if (pendingPages[page] case final Future<ScoresPage> pending) {
       return pending;

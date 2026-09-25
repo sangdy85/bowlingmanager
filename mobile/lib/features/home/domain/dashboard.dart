@@ -9,11 +9,15 @@ class Dashboard {
     required this.recentScores,
     required this.recentSessions,
     required this.recentAverage,
+    this.regularAverage = 0,
+    this.officialAverage = 0,
+    int? totalGameCount,
     this.profileRadar = DashboardRadar.empty,
     this.medals = DashboardMedals.empty,
     this.personalStats = DashboardPersonalStats.empty,
     this.teamSummaries = const <DashboardTeamSummary>[],
-  });
+    this.clubAchievements = const <DashboardClubAchievement>[],
+  }) : totalGameCount = totalGameCount ?? gameCount;
 
   final int year;
   final double average;
@@ -22,10 +26,14 @@ class Dashboard {
   final List<DashboardScore> recentScores;
   final List<GameSession> recentSessions;
   final double recentAverage;
+  final double regularAverage;
+  final double officialAverage;
+  final int totalGameCount;
   final DashboardRadar profileRadar;
   final DashboardMedals medals;
   final DashboardPersonalStats personalStats;
   final List<DashboardTeamSummary> teamSummaries;
+  final List<DashboardClubAchievement> clubAchievements;
 
   factory Dashboard.fromJson(Map<String, dynamic> json) {
     final Object? year = json['year'];
@@ -35,6 +43,9 @@ class Dashboard {
     final Object? recentScores = json['recentScores'];
     final Object? recentSessions = json['recentSessions'];
     final Object? recentAverage = json['recentAverage'];
+    final Object? regularAverage = json['regularAverage'];
+    final Object? officialAverage = json['officialAverage'];
+    final Object? totalGameCount = json['totalGameCount'];
 
     if (year is! int ||
         year < 1900 ||
@@ -47,7 +58,11 @@ class Dashboard {
         recentScores.length > 10 ||
         recentSessions is! List ||
         recentSessions.length > 7 ||
-        !_isValidAverage(recentAverage)) {
+        !_isValidAverage(recentAverage) ||
+        (regularAverage != null && !_isValidAverage(regularAverage)) ||
+        (officialAverage != null && !_isValidAverage(officialAverage)) ||
+        (totalGameCount != null &&
+            (totalGameCount is! int || totalGameCount < 0))) {
       throw const FormatException('Invalid dashboard response.');
     }
 
@@ -76,6 +91,9 @@ class Dashboard {
       recentScores: List<DashboardScore>.unmodifiable(scores),
       recentSessions: List<GameSession>.unmodifiable(sessions),
       recentAverage: (recentAverage as num).toDouble(),
+      regularAverage: (regularAverage as num?)?.toDouble() ?? 0,
+      officialAverage: (officialAverage as num?)?.toDouble() ?? 0,
+      totalGameCount: totalGameCount as int? ?? gameCount,
       profileRadar: _optionalSection(
         json['profileRadar'],
         DashboardRadar.fromJson,
@@ -94,6 +112,10 @@ class Dashboard {
       teamSummaries: _optionalList(
         json['teamSummaries'],
         DashboardTeamSummary.fromJson,
+      ),
+      clubAchievements: _optionalList(
+        json['clubAchievements'],
+        DashboardClubAchievement.fromJson,
       ),
     );
   }
@@ -328,6 +350,87 @@ class DashboardCategoryStats {
       highScore: highScore,
       lowScore: lowScore,
       gameCount: gameCount,
+    );
+  }
+}
+
+class DashboardClubAchievement {
+  const DashboardClubAchievement({
+    required this.teamId,
+    required this.teamName,
+    required this.enabled,
+    required this.bowlerHiddenEnabled,
+    required this.seasonName,
+    required this.rank,
+    required this.points,
+    required this.gold,
+    required this.silver,
+    required this.bronze,
+    required this.individualPoints,
+    required this.teamPoints,
+    required this.eventPoints,
+  });
+
+  final String teamId;
+  final String teamName;
+  final bool enabled;
+  final bool bowlerHiddenEnabled;
+  final String? seasonName;
+  final int? rank;
+  final int points;
+  final int gold;
+  final int silver;
+  final int bronze;
+  final int? individualPoints;
+  final int? teamPoints;
+  final int? eventPoints;
+
+  factory DashboardClubAchievement.fromJson(Map<String, dynamic> json) {
+    final Object? teamId = json['teamId'];
+    final Object? teamName = json['teamName'];
+    final Object? enabled = json['enabled'];
+    final Object? hidden = json['bowlerHiddenEnabled'];
+    final Object? seasonName = json['seasonName'];
+    final Object? rank = json['rank'];
+    final numeric = <Object?>[
+      json['points'],
+      json['gold'],
+      json['silver'],
+      json['bronze'],
+    ];
+    final optional = <Object?>[
+      json['individualPoints'],
+      json['teamPoints'],
+      json['eventPoints'],
+    ];
+    if (teamId is! String ||
+        teamId.isEmpty ||
+        teamName is! String ||
+        teamName.isEmpty ||
+        enabled is! bool ||
+        hidden is! bool ||
+        (seasonName != null && seasonName is! String) ||
+        (rank != null && (rank is! int || rank < 1)) ||
+        numeric.any((value) => value is! int || value < 0) ||
+        optional.any(
+          (value) => value != null && (value is! int || value < 0),
+        )) {
+      throw const FormatException('Invalid club achievement response.');
+    }
+    return DashboardClubAchievement(
+      teamId: teamId,
+      teamName: teamName,
+      enabled: enabled,
+      bowlerHiddenEnabled: hidden,
+      seasonName: seasonName as String?,
+      rank: rank as int?,
+      points: numeric[0]! as int,
+      gold: numeric[1]! as int,
+      silver: numeric[2]! as int,
+      bronze: numeric[3]! as int,
+      individualPoints: optional[0] as int?,
+      teamPoints: optional[1] as int?,
+      eventPoints: optional[2] as int?,
     );
   }
 }

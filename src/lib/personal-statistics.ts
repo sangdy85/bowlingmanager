@@ -12,9 +12,27 @@ type StatisticsDatabase = Pick<PrismaClient, "score" | "leagueMatchupIndividualS
 
 /** Active memberships and UTC year boundaries match /personal. */
 export async function getPersonalStatisticsData(user: PersonalStatisticsUser, year: number, db: StatisticsDatabase = prisma) {
-    // 해당 연도의 시작과 끝 (KST 기준 처리가 필요할 수 있으나, native Date로 간단히 범위 설정)
     const startOfYear = new Date(`${year}-01-01T00:00:00.000Z`);
     const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`);
+    return getPersonalStatisticsDataBetween(user, startOfYear, endOfYear, db);
+}
+
+/** Mobile Records uses the same web normalization while retaining every supported year. */
+export async function getAllPersonalStatisticsData(user: PersonalStatisticsUser, db: StatisticsDatabase = prisma) {
+    return getPersonalStatisticsDataBetween(
+        user,
+        new Date("1900-01-01T00:00:00.000Z"),
+        new Date("2100-12-31T23:59:59.999Z"),
+        db,
+    );
+}
+
+async function getPersonalStatisticsDataBetween(
+    user: PersonalStatisticsUser,
+    startOfYear: Date,
+    endOfYear: Date,
+    db: StatisticsDatabase,
+) {
 
     // 해당 연도 점수 조회
     const myYearlyScores = await db.score.findMany({
@@ -138,13 +156,12 @@ export async function getPersonalStatisticsData(user: PersonalStatisticsUser, ye
     });
 
     // Preserve the web's stored scores and handicaps, including values above 300.
-    const personalRecords: IntegratedRecord[] = myYearlyScores
-        .filter(s => s.gameType !== "벙개")
-        .map(s => ({
+    const allPersonalRecords: IntegratedRecord[] = myYearlyScores.map(s => ({
             id: `PERSONAL:${s.id}`, source: "PERSONAL", score: s.score,
             gameDate: s.gameDate, gameType: s.gameType, memo: s.memo, team: s.Team,
             createdAt: s.createdAt,
         }));
+    const personalRecords = allPersonalRecords.filter((record) => record.gameType !== "벙개");
     const officialRecords: IntegratedRecord[] = [
         ...leagueScores.flatMap(ls =>
             [ls.score1, ls.score2, ls.score3].flatMap((score, index): IntegratedRecord[] =>
@@ -176,6 +193,7 @@ export async function getPersonalStatisticsData(user: PersonalStatisticsUser, ye
     return {
         myYearlyScores, leagueScores, tournamentScores,
         startOfYear, endOfYear, userTeamIds, officialRecords,
+        allRecords: [...allPersonalRecords, ...officialRecords],
         integratedRecords: [...personalRecords, ...officialRecords],
     };
 }

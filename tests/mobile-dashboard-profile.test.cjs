@@ -42,6 +42,8 @@ const team = (id, role, name = id) => ({
         id, name,
         ownerId: role === 'OWNER' ? 'user-a' : null,
         User: role === 'MANAGER' ? [{ id: 'user-a' }] : [],
+        seasonRankingEnabled: false,
+        bowlerHiddenEnabled: false,
     },
 });
 
@@ -167,7 +169,7 @@ test('dashboard performs fixed batch loads for multiple teams and preserves lega
         findUser: async () => { calls.user += 1; return user; },
         loadPersonal: async () => {
             calls.personal += 1;
-            return { integratedRecords: [record], officialRecords: [] };
+            return { integratedRecords: [record], allRecords: [record], officialRecords: [], myYearlyScores: [record] };
         },
         listTeamScores: async teamIds => { calls.scores += 1; assert.deepEqual(teamIds, ['one', 'two']); return []; },
         listTeamMembers: async teamIds => { calls.members += 1; assert.deepEqual(teamIds, ['one', 'two']); return []; },
@@ -177,4 +179,38 @@ test('dashboard performs fixed batch loads for multiple teams and preserves lega
         { average: result.average, highScore: result.highScore, gameCount: result.gameCount, recentAverage: result.recentAverage },
         { average: 210, highScore: 210, gameCount: 1, recentAverage: 210 },
     );
+});
+
+test('dashboard adds regular official totals and multiple club achievements without replacing legacy fields', async () => {
+    const user = {
+        id: 'user-a', name: '볼러',
+        teamMemberships: [team('one', 'OWNER'), team('two', 'MEMBER')],
+    };
+    const regular = personal('regular', 200, day(1));
+    const meetup = personal('meetup', 180, day(2), { gameType: '벙개' });
+    const official = personal('official', 220, day(3), { source: 'LEAGUE', gameType: '상주리그' });
+    const achievements = [
+        { teamId: 'one', teamName: 'one', enabled: true, bowlerHiddenEnabled: false,
+            seasonName: '2026', rank: 2, points: 20, gold: 1, silver: 0, bronze: 0,
+            individualPoints: null, teamPoints: null, eventPoints: null },
+        { teamId: 'two', teamName: 'two', enabled: true, bowlerHiddenEnabled: true,
+            seasonName: 'Hidden', rank: 1, points: 30, gold: 1, silver: 0, bronze: 0,
+            individualPoints: 10, teamPoints: 10, eventPoints: 10 },
+    ];
+    const result = await dashboard.getMobileDashboard('user-a', 2026, {
+        findUser: async () => user,
+        loadPersonal: async () => ({
+            integratedRecords: [regular, official], allRecords: [regular, meetup, official],
+            officialRecords: [official], myYearlyScores: [regular, meetup],
+        }),
+        listTeamScores: async () => [],
+        listTeamMembers: async () => [],
+        countAllGames: async () => 3,
+        listClubAchievements: async () => achievements,
+    });
+    assert.equal(result.regularAverage, 200);
+    assert.equal(result.officialAverage, 220);
+    assert.equal(result.totalGameCount, 3);
+    assert.deepEqual(result.clubAchievements, achievements);
+    assert.equal(result.average, 210);
 });

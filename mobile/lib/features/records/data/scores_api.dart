@@ -3,7 +3,11 @@ import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart'
 import 'package:dio/dio.dart';
 
 abstract interface class ScoresApi {
-  Future<ScoresPage> fetchScores({required int page, required int limit});
+  Future<ScoresPage> fetchScores({
+    required int page,
+    required int limit,
+    RecordsFilter filter = const RecordsFilter(),
+  });
 }
 
 class MobileScoresApi implements ScoresApi {
@@ -15,11 +19,16 @@ class MobileScoresApi implements ScoresApi {
   Future<ScoresPage> fetchScores({
     required int page,
     required int limit,
+    RecordsFilter filter = const RecordsFilter(),
   }) async {
     try {
       final Response<dynamic> response = await _dio.get<dynamic>(
         '/scores/groups',
-        queryParameters: <String, int>{'page': page, 'limit': limit},
+        queryParameters: <String, Object>{
+          'page': page,
+          'limit': limit,
+          ...filter.toQuery(),
+        },
       );
       final Object? body = response.data;
       if (body is! Map || body['success'] != true || body['data'] is! Map) {

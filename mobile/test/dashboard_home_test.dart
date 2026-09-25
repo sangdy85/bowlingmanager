@@ -85,9 +85,18 @@ void main() {
 
     expect(dashboardRepository.callCount, 1);
     expect(find.text('187.4'), findsOneWidget);
-    expect(find.text('245'), findsOneWidget);
     expect(find.text('36'), findsOneWidget);
     expect(find.text('201.7'), findsOneWidget);
+    expect(find.text('안녕하세요,\n테스트 볼러님 👋'), findsOneWidget);
+    expect(find.text('나의 동호회 성과'), findsOneWidget);
+    expect(find.textContaining('2026 시즌 · 2위 · 20P'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('최근 경기'),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(ListView).first, const Offset(0, -300));
+    await tester.pump();
     expect(find.text('202.0'), findsWidgets);
     expect(find.text('최근 경기 AVG'), findsOneWidget);
     expect(find.text('2게임'), findsOneWidget);
@@ -122,9 +131,9 @@ void main() {
     await _pumpAuthenticatedApp(tester, dashboardRepository);
     await tester.pumpAndSettle();
 
-    expect(find.text('CURRENT AVG'), findsOneWidget);
-    expect(find.text('HIGH'), findsOneWidget);
-    expect(find.text('GAMES'), findsOneWidget);
+    expect(find.text('정기전 AVG'), findsOneWidget);
+    expect(find.text('공식전 AVG'), findsOneWidget);
+    expect(find.text('게임 수'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('최근 경기'),
       500,
@@ -159,7 +168,7 @@ void main() {
   });
 
   testWidgets(
-    'expanded Home fits 360px, exposes sections and navigates to team records',
+    'expanded Home fits 360px, exposes sections and navigates to its team',
     (WidgetTester tester) async {
       await tester.binding.setSurfaceSize(const Size(360, 720));
       tester.platformDispatcher.textScaleFactorTestValue = 1.2;
@@ -174,12 +183,13 @@ void main() {
       await tester.pumpAndSettle();
 
       for (final String section in <String>[
+        '나의 동호회 성과',
         '나의 기록실',
-        '나의 입상',
         '최근 경기 AVG',
+        '최근 경기',
+        '나의 입상',
         '개인 상세 통계',
         '팀 기록',
-        '최근 경기',
       ]) {
         await tester.scrollUntilVisible(
           find.text(section),
@@ -198,14 +208,14 @@ void main() {
       expect(find.bySemanticsLabel(RegExp(r'금메달 3회')), findsOneWidget);
 
       await tester.scrollUntilVisible(
-        find.text('아주 긴 이름을 가진 테스트 동호회입니다'),
-        300,
+        find.byKey(const Key('club-achievement-team-1')),
+        -300,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('아주 긴 이름을 가진 테스트 동호회입니다'), findsOneWidget);
-      await tester.tap(find.text('아주 긴 이름을 가진 테스트 동호회입니다'));
+      expect(find.text('아주 긴 이름을 가진 테스트 동호회입니다'), findsWidgets);
+      await tester.tap(find.byKey(const Key('club-achievement-team-1')));
       await tester.pumpAndSettle();
-      expect(find.text('동호회 기록'), findsOneWidget);
+      expect(find.text('동호회 상세'), findsOneWidget);
     },
   );
 
@@ -244,6 +254,9 @@ Dashboard _expandedDashboard() => Dashboard(
   average: 218.4,
   highScore: 279,
   gameCount: 80,
+  totalGameCount: 80,
+  regularAverage: 218.5,
+  officialAverage: 211.2,
   recentAverage: 221.3,
   recentScores: testDashboard.recentScores,
   recentSessions: testDashboard.recentSessions,
@@ -299,6 +312,38 @@ Dashboard _expandedDashboard() => Dashboard(
       attendanceRate: 0,
       gameCount: 0,
       average: 0,
+    ),
+  ],
+  clubAchievements: const <DashboardClubAchievement>[
+    DashboardClubAchievement(
+      teamId: 'team-1',
+      teamName: '아주 긴 이름을 가진 테스트 동호회입니다',
+      enabled: true,
+      bowlerHiddenEnabled: false,
+      seasonName: '일반 시즌',
+      rank: 2,
+      points: 20,
+      gold: 1,
+      silver: 1,
+      bronze: 0,
+      individualPoints: null,
+      teamPoints: null,
+      eventPoints: null,
+    ),
+    DashboardClubAchievement(
+      teamId: 'team-2',
+      teamName: '두 번째 동호회',
+      enabled: true,
+      bowlerHiddenEnabled: true,
+      seasonName: 'Hidden 시즌',
+      rank: 1,
+      points: 30,
+      gold: 1,
+      silver: 0,
+      bronze: 0,
+      individualPoints: 10,
+      teamPoints: 10,
+      eventPoints: 10,
     ),
   ],
 );

@@ -5,6 +5,7 @@ import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.d
 import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_state.dart';
+import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart';
 import 'package:bowlingmanager_mobile/shared/widgets/bowling_medal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +30,9 @@ class RecordsScreen extends ConsumerWidget {
         onLoadMore: () => ref
             .read(recordsControllerProvider(user.id).notifier)
             .loadNextPage(),
+        onFilter: (RecordsFilter filter) => ref
+            .read(recordsControllerProvider(user.id).notifier)
+            .applyFilter(filter),
       ),
       error: (Object error, StackTrace stackTrace) => _RecordsError(
         message: recordsErrorMessage(error),
@@ -46,11 +50,13 @@ class _RecordsContent extends StatelessWidget {
     required this.state,
     required this.onRefresh,
     required this.onLoadMore,
+    required this.onFilter,
   });
 
   final RecordsState state;
   final Future<void> Function() onRefresh;
   final Future<void> Function() onLoadMore;
+  final Future<void> Function(RecordsFilter filter) onFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +68,9 @@ class _RecordsContent extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
         children: <Widget>[
           const _RecordsHeader(),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
+          _RecordsFilters(state: state, onChanged: onFilter),
+          const SizedBox(height: 20),
           if (state.refreshErrorMessage case final String message) ...<Widget>[
             _InlineError(message: message, onRetry: onRefresh),
             const SizedBox(height: 12),
@@ -70,10 +78,7 @@ class _RecordsContent extends StatelessWidget {
           if (state.items.isEmpty)
             const _EmptyRecords()
           else
-            for (final GameSession session in state.items) ...<Widget>[
-              _RecordCard(session: session),
-              const SizedBox(height: 12),
-            ],
+            ..._recordSections(state.items),
           if (state.isLoadingMore)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 18),
@@ -97,6 +102,248 @@ class _RecordsContent extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+List<Widget> _recordSections(List<GameSession> sessions) {
+  final widgets = <Widget>[];
+  int? currentYear;
+  for (final session in sessions) {
+    if (currentYear != session.gameDate.year) {
+      currentYear = session.gameDate.year;
+      if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 10));
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(
+            '$currentYear년',
+            key: Key('records-year-$currentYear'),
+            style: AppTextStyles.title,
+          ),
+        ),
+      );
+    }
+    widgets
+      ..add(_RecordCard(session: session))
+      ..add(const SizedBox(height: 12));
+  }
+  return widgets;
+}
+
+class _RecordsFilters extends StatelessWidget {
+  const _RecordsFilters({required this.state, required this.onChanged});
+
+  final RecordsState state;
+  final Future<void> Function(RecordsFilter filter) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final filter = state.filter;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: DropdownButtonFormField<int?>(
+                key: const Key('records-year-filter'),
+                initialValue: filter.year,
+                decoration: const InputDecoration(
+                  labelText: '연도',
+                  isDense: true,
+                ),
+                items: <DropdownMenuItem<int?>>[
+                  const DropdownMenuItem<int?>(value: null, child: Text('전체')),
+                  ...state.availableYears.map(
+                    (int year) => DropdownMenuItem<int?>(
+                      value: year,
+                      child: Text('$year년'),
+                    ),
+                  ),
+                ],
+                onChanged: (int? value) => onChanged(
+                  filter.copyWith(year: value, clearYear: value == null),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            OutlinedButton.icon(
+              key: const Key('records-average-filter'),
+              onPressed: () async {
+                final RecordsFilter? next =
+                    await showModalBottomSheet<RecordsFilter>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (BuildContext context) =>
+                          _AverageFilterSheet(filter: filter),
+                    );
+                if (next != null) await onChanged(next);
+              },
+              icon: const Icon(Icons.tune_rounded),
+              label: Text(_averageFilterLabel(filter)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: RecordCategory.values
+              .map((RecordCategory category) {
+                return ChoiceChip(
+                  key: Key('records-category-${category.apiValue}'),
+                  label: Text(category.label),
+                  selected: filter.category == category,
+                  onSelected: (_) =>
+                      onChanged(filter.copyWith(category: category)),
+                );
+              })
+              .toList(growable: false),
+        ),
+        if (filter.category == RecordCategory.official) ...<Widget>[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: OfficialRecordCategory.values
+                .map((category) {
+                  return ChoiceChip(
+                    key: Key('records-official-${category.apiValue}'),
+                    label: Text(category.label),
+                    selected: filter.officialCategory == category,
+                    onSelected: (_) =>
+                        onChanged(filter.copyWith(officialCategory: category)),
+                  );
+                })
+                .toList(growable: false),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+String _averageFilterLabel(RecordsFilter filter) {
+  if (filter.minAverage == null && filter.maxAverage == null) return 'AVG 전체';
+  return '${filter.minAverage?.toStringAsFixed(0) ?? '0'}–'
+      '${filter.maxAverage?.toStringAsFixed(0) ?? '∞'}';
+}
+
+class _AverageFilterSheet extends StatefulWidget {
+  const _AverageFilterSheet({required this.filter});
+  final RecordsFilter filter;
+
+  @override
+  State<_AverageFilterSheet> createState() => _AverageFilterSheetState();
+}
+
+class _AverageFilterSheetState extends State<_AverageFilterSheet> {
+  late final TextEditingController _min = TextEditingController(
+    text: widget.filter.minAverage?.toString() ?? '',
+  );
+  late final TextEditingController _max = TextEditingController(
+    text: widget.filter.maxAverage?.toString() ?? '',
+  );
+  String? _error;
+
+  @override
+  void dispose() {
+    _min.dispose();
+    _max.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const Text('세션 AVG 범위', style: AppTextStyles.title),
+            const SizedBox(height: 6),
+            const Text(
+              '카드에 표시되는 경기 세션 평균을 기준으로 필터링합니다.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    key: const Key('records-min-average'),
+                    controller: _min,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: '최소 AVG'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    key: const Key('records-max-average'),
+                    controller: _max,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: '최대 AVG'),
+                  ),
+                ),
+              ],
+            ),
+            if (_error != null) ...<Widget>[
+              const SizedBox(height: 8),
+              Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+            ],
+            const SizedBox(height: 18),
+            Row(
+              children: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.pop(
+                    context,
+                    widget.filter.copyWith(
+                      clearMinAverage: true,
+                      clearMaxAverage: true,
+                    ),
+                  ),
+                  child: const Text('초기화'),
+                ),
+                const Spacer(),
+                FilledButton(onPressed: _apply, child: const Text('적용')),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _apply() {
+    final minText = _min.text.trim();
+    final maxText = _max.text.trim();
+    final double? min = minText.isEmpty ? null : double.tryParse(minText);
+    final double? max = maxText.isEmpty ? null : double.tryParse(maxText);
+    if ((minText.isNotEmpty && min == null) ||
+        (maxText.isNotEmpty && max == null) ||
+        (min != null && (min < 0 || min > 1000)) ||
+        (max != null && (max < 0 || max > 1000)) ||
+        (min != null && max != null && min > max)) {
+      setState(() => _error = '0~1000 사이의 올바른 AVG 범위를 입력해주세요.');
+      return;
+    }
+    Navigator.pop(
+      context,
+      widget.filter.copyWith(
+        minAverage: min,
+        clearMinAverage: min == null,
+        maxAverage: max,
+        clearMaxAverage: max == null,
       ),
     );
   }
@@ -196,7 +443,7 @@ class _InlineError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: <Widget>[
             const Icon(
@@ -250,26 +497,25 @@ class _RecordCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      _GameTypeChip(label: gameType),
-                      const SizedBox(height: 11),
+                      Text(
+                        '${_formatGameDate(session.gameDate)} · $gameType',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
                       Text(
                         teamName,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 20,
-                          height: 1.2,
+                          fontSize: 17,
                           fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _formatGameDate(session.gameDate),
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
@@ -281,52 +527,54 @@ class _RecordCard extends StatelessWidget {
                 ],
               ],
             ),
-            const SizedBox(height: 20),
-            Wrap(
-              spacing: 11,
-              runSpacing: 11,
-              children: session.scores
-                  .map(
-                    (GameSessionScore item) => ConstrainedBox(
-                      constraints: const BoxConstraints(minWidth: 56),
-                      child: Container(
-                        alignment: Alignment.center,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 11,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceElevated,
-                          borderRadius: BorderRadius.circular(11),
-                          border: Border.all(color: AppColors.divider),
-                        ),
-                        child: Text(
-                          '${item.score}',
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 20,
-                            height: 1,
-                            fontWeight: FontWeight.w800,
+            const SizedBox(height: 14),
+            SingleChildScrollView(
+              key: Key('record-scores-${session.id}'),
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: session.scores
+                    .map(
+                      (GameSessionScore item) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Container(
+                          constraints: const BoxConstraints(minWidth: 48),
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 9,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceElevated,
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(color: AppColors.divider),
+                          ),
+                          child: Text(
+                            '${item.score}',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  )
-                  .toList(growable: false),
+                    )
+                    .toList(growable: false),
+              ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
             const Divider(height: 1),
             const SizedBox(height: 16),
             Wrap(
               spacing: 10,
               runSpacing: 10,
               children: <Widget>[
-                _SummaryBadge(label: '${session.gameCount}게임'),
-                _SummaryBadge(label: '총점 ${session.total}', emphasized: true),
                 _SummaryBadge(
                   label: 'AVG ${session.average.toStringAsFixed(1)}',
                   emphasized: true,
                 ),
+                _SummaryBadge(label: '총핀 ${session.total}', emphasized: true),
+                _SummaryBadge(label: '${session.gameCount}게임'),
               ],
             ),
             if (memos.isNotEmpty) ...<Widget>[
@@ -350,32 +598,6 @@ class _RecordCard extends StatelessWidget {
                     ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GameTypeChip extends StatelessWidget {
-  const _GameTypeChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.65)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: AppColors.primaryBright,
-          fontSize: 14,
-          fontWeight: FontWeight.w800,
         ),
       ),
     );

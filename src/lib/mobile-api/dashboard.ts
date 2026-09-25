@@ -1,6 +1,12 @@
 import prisma from "@/lib/prisma";
-import { getPersonalStatisticsData, summarizeIntegratedRecords, type IntegratedRecord } from "@/lib/personal-statistics";
+import {
+    getAllPersonalStatisticsData,
+    getPersonalStatisticsData,
+    summarizeIntegratedRecords,
+    type IntegratedRecord,
+} from "@/lib/personal-statistics";
 import { calculatePersonalProfile, PERSONAL_RADAR_AXES } from "@/lib/personal-profile";
+import { getMobileSeasonRanking } from "@/lib/mobile-api/club-expansion";
 import { groupScores } from "@/lib/score-groups";
 import {
     calculateTeamStatistics,
@@ -15,6 +21,8 @@ type DashboardTeam = {
     name: string;
     ownerId: string | null;
     User: { id: string }[];
+    seasonRankingEnabled: boolean;
+    bowlerHiddenEnabled: boolean;
 };
 type DashboardMembership = { id: string; teamId: string; team: DashboardTeam };
 type DashboardUser = { id: string; name: string; teamMemberships: DashboardMembership[] };
@@ -24,12 +32,20 @@ type DashboardScoreRow = Omit<TeamRecordScore, "user"> & {
 };
 type DashboardMemberRow = TeamRecordMember & { teamId: string };
 type DashboardPersonalData = Awaited<ReturnType<typeof getPersonalStatisticsData>>;
+type DashboardClubAchievement = {
+    teamId: string; teamName: string; enabled: boolean; bowlerHiddenEnabled: boolean;
+    seasonName: string | null; rank: number | null; points: number;
+    gold: number; silver: number; bronze: number;
+    individualPoints: number | null; teamPoints: number | null; eventPoints: number | null;
+};
 
 export type MobileDashboardDependencies = {
     findUser(userId: string): Promise<DashboardUser | null>;
     loadPersonal(user: DashboardUser, year: number): Promise<DashboardPersonalData>;
     listTeamScores(teamIds: string[], start: Date, end: Date): Promise<DashboardScoreRow[]>;
     listTeamMembers(teamIds: string[]): Promise<DashboardMemberRow[]>;
+    countAllGames?(user: DashboardUser): Promise<number>;
+    listClubAchievements?(user: DashboardUser): Promise<DashboardClubAchievement[]>;
 };
 
 const defaultDependencies: MobileDashboardDependencies = {
@@ -50,6 +66,8 @@ const defaultDependencies: MobileDashboardDependencies = {
                                 id: true,
                                 name: true,
                                 ownerId: true,
+                                seasonRankingEnabled: true,
+                                bowlerHiddenEnabled: true,
                                 User: { select: { id: true } },
                             },
                         },
@@ -89,6 +107,33 @@ const defaultDependencies: MobileDashboardDependencies = {
             name: member.alias || member.user.name,
         })));
     },
+    async countAllGames(user) {
+        return (await getAllPersonalStatisticsData(user)).allRecords.length;
+    },
+    async listClubAchievements(user) {
+        return Promise.all(user.teamMemberships.map(async (membership) => {
+            const team = membership.team;
+            if (!team.seasonRankingEnabled) return emptyClubAchievement(membership);
+            const ranking = await getMobileSeasonRanking(user.id, membership.teamId);
+            const mine = ranking.rankings.find((row) => row.id === membership.id);
+            const hiddenMine = mine && "individualPoints" in mine ? mine : null;
+            return {
+                teamId: team.id,
+                teamName: team.name,
+                enabled: ranking.enabled,
+                bowlerHiddenEnabled: team.bowlerHiddenEnabled,
+                seasonName: ranking.season?.name ?? null,
+                rank: mine?.rank ?? null,
+                points: mine?.points ?? 0,
+                gold: mine?.gold ?? 0,
+                silver: mine?.silver ?? 0,
+                bronze: mine?.bronze ?? 0,
+                individualPoints: team.bowlerHiddenEnabled ? hiddenMine?.individualPoints ?? 0 : null,
+                teamPoints: team.bowlerHiddenEnabled ? hiddenMine?.teamPoints ?? 0 : null,
+                eventPoints: team.bowlerHiddenEnabled ? hiddenMine?.eventPoints ?? 0 : null,
+            };
+        }));
+    },
 };
 
 // Fixed range accepts historic records and planned future years.
@@ -111,13 +156,29 @@ export async function getMobileDashboard(
     const start = new Date(`${year}-01-01T00:00:00.000Z`);
     const end = new Date(`${year}-12-31T23:59:59.999Z`);
     const teamIds = user.teamMemberships.map((membership) => membership.teamId);
-    const [personal, scoreRows, memberRows] = await Promise.all([
+    const [personal, scoreRows, memberRows, clubAchievements] = await Promise.all([
         dependencies.loadPersonal(user, year),
         dependencies.listTeamScores(teamIds, start, end),
         dependencies.listTeamMembers(teamIds),
+        dependencies.listClubAchievements ? dependencies.listClubAchievements(user) : Promise.resolve([]),
     ]);
+    const compatiblePersonal = personal as DashboardPersonalData & {
+        allRecords?: IntegratedRecord[];
+        myYearlyScores?: unknown[];
+    };
+    const allRecords = compatiblePersonal.allRecords ?? personal.integratedRecords;
+    const totalGameCount = dependencies.countAllGames
+        ? await dependencies.countAllGames(user)
+        : (compatiblePersonal.myYearlyScores?.length
+            ?? personal.integratedRecords.filter((record) => record.source === "PERSONAL").length)
+            + personal.officialRecords.length;
     return {
         ...summarizeIntegratedRecords(personal.integratedRecords, year),
+        totalGameCount,
+        regularAverage: categoryAverage(allRecords.filter((record) =>
+            record.source === "PERSONAL" && record.gameType === "정기전")),
+        officialAverage: categoryAverage(personal.officialRecords),
+        clubAchievements,
         ...createDashboardExtensions(user, personal.integratedRecords, personal.officialRecords, scoreRows, memberRows),
     };
 }
@@ -243,5 +304,32 @@ function emptyDashboardExtensions() {
             official: { average: 0, highScore: 0, lowScore: 0, gameCount: 0, roundSpread: 0, roundCount: 0 },
         },
         teamSummaries: [],
+        totalGameCount: 0,
+        regularAverage: 0,
+        officialAverage: 0,
+        clubAchievements: [],
+    };
+}
+
+function categoryAverage(records: IntegratedRecord[]) {
+    if (records.length === 0) return 0;
+    return Number((records.reduce((sum, record) => sum + record.score, 0) / records.length).toFixed(1));
+}
+
+function emptyClubAchievement(membership: DashboardMembership): DashboardClubAchievement {
+    return {
+        teamId: membership.team.id,
+        teamName: membership.team.name,
+        enabled: false,
+        bowlerHiddenEnabled: membership.team.bowlerHiddenEnabled,
+        seasonName: null,
+        rank: null,
+        points: 0,
+        gold: 0,
+        silver: 0,
+        bronze: 0,
+        individualPoints: null,
+        teamPoints: null,
+        eventPoints: null,
     };
 }

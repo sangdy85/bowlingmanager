@@ -10,6 +10,9 @@ final Dashboard testDashboard = Dashboard(
   average: 187.4,
   highScore: 245,
   gameCount: 36,
+  totalGameCount: 36,
+  regularAverage: 187.4,
+  officialAverage: 201.7,
   recentAverage: 201.7,
   recentScores: <DashboardScore>[
     DashboardScore(
@@ -45,6 +48,23 @@ final Dashboard testDashboard = Dashboard(
       total: 404,
       average: 202,
       gameCount: 2,
+    ),
+  ],
+  clubAchievements: const <DashboardClubAchievement>[
+    DashboardClubAchievement(
+      teamId: 'team-1',
+      teamName: '테스트 팀',
+      enabled: true,
+      bowlerHiddenEnabled: false,
+      seasonName: '2026 시즌',
+      rank: 2,
+      points: 20,
+      gold: 1,
+      silver: 0,
+      bronze: 0,
+      individualPoints: null,
+      teamPoints: null,
+      eventPoints: null,
     ),
   ],
 );

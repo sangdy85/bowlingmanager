@@ -217,6 +217,26 @@ void main() {
             'average': 218.5,
           },
         ],
+        'regularAverage': 212.4,
+        'officialAverage': 205.8,
+        'totalGameCount': 92,
+        'clubAchievements': <Object>[
+          <String, Object?>{
+            'teamId': 'team-1',
+            'teamName': '배볼러',
+            'enabled': true,
+            'bowlerHiddenEnabled': true,
+            'seasonName': '2026 시즌',
+            'rank': 2,
+            'points': 30,
+            'gold': 1,
+            'silver': 1,
+            'bronze': 0,
+            'individualPoints': 10,
+            'teamPoints': 12,
+            'eventPoints': 8,
+          },
+        ],
       });
 
       expect(dashboard.profileRadar.axes, hasLength(5));
@@ -224,6 +244,11 @@ void main() {
       expect(dashboard.medals.goldCount, 3);
       expect(dashboard.personalStats.regular.average, 210.5);
       expect(dashboard.teamSummaries.single.myRole, DashboardTeamRole.manager);
+      expect(dashboard.regularAverage, 212.4);
+      expect(dashboard.officialAverage, 205.8);
+      expect(dashboard.totalGameCount, 92);
+      expect(dashboard.clubAchievements.single.bowlerHiddenEnabled, isTrue);
+      expect(dashboard.clubAchievements.single.individualPoints, 10);
     },
   );
 

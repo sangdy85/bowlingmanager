@@ -56,7 +56,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.bootstrapCount, 1);
-    expect(find.text('안녕하세요, 볼러님'), findsOneWidget);
+    expect(find.text('안녕하세요,\n테스트 볼러님 👋'), findsOneWidget);
     expect(find.text('다시 만나 반가워요'), findsNothing);
   });
 
@@ -89,8 +89,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.loginCount, 1);
-    expect(find.text('안녕하세요, 볼러님'), findsOneWidget);
-    expect(find.text('CURRENT AVG'), findsOneWidget);
+    expect(find.text('안녕하세요,\n테스트 볼러님 👋'), findsOneWidget);
+    expect(find.text('정기전 AVG'), findsOneWidget);
     expect(find.text('촬영'), findsOneWidget);
   });
 

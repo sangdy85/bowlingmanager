@@ -43,15 +43,26 @@ class ScorePagination {
 }
 
 class ScoresPage {
-  const ScoresPage({required this.items, required this.pagination});
+  const ScoresPage({
+    required this.items,
+    required this.pagination,
+    this.availableYears = const <int>[],
+  });
 
   final List<GameSession> items;
   final ScorePagination pagination;
+  final List<int> availableYears;
 
   factory ScoresPage.fromJson(Map<String, dynamic> json) {
     final Object? items = json['items'];
     final Object? pagination = json['pagination'];
-    if (items is! List || pagination is! Map) {
+    final Object? availableYears = json['availableYears'] ?? <Object>[];
+    if (items is! List ||
+        pagination is! Map ||
+        availableYears is! List ||
+        availableYears.any(
+          (year) => year is! int || year < 1900 || year > 2100,
+        )) {
       throw const FormatException('Invalid scores response.');
     }
 
@@ -63,10 +74,7 @@ class ScoresPage {
           if (item is! Map) {
             throw const FormatException('Invalid game session response.');
           }
-          return GameSession.fromJson(
-            Map<String, dynamic>.from(item),
-            enforceScoreRange: true,
-          );
+          return GameSession.fromJson(Map<String, dynamic>.from(item));
         })
         .toList(growable: false);
 
@@ -76,6 +84,75 @@ class ScoresPage {
     return ScoresPage(
       items: List<GameSession>.unmodifiable(parsedItems),
       pagination: parsedPagination,
+      availableYears: List<int>.unmodifiable(availableYears.cast<int>()),
     );
   }
+}
+
+enum RecordCategory {
+  all('ALL', '전체'),
+  regular('REGULAR', '정기전'),
+  meetup('MEETUP', '벙개'),
+  exchange('EXCHANGE', '교류전'),
+  official('OFFICIAL', '볼링장 공식'),
+  other('OTHER', '기타');
+
+  const RecordCategory(this.apiValue, this.label);
+  final String apiValue;
+  final String label;
+}
+
+enum OfficialRecordCategory {
+  all('ALL', '전체'),
+  standingLeague('STANDING_LEAGUE', '상주리그'),
+  championship('CHAMPIONSHIP', '챔프전'),
+  event('EVENT', '이벤트전');
+
+  const OfficialRecordCategory(this.apiValue, this.label);
+  final String apiValue;
+  final String label;
+}
+
+class RecordsFilter {
+  const RecordsFilter({
+    this.year,
+    this.category = RecordCategory.all,
+    this.officialCategory = OfficialRecordCategory.all,
+    this.minAverage,
+    this.maxAverage,
+  });
+
+  final int? year;
+  final RecordCategory category;
+  final OfficialRecordCategory officialCategory;
+  final double? minAverage;
+  final double? maxAverage;
+
+  Map<String, Object> toQuery() => <String, Object>{
+    'year': ?year,
+    'category': category.apiValue,
+    if (category == RecordCategory.official)
+      'officialType': officialCategory.apiValue,
+    'minAverage': ?minAverage,
+    'maxAverage': ?maxAverage,
+  };
+
+  RecordsFilter copyWith({
+    int? year,
+    bool clearYear = false,
+    RecordCategory? category,
+    OfficialRecordCategory? officialCategory,
+    double? minAverage,
+    bool clearMinAverage = false,
+    double? maxAverage,
+    bool clearMaxAverage = false,
+  }) => RecordsFilter(
+    year: clearYear ? null : year ?? this.year,
+    category: category ?? this.category,
+    officialCategory: category != null && category != RecordCategory.official
+        ? OfficialRecordCategory.all
+        : officialCategory ?? this.officialCategory,
+    minAverage: clearMinAverage ? null : minAverage ?? this.minAverage,
+    maxAverage: clearMaxAverage ? null : maxAverage ?? this.maxAverage,
+  );
 }

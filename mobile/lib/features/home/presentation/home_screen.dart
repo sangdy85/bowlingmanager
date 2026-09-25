@@ -20,8 +20,11 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AuthUser? user = ref.watch(authControllerProvider).user;
     if (user == null) {
-      return const _HomeLoading(userName: '볼러님');
+      return const _HomeLoading(userName: '볼러');
     }
+    final String userName = user.name?.trim().isNotEmpty == true
+        ? user.name!.trim()
+        : '볼러';
 
     final AsyncValue<Dashboard> dashboard = ref.watch(
       dashboardProvider(user.id),
@@ -29,15 +32,15 @@ class HomeScreen extends ConsumerWidget {
     return dashboard.when(
       data: (Dashboard data) => _DashboardContent(
         dashboard: data,
-        userName: '볼러님',
+        userName: userName,
         onRefresh: () => ref.refresh(dashboardProvider(user.id).future),
       ),
       error: (Object error, StackTrace stackTrace) => _HomeError(
-        userName: '볼러님',
+        userName: userName,
         message: _dashboardErrorMessage(error),
         onRetry: () => ref.invalidate(dashboardProvider(user.id)),
       ),
-      loading: () => const _HomeLoading(userName: '볼러님'),
+      loading: () => _HomeLoading(userName: userName),
     );
   }
 }
@@ -67,63 +70,50 @@ class _DashboardContent extends StatelessWidget {
         children: <Widget>[
           _HomeHeader(userName: userName),
           const SizedBox(height: 26),
-          _AverageCard(
-            average: dashboard.average,
-            recentAverage: dashboard.recentAverage,
-          ),
-          const SizedBox(height: 14),
           Row(
             children: <Widget>[
               Expanded(
                 child: _SummaryCard(
-                  label: 'HIGH',
-                  value: '${dashboard.highScore}',
+                  label: '정기전 AVG',
+                  value: _formatAverage(dashboard.regularAverage),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _SummaryCard(
-                  label: 'GAMES',
-                  value: '${dashboard.gameCount}',
+                  label: '공식전 AVG',
+                  value: _formatAverage(dashboard.officialAverage),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _SummaryCard(
-                  label: 'RECENT AVG',
-                  value: _formatAverage(dashboard.recentAverage),
+                  label: '게임 수',
+                  value: '${dashboard.totalGameCount}',
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 28),
+          const _SectionTitle(title: '나의 동호회 성과'),
+          const SizedBox(height: 12),
+          if (dashboard.clubAchievements.isEmpty)
+            const _EmptyAchievementCard()
+          else
+            for (final DashboardClubAchievement achievement
+                in dashboard.clubAchievements) ...<Widget>[
+              _ClubAchievementCard(achievement: achievement),
+              const SizedBox(height: 10),
+            ],
           const SizedBox(height: 28),
           const _SectionTitle(title: '나의 기록실'),
           const SizedBox(height: 12),
           _RadarCard(radar: dashboard.profileRadar),
           const SizedBox(height: 28),
-          const _SectionTitle(title: '나의 입상'),
-          const SizedBox(height: 12),
-          _MedalsCard(medals: dashboard.medals),
-          const SizedBox(height: 28),
           const _SectionTitle(title: '최근 경기 AVG'),
           const SizedBox(height: 12),
           _TrendCard(sessions: dashboard.recentSessions),
           const SizedBox(height: 28),
-          const _SectionTitle(title: '개인 상세 통계'),
-          const SizedBox(height: 12),
-          _PersonalStatsCard(stats: dashboard.personalStats),
-          const SizedBox(height: 28),
-          const _SectionTitle(title: '팀 기록'),
-          const SizedBox(height: 12),
-          if (dashboard.teamSummaries.isEmpty)
-            const _EmptyTeamCard()
-          else
-            for (final DashboardTeamSummary team
-                in dashboard.teamSummaries) ...<Widget>[
-              _TeamSummaryCard(team: team),
-              const SizedBox(height: 10),
-            ],
-          const SizedBox(height: 18),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
@@ -140,6 +130,25 @@ class _DashboardContent extends StatelessWidget {
           else
             for (final GameSession session in recentSessions) ...<Widget>[
               _RecentGameCard(session: session),
+              const SizedBox(height: 10),
+            ],
+          const SizedBox(height: 18),
+          const _SectionTitle(title: '나의 입상'),
+          const SizedBox(height: 12),
+          _MedalsCard(medals: dashboard.medals),
+          const SizedBox(height: 28),
+          const _SectionTitle(title: '개인 상세 통계'),
+          const SizedBox(height: 12),
+          _PersonalStatsCard(stats: dashboard.personalStats),
+          const SizedBox(height: 28),
+          const _SectionTitle(title: '팀 기록'),
+          const SizedBox(height: 12),
+          if (dashboard.teamSummaries.isEmpty)
+            const _EmptyTeamCard()
+          else
+            for (final DashboardTeamSummary team
+                in dashboard.teamSummaries) ...<Widget>[
+              _TeamSummaryCard(team: team),
               const SizedBox(height: 10),
             ],
         ],
@@ -162,7 +171,7 @@ class _HomeHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text('안녕하세요, $userName', style: AppTextStyles.headline),
+              Text('안녕하세요,\n$userName님 👋', style: AppTextStyles.headline),
               const SizedBox(height: 5),
               const Text(
                 '오늘도 좋은 게임을 준비해볼까요?',
@@ -251,75 +260,6 @@ class _HomeError extends StatelessWidget {
   }
 }
 
-class _AverageCard extends StatelessWidget {
-  const _AverageCard({required this.average, required this.recentAverage});
-
-  final double average;
-  final double recentAverage;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[Color(0xFF173B63), Color(0xFF10263D)],
-        ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFF27517A)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Text('CURRENT AVG', style: AppTextStyles.label),
-                const SizedBox(height: 12),
-                Text(
-                  _formatAverage(average),
-                  style: AppTextStyles.displayScore,
-                ),
-              ],
-            ),
-          ),
-          DecoratedBox(
-            decoration: const BoxDecoration(
-              color: Color(0x263FD7A4),
-              borderRadius: BorderRadius.all(Radius.circular(20)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  const Icon(
-                    Icons.history_rounded,
-                    color: AppColors.success,
-                    size: 17,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '최근 ${_formatAverage(recentAverage)}',
-                    style: const TextStyle(
-                      color: AppColors.success,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({required this.label, required this.value});
 
@@ -353,6 +293,98 @@ class _SummaryCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ClubAchievementCard extends StatelessWidget {
+  const _ClubAchievementCard({required this.achievement});
+
+  final DashboardClubAchievement achievement;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      key: Key('club-achievement-${achievement.teamId}'),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () =>
+            context.go('/club/${Uri.encodeComponent(achievement.teamId)}'),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      achievement.teamName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (!achievement.enabled || achievement.seasonName == null)
+                const Text(
+                  '진행 중인 시즌 성과가 없습니다.',
+                  style: TextStyle(color: AppColors.textSecondary),
+                )
+              else ...<Widget>[
+                Text(
+                  '${achievement.seasonName} · '
+                  '${achievement.rank == null ? '순위 없음' : '${achievement.rank}위'} · '
+                  '${achievement.points}P',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                if (achievement.gold + achievement.silver + achievement.bronze >
+                    0) ...<Widget>[
+                  const SizedBox(height: 6),
+                  Text(
+                    '입상 ${achievement.gold}/${achievement.silver}/${achievement.bronze}',
+                    style: const TextStyle(color: AppColors.textSecondary),
+                  ),
+                ],
+                if (achievement.bowlerHiddenEnabled) ...<Widget>[
+                  const SizedBox(height: 6),
+                  Text(
+                    '개인 ${achievement.individualPoints ?? 0}P · '
+                    '팀 ${achievement.teamPoints ?? 0}P · '
+                    '이벤트 ${achievement.eventPoints ?? 0}P',
+                    style: const TextStyle(color: AppColors.textSecondary),
+                  ),
+                ],
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyAchievementCard extends StatelessWidget {
+  const _EmptyAchievementCard();
+
+  @override
+  Widget build(BuildContext context) => const Card(
+    child: Padding(
+      padding: EdgeInsets.all(20),
+      child: Text(
+        '표시할 동호회 성과가 없습니다.',
+        style: TextStyle(color: AppColors.textSecondary),
+      ),
+    ),
+  );
 }
 
 class _SectionTitle extends StatelessWidget {

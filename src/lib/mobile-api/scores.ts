@@ -7,6 +7,11 @@ import {
 } from "@/lib/mobile-api/score-record";
 import { groupScores, type ScoreGameGroup } from "@/lib/score-groups";
 import {
+    getAllPersonalStatisticsData,
+    type IntegratedRecord,
+    type PersonalStatisticsUser,
+} from "@/lib/personal-statistics";
+import {
     createTeamActivityDetail,
     teamActivityDateKey,
     type TeamRecordMember,
@@ -46,7 +51,22 @@ export type MobileScoreGroupDependencies = {
     listUserScores(userId: string): Promise<MobileGroupScoreRow[]>;
     listTeamRegularScores(scopes: TeamRankScope[]): Promise<TeamRankScoreRow[]>;
     listTeamMembers(teamIds: string[]): Promise<TeamRankMemberRow[]>;
+    listIntegratedRecords?(userId: string): Promise<IntegratedRecord[]>;
 };
+
+export type MobileRecordCategory = "ALL" | "REGULAR" | "MEETUP" | "EXCHANGE" | "OFFICIAL" | "OTHER";
+export type MobileOfficialCategory = "ALL" | "STANDING_LEAGUE" | "CHAMPIONSHIP" | "EVENT";
+export type MobileScoreGroupFilters = {
+    year: number | null;
+    category: MobileRecordCategory;
+    officialType: MobileOfficialCategory;
+    minAverage: number | null;
+    maxAverage: number | null;
+};
+
+export class MobileScoreFilterError extends Error {
+    constructor(public readonly code: string, message: string) { super(message); }
+}
 
 const defaultGroupDependencies: MobileScoreGroupDependencies = {
     listUserScores(userId) {
@@ -104,6 +124,21 @@ const defaultGroupDependencies: MobileScoreGroupDependencies = {
             },
         });
     },
+    async listIntegratedRecords(userId) {
+        const user: PersonalStatisticsUser | null = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                name: true,
+                teamMemberships: {
+                    where: { team: { isActive: true } },
+                    select: { teamId: true, team: { select: { name: true } } },
+                },
+            },
+        });
+        if (!user) return [];
+        return (await getAllPersonalStatisticsData(user)).allRecords;
+    },
 };
 
 function parsePositiveInteger(value: string | null, fallback: number) {
@@ -120,6 +155,40 @@ export function parseMobileScorePagination(searchParams: URLSearchParams) {
     return {
         page,
         limit: Math.min(requestedLimit, MAX_LIMIT),
+    };
+}
+
+export function parseMobileScoreFilters(searchParams: URLSearchParams): MobileScoreGroupFilters {
+    const single = (key: string) => {
+        const values = searchParams.getAll(key);
+        if (values.length > 1) throw new MobileScoreFilterError("INVALID_FILTER", "기록 필터를 확인해주세요.");
+        return values[0]?.trim() ?? "";
+    };
+    const yearText = single("year");
+    const categoryText = single("category") || "ALL";
+    const officialText = single("officialType") || "ALL";
+    const minText = single("minAverage");
+    const maxText = single("maxAverage");
+    const categories = new Set<MobileRecordCategory>(["ALL", "REGULAR", "MEETUP", "EXCHANGE", "OFFICIAL", "OTHER"]);
+    const officialTypes = new Set<MobileOfficialCategory>(["ALL", "STANDING_LEAGUE", "CHAMPIONSHIP", "EVENT"]);
+    const year = yearText ? Number(yearText) : null;
+    const minAverage = minText ? Number(minText) : null;
+    const maxAverage = maxText ? Number(maxText) : null;
+    if ((year !== null && (!Number.isInteger(year) || year < 1900 || year > 2100))
+        || !categories.has(categoryText as MobileRecordCategory)
+        || !officialTypes.has(officialText as MobileOfficialCategory)
+        || (officialText !== "ALL" && categoryText !== "OFFICIAL")
+        || (minAverage !== null && (!Number.isFinite(minAverage) || minAverage < 0 || minAverage > 1000))
+        || (maxAverage !== null && (!Number.isFinite(maxAverage) || maxAverage < 0 || maxAverage > 1000))
+        || (minAverage !== null && maxAverage !== null && minAverage > maxAverage)) {
+        throw new MobileScoreFilterError("INVALID_FILTER", "기록 필터를 확인해주세요.");
+    }
+    return {
+        year,
+        category: categoryText as MobileRecordCategory,
+        officialType: officialText as MobileOfficialCategory,
+        minAverage,
+        maxAverage,
     };
 }
 
@@ -155,19 +224,33 @@ export async function getMobileScoreGroups(
     page: number,
     limit: number,
     dependencies: MobileScoreGroupDependencies = defaultGroupDependencies,
+    filters: MobileScoreGroupFilters = {
+        year: null, category: "ALL", officialType: "ALL", minAverage: null, maxAverage: null,
+    },
 ) {
     const scoreRecords = await dependencies.listUserScores(userId);
-    const groups = groupScores(scoreRecords.map(({ Team, ...score }) => ({
-        ...score,
-        source: "PERSONAL" as const,
-        team: Team,
-    })));
+    const records = dependencies.listIntegratedRecords
+        ? await dependencies.listIntegratedRecords(userId)
+        : scoreRecords.map(({ Team, ...score }) => ({
+            ...score,
+            source: "PERSONAL" as const,
+            team: Team,
+        }));
+    const allGroups = groupScores(records);
+    const availableYears = [...new Set(allGroups.map((group) => group.gameDate.getUTCFullYear()))]
+        .sort((left, right) => right - left);
+    const groups = allGroups.filter((group) => matchesRecordFilters(group, filters));
     const total = groups.length;
     const start = (page - 1) * limit;
     const pageItems = groups.slice(start, start + limit);
+    const ranked = await addTeamRegularRanks(userId, pageItems, scoreRecords, dependencies);
 
     return {
-        items: await addTeamRegularRanks(userId, pageItems, scoreRecords, dependencies),
+        items: ranked.map((group) => {
+            const taxonomy = recordTaxonomy(group);
+            return { ...group, year: group.gameDate.getUTCFullYear(), ...taxonomy };
+        }),
+        availableYears,
         pagination: {
             page,
             limit,
@@ -175,6 +258,32 @@ export async function getMobileScoreGroups(
             totalPages: Math.ceil(total / limit),
         },
     };
+}
+
+export function recordTaxonomy(record: Pick<ScoreGameGroup, "source" | "gameType">) {
+    const gameType = record.gameType?.trim() ?? "";
+    if (record.source === "LEAGUE" || gameType === "상주" || gameType === "상주리그") {
+        return { category: "OFFICIAL" as const, subcategory: "STANDING_LEAGUE" as const };
+    }
+    if (record.source === "TOURNAMENT" || gameType === "챔프전" || gameType === "이벤트전") {
+        return {
+            category: "OFFICIAL" as const,
+            subcategory: (gameType === "이벤트전" ? "EVENT" : "CHAMPIONSHIP") as MobileOfficialCategory,
+        };
+    }
+    if (gameType === "정기전") return { category: "REGULAR" as const, subcategory: null };
+    if (gameType === "벙개") return { category: "MEETUP" as const, subcategory: null };
+    if (gameType === "교류전") return { category: "EXCHANGE" as const, subcategory: null };
+    return { category: "OTHER" as const, subcategory: null };
+}
+
+function matchesRecordFilters(group: ScoreGameGroup, filters: MobileScoreGroupFilters) {
+    const taxonomy = recordTaxonomy(group);
+    return (filters.year === null || group.gameDate.getUTCFullYear() === filters.year)
+        && (filters.category === "ALL" || taxonomy.category === filters.category)
+        && (filters.officialType === "ALL" || taxonomy.subcategory === filters.officialType)
+        && (filters.minAverage === null || group.average >= filters.minAverage)
+        && (filters.maxAverage === null || group.average <= filters.maxAverage);
 }
 
 async function addTeamRegularRanks(
@@ -192,7 +301,10 @@ async function addTeamRegularRanks(
         const dates = new Set<string>();
         let complete = true;
         for (const score of group.scores) {
-            const source = userScoreById.get(score.id);
+            const source = userScoreById.get(score.id)
+                ?? (score.id.startsWith("PERSONAL:")
+                    ? userScoreById.get(score.id.slice("PERSONAL:".length))
+                    : undefined);
             if (!source) {
                 complete = false;
                 break;

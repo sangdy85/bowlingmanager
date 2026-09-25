@@ -30,6 +30,7 @@ void main() {
       expect(capturedRequest?.uri.queryParameters, <String, String>{
         'page': '2',
         'limit': '20',
+        'category': 'ALL',
       });
       expect(page.items.single.scores.single.score, 215);
       expect(page.items.single.rank?.position, 2);
@@ -110,6 +111,7 @@ const Map<String, Object> _scoresEnvelope = <String, Object>{
         'rank': <String, int>{'position': 2, 'participantCount': 13},
       },
     ],
+    'availableYears': <int>[2026],
     'pagination': <String, Object>{
       'page': 2,
       'limit': 20,

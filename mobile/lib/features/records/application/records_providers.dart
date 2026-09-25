@@ -29,6 +29,7 @@ class RecordsController extends AsyncNotifier<RecordsState> {
 
   final String userId;
   late ScoresRepository _repository;
+  RecordsFilter _filter = const RecordsFilter();
 
   @override
   Future<RecordsState> build() {
@@ -40,8 +41,24 @@ class RecordsController extends AsyncNotifier<RecordsState> {
     final ScoresPage page = await _repository.fetchScores(
       page: 1,
       limit: recordsPageLimit,
+      filter: _filter,
     );
-    return RecordsState(items: page.items, pagination: page.pagination);
+    return RecordsState(
+      items: page.items,
+      pagination: page.pagination,
+      filter: _filter,
+      availableYears: page.availableYears,
+    );
+  }
+
+  Future<void> applyFilter(RecordsFilter filter) async {
+    _filter = filter;
+    state = const AsyncLoading<RecordsState>();
+    final AsyncValue<RecordsState> nextState = await AsyncValue.guard(
+      _fetchFirstPage,
+    );
+    if (!ref.mounted) return;
+    state = nextState;
   }
 
   Future<void> retryInitial() async {
@@ -94,6 +111,7 @@ class RecordsController extends AsyncNotifier<RecordsState> {
       final ScoresPage nextPage = await _repository.fetchScores(
         page: requestedPage,
         limit: recordsPageLimit,
+        filter: _filter,
       );
       if (!ref.mounted) return;
       if (nextPage.pagination.page != requestedPage) {
@@ -113,6 +131,10 @@ class RecordsController extends AsyncNotifier<RecordsState> {
             ...uniqueItems,
           ]),
           pagination: nextPage.pagination,
+          filter: _filter,
+          availableYears: nextPage.availableYears.isEmpty
+              ? current.availableYears
+              : nextPage.availableYears,
         ),
       );
     } on Object catch (error) {

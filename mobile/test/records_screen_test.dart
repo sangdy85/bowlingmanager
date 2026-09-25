@@ -4,6 +4,7 @@ import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
+import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,9 +27,9 @@ void main() {
     pending.complete(testScoresPage);
     await tester.pumpAndSettle();
 
-    expect(find.text('2026.09.15'), findsOneWidget);
+    expect(find.textContaining('2026.09.15'), findsOneWidget);
     expect(find.text('215'), findsOneWidget);
-    expect(find.text('정기전'), findsOneWidget);
+    expect(find.textContaining('정기전'), findsWidgets);
     expect(find.text('테스트 팀'), findsOneWidget);
     expect(find.text('synthetic memo'), findsOneWidget);
     expect(find.byType(RefreshIndicator), findsOneWidget);
@@ -42,6 +43,44 @@ void main() {
 
     expect(find.text('아직 기록이 없습니다.'), findsOneWidget);
   });
+
+  testWidgets(
+    'Records groups years and exposes server-backed category filters',
+    (WidgetTester tester) async {
+      final FakeScoresRepository repository = FakeScoresRepository()
+        ..pages[1] = scoresPage(
+          page: 1,
+          total: 2,
+          availableYears: const <int>[2026, 2025],
+          items: <GameSession>[
+            scoreRecord('newer', 220),
+            scoreRecord('older', 190, year: 2025),
+          ],
+        );
+
+      await _openRecords(tester, repository);
+
+      expect(find.byKey(const Key('records-year-2026')), findsOneWidget);
+      expect(find.byKey(const Key('records-year-2025')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('records-category-OFFICIAL')));
+      await tester.pumpAndSettle();
+
+      expect(
+        repository.requestedFilters.last.category,
+        RecordCategory.official,
+      );
+      expect(find.byKey(const Key('records-official-ALL')), findsOneWidget);
+      expect(
+        find.byKey(const Key('records-official-STANDING_LEAGUE')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('records-official-CHAMPIONSHIP')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('records-official-EVENT')), findsOneWidget);
+    },
+  );
 
   testWidgets('Records groups variable games with total, average and memos', (
     WidgetTester tester,
@@ -67,14 +106,14 @@ void main() {
 
     await _openRecords(tester, repository);
 
-    expect(find.text('정기전'), findsOneWidget);
+    expect(find.textContaining('정기전'), findsWidgets);
     expect(find.text('배볼러'), findsOneWidget);
-    expect(find.text('2026.09.22'), findsOneWidget);
+    expect(find.textContaining('2026.09.22'), findsOneWidget);
     for (final String score in <String>['202', '213', '208', '192']) {
       expect(find.text(score), findsOneWidget);
     }
     expect(find.text('4게임'), findsOneWidget);
-    expect(find.text('총점 815'), findsOneWidget);
+    expect(find.text('총핀 815'), findsOneWidget);
     expect(find.text('AVG 203.8'), findsOneWidget);
     expect(find.text('202 · 첫 메모'), findsOneWidget);
     expect(find.text('213 · 둘째 메모'), findsOneWidget);
@@ -119,12 +158,12 @@ void main() {
       ..pages[1] = scoresPage(page: 1, total: 1, items: <GameSession>[session]);
     await _openRecords(tester, repository);
 
-    expect(find.text('벙개'), findsOneWidget);
+    expect(find.textContaining('벙개'), findsWidgets);
     expect(find.byKey(const Key('record-rank-1')), findsNothing);
     expect(find.byType(Icon), findsWidgets);
   });
 
-  testWidgets('Records card wraps twelve scores on a 360px scaled layout', (
+  testWidgets('Records card scrolls twelve scores on a 360px scaled layout', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(360, 720);
@@ -158,9 +197,10 @@ void main() {
     await _openRecords(tester, repository);
 
     expect(find.text('12게임'), findsOneWidget);
-    expect(find.text('총점 3600'), findsOneWidget);
+    expect(find.text('총핀 3600'), findsOneWidget);
     expect(find.text('AVG 300.0'), findsOneWidget);
     expect(find.text('300'), findsNWidgets(12));
+    expect(find.byKey(const Key('record-scores-long-session')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -199,6 +239,11 @@ void main() {
     await _openRecords(tester, repository);
 
     await tester.ensureVisible(find.byKey(const Key('records-load-more')));
+    await tester.drag(
+      find.byKey(const Key('records-list')),
+      const Offset(0, -180),
+    );
+    await tester.pump();
     await tester.tap(find.byKey(const Key('records-load-more')));
     await tester.pump();
 
@@ -235,6 +280,11 @@ void main() {
     await _openRecords(tester, repository);
 
     await tester.ensureVisible(find.byKey(const Key('records-load-more')));
+    await tester.drag(
+      find.byKey(const Key('records-list')),
+      const Offset(0, -180),
+    );
+    await tester.pump();
     await tester.tap(find.byKey(const Key('records-load-more')));
     await tester.pumpAndSettle();
 

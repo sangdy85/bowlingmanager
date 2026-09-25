@@ -7,6 +7,8 @@ class RecordsState {
   const RecordsState({
     required this.items,
     required this.pagination,
+    this.filter = const RecordsFilter(),
+    this.availableYears = const <int>[],
     this.isLoadingMore = false,
     this.paginationErrorMessage,
     this.refreshErrorMessage,
@@ -14,6 +16,8 @@ class RecordsState {
 
   final List<GameSession> items;
   final ScorePagination pagination;
+  final RecordsFilter filter;
+  final List<int> availableYears;
   final bool isLoadingMore;
   final String? paginationErrorMessage;
   final String? refreshErrorMessage;
@@ -23,6 +27,8 @@ class RecordsState {
   RecordsState copyWith({
     List<GameSession>? items,
     ScorePagination? pagination,
+    RecordsFilter? filter,
+    List<int>? availableYears,
     bool? isLoadingMore,
     Object? paginationErrorMessage = _unchanged,
     Object? refreshErrorMessage = _unchanged,
@@ -30,6 +36,8 @@ class RecordsState {
     return RecordsState(
       items: items ?? this.items,
       pagination: pagination ?? this.pagination,
+      filter: filter ?? this.filter,
+      availableYears: availableYears ?? this.availableYears,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       paginationErrorMessage: identical(paginationErrorMessage, _unchanged)
           ? this.paginationErrorMessage
