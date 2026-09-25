@@ -34,8 +34,6 @@ class _ClubRecordsScreenState extends ConsumerState<ClubRecordsScreen> {
   ClubRecordFilter _filter = ClubRecordFilter.regular;
   final Set<ClubRecordFilter> _activityFilters = <ClubRecordFilter>{
     ClubRecordFilter.regular,
-    ClubRecordFilter.casual,
-    ClubRecordFilter.house,
   };
   late int _section;
 
@@ -61,14 +59,6 @@ class _ClubRecordsScreenState extends ConsumerState<ClubRecordsScreen> {
       teamId: widget.teamId,
       year: _year,
       typesKey: clubActivityTypesKey(_activityFilters),
-    );
-    final ClubActivityFeedRequest overviewFeedRequest = (
-      userId: user.id,
-      teamId: widget.teamId,
-      year: _year,
-      typesKey: clubActivityTypesKey(const <ClubRecordFilter>{
-        ClubRecordFilter.regular,
-      }),
     );
     final AsyncValue<ClubStatistics> statistics = ref.watch(
       clubStatisticsProvider(request),
@@ -114,17 +104,17 @@ class _ClubRecordsScreenState extends ConsumerState<ClubRecordsScreen> {
               ButtonSegment<int>(
                 value: 0,
                 icon: Icon(Icons.dashboard_outlined),
-                label: Text('종합'),
+                label: Text('종합 순위'),
               ),
               ButtonSegment<int>(
                 value: 1,
                 icon: Icon(Icons.query_stats_rounded),
-                label: Text('팀원 통계'),
+                label: Text('종합 기록'),
               ),
               ButtonSegment<int>(
                 value: 2,
                 icon: Icon(Icons.event_note_rounded),
-                label: Text('활동 일지'),
+                label: Text('상세 기록'),
               ),
             ],
             selected: <int>{_section},
@@ -242,8 +232,7 @@ class _ClubRecordsScreenState extends ConsumerState<ClubRecordsScreen> {
           child: switch (_section) {
             0 => _OverviewBody(
               request: (userId: user.id, teamId: widget.teamId),
-              statistics: statistics,
-              feedRequest: overviewFeedRequest,
+              year: _year,
             ),
             1 => _StatisticsBody(request: request, value: statistics),
             _ => _ActivitiesBody(request: feedRequest),
@@ -255,14 +244,9 @@ class _ClubRecordsScreenState extends ConsumerState<ClubRecordsScreen> {
 }
 
 class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({
-    required this.request,
-    required this.statistics,
-    required this.feedRequest,
-  });
+  const _OverviewBody({required this.request, required this.year});
   final ClubExpansionRequest request;
-  final AsyncValue<ClubStatistics> statistics;
-  final ClubActivityFeedRequest feedRequest;
+  final int year;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -271,15 +255,13 @@ class _OverviewBody extends ConsumerWidget {
       userId: request.userId,
       teamId: request.teamId,
       seasonId: null as String?,
+      year: year,
       competitionType: 'ALL',
     );
-    final recentFeed = ref.watch(
-      clubActivityFeedControllerProvider(feedRequest),
-    );
-    if (profile.isLoading || statistics.isLoading) {
+    if (profile.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    final error = profile.error ?? statistics.error;
+    final error = profile.error;
     if (error != null) {
       return ListView(
         padding: const EdgeInsets.all(20),
@@ -314,19 +296,16 @@ class _OverviewBody extends ConsumerWidget {
       );
     }
     final ClubSeasonRanking? season = ranking?.requireValue;
-    final ClubStatisticsSummary summary = statistics.requireValue.summary;
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(clubTeamProfileProvider(request));
         if (team.seasonRankingEnabled) {
           ref.invalidate(clubSeasonRankingProvider(rankingRequest));
         }
-        ref.invalidate(clubActivityFeedControllerProvider(feedRequest));
         await Future.wait(<Future<Object?>>[
           ref.read(clubTeamProfileProvider(request).future),
           if (team.seasonRankingEnabled)
             ref.read(clubSeasonRankingProvider(rankingRequest).future),
-          ref.read(clubActivityFeedControllerProvider(feedRequest).future),
         ]);
       },
       child: ListView(
@@ -334,25 +313,6 @@ class _OverviewBody extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
         children: <Widget>[
-          if (team.notice?.isNotEmpty == true)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text('공지 · ${team.notice}'),
-              ),
-            ),
-          if (team.description?.isNotEmpty == true) ...<Widget>[
-            const SizedBox(height: 10),
-            Text(
-              team.description!,
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-          ],
-          const SizedBox(height: 14),
-          _SummaryCard(summary: summary),
-          const SizedBox(height: 16),
-          _RecentRegularCard(value: recentFeed),
-          const SizedBox(height: 16),
           if (!team.seasonRankingEnabled)
             const _EmptyCard(message: '시즌 순위표가 비활성화되어 있습니다.')
           else if (season?.season == null)
@@ -377,7 +337,6 @@ class _OverviewBody extends ConsumerWidget {
                     DataColumn(label: Text('🥉')),
                   ],
                   rows: season.rows
-                      .take(5)
                       .map(
                         (row) => DataRow(
                           cells: <DataCell>[
@@ -419,12 +378,72 @@ class _OverviewBody extends ConsumerWidget {
               const SizedBox(height: 14),
               _MedalLeaders(rows: season.rows),
             ],
+            const SizedBox(height: 22),
+            const Text('나의 대회 성적', style: AppTextStyles.title),
+            const SizedBox(height: 10),
+            _MyCompetitionHistory(items: season.myCompetitionHistory),
           ],
         ],
       ),
     );
   }
 }
+
+class _MyCompetitionHistory extends StatelessWidget {
+  const _MyCompetitionHistory({required this.items});
+
+  final List<ClubSeasonPointEntry> items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const _EmptyCard(message: '공식 대회 기록이 없습니다.');
+    }
+    final Map<int, List<ClubSeasonPointEntry>> byMonth =
+        <int, List<ClubSeasonPointEntry>>{};
+    for (final ClubSeasonPointEntry item in items) {
+      byMonth.putIfAbsent(item.month, () => <ClubSeasonPointEntry>[]).add(item);
+    }
+    return Column(
+      children: <Widget>[
+        for (final int month in byMonth.keys.toList()..sort())
+          Card(
+            child: ExpansionTile(
+              initiallyExpanded:
+                  month == byMonth.keys.reduce((a, b) => a > b ? a : b),
+              title: Text('$month월'),
+              children: byMonth[month]!
+                  .map(
+                    (ClubSeasonPointEntry item) => ListTile(
+                      dense: true,
+                      title: Text(item.competitionTitle),
+                      subtitle: Text(
+                        _competitionTypeLabel(item.competitionType),
+                      ),
+                      trailing: Text(
+                        item.participationStatus == 'ABSENT'
+                            ? '불참'
+                            : item.finalRank == null
+                            ? '${item.points}P'
+                            : '${item.finalRank}위 · ${item.points}P',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+String _competitionTypeLabel(String value) => switch (value) {
+  'INDIVIDUAL' => '개인전 · OFFICIAL',
+  'TEAM' => '팀전 · OFFICIAL',
+  'EVENT' => '이벤트전 · OFFICIAL',
+  _ => 'OFFICIAL',
+};
 
 class _StatisticsBody extends ConsumerWidget {
   const _StatisticsBody({required this.request, required this.value});
@@ -452,8 +471,6 @@ class _StatisticsBody extends ConsumerWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
           children: <Widget>[
-            _SummaryCard(summary: data.summary),
-            const SizedBox(height: 18),
             if (data.members.isEmpty)
               const _EmptyCard(message: '선택한 조건의 팀원 기록이 없습니다.')
             else
@@ -536,7 +553,9 @@ class _MemberStatisticsTableState extends State<_MemberStatisticsTable> {
                 for (int i = 0; i < rows.length; i++)
                   _StatCell(
                     width: _nameWidth,
-                    text: rows[i].name,
+                    text: rows[i].aceRank == null
+                        ? rows[i].name
+                        : 'ACE ${rows[i].aceRank} · ${rows[i].name}',
                     background: i.isOdd
                         ? AppColors.surfaceElevated.withValues(alpha: 0.45)
                         : null,
@@ -680,56 +699,6 @@ class _StatCell extends StatelessWidget {
   );
 }
 
-class _RecentRegularCard extends StatelessWidget {
-  const _RecentRegularCard({required this.value});
-
-  final AsyncValue<ClubActivityFeedState> value;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = value.value?.items ?? const <ClubActivityFeedItem>[];
-    final recent = items.isEmpty ? null : items.first;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Text('최근 정기전', style: TextStyle(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 10),
-            if (value.isLoading && value.value == null)
-              const Center(child: CircularProgressIndicator())
-            else if (value.hasError)
-              const Text(
-                '최근 정기전 정보를 불러오지 못했습니다.',
-                style: TextStyle(color: AppColors.textSecondary),
-              )
-            else if (recent == null)
-              const Text(
-                '정기전 기록이 없습니다.',
-                style: TextStyle(color: AppColors.textSecondary),
-              )
-            else
-              Wrap(
-                spacing: 18,
-                runSpacing: 8,
-                children: <Widget>[
-                  Text(_date(recent.date)),
-                  Text('${recent.participantCount}명'),
-                  Text('${recent.gameCount}게임'),
-                  Text(
-                    'AVG ${recent.dailyAverage.toStringAsFixed(1)}',
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _MedalLeaders extends StatelessWidget {
   const _MedalLeaders({required this.rows});
 
@@ -763,36 +732,6 @@ class _MedalLeaders extends StatelessWidget {
         .map((row) => row.name)
         .join(', ');
     return '$names $max회';
-  }
-}
-
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.summary});
-
-  final ClubStatisticsSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Wrap(
-          spacing: 24,
-          runSpacing: 14,
-          children: <Widget>[
-            _Metric(label: '활동', value: '${summary.activityCount}회'),
-            _Metric(label: '참여 회원', value: '${summary.memberCount}명'),
-            _Metric(
-              label: '평균 참석률',
-              value: '${summary.attendanceRate.toStringAsFixed(1)}%',
-            ),
-            _Metric(label: '게임', value: '${summary.gameCount}'),
-            _Metric(label: '총점', value: _number(summary.total)),
-            _Metric(label: 'AVG', value: summary.average.toStringAsFixed(1)),
-          ],
-        ),
-      ),
-    );
   }
 }
 
@@ -1356,27 +1295,6 @@ Color? _rowColor(bool highlighted, bool alternate) {
   if (highlighted) return AppColors.primary.withValues(alpha: 0.22);
   if (alternate) return AppColors.surfaceElevated.withValues(alpha: 0.48);
   return null;
-}
-
-class _Metric extends StatelessWidget {
-  const _Metric({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(label, style: const TextStyle(color: AppColors.textSecondary)),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-        ),
-      ],
-    );
-  }
 }
 
 class _EmptyCard extends StatelessWidget {

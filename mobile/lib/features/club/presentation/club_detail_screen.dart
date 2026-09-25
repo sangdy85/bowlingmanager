@@ -78,7 +78,7 @@ class ClubDetailScreen extends ConsumerWidget {
             Card(
               clipBehavior: Clip.antiAlias,
               child: ListTile(
-                key: const Key('club-overview-link'),
+                key: const Key('club-records-link'),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 10,
@@ -87,43 +87,11 @@ class ClubDetailScreen extends ConsumerWidget {
                   Icons.query_stats_rounded,
                   color: AppColors.primaryBright,
                 ),
-                title: const Text('종합'),
-                subtitle: const Text('시즌 순위와 팀 핵심 지표'),
+                title: const Text('동호회 기록'),
+                subtitle: const Text('종합 순위, 종합 기록, 상세 기록'),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => context.push(
-                  '/club/${Uri.encodeComponent(teamId)}/records?section=overview',
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Card(
-              child: ListTile(
-                key: const Key('club-records-link'),
-                leading: const Icon(
-                  Icons.table_chart_outlined,
-                  color: AppColors.primaryBright,
-                ),
-                title: const Text('기록'),
-                subtitle: const Text('팀원 통계와 월별 평균'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push(
-                  '/club/${Uri.encodeComponent(teamId)}/records?section=statistics',
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Card(
-              child: ListTile(
-                key: const Key('club-activities-link'),
-                leading: const Icon(
-                  Icons.scoreboard_outlined,
-                  color: AppColors.primaryBright,
-                ),
-                title: const Text('활동일지'),
-                subtitle: const Text('경기별 전체 결과표'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push(
-                  '/club/${Uri.encodeComponent(teamId)}/records?section=activities',
+                  '/club/${Uri.encodeComponent(teamId)}/records',
                 ),
               ),
             ),
@@ -140,7 +108,7 @@ class ClubDetailScreen extends ConsumerWidget {
                   Icons.event_note_rounded,
                   color: AppColors.primaryBright,
                 ),
-                title: const Text('일정 및 레인 추첨'),
+                title: const Text('일정'),
                 subtitle: const Text('참석 조사, 게스트, 레인 좌석 추첨'),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () =>

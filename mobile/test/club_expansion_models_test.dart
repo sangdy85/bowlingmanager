@@ -58,6 +58,20 @@ void main() {
       'season': _seasonJson(),
       'seasons': <Object>[_seasonJson()],
       'competitionType': 'ALL',
+      'myCompetitionHistory': <Object>[
+        _seasonEntryJson(),
+        <String, dynamic>{
+          ..._seasonEntryJson(),
+          'id': 'absent:event-2',
+          'eventId': 'event-2',
+          'competitionTitle': '2월 팀전',
+          'competitionType': 'TEAM',
+          'month': 2,
+          'finalRank': null,
+          'points': 0,
+          'participationStatus': 'ABSENT',
+        },
+      ],
       'rankings': <Object>[
         <String, dynamic>{
           'rank': 1,
@@ -90,6 +104,8 @@ void main() {
     expect(enabled.rows.single.individualPoints, 50);
     expect(enabled.rows.single.monthlyHistory.first, hasLength(1));
     expect(enabled.seasons.single.teamPoints.first.points, 35);
+    expect(enabled.myCompetitionHistory, hasLength(2));
+    expect(enabled.myCompetitionHistory.last.participationStatus, 'ABSENT');
   });
 
   test('season ranking rejects malformed point ledger and point tables', () {
@@ -101,6 +117,13 @@ void main() {
 
     final entry = _seasonEntryJson()..['month'] = 13;
     expect(() => ClubSeasonPointEntry.fromJson(entry), throwsFormatException);
+
+    final invalidStatus = _seasonEntryJson()
+      ..['participationStatus'] = 'UNKNOWN';
+    expect(
+      () => ClubSeasonPointEntry.fromJson(invalidStatus),
+      throwsFormatException,
+    );
   });
 
   test('board models parse list pagination and author edit permission', () {

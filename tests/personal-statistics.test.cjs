@@ -78,6 +78,7 @@ function database(rows = {}) {
         id: 'member-1', teamId: 'team-1', userId: user.id, alias: null,
         user: { name: user.name },
     }] };
+    db.teamEvent = { findMany: async () => [] };
     return { db, calls };
 }
 const shared = loadTs('src/lib/personal-statistics.ts', { '@/lib/prisma': {} });

@@ -17,6 +17,7 @@ class Dashboard {
     this.personalStats = DashboardPersonalStats.empty,
     this.teamSummaries = const <DashboardTeamSummary>[],
     this.clubAchievements = const <DashboardClubAchievement>[],
+    this.nextEvent,
   }) : totalGameCount = totalGameCount ?? gameCount;
 
   final int year;
@@ -34,6 +35,7 @@ class Dashboard {
   final DashboardPersonalStats personalStats;
   final List<DashboardTeamSummary> teamSummaries;
   final List<DashboardClubAchievement> clubAchievements;
+  final DashboardNextEvent? nextEvent;
 
   factory Dashboard.fromJson(Map<String, dynamic> json) {
     final Object? year = json['year'];
@@ -83,6 +85,11 @@ class Dashboard {
         })
         .toList(growable: false);
 
+    final Object? nextEvent = json['nextEvent'];
+    if (nextEvent != null && nextEvent is! Map) {
+      throw const FormatException('Invalid next event response.');
+    }
+
     return Dashboard(
       year: year,
       average: (average as num).toDouble(),
@@ -117,6 +124,11 @@ class Dashboard {
         json['clubAchievements'],
         DashboardClubAchievement.fromJson,
       ),
+      nextEvent: nextEvent == null
+          ? null
+          : DashboardNextEvent.fromJson(
+              Map<String, dynamic>.from(nextEvent as Map),
+            ),
     );
   }
 
@@ -155,6 +167,114 @@ class Dashboard {
       return <T>[];
     }
   }
+}
+
+class DashboardNextEvent {
+  const DashboardNextEvent({
+    required this.eventId,
+    required this.teamId,
+    required this.teamName,
+    required this.title,
+    required this.eventType,
+    required this.competitionType,
+    required this.dateTime,
+    required this.location,
+    required this.attendanceStatus,
+    this.attendanceEnabled = true,
+    required this.laneMode,
+    required this.laneStatus,
+    required this.assignedLane,
+    required this.hiddenEnabled,
+    required this.competitionState,
+    required this.individualGroup,
+    required this.teamAssignment,
+    required this.eventVoteStatus,
+  });
+
+  final String eventId;
+  final String teamId;
+  final String teamName;
+  final String title;
+  final String? eventType;
+  final String? competitionType;
+  final DateTime dateTime;
+  final String location;
+  final String attendanceStatus;
+  final bool attendanceEnabled;
+  final String? laneMode;
+  final String laneStatus;
+  final String? assignedLane;
+  final bool hiddenEnabled;
+  final String? competitionState;
+  final String? individualGroup;
+  final String? teamAssignment;
+  final String? eventVoteStatus;
+
+  bool get isAttending => attendanceStatus == 'ATTENDING';
+  bool get isUnanswered => attendanceStatus == 'UNANSWERED';
+
+  factory DashboardNextEvent.fromJson(Map<String, dynamic> json) {
+    final String eventId = _requiredDashboardString(json['eventId']);
+    final String teamId = _requiredDashboardString(json['teamId']);
+    final String teamName = _requiredDashboardString(json['teamName']);
+    final String title = _requiredDashboardString(json['title']);
+    final String location = _requiredDashboardString(json['location']);
+    final Object? rawDateTime = json['dateTime'];
+    final DateTime? dateTime = rawDateTime is String
+        ? DateTime.tryParse(rawDateTime)
+        : null;
+    final Object? hiddenEnabled = json['hiddenEnabled'];
+    final String attendanceStatus = _requiredDashboardString(
+      json['attendanceStatus'],
+    );
+    final Object? attendanceEnabled = json['attendanceEnabled'] ?? true;
+    final String laneStatus = _requiredDashboardString(json['laneStatus']);
+    if (dateTime == null ||
+        hiddenEnabled is! bool ||
+        attendanceEnabled is! bool ||
+        !const <String>{
+          'UNANSWERED',
+          'ATTENDING',
+          'NOT_ATTENDING',
+        }.contains(attendanceStatus)) {
+      throw const FormatException('Invalid next event response.');
+    }
+    return DashboardNextEvent(
+      eventId: eventId,
+      teamId: teamId,
+      teamName: teamName,
+      title: title,
+      eventType: _nullableDashboardString(json['eventType']),
+      competitionType: _nullableDashboardString(json['competitionType']),
+      dateTime: dateTime,
+      location: location,
+      attendanceStatus: attendanceStatus,
+      attendanceEnabled: attendanceEnabled,
+      laneMode: _nullableDashboardString(json['laneMode']),
+      laneStatus: laneStatus,
+      assignedLane: _nullableDashboardString(json['assignedLane']),
+      hiddenEnabled: hiddenEnabled,
+      competitionState: _nullableDashboardString(json['competitionState']),
+      individualGroup: _nullableDashboardString(json['individualGroup']),
+      teamAssignment: _nullableDashboardString(json['teamAssignment']),
+      eventVoteStatus: _nullableDashboardString(json['eventVoteStatus']),
+    );
+  }
+}
+
+String _requiredDashboardString(Object? value) {
+  if (value is! String || value.trim().isEmpty) {
+    throw const FormatException('Invalid next event response.');
+  }
+  return value;
+}
+
+String? _nullableDashboardString(Object? value) {
+  if (value == null) return null;
+  if (value is! String || value.trim().isEmpty) {
+    throw const FormatException('Invalid next event response.');
+  }
+  return value;
 }
 
 class DashboardRadar {

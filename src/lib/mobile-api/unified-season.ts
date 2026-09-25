@@ -161,7 +161,7 @@ export function jointCompetitionRanks<T extends { totalPoints: number }>(rows: r
 export async function getUnifiedSeasonRanking(
     actorUserId: string,
     teamId: string,
-    options: { seasonId?: string | null; competitionType?: SeasonCompetitionType | "ALL" } = {},
+    options: { seasonId?: string | null; year?: number; competitionType?: SeasonCompetitionType | "ALL" } = {},
 ) {
     const team = await prisma.team.findFirst({
         where: { id: teamId, isActive: true, members: { some: { userId: actorUserId } } },
@@ -176,6 +176,8 @@ export async function getUnifiedSeasonRanking(
     if (!team.seasonRankingEnabled) return { enabled: false, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [] };
     const season = options.seasonId
         ? seasons.find((item) => item.id === options.seasonId) ?? null
+        : options.year
+        ? seasons.find((item) => kstYear(item.startDate) <= options.year! && options.year! <= kstYear(item.endDate)) ?? null
         : seasons.find((item) => item.status === "ACTIVE") ?? null;
     if (options.seasonId && !season) throw new UnifiedSeasonError("SEASON_NOT_FOUND", "시즌을 찾을 수 없습니다.", 404);
     const competitionType = options.competitionType ?? "ALL";
@@ -274,6 +276,7 @@ export function serializeSeasonSummary(season: {
 }
 
 function kstMonth(value: Date) { return new Date(value.getTime() + 9 * 60 * 60 * 1000).getUTCMonth() + 1; }
+function kstYear(value: Date) { return new Date(value.getTime() + 9 * 60 * 60 * 1000).getUTCFullYear(); }
 
 function validatePointTable(value: unknown): SeasonRankPoint[] {
     if (!Array.isArray(value) || value.length > 100) throw new UnifiedSeasonError("INVALID_POINT_TABLE", "시즌 포인트표를 확인해주세요.", 400);

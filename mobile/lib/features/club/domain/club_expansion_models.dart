@@ -243,6 +243,7 @@ class ClubSeasonPointEntry {
     required this.finalRank,
     required this.points,
     required this.month,
+    this.participationStatus = 'PARTICIPATED',
   });
   final String id;
   final String? eventId;
@@ -252,6 +253,7 @@ class ClubSeasonPointEntry {
   final int? finalRank;
   final int points;
   final int month;
+  final String participationStatus;
 
   factory ClubSeasonPointEntry.fromJson(Map<String, dynamic> json) {
     final date = DateTime.tryParse(json['competitionDate'] as String? ?? '');
@@ -268,7 +270,11 @@ class ClubSeasonPointEntry {
         json['points'] is! int ||
         json['month'] is! int ||
         (json['month'] as int) < 1 ||
-        (json['month'] as int) > 12) {
+        (json['month'] as int) > 12 ||
+        !const <String>{
+          'PARTICIPATED',
+          'ABSENT',
+        }.contains(json['participationStatus'] ?? 'PARTICIPATED')) {
       throw const FormatException('Invalid season point entry.');
     }
     return ClubSeasonPointEntry(
@@ -280,6 +286,8 @@ class ClubSeasonPointEntry {
       finalRank: json['finalRank'] as int?,
       points: json['points'] as int,
       month: json['month'] as int,
+      participationStatus:
+          (json['participationStatus'] ?? 'PARTICIPATED') as String,
     );
   }
 }
@@ -436,6 +444,7 @@ class ClubSeasonRanking {
     required this.bowlerHiddenEnabled,
     this.seasons = const <ClubSeason>[],
     this.competitionType = 'ALL',
+    this.myCompetitionHistory = const <ClubSeasonPointEntry>[],
   });
   final bool enabled;
   final ClubSeason? season;
@@ -443,14 +452,17 @@ class ClubSeasonRanking {
   final bool bowlerHiddenEnabled;
   final List<ClubSeason> seasons;
   final String competitionType;
+  final List<ClubSeasonPointEntry> myCompetitionHistory;
   factory ClubSeasonRanking.fromJson(Map<String, dynamic> json) {
     final rows = json['rankings'];
     final seasons = json['seasons'] ?? const <Object>[];
     final competitionType = json['competitionType'] ?? 'ALL';
+    final history = json['myCompetitionHistory'] ?? const <Object>[];
     if (json['enabled'] is! bool ||
         json['bowlerHiddenEnabled'] is! bool ||
         rows is! List ||
         seasons is! List ||
+        history is! List ||
         !const <String>{
           'ALL',
           'INDIVIDUAL',
@@ -477,6 +489,13 @@ class ClubSeasonRanking {
         ),
       ),
       competitionType: competitionType as String,
+      myCompetitionHistory: List<ClubSeasonPointEntry>.unmodifiable(
+        history.map(
+          (value) => ClubSeasonPointEntry.fromJson(
+            _map(value, 'Invalid competition history.'),
+          ),
+        ),
+      ),
     );
   }
 }

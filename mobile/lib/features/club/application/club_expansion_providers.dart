@@ -20,6 +20,7 @@ typedef ClubSeasonRankingRequest = ({
   String userId,
   String teamId,
   String? seasonId,
+  int? year,
   String competitionType,
 });
 typedef ClubSeasonMemberRequest = ({
@@ -74,6 +75,7 @@ final clubSeasonRankingProvider = FutureProvider.autoDispose
           .fetchSeasonRanking(
             request.teamId,
             seasonId: request.seasonId,
+            year: request.year,
             competitionType: request.competitionType,
           ),
       retry: (_, _) => null,

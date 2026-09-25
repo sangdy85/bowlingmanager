@@ -78,11 +78,15 @@ class ClubExpansionApi {
   Future<ClubSeasonRanking> fetchSeasonRanking(
     String teamId, {
     String? seasonId,
+    int? year,
     String competitionType = 'ALL',
   }) async => _guard(() async {
     final response = await _dio.get<dynamic>(
       '/teams/${Uri.encodeComponent(teamId)}/season-ranking',
-      queryParameters: _seasonQuery(seasonId, competitionType),
+      queryParameters: <String, Object>{
+        ..._seasonQuery(seasonId, competitionType),
+        'year': ?year,
+      },
     );
     return ClubSeasonRanking.fromJson(_data(response.data));
   });

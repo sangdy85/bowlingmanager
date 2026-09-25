@@ -6,6 +6,8 @@ import 'package:bowlingmanager_mobile/core/theme/app_colors.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_text_styles.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
+import 'package:bowlingmanager_mobile/features/club/application/club_event_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/home/domain/dashboard.dart';
 import 'package:flutter/material.dart';
@@ -32,6 +34,7 @@ class HomeScreen extends ConsumerWidget {
     return dashboard.when(
       data: (Dashboard data) => _DashboardContent(
         dashboard: data,
+        userId: user.id,
         userName: userName,
         onRefresh: () => ref.refresh(dashboardProvider(user.id).future),
       ),
@@ -48,11 +51,13 @@ class HomeScreen extends ConsumerWidget {
 class _DashboardContent extends StatelessWidget {
   const _DashboardContent({
     required this.dashboard,
+    required this.userId,
     required this.userName,
     required this.onRefresh,
   });
 
   final Dashboard dashboard;
+  final String userId;
   final String userName;
   final Future<void> Function() onRefresh;
 
@@ -69,6 +74,8 @@ class _DashboardContent extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
         children: <Widget>[
           _HomeHeader(userName: userName),
+          const SizedBox(height: 18),
+          _NextEventCard(event: dashboard.nextEvent, userId: userId),
           const SizedBox(height: 26),
           Row(
             children: <Widget>[
@@ -110,6 +117,14 @@ class _DashboardContent extends StatelessWidget {
           const SizedBox(height: 12),
           _RadarCard(radar: dashboard.profileRadar),
           const SizedBox(height: 28),
+          const _SectionTitle(title: '나의 입상'),
+          const SizedBox(height: 12),
+          _MedalsCard(medals: dashboard.medals),
+          const SizedBox(height: 28),
+          const _SectionTitle(title: '개인 상세 통계'),
+          const SizedBox(height: 12),
+          _PersonalStatsCard(stats: dashboard.personalStats),
+          const SizedBox(height: 28),
           const _SectionTitle(title: '최근 경기 AVG'),
           const SizedBox(height: 12),
           _TrendCard(sessions: dashboard.recentSessions),
@@ -133,14 +148,6 @@ class _DashboardContent extends StatelessWidget {
               const SizedBox(height: 10),
             ],
           const SizedBox(height: 18),
-          const _SectionTitle(title: '나의 입상'),
-          const SizedBox(height: 12),
-          _MedalsCard(medals: dashboard.medals),
-          const SizedBox(height: 28),
-          const _SectionTitle(title: '개인 상세 통계'),
-          const SizedBox(height: 12),
-          _PersonalStatsCard(stats: dashboard.personalStats),
-          const SizedBox(height: 28),
           const _SectionTitle(title: '팀 기록'),
           const SizedBox(height: 12),
           if (dashboard.teamSummaries.isEmpty)
@@ -156,6 +163,227 @@ class _DashboardContent extends StatelessWidget {
     );
   }
 }
+
+class _NextEventCard extends ConsumerStatefulWidget {
+  const _NextEventCard({required this.event, required this.userId});
+
+  final DashboardNextEvent? event;
+  final String userId;
+
+  @override
+  ConsumerState<_NextEventCard> createState() => _NextEventCardState();
+}
+
+class _NextEventCardState extends ConsumerState<_NextEventCard> {
+  bool _working = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final DashboardNextEvent? event = widget.event;
+    if (event == null) {
+      return const Card(
+        key: Key('home-next-event-empty'),
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Text('예정된 일정이 없습니다.'),
+        ),
+      );
+    }
+    final DateTime local = event.dateTime.toLocal();
+    final String date = '${local.year}.${_two(local.month)}.${_two(local.day)}';
+    final String time = '${_two(local.hour)}:${_two(local.minute)}';
+    return Card(
+      key: const Key('home-next-event'),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Text(
+              'NEXT EVENT',
+              style: TextStyle(
+                color: AppColors.primaryBright,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(event.title, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 6),
+            Text('${event.teamName} · ${event.eventType ?? '기타'}'),
+            Text(
+              '$date $time · ${event.location}',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 14),
+            if (event.attendanceEnabled && event.isUnanswered)
+              Wrap(
+                spacing: 8,
+                children: <Widget>[
+                  FilledButton(
+                    key: const Key('home-attendance-yes'),
+                    onPressed: _working
+                        ? null
+                        : () => _attendance(ClubEventAttendance.attending),
+                    child: const Text('참석'),
+                  ),
+                  OutlinedButton(
+                    key: const Key('home-attendance-no'),
+                    onPressed: _working
+                        ? null
+                        : () => _attendance(ClubEventAttendance.notAttending),
+                    child: const Text('불참'),
+                  ),
+                ],
+              )
+            else if (event.attendanceEnabled)
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      '참석: ${_attendanceLabel(event.attendanceStatus)}',
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _working ? null : () => _open('attendance'),
+                    child: const Text('변경'),
+                  ),
+                ],
+              ),
+            if (event.isAttending && event.assignedLane != null)
+              _ActionLine(
+                icon: Icons.place_outlined,
+                text: '내 레인 ${event.assignedLane}',
+                onTap: () => _open('lane'),
+              ),
+            if (event.isAttending &&
+                event.assignedLane == null &&
+                event.laneMode == 'INDIVIDUAL' &&
+                event.laneStatus == 'OPEN')
+              _ActionLine(
+                icon: Icons.casino_outlined,
+                text: '내 레인 추첨',
+                onTap: _working ? null : _drawLane,
+              ),
+            if (event.hiddenEnabled &&
+                event.isAttending &&
+                event.competitionType == 'INDIVIDUAL')
+              _ActionLine(
+                icon: Icons.groups_2_outlined,
+                text: event.individualGroup == null
+                    ? '조 편성 대기'
+                    : '개인전 ${event.individualGroup}조',
+                onTap: () => _open('individual'),
+              ),
+            if (event.hiddenEnabled &&
+                event.isAttending &&
+                event.competitionType == 'TEAM')
+              _ActionLine(
+                icon: Icons.group_outlined,
+                text: event.teamAssignment == null
+                    ? '팀 배정 대기'
+                    : '내 팀 ${event.teamAssignment}',
+                onTap: () => _open('team'),
+              ),
+            if (event.hiddenEnabled &&
+                event.isAttending &&
+                event.competitionType == 'EVENT' &&
+                event.eventVoteStatus != 'NOT_PARTICIPANT')
+              _ActionLine(
+                icon: Icons.how_to_vote_outlined,
+                text: event.eventVoteStatus == 'COMPLETED'
+                    ? '이벤트전 · 투표 완료'
+                    : event.competitionState == 'VOTING_OPEN'
+                    ? '이벤트전 투표하기'
+                    : '이벤트전 · 투표 대기',
+                onTap: () => _open('event'),
+              ),
+            const Divider(height: 22),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => _open('summary'),
+                icon: const Icon(Icons.chevron_right_rounded),
+                label: const Text('일정 상세'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _attendance(ClubEventAttendance status) async {
+    await _run(
+      () => ref
+          .read(clubEventsRepositoryProvider)
+          .setAttendance(widget.event!.teamId, widget.event!.eventId, status),
+    );
+  }
+
+  Future<void> _drawLane() async {
+    await _run(
+      () => ref
+          .read(clubEventsRepositoryProvider)
+          .drawMine(widget.event!.teamId, widget.event!.eventId),
+    );
+  }
+
+  Future<void> _run(Future<void> Function() action) async {
+    setState(() => _working = true);
+    try {
+      await action();
+      ref.invalidate(dashboardProvider(widget.userId));
+      invalidateClubEvents(
+        ref,
+        widget.userId,
+        widget.event!.teamId,
+        widget.event!.eventId,
+      );
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_dashboardErrorMessage(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  void _open(String section) {
+    final DashboardNextEvent event = widget.event!;
+    context.push(
+      '/club/${Uri.encodeComponent(event.teamId)}/events/${Uri.encodeComponent(event.eventId)}?section=$section',
+    );
+  }
+}
+
+class _ActionLine extends StatelessWidget {
+  const _ActionLine({
+    required this.icon,
+    required this.text,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String text;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) => ListTile(
+    dense: true,
+    contentPadding: EdgeInsets.zero,
+    leading: Icon(icon, color: AppColors.primaryBright),
+    title: Text(text, style: const TextStyle(fontWeight: FontWeight.w700)),
+    trailing: const Icon(Icons.chevron_right_rounded),
+    onTap: onTap,
+  );
+}
+
+String _two(int value) => value.toString().padLeft(2, '0');
+String _attendanceLabel(String value) => switch (value) {
+  'ATTENDING' => '참석',
+  'NOT_ATTENDING' => '불참',
+  _ => '미응답',
+};
 
 class _HomeHeader extends StatelessWidget {
   const _HomeHeader({required this.userName});

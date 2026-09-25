@@ -138,6 +138,7 @@ class ClubMemberStatistics {
     required this.monthlyAverages,
     required this.total,
     required this.average,
+    this.aceRank,
   });
 
   final String id;
@@ -149,6 +150,7 @@ class ClubMemberStatistics {
   final List<int?> monthlyAverages;
   final int total;
   final double average;
+  final int? aceRank;
 
   factory ClubMemberStatistics.fromJson(Map<String, dynamic> json) {
     final Object? id = json['id'];
@@ -160,6 +162,7 @@ class ClubMemberStatistics {
     final Object? monthly = json['monthlyAverages'];
     final Object? total = json['total'];
     final Object? average = json['average'];
+    final Object? aceRank = json['aceRank'];
     if (id is! String ||
         id.isEmpty ||
         name is! String ||
@@ -171,7 +174,8 @@ class ClubMemberStatistics {
         monthly is! List ||
         monthly.length != 12 ||
         total is! int ||
-        average is! num) {
+        average is! num ||
+        (aceRank != null && (aceRank is! int || aceRank < 1 || aceRank > 3))) {
       throw const FormatException('Invalid club member statistics.');
     }
     return ClubMemberStatistics(
@@ -191,6 +195,7 @@ class ClubMemberStatistics {
       ),
       total: total,
       average: average.toDouble(),
+      aceRank: aceRank as int?,
     );
   }
 }

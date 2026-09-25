@@ -15,10 +15,12 @@ class ClubEventDetailScreen extends ConsumerStatefulWidget {
   const ClubEventDetailScreen({
     required this.teamId,
     required this.eventId,
+    this.initialSection,
     super.key,
   });
   final String teamId;
   final String eventId;
+  final String? initialSection;
   @override
   ConsumerState<ClubEventDetailScreen> createState() =>
       _ClubEventDetailScreenState();
@@ -26,6 +28,11 @@ class ClubEventDetailScreen extends ConsumerStatefulWidget {
 
 class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
   bool _working = false;
+  String _attendanceFilter = 'ATTENDING';
+  bool _initialSectionHandled = false;
+  final GlobalKey _competitionKey = GlobalKey();
+  final GlobalKey _attendanceKey = GlobalKey();
+  final GlobalKey _laneKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -74,54 +81,93 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
             ],
           ),
         ),
-        data: (ClubEvent event) => RefreshIndicator(
-          onRefresh: () => ref.refresh(provider.future),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-            children: <Widget>[
-              _eventCard(event),
-              if (event.competition != null) ...<Widget>[
-                const SizedBox(height: 12),
-                if (event.competition!.type == ClubCompetitionType.team)
-                  ClubTeamCompetitionCard(
-                    userId: user.id,
-                    teamId: widget.teamId,
-                    eventId: widget.eventId,
-                    competitionMode: event.competition!.mode,
-                  )
-                else if (event.competition!.type == ClubCompetitionType.event)
-                  ClubEventCompetitionCard(
-                    userId: user.id,
-                    teamId: widget.teamId,
-                    eventId: widget.eventId,
-                    competitionMode: event.competition!.mode,
-                  )
-                else
-                  _competitionCard(event, user.id),
+        data: (ClubEvent event) {
+          _scheduleInitialSection();
+          return RefreshIndicator(
+            onRefresh: () => ref.refresh(provider.future),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              children: <Widget>[
+                _eventCard(event),
+                if (event.competition != null) ...<Widget>[
+                  const SizedBox(height: 12),
+                  if (event.competition!.type == ClubCompetitionType.team)
+                    KeyedSubtree(
+                      key: _competitionKey,
+                      child: ClubTeamCompetitionCard(
+                        userId: user.id,
+                        teamId: widget.teamId,
+                        eventId: widget.eventId,
+                        competitionMode: event.competition!.mode,
+                      ),
+                    )
+                  else if (event.competition!.type == ClubCompetitionType.event)
+                    KeyedSubtree(
+                      key: _competitionKey,
+                      child: ClubEventCompetitionCard(
+                        userId: user.id,
+                        teamId: widget.teamId,
+                        eventId: widget.eventId,
+                        competitionMode: event.competition!.mode,
+                      ),
+                    )
+                  else
+                    KeyedSubtree(
+                      key: _competitionKey,
+                      child: _competitionCard(event, user.id),
+                    ),
+                ],
+                if (event.attendanceEnabled) ...<Widget>[
+                  const SizedBox(height: 12),
+                  KeyedSubtree(
+                    key: _attendanceKey,
+                    child: _attendanceCard(event, user.id),
+                  ),
+                ],
+                if (event.canManage) ...<Widget>[
+                  const SizedBox(height: 12),
+                  _adminCard(event, user.id),
+                ],
+                if (event.laneDrawEnabled &&
+                    event.competition?.type !=
+                        ClubCompetitionType.team) ...<Widget>[
+                  const SizedBox(height: 12),
+                  KeyedSubtree(key: _laneKey, child: _drawCard(event, user.id)),
+                ],
+                if (event.assignments.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 12),
+                  _resultsCard(event),
+                ],
               ],
-              if (event.attendanceEnabled) ...<Widget>[
-                const SizedBox(height: 12),
-                _attendanceCard(event, user.id),
-              ],
-              if (event.canManage) ...<Widget>[
-                const SizedBox(height: 12),
-                _adminCard(event, user.id),
-              ],
-              if (event.laneDrawEnabled &&
-                  event.competition?.type !=
-                      ClubCompetitionType.team) ...<Widget>[
-                const SizedBox(height: 12),
-                _drawCard(event, user.id),
-              ],
-              if (event.assignments.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 12),
-                _resultsCard(event),
-              ],
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
+  }
+
+  void _scheduleInitialSection() {
+    if (_initialSectionHandled ||
+        widget.initialSection == null ||
+        widget.initialSection == 'summary') {
+      return;
+    }
+    _initialSectionHandled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final GlobalKey key = switch (widget.initialSection) {
+        'attendance' => _attendanceKey,
+        'lane' => _laneKey,
+        _ => _competitionKey,
+      };
+      final BuildContext? target = key.currentContext;
+      if (target != null) {
+        Scrollable.ensureVisible(
+          target,
+          duration: const Duration(milliseconds: 320),
+          alignment: 0.05,
+        );
+      }
+    });
   }
 
   Widget _eventCard(ClubEvent event) => Card(
@@ -215,14 +261,63 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
           ),
           if (event.attendance != null) ...<Widget>[
             const Divider(height: 28),
-            ...event.attendance!.map(
-              (item) => ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                title: Text(item.name),
-                trailing: Text(item.status.label),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: <Widget>[
+                  for (final ({String value, String label, int count}) filter
+                      in <({String value, String label, int count})>[
+                        (
+                          value: 'ATTENDING',
+                          label: '참석',
+                          count: event.counts.attending,
+                        ),
+                        (
+                          value: 'NOT_ATTENDING',
+                          label: '불참',
+                          count: event.counts.notAttending,
+                        ),
+                        (
+                          value: 'UNANSWERED',
+                          label: '미응답',
+                          count: event.counts.unanswered,
+                        ),
+                        (
+                          value: 'GUEST',
+                          label: '게스트',
+                          count: event.counts.guests,
+                        ),
+                      ]) ...<Widget>[
+                    ChoiceChip(
+                      label: Text('${filter.label} ${filter.count}'),
+                      selected: _attendanceFilter == filter.value,
+                      onSelected: (_) =>
+                          setState(() => _attendanceFilter = filter.value),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ],
               ),
             ),
+            const SizedBox(height: 8),
+            if (_attendanceFilter == 'GUEST')
+              ...event.guests.map(
+                (item) => ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(item.name),
+                ),
+              )
+            else
+              ...event.attendance!
+                  .where((item) => item.status.apiValue == _attendanceFilter)
+                  .map(
+                    (item) => ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(item.name),
+                    ),
+                  ),
           ],
         ],
       ),
@@ -271,6 +366,59 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
               if (event.competition!.mode == ClubCompetitionMode.mini)
                 const Text('미니 경기 · 시즌 포인트 미지급'),
               const SizedBox(height: 10),
+              if (!result.groupAssignmentComplete)
+                Text(
+                  '조 편성 대기 · 미배정 ${result.missingGroupCount}명',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                )
+              else if (result.participantPreview != null) ...<Widget>[
+                for (final String group in const <String>[
+                  'A',
+                  'B',
+                  'C',
+                  'D',
+                  'E',
+                ])
+                  if (result.participantPreview!.any(
+                    (item) => item.effectiveGroup == group,
+                  ))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Card(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              CircleAvatar(child: Text(group)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  result.participantPreview!
+                                      .where(
+                                        (item) => item.effectiveGroup == group,
+                                      )
+                                      .map((item) => item.name)
+                                      .join(' · '),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+              ] else if (result.myPreview
+                  case final ClubCompetitionPreview mine)
+                Text(
+                  mine.effectiveGroup == null
+                      ? '내 조 편성 대기'
+                      : '내 조 · ${mine.effectiveGroup}조',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              const Divider(height: 28),
               if (result.overall.isEmpty)
                 const Text('아직 집계할 경기 점수가 없습니다.')
               else

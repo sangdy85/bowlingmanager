@@ -5,9 +5,14 @@ import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.d
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/home/domain/dashboard.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/application/club_event_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/data/club_events_api.dart';
+import 'package:bowlingmanager_mobile/features/club/data/club_events_repository.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:dio/dio.dart';
 
 import 'support/auth_fakes.dart';
 import 'support/dashboard_fakes.dart';
@@ -134,12 +139,85 @@ void main() {
     expect(find.text('정기전 AVG'), findsOneWidget);
     expect(find.text('공식전 AVG'), findsOneWidget);
     expect(find.text('게임 수'), findsOneWidget);
+    expect(find.text('예정된 일정이 없습니다.'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('최근 경기'),
       500,
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('최근 기록이 없습니다.'), findsWidgets);
+  });
+
+  testWidgets('Home puts the next event and its current actions first', (
+    WidgetTester tester,
+  ) async {
+    final FakeDashboardRepository repository = FakeDashboardRepository()
+      ..result = Dashboard(
+        year: 2026,
+        average: 0,
+        highScore: 0,
+        gameCount: 0,
+        recentAverage: 0,
+        recentScores: const <DashboardScore>[],
+        recentSessions: const <GameSession>[],
+        nextEvent: DashboardNextEvent(
+          eventId: 'event-1',
+          teamId: 'team-1',
+          teamName: '배볼러',
+          title: '9월 정기전',
+          eventType: '정기전',
+          competitionType: 'INDIVIDUAL',
+          dateTime: DateTime.now().add(const Duration(days: 1)),
+          location: '서울 볼링장',
+          attendanceStatus: 'ATTENDING',
+          laneMode: 'BULK',
+          laneStatus: 'COMPLETED',
+          assignedLane: '12-2',
+          hiddenEnabled: true,
+          competitionState: 'ATTENDANCE_OPEN',
+          individualGroup: 'B',
+          teamAssignment: null,
+          eventVoteStatus: null,
+        ),
+      );
+    await _pumpAuthenticatedApp(tester, repository);
+    await tester.pumpAndSettle();
+
+    expect(find.text('NEXT EVENT'), findsOneWidget);
+    expect(find.text('9월 정기전'), findsOneWidget);
+    expect(find.text('내 레인 12-2'), findsOneWidget);
+    expect(find.text('개인전 B조'), findsOneWidget);
+  });
+
+  testWidgets('Home answers attendance and starts an individual lane draw', (
+    WidgetTester tester,
+  ) async {
+    final _FakeClubEventsApi eventsApi = _FakeClubEventsApi();
+    final FakeDashboardRepository repository = FakeDashboardRepository()
+      ..result = _dashboardWithEvent(
+        attendanceStatus: 'UNANSWERED',
+        laneMode: 'INDIVIDUAL',
+        laneStatus: 'OPEN',
+      );
+    await _pumpAuthenticatedApp(tester, repository, eventsApi: eventsApi);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('home-attendance-yes')));
+    await tester.pumpAndSettle();
+    expect(eventsApi.attendance, <ClubEventAttendance>[
+      ClubEventAttendance.attending,
+    ]);
+
+    repository.result = _dashboardWithEvent(
+      attendanceStatus: 'ATTENDING',
+      laneMode: 'INDIVIDUAL',
+      laneStatus: 'OPEN',
+    );
+    await tester.drag(find.byType(ListView).first, const Offset(0, 500));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('내 레인 추첨'));
+    await tester.pumpAndSettle();
+    expect(eventsApi.drawCount, 1);
   });
 
   testWidgets('Home shows an API error and retries the dashboard request', (
@@ -185,10 +263,10 @@ void main() {
       for (final String section in <String>[
         '나의 동호회 성과',
         '나의 기록실',
-        '최근 경기 AVG',
-        '최근 경기',
         '나의 입상',
         '개인 상세 통계',
+        '최근 경기 AVG',
+        '최근 경기',
         '팀 기록',
       ]) {
         await tester.scrollUntilVisible(
@@ -233,8 +311,9 @@ void main() {
 
 Future<void> _pumpAuthenticatedApp(
   WidgetTester tester,
-  FakeDashboardRepository dashboardRepository,
-) {
+  FakeDashboardRepository dashboardRepository, {
+  _FakeClubEventsApi? eventsApi,
+}) {
   final FakeAuthRepository authRepository = FakeAuthRepository()
     ..bootstrapResult = testUser;
   return tester.pumpWidget(
@@ -243,10 +322,68 @@ Future<void> _pumpAuthenticatedApp(
         authRepositoryProvider.overrideWithValue(authRepository),
         dashboardRepositoryProvider.overrideWithValue(dashboardRepository),
         clubRepositoryProvider.overrideWithValue(FakeClubRepository()),
+        if (eventsApi != null)
+          clubEventsRepositoryProvider.overrideWithValue(
+            ClubEventsRepository(eventsApi),
+          ),
       ],
       child: const BowlingManagerApp(),
     ),
   );
+}
+
+Dashboard _dashboardWithEvent({
+  required String attendanceStatus,
+  required String laneMode,
+  required String laneStatus,
+}) => Dashboard(
+  year: 2026,
+  average: 0,
+  highScore: 0,
+  gameCount: 0,
+  recentAverage: 0,
+  recentScores: const <DashboardScore>[],
+  recentSessions: const <GameSession>[],
+  nextEvent: DashboardNextEvent(
+    eventId: 'event-1',
+    teamId: 'team-1',
+    teamName: '배볼러',
+    title: '9월 정기전',
+    eventType: '정기전',
+    competitionType: null,
+    dateTime: DateTime.now().add(const Duration(days: 1)),
+    location: '서울 볼링장',
+    attendanceStatus: attendanceStatus,
+    laneMode: laneMode,
+    laneStatus: laneStatus,
+    assignedLane: null,
+    hiddenEnabled: false,
+    competitionState: null,
+    individualGroup: null,
+    teamAssignment: null,
+    eventVoteStatus: null,
+  ),
+);
+
+class _FakeClubEventsApi extends ClubEventsApi {
+  _FakeClubEventsApi() : super(Dio());
+
+  final List<ClubEventAttendance> attendance = <ClubEventAttendance>[];
+  int drawCount = 0;
+
+  @override
+  Future<void> setAttendance(
+    String teamId,
+    String eventId,
+    ClubEventAttendance status,
+  ) async {
+    attendance.add(status);
+  }
+
+  @override
+  Future<void> drawMine(String teamId, String eventId) async {
+    drawCount += 1;
+  }
 }
 
 Dashboard _expandedDashboard() => Dashboard(

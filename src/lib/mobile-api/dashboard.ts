@@ -7,6 +7,8 @@ import {
 } from "@/lib/personal-statistics";
 import { calculatePersonalProfile, PERSONAL_RADAR_AXES } from "@/lib/personal-profile";
 import { getMobileSeasonRanking } from "@/lib/mobile-api/club-expansion";
+import { getBowlerHiddenCompetition } from "@/lib/mobile-api/bowler-hidden";
+import { kstDateKey } from "@/lib/mobile-api/team-events";
 import { groupScores } from "@/lib/score-groups";
 import {
     calculateTeamStatistics,
@@ -46,6 +48,28 @@ export type MobileDashboardDependencies = {
     listTeamMembers(teamIds: string[]): Promise<DashboardMemberRow[]>;
     countAllGames?(user: DashboardUser): Promise<number>;
     listClubAchievements?(user: DashboardUser): Promise<DashboardClubAchievement[]>;
+    loadNextEvent?(user: DashboardUser, now: Date): Promise<MobileNextEvent | null>;
+};
+
+type MobileNextEvent = {
+    eventId: string;
+    teamId: string;
+    teamName: string;
+    title: string;
+    eventType: string | null;
+    competitionType: string | null;
+    dateTime: string;
+    location: string;
+    attendanceStatus: string;
+    attendanceEnabled: boolean;
+    laneMode: string | null;
+    laneStatus: string;
+    assignedLane: string | null;
+    hiddenEnabled: boolean;
+    competitionState: string | null;
+    individualGroup: string | null;
+    teamAssignment: string | null;
+    eventVoteStatus: string | null;
 };
 
 const defaultDependencies: MobileDashboardDependencies = {
@@ -134,6 +158,80 @@ const defaultDependencies: MobileDashboardDependencies = {
             };
         }));
     },
+    async loadNextEvent(user, now) {
+        const memberIds = user.teamMemberships.map((membership) => membership.id);
+        const teamIds = user.teamMemberships.map((membership) => membership.teamId);
+        if (teamIds.length === 0) return null;
+
+        const startOfToday = new Date(`${kstDateKey(now)}T00:00:00+09:00`);
+        const candidates = await prisma.teamEvent.findMany({
+            where: { teamId: { in: teamIds }, eventDate: { gte: startOfToday } },
+            orderBy: [{ eventDate: "asc" }, { eventTime: "asc" }, { id: "asc" }],
+            select: {
+                id: true, teamId: true, title: true, eventDate: true, eventTime: true,
+                location: true, gameType: true, attendanceEnabled: true, laneDrawEnabled: true, laneDrawMode: true,
+                laneDrawStatus: true, competitionEnabled: true, competitionType: true,
+                competitionStatus: true,
+                team: { select: { name: true, bowlerHiddenEnabled: true } },
+                attendances: {
+                    where: { memberId: { in: memberIds } }, take: 1,
+                    select: { memberId: true, status: true, manualGroup: true },
+                },
+                laneAssignments: {
+                    where: { memberId: { in: memberIds } }, take: 1,
+                    select: { slot: { select: { laneNumber: true, position: true } } },
+                },
+                competitionTeams: {
+                    where: { participants: { some: { memberId: { in: memberIds } } } }, take: 1,
+                    select: { name: true },
+                },
+                eventCompetitionParticipants: {
+                    where: { memberId: { in: memberIds } }, take: 1,
+                    select: { ballot: { select: { id: true } } },
+                },
+            },
+        });
+        const selected = candidates.find((event) => eventDateTime(event.eventDate, event.eventTime) >= now);
+        if (!selected) return null;
+
+        const attendance = selected.attendances[0];
+        const assignment = selected.laneAssignments[0]?.slot;
+        let individualGroup = attendance?.manualGroup ?? null;
+        if (selected.team.bowlerHiddenEnabled && selected.competitionEnabled &&
+            selected.competitionType === "INDIVIDUAL" && attendance?.status === "ATTENDING") {
+            try {
+                const state = await getBowlerHiddenCompetition(user.id, selected.teamId, selected.id);
+                individualGroup = state.myPreview?.effectiveGroup ?? state.myPreview?.finalGroup ?? individualGroup;
+            } catch {
+                // The dashboard remains useful while the competition is not ready yet.
+            }
+        }
+        return {
+            eventId: selected.id,
+            teamId: selected.teamId,
+            teamName: selected.team.name,
+            title: selected.title,
+            eventType: selected.gameType,
+            competitionType: selected.team.bowlerHiddenEnabled && selected.competitionEnabled
+                ? selected.competitionType : null,
+            dateTime: eventDateTime(selected.eventDate, selected.eventTime).toISOString(),
+            location: selected.location,
+            attendanceStatus: attendance?.status ?? "UNANSWERED",
+            attendanceEnabled: selected.attendanceEnabled,
+            laneMode: selected.laneDrawEnabled ? selected.laneDrawMode : null,
+            laneStatus: selected.laneDrawStatus,
+            assignedLane: assignment ? `${assignment.laneNumber}-${assignment.position}` : null,
+            hiddenEnabled: selected.team.bowlerHiddenEnabled,
+            competitionState: selected.team.bowlerHiddenEnabled && selected.competitionEnabled
+                ? selected.competitionStatus : null,
+            individualGroup,
+            teamAssignment: selected.competitionTeams[0]?.name ?? null,
+            eventVoteStatus: selected.competitionType === "EVENT"
+                ? (selected.eventCompetitionParticipants[0]?.ballot ? "COMPLETED" :
+                    selected.eventCompetitionParticipants.length > 0 ? "PENDING" : "NOT_PARTICIPANT")
+                : null,
+        };
+    },
 };
 
 // Fixed range accepts historic records and planned future years.
@@ -156,11 +254,12 @@ export async function getMobileDashboard(
     const start = new Date(`${year}-01-01T00:00:00.000Z`);
     const end = new Date(`${year}-12-31T23:59:59.999Z`);
     const teamIds = user.teamMemberships.map((membership) => membership.teamId);
-    const [personal, scoreRows, memberRows, clubAchievements] = await Promise.all([
+    const [personal, scoreRows, memberRows, clubAchievements, nextEvent] = await Promise.all([
         dependencies.loadPersonal(user, year),
         dependencies.listTeamScores(teamIds, start, end),
         dependencies.listTeamMembers(teamIds),
         dependencies.listClubAchievements ? dependencies.listClubAchievements(user) : Promise.resolve([]),
+        dependencies.loadNextEvent ? dependencies.loadNextEvent(user, new Date()) : Promise.resolve(null),
     ]);
     const compatiblePersonal = personal as DashboardPersonalData & {
         allRecords?: IntegratedRecord[];
@@ -179,6 +278,7 @@ export async function getMobileDashboard(
             record.source === "PERSONAL" && record.gameType === "정기전")),
         officialAverage: categoryAverage(personal.officialRecords),
         clubAchievements,
+        nextEvent,
         ...createDashboardExtensions(user, personal.integratedRecords, personal.officialRecords, scoreRows, memberRows),
     };
 }
@@ -308,7 +408,12 @@ function emptyDashboardExtensions() {
         regularAverage: 0,
         officialAverage: 0,
         clubAchievements: [],
+        nextEvent: null,
     };
+}
+
+function eventDateTime(date: Date, time: string) {
+    return new Date(`${kstDateKey(date)}T${time}:00+09:00`);
 }
 
 function categoryAverage(records: IntegratedRecord[]) {

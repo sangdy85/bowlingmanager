@@ -176,28 +176,38 @@ class _ClubTeamCompetitionCardState
       ],
       if (state.history.isNotEmpty) ...<Widget>[
         const Divider(height: 28),
-        const Text('드래프트 기록', style: TextStyle(fontWeight: FontWeight.w700)),
-        ...state.history.map(
-          (item) => ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: CircleAvatar(
-              radius: 15,
-              child: Text('${item.pickNumber}'),
-            ),
-            title: Text(
-              item.pickType == 'LUCKY_DRAW_MISS'
-                  ? '${item.teamName} · 행운권 꽝'
-                  : item.pickType == 'LUCKY_DRAW_WIN'
-                  ? '${item.teamName} · 행운권 당첨 → ${item.selectedDisplayName}'
-                  : item.automatic
-                  ? '자동 배정 → ${item.selectedDisplayName} → ${item.teamName}'
-                  : '${item.teamName} → ${item.selectedDisplayName} 선택',
-            ),
-            subtitle: item.roundNumber > 0
-                ? Text('${item.roundNumber}라운드')
-                : null,
+        ExpansionTile(
+          key: const Key('team-draft-history'),
+          tilePadding: EdgeInsets.zero,
+          initiallyExpanded: false,
+          title: const Text(
+            '드래프트 기록',
+            style: TextStyle(fontWeight: FontWeight.w700),
           ),
+          children: state.history
+              .map(
+                (item) => ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    radius: 15,
+                    child: Text('${item.pickNumber}'),
+                  ),
+                  title: Text(
+                    item.pickType == 'LUCKY_DRAW_MISS'
+                        ? '${item.teamName} · 행운권 꽝'
+                        : item.pickType == 'LUCKY_DRAW_WIN'
+                        ? '${item.teamName} · 행운권 당첨 → ${item.selectedDisplayName}'
+                        : item.automatic
+                        ? '자동 배정 → ${item.selectedDisplayName} → ${item.teamName}'
+                        : '${item.teamName} → ${item.selectedDisplayName} 선택',
+                  ),
+                  subtitle: item.roundNumber > 0
+                      ? Text('${item.roundNumber}라운드')
+                      : null,
+                ),
+              )
+              .toList(),
         ),
       ],
       if (state.results.teams.isNotEmpty) ...<Widget>[
@@ -259,42 +269,6 @@ class _ClubTeamCompetitionCardState
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
           ),
-          if (individuals.isNotEmpty)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: <DataColumn>[
-                  const DataColumn(label: Text('순위')),
-                  const DataColumn(label: Text('성명')),
-                  for (int index = 1; index <= gameCount; index++)
-                    DataColumn(label: Text('${index}G'), numeric: true),
-                  const DataColumn(label: Text('총점'), numeric: true),
-                  const DataColumn(label: Text('AVG'), numeric: true),
-                ],
-                rows: individuals
-                    .map(
-                      (row) => DataRow(
-                        cells: <DataCell>[
-                          DataCell(Text('${row.rank}')),
-                          DataCell(Text(row.name)),
-                          for (int index = 0; index < gameCount; index++)
-                            DataCell(
-                              Text(
-                                index < row.scores.length
-                                    ? '${row.scores[index]}'
-                                    : '-',
-                              ),
-                            ),
-                          DataCell(Text('${row.total}')),
-                          DataCell(
-                            Text(row.average?.toStringAsFixed(1) ?? '-'),
-                          ),
-                        ],
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
           ...gameRows.map((row) {
             final game = row.result!;
             final String excluded = game.excludedScores.isEmpty
@@ -308,6 +282,50 @@ class _ClubTeamCompetitionCardState
               '${game.rank == null ? '미확정' : '${game.rank}위 / ${game.points}P'}',
             );
           }),
+          if (individuals.isNotEmpty)
+            ExpansionTile(
+              key: Key('team-player-results-${summary.competitionTeamId}'),
+              tilePadding: EdgeInsets.zero,
+              initiallyExpanded: false,
+              title: const Text('선수별 결과'),
+              children: <Widget>[
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    columns: <DataColumn>[
+                      const DataColumn(label: Text('순위')),
+                      const DataColumn(label: Text('성명')),
+                      for (int index = 1; index <= gameCount; index++)
+                        DataColumn(label: Text('${index}G'), numeric: true),
+                      const DataColumn(label: Text('총점'), numeric: true),
+                      const DataColumn(label: Text('AVG'), numeric: true),
+                    ],
+                    rows: individuals
+                        .map(
+                          (row) => DataRow(
+                            cells: <DataCell>[
+                              DataCell(Text('${row.rank}')),
+                              DataCell(Text(row.name)),
+                              for (int index = 0; index < gameCount; index++)
+                                DataCell(
+                                  Text(
+                                    index < row.scores.length
+                                        ? '${row.scores[index]}'
+                                        : '-',
+                                  ),
+                                ),
+                              DataCell(Text('${row.total}')),
+                              DataCell(
+                                Text(row.average?.toStringAsFixed(1) ?? '-'),
+                              ),
+                            ],
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ],
+            ),
         ];
       }),
     ];

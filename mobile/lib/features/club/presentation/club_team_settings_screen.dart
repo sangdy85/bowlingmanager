@@ -246,6 +246,7 @@ class _ClubTeamSettingsScreenState
           userId: request.userId,
           teamId: request.teamId,
           seasonId: null,
+          year: null,
           competitionType: 'ALL',
         )),
       );

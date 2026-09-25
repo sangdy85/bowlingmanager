@@ -139,12 +139,27 @@ export async function getMobileTeamStatistics(
     const data = await loadYearData(userId, teamId, query.year, dependencies, true);
     if (!data) return null;
     const calculated = calculateTeamStatistics(data.scores, data.members, query.filter);
+    const aceRanks = query.filter === "REGULAR"
+        ? calculateAceRanks(calculated.members)
+        : new Map<string, number>();
     return {
         year: query.year,
         filter: query.filter,
         availableYears: data.availableYears,
         ...calculated,
+        members: calculated.members.map((member) => ({
+            ...member,
+            aceRank: aceRanks.get(member.id) ?? null,
+        })),
     };
+}
+
+function calculateAceRanks(members: { id: string; attendanceRate: number; average: number }[]) {
+    const eligible = members
+        .filter((member) => member.attendanceRate >= 80)
+        .sort((left, right) => right.average - left.average || left.id.localeCompare(right.id))
+        .slice(0, 3);
+    return new Map(eligible.map((member, index) => [member.id, index + 1]));
 }
 
 export async function getMobileTeamActivities(

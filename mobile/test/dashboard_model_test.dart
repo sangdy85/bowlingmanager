@@ -119,6 +119,45 @@ void main() {
     expect(dashboard.recentAverage, 0);
   });
 
+  test('Dashboard.fromJson parses the additive next event contract', () {
+    final Dashboard dashboard = Dashboard.fromJson(<String, dynamic>{
+      ..._coreDashboard(),
+      'nextEvent': <String, dynamic>{
+        'eventId': 'event-1',
+        'teamId': 'team-1',
+        'teamName': '배볼러',
+        'title': '9월 정기전',
+        'eventType': '정기전',
+        'competitionType': 'INDIVIDUAL',
+        'dateTime': '2026-09-30T10:00:00.000Z',
+        'location': '서울 볼링장',
+        'attendanceStatus': 'ATTENDING',
+        'laneMode': 'INDIVIDUAL',
+        'laneStatus': 'OPEN',
+        'assignedLane': '12-2',
+        'hiddenEnabled': true,
+        'competitionState': 'ATTENDANCE_OPEN',
+        'individualGroup': 'B',
+        'teamAssignment': null,
+        'eventVoteStatus': null,
+      },
+    });
+
+    expect(dashboard.nextEvent?.title, '9월 정기전');
+    expect(dashboard.nextEvent?.assignedLane, '12-2');
+    expect(dashboard.nextEvent?.individualGroup, 'B');
+  });
+
+  test('Dashboard.fromJson rejects malformed next event data', () {
+    expect(
+      () => Dashboard.fromJson(<String, dynamic>{
+        ..._coreDashboard(),
+        'nextEvent': <String, dynamic>{'eventId': 'event-1'},
+      }),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
   test('Dashboard.fromJson accepts an empty recent score list', () {
     final Dashboard dashboard = Dashboard.fromJson(<String, dynamic>{
       'year': 2026,

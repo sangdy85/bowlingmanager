@@ -428,6 +428,7 @@ test('season ranking reads active publication ledger in one batch and supports f
   let enabled = false;
   let entryWhere = null;
   let entryCalls = 0;
+  let eventWhere = null;
   const season = {
     id: 'season-1', teamId: 'team-1', name: '반기', enabled: true, status: 'ACTIVE',
     startDate: new Date('2026-01-01T00:00:00+09:00'),
@@ -451,6 +452,21 @@ test('season ranking reads active publication ledger in one batch and supports f
         }];
       },
     },
+    teamEvent: {
+      findMany: async args => {
+        eventWhere = args.where;
+        return [
+          {
+            id: 'event-1', title: '2월 팀전', eventDate: new Date('2026-02-10T03:00:00.000Z'),
+            competitionType: 'TEAM', attendances: [{ status: 'ATTENDING' }],
+          },
+          {
+            id: 'event-2', title: '3월 개인전', eventDate: new Date('2026-03-10T03:00:00.000Z'),
+            competitionType: 'INDIVIDUAL', attendances: [{ status: 'NOT_ATTENDING' }],
+          },
+        ];
+      },
+    },
   };
   const isolated = loadTs('src/lib/mobile-api/club-expansion.ts', {
     '@/lib/prisma': fakePrisma,
@@ -467,6 +483,16 @@ test('season ranking reads active publication ledger in one batch and supports f
   assert.equal(result.rankings.find(row => row.id === 'member-owner').points, 35);
   assert.equal(result.rankings.find(row => row.id === 'member-owner').teamPoints, 35);
   assert.equal(result.rankings.find(row => row.id === 'member-owner').monthlyHistory[1].length, 1);
+  assert.deepEqual(eventWhere, {
+    seasonId: 'season-1', competitionEnabled: true,
+    competitionMode: 'OFFICIAL', competitionStatus: 'PUBLISHED',
+  });
+  assert.deepEqual(result.myCompetitionHistory.map(item => ({
+    eventId: item.eventId, status: item.participationStatus, points: item.points,
+  })), [
+    { eventId: 'event-1', status: 'PARTICIPATED', points: 35 },
+    { eventId: 'event-2', status: 'ABSENT', points: 0 },
+  ]);
   assert.equal(entryCalls, 1);
 });
 

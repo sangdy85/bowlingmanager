@@ -495,13 +495,22 @@ export function calculateSeasonRanking(
 export async function getMobileSeasonRanking(
     actorUserId: string,
     teamId: string,
-    options: { seasonId?: string | null; competitionType?: "ALL" | "INDIVIDUAL" | "TEAM" | "EVENT" } = {},
+    options: { seasonId?: string | null; year?: number; competitionType?: "ALL" | "INDIVIDUAL" | "TEAM" | "EVENT" } = {},
 ) {
     const team = await requireTeam(actorUserId, teamId);
     if (team.bowlerHiddenEnabled) {
         try {
             const result = await getUnifiedSeasonRanking(actorUserId, teamId, options);
-            return { ...result, bowlerHiddenEnabled: true };
+            const memberId = team.members.find((member) => member.userId === actorUserId)?.id;
+            const mine = result.rankings.find((row) => row.id === memberId);
+            const myCompetitionHistory = memberId && result.season
+                ? await listMyOfficialCompetitionHistory(memberId, result.season.id, mine?.entries ?? [])
+                : [];
+            return {
+                ...result,
+                bowlerHiddenEnabled: true,
+                myCompetitionHistory,
+            };
         } catch (error) {
             if (error instanceof UnifiedSeasonError) throw new ClubExpansionError(error.code, error.message, error.status);
             throw error;
@@ -512,13 +521,15 @@ export async function getMobileSeasonRanking(
     }
     const seasons = await prisma.teamSeason.findMany({ where: { teamId }, orderBy: [{ startDate: "desc" }, { id: "asc" }] });
     if (!team.seasonRankingEnabled) {
-        return { enabled: false, bowlerHiddenEnabled: false, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [] };
+        return { enabled: false, bowlerHiddenEnabled: false, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [], myCompetitionHistory: [] };
     }
     const season = options.seasonId
         ? seasons.find((item) => item.id === options.seasonId) ?? null
+        : options.year
+        ? seasons.find((item) => seasonIncludesYear(item, options.year!)) ?? null
         : seasons.find((item) => item.status === "ACTIVE") ?? null;
     if (options.seasonId && !season) throw new ClubExpansionError("SEASON_NOT_FOUND", "시즌을 찾을 수 없습니다.", 404);
-    if (!season) return { enabled: true, bowlerHiddenEnabled: false, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [] };
+    if (!season) return { enabled: true, bowlerHiddenEnabled: false, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [], myCompetitionHistory: [] };
     const scores = mappedScores(await listTeamScores(teamId, season.startDate, season.endDate));
     const pointTable = readSeasonPointTable(season.individualPointsConfig);
     const rankings = calculateSeasonRanking(
@@ -530,8 +541,63 @@ export async function getMobileSeasonRanking(
     );
     return {
         enabled: true, bowlerHiddenEnabled: false, season: serializeSeasonSummary(season),
-        seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings,
+        seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings, myCompetitionHistory: [],
     };
+}
+
+async function listMyOfficialCompetitionHistory(
+    memberId: string,
+    seasonId: string,
+    entries: {
+        id: string; eventId: string | null; competitionType: string; competitionDate: string;
+        competitionTitle: string; finalRank: number | null; points: number; month: number;
+    }[],
+) {
+    const events = await prisma.teamEvent.findMany({
+        where: {
+            seasonId,
+            competitionEnabled: true,
+            competitionMode: "OFFICIAL",
+            competitionStatus: "PUBLISHED",
+        },
+        orderBy: [{ eventDate: "asc" }, { eventTime: "asc" }, { id: "asc" }],
+        select: {
+            id: true,
+            title: true,
+            eventDate: true,
+            competitionType: true,
+            attendances: {
+                where: { memberId },
+                take: 1,
+                select: { status: true },
+            },
+        },
+    });
+    const participatedEventIds = new Set(entries.flatMap((entry) => entry.eventId ? [entry.eventId] : []));
+    const history = entries.map((entry) => ({ ...entry, participationStatus: "PARTICIPATED" as const }));
+    for (const event of events) {
+        if (participatedEventIds.has(event.id) || event.attendances[0]?.status !== "NOT_ATTENDING" ||
+            !["INDIVIDUAL", "TEAM", "EVENT"].includes(event.competitionType ?? "")) continue;
+        history.push({
+            id: `absent:${event.id}`,
+            eventId: event.id,
+            competitionType: event.competitionType!,
+            competitionDate: event.eventDate.toISOString(),
+            competitionTitle: event.title,
+            finalRank: null,
+            points: 0,
+            month: Number(teamActivityDateKey(event.eventDate).slice(5, 7)),
+            participationStatus: "ABSENT",
+        });
+    }
+    return history.sort((left, right) =>
+        left.competitionDate.localeCompare(right.competitionDate) || left.id.localeCompare(right.id));
+}
+
+function seasonIncludesYear(season: { startDate: Date; endDate: Date }, year: number) {
+    const startYear = Number(teamActivityDateKey(season.startDate).slice(0, 4));
+    const endYear = Number(teamActivityDateKey(season.endDate).slice(0, 4));
+    return startYear <= year && year <= endYear;
 }
 
 function parsePointInput(value: unknown) {

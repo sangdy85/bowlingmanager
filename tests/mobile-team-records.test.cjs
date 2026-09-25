@@ -240,6 +240,26 @@ test('year statistics queries members, scores and year dates once without member
     assert.deepEqual(calls, { members: 1, scores: 1, dates: 1 });
 });
 
+test('regular statistics adds ACE ranks only for attendance of at least 80 percent', async () => {
+    const eligibleMembers = [
+        { id: 'one', userId: 'one', alias: '1위', user: { name: '1위' } },
+        { id: 'two', userId: 'two', alias: '2위', user: { name: '2위' } },
+        { id: 'low', userId: 'low', alias: '출석 미달', user: { name: '출석 미달' } },
+    ];
+    const rows = [];
+    for (let day = 1; day <= 5; day += 1) {
+        const date = `2026-09-0${day}`;
+        rows.push(score(`one-${day}`, 220, date, { userId: 'one', user: { name: '1위' } }));
+        rows.push(score(`two-${day}`, 200, date, { userId: 'two', user: { name: '2위' } }));
+        if (day === 1) rows.push(score('low-1', 300, date, { userId: 'low', user: { name: '출석 미달' } }));
+    }
+    const result = await service.getMobileTeamStatistics('one', 'team-1', { year: 2026, filter: 'REGULAR' }, dependencies({
+        listMembers: async () => eligibleMembers,
+        listScores: async () => rows.map(({ user, ...item }) => ({ ...item, User: user })),
+    }));
+    assert.deepEqual(result.members.map(member => member.aceRank), [1, 2, null]);
+});
+
 test('statistics service returns active years and empty years safely', async () => {
     const result = await service.getMobileTeamStatistics('user-a', 'team-1', { year: 2025, filter: 'REGULAR' }, dependencies({
         listScores: async () => [],

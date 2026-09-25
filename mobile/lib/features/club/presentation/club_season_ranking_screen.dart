@@ -28,6 +28,7 @@ class _ClubSeasonRankingScreenState
       userId: user.id,
       teamId: widget.teamId,
       seasonId: _seasonId,
+      year: null as int?,
       competitionType: _competitionType,
     );
     final value = ref.watch(clubSeasonRankingProvider(request));

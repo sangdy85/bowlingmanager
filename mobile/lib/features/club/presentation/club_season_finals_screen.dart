@@ -78,6 +78,7 @@ class ClubSeasonFinalsScreen extends ConsumerWidget {
       userId: userId,
       teamId: teamId,
       seasonId: null as String?,
+      year: null as int?,
       competitionType: 'ALL',
     );
     final ranking = await ref.read(

@@ -43,7 +43,7 @@ void main() {
       );
       await tester.tap(find.byKey(const Key('club-team-1')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('club-overview-link')));
+      await tester.tap(find.byKey(const Key('club-records-link')));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('club-overview')), findsOneWidget);
@@ -398,7 +398,7 @@ void main() {
     await _openClubs(tester, repository, surfaceSize: const Size(360, 720));
     await tester.tap(find.byKey(const Key('club-team-1')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('club-overview-link')));
+    await tester.tap(find.byKey(const Key('club-records-link')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('club-overview')), findsOneWidget);
     expect(find.text('2026 시즌'), findsOneWidget);
@@ -507,7 +507,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('club-records-link')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('활동 일지'));
+    await tester.tap(find.text('상세 기록'));
     await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(Key('club-activity-menu-${testClubActivity.id}')),
@@ -595,7 +595,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('club-records-link')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('활동 일지'));
+    await tester.tap(find.text('상세 기록'));
     await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(Key('club-activity-menu-${testClubActivity.id}')),
@@ -663,6 +663,12 @@ void main() {
       await tester.tap(find.byKey(const Key('club-records-link')));
       await tester.pumpAndSettle();
 
+      expect(find.text('나의 대회 성적'), findsOneWidget);
+      expect(find.text('2월 팀전'), findsOneWidget);
+      expect(find.text('불참'), findsOneWidget);
+      await tester.tap(find.text('종합 기록'));
+      await tester.pumpAndSettle();
+
       expect(find.text('동호회 기록'), findsOneWidget);
       expect(find.text('100.0% (2/2)'), findsOneWidget);
       expect(find.text('1월'), findsOneWidget);
@@ -686,7 +692,7 @@ void main() {
       await tester.tap(find.text('2026년').last);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('활동 일지'));
+      await tester.tap(find.text('상세 기록'));
       await tester.pumpAndSettle();
       expect(
         find.byKey(const Key('club-activity-filter-scroll-hint')),
@@ -746,9 +752,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('club-records-link')));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('종합 기록'));
+    await tester.pumpAndSettle();
 
     expect(find.text('선택한 조건의 팀원 기록이 없습니다.'), findsOneWidget);
-    expect(find.text('0회'), findsOneWidget);
+    expect(find.text('0회'), findsNothing);
   });
 
   testWidgets(
@@ -805,16 +813,14 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('club-records-link')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('활동 일지'));
+      await tester.tap(find.text('상세 기록'));
       await tester.pumpAndSettle();
 
       expect(find.byKey(Key('club-activity-${second.id}')), findsOneWidget);
       expect(find.byKey(Key('club-activity-menu-${second.id}')), findsNothing);
 
-      for (final String type in <String>['REGULAR', 'CASUAL', 'HOUSE']) {
-        await tester.tap(find.byKey(Key('club-activity-filter-$type')));
-        await tester.pumpAndSettle();
-      }
+      await tester.tap(find.byKey(const Key('club-activity-filter-REGULAR')));
+      await tester.pumpAndSettle();
       expect(find.text('경기 방식을 하나 이상 선택해주세요.'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
@@ -833,6 +839,8 @@ void main() {
     await tester.tap(find.byKey(const Key('club-team-1')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('club-records-link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('종합 기록'));
     await tester.pumpAndSettle();
     expect(find.text(error.userMessage), findsOneWidget);
 
@@ -946,10 +954,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('club-records-link')));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('종합 기록'));
+    await tester.pumpAndSettle();
     expect(find.text(longName), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.text('활동 일지'));
+    await tester.tap(find.text('상세 기록'));
     await tester.pumpAndSettle();
     expect(find.text('12G'), findsOneWidget);
     expect(find.text('2,466'), findsOneWidget);
@@ -1063,6 +1073,29 @@ final ClubSeasonRanking _ranking = ClubSeasonRanking(
   season: _season,
   seasons: <ClubSeason>[_season],
   competitionType: 'ALL',
+  myCompetitionHistory: <ClubSeasonPointEntry>[
+    ClubSeasonPointEntry(
+      id: 'entry-1',
+      eventId: 'event-1',
+      competitionType: 'INDIVIDUAL',
+      competitionDate: DateTime(2026, 1, 10),
+      competitionTitle: '1월 개인전',
+      finalRank: 1,
+      points: 5,
+      month: 1,
+    ),
+    ClubSeasonPointEntry(
+      id: 'absent:event-2',
+      eventId: 'event-2',
+      competitionType: 'TEAM',
+      competitionDate: DateTime(2026, 2, 10),
+      competitionTitle: '2월 팀전',
+      finalRank: null,
+      points: 0,
+      month: 2,
+      participationStatus: 'ABSENT',
+    ),
+  ],
   rows: <ClubSeasonRankingRow>[
     ClubSeasonRankingRow(
       rank: 1,

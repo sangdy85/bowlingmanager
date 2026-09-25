@@ -176,6 +176,8 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                             ClubEventDetailScreen(
                               teamId: state.pathParameters['teamId']!,
                               eventId: state.pathParameters['eventId']!,
+                              initialSection:
+                                  state.uri.queryParameters['section'],
                             ),
                         routes: <RouteBase>[
                           GoRoute(

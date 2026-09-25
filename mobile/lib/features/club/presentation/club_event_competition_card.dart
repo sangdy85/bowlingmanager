@@ -143,13 +143,16 @@ class _ClubEventCompetitionCardState
         if (state.voting != null) ...<Widget>[
           const SizedBox(height: 8),
           Text(
-            '투표 제출 ${state.voting!.submittedCount}명 · 미제출 ${state.voting!.pendingCount}명',
+            '투표 완료 ${state.voting!.submittedCount} / '
+            '${state.voting!.submittedCount + state.voting!.pendingCount}',
           ),
         ],
         if (state.status == 'VOTING_OPEN' &&
             state.isParticipant &&
             (state.voting?.mySelections.isEmpty ?? true)) ...<Widget>[
           const Divider(height: 28),
+          const Text('내 투표', style: TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
           Text(
             '남은 시간 ${_remaining(state.voteCloseAt)}',
             style: const TextStyle(fontWeight: FontWeight.w700),

@@ -22,7 +22,7 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
   final _date = TextEditingController();
   final _time = TextEditingController(text: '19:00');
   final _location = TextEditingController();
-  final _gameType = TextEditingController();
+  String? _gameType;
   final _rankPoints = TextEditingController(text: '1:20, 2:17, 3:15');
   final _gameCount = TextEditingController(text: '4');
   bool _attendanceEnabled = true;
@@ -40,7 +40,6 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
     _date.dispose();
     _time.dispose();
     _location.dispose();
-    _gameType.dispose();
     _rankPoints.dispose();
     _gameCount.dispose();
     super.dispose();
@@ -53,7 +52,7 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
     _date.text = event.date;
     _time.text = event.time;
     _location.text = event.location;
-    _gameType.text = event.gameType ?? '';
+    _gameType = event.gameType;
     _attendanceEnabled = event.attendanceEnabled;
     _laneDrawEnabled = event.laneDrawEnabled;
     _mode = event.laneDrawMode;
@@ -114,13 +113,47 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
           children: <Widget>[
             _field(_title, '제목', 100),
             const SizedBox(height: 12),
-            _field(_date, '날짜 (YYYY-MM-DD)', 10),
+            TextFormField(
+              key: const Key('club-event-date'),
+              controller: _date,
+              readOnly: true,
+              decoration: const InputDecoration(
+                labelText: '날짜',
+                suffixIcon: Icon(Icons.calendar_month_outlined),
+              ),
+              onTap: _pickDate,
+              validator: (String? value) =>
+                  value == null || value.isEmpty ? '날짜를 선택해주세요.' : null,
+            ),
             const SizedBox(height: 12),
-            _field(_time, '시간 (HH:mm)', 5),
+            TextFormField(
+              key: const Key('club-event-time'),
+              controller: _time,
+              readOnly: true,
+              decoration: const InputDecoration(
+                labelText: '시간',
+                suffixIcon: Icon(Icons.schedule_outlined),
+              ),
+              onTap: _pickTime,
+              validator: (String? value) =>
+                  value == null || value.isEmpty ? '시간을 선택해주세요.' : null,
+            ),
             const SizedBox(height: 12),
             _field(_location, '장소', 120),
             const SizedBox(height: 12),
-            _field(_gameType, '경기 유형 (선택)', 40, optional: true),
+            DropdownButtonFormField<String>(
+              key: const Key('club-event-game-type'),
+              initialValue: _gameType,
+              decoration: const InputDecoration(labelText: '경기 유형'),
+              items: const <DropdownMenuItem<String>>[
+                DropdownMenuItem(value: '정기전', child: Text('정기전')),
+                DropdownMenuItem(value: '벙개', child: Text('벙개')),
+                DropdownMenuItem(value: '상주', child: Text('상주리그')),
+                DropdownMenuItem(value: '교류전', child: Text('교류전')),
+                DropdownMenuItem(value: '기타', child: Text('기타')),
+              ],
+              onChanged: (String? value) => setState(() => _gameType = value),
+            ),
             SwitchListTile(
               title: const Text('참석 조사'),
               value: _attendanceEnabled,
@@ -282,7 +315,7 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
       date: _date.text.trim(),
       time: _time.text.trim(),
       location: _location.text.trim(),
-      gameType: _gameType.text.trim().isEmpty ? null : _gameType.text.trim(),
+      gameType: _gameType,
       attendanceEnabled: _attendanceEnabled,
       laneDrawEnabled: _laneDrawEnabled,
       laneDrawMode: _mode,
@@ -321,6 +354,39 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final DateTime now = DateTime.now();
+    final DateTime initial = DateTime.tryParse(_date.text) ?? now;
+    final DateTime? value = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 10),
+    );
+    if (value != null) {
+      _date.text =
+          '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+    }
+  }
+
+  Future<void> _pickTime() async {
+    final List<String> parts = _time.text.split(':');
+    final TimeOfDay initial = parts.length == 2
+        ? TimeOfDay(
+            hour: int.tryParse(parts[0]) ?? 19,
+            minute: int.tryParse(parts[1]) ?? 0,
+          )
+        : const TimeOfDay(hour: 19, minute: 0);
+    final TimeOfDay? value = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
+    if (value != null) {
+      _time.text =
+          '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
     }
   }
 

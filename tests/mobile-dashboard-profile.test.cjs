@@ -181,6 +181,27 @@ test('dashboard performs fixed batch loads for multiple teams and preserves lega
     );
 });
 
+test('dashboard returns the additive next event without changing legacy metrics', async () => {
+    const user = { id: 'user-a', name: '볼러', teamMemberships: [team('one', 'MEMBER')] };
+    const nextEvent = {
+        eventId: 'event-1', teamId: 'one', teamName: 'one', title: '정기전',
+        eventType: '정기전', competitionType: null,
+        dateTime: '2026-09-30T10:00:00.000Z', location: '서울 볼링장',
+        attendanceStatus: 'UNANSWERED', laneMode: 'BULK', laneStatus: 'NOT_STARTED',
+        assignedLane: null, hiddenEnabled: false, competitionState: null,
+        individualGroup: null, teamAssignment: null, eventVoteStatus: null,
+    };
+    const result = await dashboard.getMobileDashboard('user-a', 2026, {
+        findUser: async () => user,
+        loadPersonal: async () => ({ integratedRecords: [], allRecords: [], officialRecords: [], myYearlyScores: [] }),
+        listTeamScores: async () => [],
+        listTeamMembers: async () => [],
+        loadNextEvent: async () => nextEvent,
+    });
+    assert.deepEqual(result.nextEvent, nextEvent);
+    assert.equal(result.gameCount, 0);
+});
+
 test('dashboard adds regular official totals and multiple club achievements without replacing legacy fields', async () => {
     const user = {
         id: 'user-a', name: '볼러',
