@@ -365,7 +365,12 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
       return '그룹 산정을 위한 기록이 부족합니다.';
     }
     final String source = item.groupingSource == 'MANUAL' ? '수동 지정' : '자동 산정';
-    return '${item.groupingScore?.toStringAsFixed(2) ?? '-'} · '
+    final String components = item.groupingSource == 'AUTO'
+        ? '최근50 ${item.recent50Average?.toStringAsFixed(2) ?? '-'} · '
+              '최근12 ${item.recent12Average?.toStringAsFixed(2) ?? '-'} · '
+              '정기전 기대 ${item.regularExpectedScore?.toStringAsFixed(2) ?? '-'}\n'
+        : '';
+    return '$components${item.groupingScore?.toStringAsFixed(2) ?? '-'} · '
         '${item.baseTier ?? '-'}등급 · ${item.finalGroup ?? '-'} · $source';
   }
 

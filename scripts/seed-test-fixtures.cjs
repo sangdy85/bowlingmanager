@@ -97,17 +97,27 @@ async function seedTestFixtures(prisma = new PrismaClient()) {
         where: { id }, create: { id, eventId: 'local-fixture-individual-event', name }, update: { name },
       });
     }
-    const sampleCounts = new Map([[1, 50], [2, 20], [3, 11]]);
-    for (const [userNumber, count] of sampleCounts) {
-      for (let game = 1; game <= count; game += 1) {
+    const sampleCounts = new Map([
+      [1, { total: 60, regular: 35 }],
+      [2, { total: 50, regular: 12 }],
+      [3, { total: 50, regular: 29 }],
+      [4, { total: 50, regular: 11 }],
+      [5, { total: 49, regular: 20 }],
+      [6, { total: 50, regular: 12 }],
+    ]);
+    for (const [userNumber, sample] of sampleCounts) {
+      const { total, regular } = sample;
+      for (let game = 1; game <= total; game += 1) {
+        const score = 150 + ((userNumber * 7 + game) % 60);
+        const gameDate = new Date(Date.UTC(2026, 0, 1 + game));
+        const gameType = game <= regular ? '정기전' : '벙개';
         await prisma.score.upsert({
           where: { id: `local-fixture-score-test${userNumber}-${game}` },
           create: {
             id: `local-fixture-score-test${userNumber}-${game}`, userId: `local-fixture-user-test${userNumber}`,
-            teamId: TEAM_ID, score: 150 + ((userNumber * 7 + game) % 60),
-            gameDate: new Date(Date.UTC(2026, 7, 1 + game)), gameType: game % 2 === 0 ? '정기전' : '개인',
+            teamId: TEAM_ID, score, gameDate, gameType,
           },
-          update: {},
+          update: { score, gameDate, gameType },
         });
       }
     }

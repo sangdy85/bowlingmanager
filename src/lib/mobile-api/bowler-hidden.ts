@@ -105,7 +105,12 @@ export function recentAverage(values: readonly number[], limit: number): number 
     const selected = values.slice(0, limit);
     return selected.length === 0
         ? null
-        : Number((selected.reduce((sum, value) => sum + value, 0) / selected.length).toFixed(1));
+        : selected.reduce((sum, value) => sum + value, 0) / selected.length;
+}
+
+export function regularExpectedAverage(values: readonly number[]): number | null {
+    if (values.length < 12) return null;
+    return recentAverage(values, 30);
 }
 
 export function calculateGroupingScore(input: {
@@ -211,7 +216,10 @@ export async function getBowlerHiddenCompetition(actorUserId: string, teamId: st
             prisma.score.findMany({
                 where: { userId: { in: userIds }, score: { gte: 0, lte: 300 } },
                 orderBy: [{ gameDate: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-                select: { id: true, userId: true, score: true, gameDate: true, createdAt: true },
+                select: {
+                    id: true, userId: true, score: true, gameDate: true, createdAt: true, gameType: true,
+                    TeamEvent: { select: { competitionType: true } },
+                },
             }),
             prisma.leagueMatchupIndividualScore.findMany({
                 where: { userId: { in: userIds } },
@@ -245,27 +253,31 @@ export async function getBowlerHiddenCompetition(actorUserId: string, teamId: st
             average: Number((item.total / item.scores.length).toFixed(1)), points: points.get(index + 1) ?? 0,
         }));
 
-    type Recent = { score: number; date: Date; order: number; id: string };
+    type Recent = { score: number; date: Date; order: number; id: string; regular: boolean };
     const recentByUser = new Map<string, Recent[]>();
     const append = (userId: string | null, value: Recent) => {
         if (!userId || value.score < 0 || value.score > 300) return;
         const existing = recentByUser.get(userId); if (existing) existing.push(value); else recentByUser.set(userId, [value]);
     };
-    personalScores.forEach((row) => append(row.userId, { score: row.score, date: row.gameDate, order: 0, id: `P:${row.id}` }));
+    personalScores.forEach((row) => append(row.userId, {
+        score: row.score, date: row.gameDate, order: 0, id: `P:${row.id}`,
+        regular: row.gameType?.trim() === "정기전" && row.TeamEvent?.competitionType !== "TEAM" && row.TeamEvent?.competitionType !== "EVENT",
+    }));
     leagueScores.forEach((row) => [row.score1, row.score2, row.score3].forEach((score, index) => append(row.userId, {
-        score, date: row.LeagueMatchup.round.date ?? row.createdAt, order: index + 1, id: `L:${row.id}:${index + 1}`,
+        score, date: row.LeagueMatchup.round.date ?? row.createdAt, order: index + 1, id: `L:${row.id}:${index + 1}`, regular: false,
     })));
     tournamentScores.forEach((row) => append(row.registration.userId, {
-        score: row.score, date: row.round?.date ?? row.createdAt, order: row.gameNumber, id: `T:${row.id}`,
+        score: row.score, date: row.round?.date ?? row.createdAt, order: row.gameNumber, id: `T:${row.id}`, regular: false,
     }));
     const memberPreviews = participants.map((participant) => {
-        const values = (recentByUser.get(participant.userId) ?? []).sort((left, right) =>
-            right.date.getTime() - left.date.getTime() || right.order - left.order || right.id.localeCompare(left.id),
-        ).map((item) => item.score);
+        const records = (recentByUser.get(participant.userId) ?? []).sort((left, right) =>
+            right.date.getTime() - left.date.getTime() || right.order - left.order || right.id.localeCompare(left.id));
+        const values = records.map((item) => item.score);
+        const regularValues = records.filter((item) => item.regular).map((item) => item.score);
         const attendance = event.attendances.find((item) => item.memberId === participant.memberId)!;
-        const recent50Average = recentAverage(values, 50);
-        const recent12Average = recentAverage(values, 12);
-        const regularExpectedScore = null;
+        const recent50Average = values.length >= 50 ? recentAverage(values, 50) : null;
+        const recent12Average = values.length >= 12 ? recentAverage(values, 12) : null;
+        const regularExpectedScore = regularExpectedAverage(regularValues);
         const grouping = createGroupingPreview({
             recent50Average, recent12Average, regularExpectedScore,
             manualGroupingScore: attendance.manualGroupingScore ?? null,

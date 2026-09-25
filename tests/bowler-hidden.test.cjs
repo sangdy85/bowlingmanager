@@ -81,6 +81,79 @@ test('grouping preview requires every automatic component and distinguishes manu
   }), { groupingScore: 190, groupingSource: 'AUTO', ratingStatus: 'READY', baseTier: 'B' });
 });
 
+test('regular expected average uses the latest thirty and requires twelve regular games', () => {
+  assert.equal(hidden.regularExpectedAverage(Array.from({ length: 35 }, (_, index) => 135 - index)), 120.5);
+  assert.equal(hidden.regularExpectedAverage(Array.from({ length: 29 }, () => 190)), 190);
+  assert.equal(hidden.regularExpectedAverage(Array.from({ length: 12 }, () => 180)), 180);
+  assert.equal(hidden.regularExpectedAverage(Array.from({ length: 11 }, () => 200)), null);
+});
+
+test('automatic grouping fixtures enforce total fifty and regular twelve thresholds', async () => {
+  const specifications = [
+    { total: 60, regular: 35, score: index => 101 + index },
+    { total: 50, regular: 12, score: () => 180 },
+    { total: 50, regular: 29, score: () => 190 },
+    { total: 50, regular: 11, score: () => 200 },
+    { total: 49, regular: 20, score: () => 200 },
+    { total: 50, regular: 12, score: () => 200 },
+  ];
+  const personalScores = specifications.flatMap((specification, userIndex) =>
+    Array.from({ length: specification.total }, (_, index) => ({
+      id: `u${userIndex + 1}-${String(index + 1).padStart(2, '0')}`,
+      userId: `user-${userIndex + 1}`,
+      score: specification.score(index),
+      gameDate: new Date(Date.UTC(2026, 0, index + 1)),
+      createdAt: new Date(Date.UTC(2026, 0, index + 1)),
+      gameType: index < specification.regular ? '정기전' : '벙개',
+      TeamEvent: null,
+    })),
+  );
+  // These look like regular rows by label, but TEAM/EVENT competitions are explicitly excluded.
+  personalScores.push({
+    id: 'team-hidden', userId: 'user-2', score: 300,
+    gameDate: new Date('2026-12-30'), createdAt: new Date('2026-12-30'),
+    gameType: '정기전', TeamEvent: { competitionType: 'TEAM' },
+  });
+  personalScores.push({
+    id: 'event-hidden', userId: 'user-3', score: 300,
+    gameDate: new Date('2026-12-31'), createdAt: new Date('2026-12-31'),
+    gameType: '정기전', TeamEvent: { competitionType: 'EVENT' },
+  });
+  const prisma = {
+    teamSeason: { findFirst: async () => ({
+      status: 'ACTIVE', individualPointsConfig: '{}', teamPointsConfig: '{}', eventPointsConfig: '{}',
+    }) },
+    teamEvent: { findFirst: async () => ({
+      id: 'event-auto', eventDate: new Date('2026-09-22T00:00:00+09:00'), gameType: '정기전',
+      competitionEnabled: true, competitionType: 'INDIVIDUAL', competitionMode: 'MINI',
+      competitionStatus: 'DRAFT', rankPoints: '{}', guests: [], seasonPublications: [],
+      team: { id: 'team-1', ownerId: 'owner', bowlerHiddenEnabled: true, User: [] },
+      attendances: specifications.map((_, index) => ({
+        memberId: `member-${index + 1}`, memberDisplayName: `회원${index + 1}`,
+        manualGroupingScore: null, member: { userId: `user-${index + 1}` },
+      })),
+    }) },
+    score: { findMany: async args => args.where.teamId ? [] : personalScores },
+    leagueMatchupIndividualScore: { findMany: async () => [] },
+    tournamentScore: { findMany: async () => [] },
+  };
+  const service = loadTs('src/lib/mobile-api/bowler-hidden.ts', { '@/lib/prisma': prisma });
+  const result = await service.getBowlerHiddenCompetition('owner', 'team-1', 'event-auto');
+  const [a, b, c, d, e, f] = result.participantPreview;
+  assert.deepEqual(
+    [a.recent50Average, a.recent12Average, a.regularExpectedScore, a.groupingScore],
+    [135.5, 154.5, 120.5, 138.6],
+  );
+  assert.deepEqual([a.groupingSource, b.groupingSource, c.groupingSource], ['AUTO', 'AUTO', 'AUTO']);
+  assert.equal(b.regularExpectedScore, 180);
+  assert.equal(c.regularExpectedScore, 190);
+  assert.deepEqual([d.groupingSource, d.ratingStatus], ['MANUAL_REQUIRED', 'DATA_INSUFFICIENT']);
+  assert.equal(d.regularExpectedScore, null);
+  assert.equal(e.recent50Average, null);
+  assert.equal(e.groupingSource, 'MANUAL_REQUIRED');
+  assert.deepEqual([f.gameSampleCount, f.regularExpectedScore, f.groupingSource], [50, 200, 'AUTO']);
+});
+
 test('event parser gates competitions and accepts implemented individual/team/event types', () => {
   const events = loadTs('src/lib/mobile-api/team-events.ts', {
     '@/lib/prisma': {}, '@/lib/mobile-api/bowler-hidden': hidden,
