@@ -96,6 +96,12 @@ test('19/4 draft enforces every snake turn and records twelve picks plus three b
     assignmentType: index < 4 ? 'CAPTAIN' : null, assignmentOrder: index < 4 ? 0 : null,
     member: item,
   }));
+  for (let index = 17; index < 19; index += 1) {
+    participants[index].memberId = null;
+    participants[index].guestId = `guest-${index - 16}`;
+    participants[index].member = null;
+    participants[index].guest = { id: participants[index].guestId, name: `게스트${index - 16}` };
+  }
   const teams = members.slice(0, 4).map((captain, index) => ({
     id: `team-${index + 1}`, generation: 1, name: `TEAM ${index + 1}`, draftOrder: index + 1,
     lanePriority: null, teamHandicap: 0, captainMemberId: captain.id, captain,
@@ -105,7 +111,7 @@ test('19/4 draft enforces every snake turn and records twelve picks plus three b
     id: 'event-draft', teamId: 'team-1', competitionEnabled: true, competitionType: 'TEAM',
     competitionStatus: 'DRAFT_READY', draftGeneration: 1, currentPickNumber: 1,
     team: { ownerId: 'user-1', bowlerHiddenEnabled: true, User: [], members },
-    attendances: members.map(item => ({ status: 'ATTENDING', member: item })),
+    attendances: members.slice(0, 17).map(item => ({ status: 'ATTENDING', member: item })), guests: [{ id: 'guest-1', name: '게스트1' }, { id: 'guest-2', name: '게스트2' }],
     competitionTeams: teams, competitionParticipants: participants, competitionDraftPicks: [],
     laneSlots: [], laneAssignments: [], seasonPublications: [], rankPoints: '{}',
   };
@@ -171,16 +177,28 @@ test('19/4 draft enforces every snake turn and records twelve picks plus three b
     }
   }
 
+  assert.equal(event.competitionStatus, 'LUCKY_DRAW');
+  await service.updateTeamCompetition('user-1', 'team-1', event.id, { action: 'AUTO_ASSIGN_REMAINDER' });
   assert.equal(event.competitionStatus, 'TEAMS_FINALIZED');
   assert.equal(event.competitionDraftPicks.length, 15);
   assert.equal(new Set(event.competitionDraftPicks.map(item => item.pickNumber)).size, 15);
   assert.equal(new Set(event.competitionDraftPicks.map(item => item.selectedParticipantId)).size, 15);
   assert.equal(participants.filter(item => !item.competitionTeamId).length, 0);
+  assert.equal(participants.filter(item => item.guestId && item.competitionTeamId).length, 2);
   const sizes = teams.map(team => participants.filter(item => item.competitionTeamId === team.id).length);
   assert.deepEqual([...sizes].sort((a, b) => b - a), [5, 5, 5, 4]);
   assert.ok(Math.max(...sizes) - Math.min(...sizes) <= 1);
   assert.deepEqual(event.competitionDraftPicks.slice(0, 12).map(item => Number(item.competitionTeamId.slice(-1))), actorOrder);
-  assert.equal(event.competitionDraftPicks.slice(12).every(item => item.pickType === 'RANDOM_REMAINDER'), true);
+  assert.equal(event.competitionDraftPicks.slice(12).every(item => item.pickType === 'AUTO_REMAINDER'), true);
+});
+
+test('lucky draw server policy supports wins, misses and forces a bounded win', () => {
+  const service = loadTs('src/lib/mobile-api/team-competition.ts', {
+    '@/lib/prisma': {}, '@/lib/mobile-api/bowler-hidden': { readRankPoints: () => [] },
+  });
+  assert.equal(service.luckyDrawWins(0, 4, () => 0), true);
+  assert.equal(service.luckyDrawWins(0, 4, () => 1), false);
+  assert.equal(service.luckyDrawWins(3, 4, () => 1), true);
 });
 
 test('official lane example allocates non-interleaved contiguous team blocks', () => {
@@ -276,12 +294,20 @@ test('5/5/5/4 scoring excludes each game own lowest player and accumulates game 
       participants: teamParticipants,
     });
   }
+  const guestParticipant = participants.at(-1);
+  const guestUserId = guestParticipant.member.userId;
+  guestParticipant.memberId = null; guestParticipant.guestId = 'guest-score';
+  guestParticipant.guest = { id: 'guest-score', name: '게스트점수' }; guestParticipant.member = null;
+  scores.filter(row => row.userId === guestUserId).forEach(row => {
+    row.userId = null; row.teamEventGuestId = 'guest-score'; row.guestName = '게스트점수';
+  });
   const event = {
     id: 'event-exact-score', teamId: 'team-1', eventDate: new Date('2026-09-22T00:00:00+09:00'),
     gameType: '정기전', competitionEnabled: true, competitionType: 'TEAM', competitionStatus: 'TEAMS_FINALIZED',
     draftGeneration: 1, currentPickNumber: 13, rankPoints: JSON.stringify({ 1: 5, 2: 3, 3: 2, 4: 1 }),
     team: { ownerId: 'user-1', bowlerHiddenEnabled: true, User: [], members },
-    attendances: members.map(item => ({ status: 'ATTENDING', member: item })),
+    attendances: members.filter(item => item.userId !== guestUserId).map(item => ({ status: 'ATTENDING', member: item })),
+    guests: [{ id: 'guest-score', name: '게스트점수' }],
     competitionTeams: teams, competitionParticipants: participants,
     competitionDraftPicks: [], laneSlots: [], laneAssignments: [], seasonPublications: [],
   };

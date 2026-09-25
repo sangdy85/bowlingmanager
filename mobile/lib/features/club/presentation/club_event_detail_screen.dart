@@ -323,6 +323,26 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                         : null,
                   ),
                 ),
+                const SizedBox(height: 8),
+                Text('미배정 ${result.missingGroupCount}명'),
+                if (event.canManage)
+                  FilledButton.tonal(
+                    onPressed: _working || !result.groupAssignmentComplete
+                        ? null
+                        : () => _action(
+                            userId,
+                            () => ref
+                                .read(clubEventsRepositoryProvider)
+                                .individualCompetitionAction(
+                                  widget.teamId,
+                                  widget.eventId,
+                                  const <String, dynamic>{
+                                    'action': 'COMPLETE_GROUP_ASSIGNMENT',
+                                  },
+                                ),
+                          ),
+                    child: const Text('조 편성 완료'),
+                  ),
               ],
               if (event.canManage) ...<Widget>[
                 const Divider(height: 28),
@@ -361,62 +381,34 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
   }
 
   String _groupingDescription(ClubCompetitionPreview item) {
-    if (item.ratingStatus == 'DATA_INSUFFICIENT') {
-      return '그룹 산정을 위한 기록이 부족합니다.';
+    if (item.autoGroupingScore == null) {
+      return item.manualGroup == null
+          ? '자동 산정 불가 · 조 선택 필요'
+          : '자동 산정 불가 · 수동 ${item.manualGroup}조';
     }
-    final String source = item.groupingSource == 'MANUAL' ? '수동 지정' : '자동 산정';
-    final String components = item.groupingSource == 'AUTO'
-        ? '최근50 ${item.recent50Average?.toStringAsFixed(2) ?? '-'} · '
-              '최근12 ${item.recent12Average?.toStringAsFixed(2) ?? '-'} · '
-              '정기전 기대 ${item.regularExpectedScore?.toStringAsFixed(2) ?? '-'}\n'
-        : '';
-    return '$components${item.groupingScore?.toStringAsFixed(2) ?? '-'} · '
-        '${item.baseTier ?? '-'}등급 · ${item.finalGroup ?? '-'} · $source';
+    final String score = item.autoGroupingScore!.toStringAsFixed(1);
+    if (item.manualGroup != null && item.manualGroup != item.autoGroup) {
+      return '$score · 자동 ${item.autoGroup}조 → 수동 ${item.manualGroup}조';
+    }
+    return '$score · ${item.autoGroup}조 · 자동';
   }
 
   Future<void> _setManualGrouping(
     String userId,
     ClubCompetitionPreview item,
   ) async {
-    final controller = TextEditingController(
-      text: item.manualGroupingScore?.toString() ?? '',
-    );
-    final int? score = await showDialog<int>(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: Text('${item.name} 수동 그룹 점수'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: '0 이상의 정수'),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final int? value = int.tryParse(controller.text.trim());
-              if (value != null && value >= 0) Navigator.pop(context, value);
-            },
-            child: const Text('저장'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (score == null) return;
+    final String? group = await showClubManualGroupDialog(context, item.name);
+    if (group == null || !mounted) return;
     await _action(
       userId,
       () => ref.read(clubEventsRepositoryProvider).individualCompetitionAction(
         widget.teamId,
         widget.eventId,
         <String, dynamic>{
-          'action': 'SET_MANUAL_GROUPING',
+          'action': 'SET_MANUAL_GROUP',
           'participantKind': item.participantKind,
           'participantId': item.participantId,
-          'manualGroupingScore': score,
+          'manualGroup': group,
         },
       ),
     );
@@ -617,30 +609,8 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
   }
 
   Future<void> _addGuest(String userId) async {
-    final controller = TextEditingController();
-    final String? name = await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: const Text('게스트 추가'),
-        content: TextField(
-          controller: controller,
-          maxLength: 40,
-          decoration: const InputDecoration(labelText: '이름'),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('추가'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (name != null && name.isNotEmpty) {
+    final String? name = await showClubGuestDialog(context);
+    if (name != null && name.isNotEmpty && mounted) {
       await _action(
         userId,
         () => ref
@@ -792,4 +762,46 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
+}
+
+Future<String?> showClubManualGroupDialog(
+  BuildContext context,
+  String participantName,
+) => showDialog<String>(
+  context: context,
+  builder: (BuildContext context) => SimpleDialog(
+    title: Text('$participantName 조 선택'),
+    children: <Widget>[
+      for (final String value in const <String>['A', 'B', 'C', 'D', 'E'])
+        SimpleDialogOption(
+          onPressed: () => Navigator.pop(context, value),
+          child: Text('$value조'),
+        ),
+    ],
+  ),
+);
+
+Future<String?> showClubGuestDialog(BuildContext context) {
+  String value = '';
+  return showDialog<String>(
+    context: context,
+    builder: (BuildContext context) => AlertDialog(
+      title: const Text('게스트 추가'),
+      content: TextField(
+        maxLength: 40,
+        onChanged: (String text) => value = text,
+        decoration: const InputDecoration(labelText: '이름'),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, value.trim()),
+          child: const Text('추가'),
+        ),
+      ],
+    ),
+  );
 }

@@ -152,13 +152,81 @@ test('score completion and sequential reveal reject incomplete or duplicate prog
   assert.throws(() => service.nextRevealStep(4, 4), error => error.code === 'REVEAL_COMPLETE');
 });
 
-test('vote replacement and reveal use transactions and compare-and-set guards', () => {
+test('immutable ballots and reveal use transactions and compare-and-set guards', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '../src/lib/mobile-api/event-competition.ts'), 'utf8');
-  assert.match(source, /eventCompetitionBallot\.upsert/);
-  assert.match(source, /eventCompetitionVotePick\.deleteMany/);
+  assert.match(source, /eventCompetitionBallot\.findUnique/);
+  assert.match(source, /eventCompetitionBallot\.create/);
+  assert.match(source, /BALLOT_ALREADY_SUBMITTED/);
+  assert.doesNotMatch(source, /eventCompetitionVotePick\.deleteMany/);
   assert.match(source, /\$transaction\(async \(tx\)/);
   assert.match(source, /revealedAt: null/);
   assert.match(source, /eventRevealIndex: event\.eventRevealIndex/);
+});
+
+test('member and guest mixed results share votes without rounding or identity loss', () => {
+  const mixed = [
+    { participantId: 'm1', memberId: 'member-1', name: '회원1', scores: [250, 250] },
+    { participantId: 'm2', memberId: 'member-2', name: '회원2', scores: [200, 200] },
+    { participantId: 'g1', memberId: null, guestId: 'guest-1', name: '게스트A', scores: [217, 230, 220, 250] },
+    { participantId: 'g2', memberId: null, guestId: 'guest-2', name: '게스트B', scores: [150, 150] },
+  ];
+  const mixedBallots = [
+    { voterParticipantId: 'm1', selectedParticipantIds: ['m2', 'g1', 'g2'] },
+    { voterParticipantId: 'm2', selectedParticipantIds: ['m1', 'g1', 'g2'] },
+    { voterParticipantId: 'g1', selectedParticipantIds: ['m1', 'm2', 'g2'] },
+    { voterParticipantId: 'g2', selectedParticipantIds: ['m1', 'm2', 'g1'] },
+  ];
+  const rows = service.calculateEventResults(mixed, mixedBallots, [], 'INCLUDE_ACTUAL_ONLY', 'ACTUAL_SCORE_THEN_ID');
+  const guest = rows.find(row => row.participantId === 'g1');
+  assert.equal(guest.memberId, null); assert.equal(guest.guestId, 'guest-1');
+  assert.equal(guest.actualScore, 917); assert.equal(guest.voteCount, 3); assert.equal(guest.shareScore, 917 / 3);
+});
+
+test('manager proxy vote stores participant identity, audits actor and rejects duplicates or members', async () => {
+  const now = new Date('2026-09-22T10:05:00Z');
+  const participants = [
+    { id: 'p-owner', memberId: 'member-owner', guestId: null, revealOrder: 1, revealedAt: null, member: { id: 'member-owner', userId: 'owner', alias: null, user: { name: '관리자' } }, guest: null },
+    { id: 'p-member', memberId: 'member-2', guestId: null, revealOrder: 2, revealedAt: null, member: { id: 'member-2', userId: 'member-user', alias: null, user: { name: '회원' } }, guest: null },
+    { id: 'p-three', memberId: 'member-3', guestId: null, revealOrder: 3, revealedAt: null, member: { id: 'member-3', userId: 'third-user', alias: null, user: { name: '회원3' } }, guest: null },
+    { id: 'p-guest', memberId: null, guestId: 'guest-1', revealOrder: 4, revealedAt: null, member: null, guest: { id: 'guest-1', name: '게스트A' } },
+  ];
+  const ballots = [];
+  const event = {
+    id: 'event-1', teamId: 'team-1', competitionEnabled: true, competitionType: 'EVENT', competitionStatus: 'EVENT_READY',
+    competitionStartAt: new Date('2026-09-22T10:00:00Z'), votingDurationMinutes: 30, competitionGameCount: 1,
+    competitionMode: 'OFFICIAL', eventNonVoterPolicy: null, eventTieBreakPolicy: null, eventRevealIndex: 0,
+    eventPublishedSnapshot: null, eventDate: new Date('2026-09-22T00:00:00Z'), gameType: '정기전', rankPoints: '{}',
+    team: { ownerId: 'owner', bowlerHiddenEnabled: true, User: [], members: participants.filter(p => p.member).map(p => p.member) },
+    attendances: [], guests: [{ id: 'guest-1', name: '게스트A' }], eventCompetitionParticipants: participants,
+    eventCompetitionBallots: ballots, seasonPublications: [], seasonId: null,
+  };
+  const prisma = {
+    teamEvent: { findFirst: async args => args.select ? { competitionStartAt: event.competitionStartAt, votingDurationMinutes: 30 } : event },
+    eventCompetitionBallot: {
+      findUnique: async args => ballots.find(ballot => ballot.voterParticipantId === args.where.voterParticipantId) ?? null,
+      create: async args => { const ballot = { id: `b-${ballots.length + 1}`, selections: [], ...args.data }; ballots.push(ballot); return ballot; },
+    },
+    eventCompetitionVotePick: { create: async args => { const ballot = ballots.find(item => item.id === args.data.ballotId); ballot.selections.push(args.data); return args.data; } },
+  };
+  prisma.$transaction = async callback => callback(prisma);
+  const scoped = loadTs('src/lib/mobile-api/event-competition.ts', {
+    '@/lib/prisma': prisma, '@/lib/mobile-api/bowler-hidden': { readRankPoints: () => [] },
+    '@/lib/mobile-api/unified-season': {
+      createSeasonPointPublication: async () => ({}), getPublicationPointTable: async () => [], getSeasonPointPreview: async () => [],
+      revokeSeasonPointPublication: async () => {}, seasonPointsForRank: () => 0,
+    },
+  });
+  const selection = ['p-owner', 'p-member', 'p-three'];
+  await scoped.updateEventCompetition('owner', 'team-1', 'event-1', {
+    action: 'PROXY_VOTE', voterParticipantId: 'p-guest', selectedParticipantIds: selection,
+  }, now);
+  assert.equal(ballots[0].voterParticipantId, 'p-guest'); assert.equal(ballots[0].enteredByUserId, 'owner');
+  await assert.rejects(scoped.updateEventCompetition('owner', 'team-1', 'event-1', {
+    action: 'PROXY_VOTE', voterParticipantId: 'p-guest', selectedParticipantIds: selection,
+  }, now), error => error.code === 'BALLOT_ALREADY_SUBMITTED');
+  await assert.rejects(scoped.updateEventCompetition('member-user', 'team-1', 'event-1', {
+    action: 'PROXY_VOTE', voterParticipantId: 'p-three', selectedParticipantIds: ['p-owner', 'p-member', 'p-guest'],
+  }, now), error => error.code === 'FORBIDDEN');
 });
 
 test('published EVENT source scores are locked while unrelated rows remain mutable', async () => {

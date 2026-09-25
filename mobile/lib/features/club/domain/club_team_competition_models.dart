@@ -1,20 +1,37 @@
 class ClubTeamCompetitionParticipant {
   const ClubTeamCompetitionParticipant({
+    required this.participantId,
+    required this.participantKind,
     required this.memberId,
+    required this.guestId,
     required this.name,
     required this.assignmentType,
     required this.assignmentOrder,
     required this.laneSlot,
   });
-  final String memberId;
+  final String participantId;
+  final String participantKind;
+  final String? memberId;
+  final String? guestId;
   final String name;
   final String? assignmentType;
   final int? assignmentOrder;
   final String? laneSlot;
 
   factory ClubTeamCompetitionParticipant.fromJson(Map<String, dynamic> json) {
-    const Set<String> assignmentTypes = <String>{'CAPTAIN', 'DRAFT', 'RANDOM'};
-    if (json['memberId'] is! String ||
+    const Set<String> assignmentTypes = <String>{
+      'CAPTAIN',
+      'DRAFT',
+      'RANDOM',
+      'LUCKY_DRAW',
+    };
+    final String? memberId = json['memberId'] as String?;
+    final String? guestId = json['guestId'] as String?;
+    final String kind =
+        (json['participantKind'] ?? (guestId == null ? 'MEMBER' : 'GUEST'))
+            as String;
+    if ((memberId == null) == (guestId == null) ||
+        !const <String>{'MEMBER', 'GUEST'}.contains(kind) ||
         json['name'] is! String ||
         (json['assignmentType'] != null &&
             !assignmentTypes.contains(json['assignmentType'])) ||
@@ -23,7 +40,10 @@ class ClubTeamCompetitionParticipant {
       throw const FormatException('Invalid team competition participant.');
     }
     return ClubTeamCompetitionParticipant(
-      memberId: json['memberId'] as String,
+      participantId: _string(json['participantId'] ?? memberId ?? guestId),
+      participantKind: kind,
+      memberId: memberId,
+      guestId: guestId,
       name: json['name'] as String,
       assignmentType: json['assignmentType'] as String?,
       assignmentOrder: json['assignmentOrder'] as int?,
@@ -110,7 +130,7 @@ class ClubDraftHistoryItem {
   final String pickType;
   final String teamName;
   final String selectedDisplayName;
-  bool get automatic => pickType == 'RANDOM_REMAINDER';
+  bool get automatic => pickType == 'AUTO_REMAINDER';
   factory ClubDraftHistoryItem.fromJson(Map<String, dynamic> json) =>
       ClubDraftHistoryItem(
         id: _string(json['id']),
@@ -121,6 +141,10 @@ class ClubDraftHistoryItem {
         pickType: _enumString(json['pickType'], const <String>{
           'CAPTAIN_PICK',
           'RANDOM_REMAINDER',
+          'MANUAL_PICK',
+          'LUCKY_DRAW_WIN',
+          'LUCKY_DRAW_MISS',
+          'AUTO_REMAINDER',
         }),
         teamName: _string(json['teamName']),
         selectedDisplayName: _string(json['selectedDisplayName']),
@@ -172,6 +196,7 @@ class ClubTeamIndividualResult {
   const ClubTeamIndividualResult({
     required this.rank,
     required this.memberId,
+    required this.guestId,
     required this.name,
     required this.competitionTeamId,
     required this.scores,
@@ -179,7 +204,8 @@ class ClubTeamIndividualResult {
     required this.average,
   });
   final int rank;
-  final String memberId;
+  final String? memberId;
+  final String? guestId;
   final String name;
   final String competitionTeamId;
   final List<int> scores;
@@ -196,7 +222,8 @@ class ClubTeamIndividualResult {
     }
     return ClubTeamIndividualResult(
       rank: _positiveInt(json['rank']),
-      memberId: _string(json['memberId']),
+      memberId: json['memberId'] as String?,
+      guestId: json['guestId'] as String?,
       name: _string(json['name']),
       competitionTeamId: _string(json['competitionTeamId']),
       scores: List<int>.unmodifiable(rawScores.cast<int>()),
@@ -334,7 +361,7 @@ class ClubTeamCompetitionState {
   final String? myTeam;
   final ClubTeamCompetitionResults results;
 
-  bool get polling => status == 'DRAFT_IN_PROGRESS';
+  bool get polling => status == 'DRAFT_IN_PROGRESS' || status == 'LUCKY_DRAW';
 
   factory ClubTeamCompetitionState.fromJson(Map<String, dynamic> json) {
     const Set<String> statuses = <String>{
@@ -342,6 +369,7 @@ class ClubTeamCompetitionState {
       'ATTENDANCE_LOCKED',
       'DRAFT_READY',
       'DRAFT_IN_PROGRESS',
+      'LUCKY_DRAW',
       'TEAMS_FINALIZED',
       'LANES_ASSIGNED',
       'PUBLISHED',

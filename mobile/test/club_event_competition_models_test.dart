@@ -18,6 +18,13 @@ void main() {
           'memberId': 'member-1',
           'name': '회원1',
         },
+        <String, Object?>{
+          'participantId': 'participant-guest',
+          'participantKind': 'GUEST',
+          'memberId': null,
+          'guestId': 'guest-1',
+          'name': '게스트A',
+        },
         <String, Object>{
           'participantId': 'participant-2',
           'memberId': 'member-2',
@@ -28,6 +35,7 @@ void main() {
         'submittedCount': 1,
         'pendingCount': 3,
         'mySelections': <String>['participant-2'],
+        'submittedParticipantIds': <String>['participant-1'],
       },
       'scoreComplete': false,
       'reveal': <String, Object>{'revealedCount': 0, 'totalCount': 4},
@@ -36,6 +44,14 @@ void main() {
     expect(state.status, 'VOTING_OPEN');
     expect(state.polling, isTrue);
     expect(state.voting!.mySelections, <String>['participant-2']);
+    expect(state.voting!.submittedParticipantIds, <String>['participant-1']);
+    expect(
+      state.participants
+          .where((participant) => participant.participantKind == 'GUEST')
+          .single
+          .guestId,
+      'guest-1',
+    );
   });
 
   test('parses decimal published result and own selections', () {

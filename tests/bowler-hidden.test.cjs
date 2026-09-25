@@ -70,15 +70,23 @@ test('grouping score keeps precision and applies the fixed 30/40/30 weights', ()
 });
 
 test('grouping preview requires every automatic component and distinguishes manual overrides', () => {
-  assert.deepEqual(hidden.createGroupingPreview({
+  const missing = hidden.createGroupingPreview({
     recent50Average: 200, recent12Average: 200, regularExpectedScore: null, manualGroupingScore: null,
-  }), { groupingScore: null, groupingSource: 'MANUAL_REQUIRED', ratingStatus: 'DATA_INSUFFICIENT', baseTier: null });
-  assert.deepEqual(hidden.createGroupingPreview({
+  });
+  assert.equal(missing.groupingSource, 'MANUAL_REQUIRED'); assert.equal(missing.effectiveGroup, null);
+  const legacy = hidden.createGroupingPreview({
     recent50Average: null, recent12Average: null, regularExpectedScore: null, manualGroupingScore: 190,
-  }), { groupingScore: 190, groupingSource: 'MANUAL', ratingStatus: 'READY', baseTier: 'B' });
-  assert.deepEqual(hidden.createGroupingPreview({
+  });
+  assert.equal(legacy.groupingSource, 'LEGACY_MANUAL_SCORE'); assert.equal(legacy.effectiveGroup, 'B');
+  const auto = hidden.createGroupingPreview({
     recent50Average: 200, recent12Average: 190, regularExpectedScore: 180, manualGroupingScore: null,
-  }), { groupingScore: 190, groupingSource: 'AUTO', ratingStatus: 'READY', baseTier: 'B' });
+  });
+  assert.equal(auto.autoGroupingScore, 190); assert.equal(auto.autoGroup, 'B'); assert.equal(auto.effectiveGroup, 'B');
+  const override = hidden.createGroupingPreview({
+    recent50Average: 200, recent12Average: 190, regularExpectedScore: 180, manualGroupingScore: null, manualGroup: 'C',
+  });
+  assert.equal(override.autoGroupingScore, 190); assert.equal(override.autoGroup, 'B');
+  assert.equal(override.manualGroup, 'C'); assert.equal(override.effectiveGroup, 'C'); assert.equal(override.groupingSource, 'MANUAL_OVERRIDE');
 });
 
 test('regular expected average uses the latest thirty and requires twelve regular games', () => {
@@ -86,6 +94,15 @@ test('regular expected average uses the latest thirty and requires twelve regula
   assert.equal(hidden.regularExpectedAverage(Array.from({ length: 29 }, () => 190)), 190);
   assert.equal(hidden.regularExpectedAverage(Array.from({ length: 12 }, () => 180)), 180);
   assert.equal(hidden.regularExpectedAverage(Array.from({ length: 11 }, () => 200)), null);
+});
+
+test('group assignment completes only when every attending member and guest has an effective group', () => {
+  assert.deepEqual(hidden.groupAssignmentState([
+    { effectiveGroup: 'A' }, { effectiveGroup: 'C' }, { effectiveGroup: 'E' },
+  ]), { missingGroupCount: 0, groupAssignmentComplete: true });
+  assert.deepEqual(hidden.groupAssignmentState([
+    { effectiveGroup: 'A' }, { effectiveGroup: null }, { effectiveGroup: 'E' },
+  ]), { missingGroupCount: 1, groupAssignmentComplete: false });
 });
 
 test('automatic grouping fixtures enforce total fifty and regular twelve thresholds', async () => {
@@ -253,30 +270,30 @@ test('manual grouping permits managers and same-event captains while preserving 
   };
   const service = loadTs('src/lib/mobile-api/bowler-hidden.ts', { '@/lib/prisma': prisma });
   await service.updateBowlerHiddenCompetition('owner', 'team-1', 'event-1', {
-    action: 'SET_MANUAL_GROUPING', participantKind: 'MEMBER', participantId: 'target-member', manualGroupingScore: 200,
+    action: 'SET_MANUAL_GROUP', participantKind: 'MEMBER', participantId: 'target-member', manualGroup: 'A',
   });
   actor = 'manager';
   await service.updateBowlerHiddenCompetition('manager', 'team-1', 'event-1', {
-    action: 'SET_MANUAL_GROUPING', participantKind: 'GUEST', participantId: 'guest-1', manualGroupingScore: 189,
+    action: 'SET_MANUAL_GROUP', participantKind: 'GUEST', participantId: 'guest-1', manualGroup: 'B',
   });
   actor = 'captain';
   await service.updateBowlerHiddenCompetition('captain', 'team-1', 'event-1', {
-    action: 'SET_MANUAL_GROUPING', participantKind: 'MEMBER', participantId: 'target-member', manualGroupingScore: 170,
+    action: 'SET_MANUAL_GROUP', participantKind: 'MEMBER', participantId: 'target-member', manualGroup: 'C',
   });
   assert.equal(updates.length, 3);
-  assert.deepEqual(updates.map(item => item.data.manualGroupingScore), [200, 189, 170]);
+  assert.deepEqual(updates.map(item => item.data.manualGroup), ['A', 'B', 'C']);
 
   actor = 'ordinary';
   await assert.rejects(() => service.updateBowlerHiddenCompetition('ordinary', 'team-1', 'event-1', {
-    action: 'SET_MANUAL_GROUPING', participantKind: 'MEMBER', participantId: 'target-member', manualGroupingScore: 180,
+    action: 'SET_MANUAL_GROUP', participantKind: 'MEMBER', participantId: 'target-member', manualGroup: 'D',
   }), error => error.code === 'FORBIDDEN');
   actor = 'captain';
   await assert.rejects(() => service.updateBowlerHiddenCompetition('captain', 'team-1', 'event-1', {
-    action: 'SET_MANUAL_GROUPING', participantKind: 'GUEST', participantId: 'guest-1', manualGroupingScore: 180,
+    action: 'SET_MANUAL_GROUP', participantKind: 'GUEST', participantId: 'guest-1', manualGroup: 'D',
   }), error => error.code === 'FORBIDDEN');
   await assert.rejects(() => service.updateBowlerHiddenCompetition('owner', 'team-1', 'event-1', {
-    action: 'SET_MANUAL_GROUPING', participantKind: 'MEMBER', participantId: 'target-member', manualGroupingScore: -1,
-  }), error => error.code === 'INVALID_MANUAL_GROUPING');
+    action: 'SET_MANUAL_GROUP', participantKind: 'MEMBER', participantId: 'target-member', manualGroup: 'F',
+  }), error => error.code === 'INVALID_MANUAL_GROUP');
 });
 
 test('migration is additive and defaults all existing teams to off', () => {

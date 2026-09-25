@@ -146,7 +146,9 @@ class _ClubEventCompetitionCardState
             '투표 제출 ${state.voting!.submittedCount}명 · 미제출 ${state.voting!.pendingCount}명',
           ),
         ],
-        if (state.status == 'VOTING_OPEN' && state.isParticipant) ...<Widget>[
+        if (state.status == 'VOTING_OPEN' &&
+            state.isParticipant &&
+            (state.voting?.mySelections.isEmpty ?? true)) ...<Widget>[
           const Divider(height: 28),
           Text(
             '남은 시간 ${_remaining(state.voteCloseAt)}',
@@ -188,6 +190,12 @@ class _ClubEventCompetitionCardState
         ],
         if (state.canManage) ...<Widget>[
           const SizedBox(height: 12),
+          if (state.status == 'VOTING_OPEN')
+            OutlinedButton.icon(
+              onPressed: _working ? null : () => _proxyVote(state),
+              icon: const Icon(Icons.how_to_vote_outlined),
+              label: const Text('대리 투표'),
+            ),
           ..._managerActions(state),
         ],
         if (state.reveal case final ClubEventRevealState reveal) ...<Widget>[
@@ -377,6 +385,86 @@ class _ClubEventCompetitionCardState
         'tieBreakPolicy': tie,
       });
     }
+  }
+
+  Future<void> _proxyVote(ClubEventCompetitionState state) async {
+    final Set<String> submitted =
+        state.voting?.submittedParticipantIds.toSet() ?? <String>{};
+    final voters = state.participants
+        .where((participant) => !submitted.contains(participant.participantId))
+        .toList();
+    final ClubEventCompetitionParticipant? voter =
+        await showDialog<ClubEventCompetitionParticipant>(
+          context: context,
+          builder: (BuildContext context) => SimpleDialog(
+            title: const Text('누구의 투표를 입력하시겠습니까?'),
+            children: voters
+                .map(
+                  (participant) => SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context, participant),
+                    child: Text(
+                      participant.participantKind == 'GUEST'
+                          ? '게스트 · ${participant.name}'
+                          : participant.name,
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        );
+    if (voter == null || !mounted) return;
+    final Set<String> selections = <String>{};
+    final List<String>? selected = await showDialog<List<String>>(
+      context: context,
+      builder: (BuildContext context) => StatefulBuilder(
+        builder: (BuildContext context, StateSetter setDialogState) =>
+            AlertDialog(
+              title: Text('${voter.name} 대리 투표'),
+              content: SizedBox(
+                width: 420,
+                child: ListView(
+                  shrinkWrap: true,
+                  children: state.participants.map((participant) {
+                    final bool self =
+                        participant.participantId == voter.participantId;
+                    return CheckboxListTile(
+                      value: selections.contains(participant.participantId),
+                      title: Text(participant.name),
+                      subtitle: self ? const Text('본인') : null,
+                      onChanged: self
+                          ? null
+                          : (bool? checked) => setDialogState(() {
+                              if (checked == true && selections.length < 3) {
+                                selections.add(participant.participantId);
+                              } else if (checked == false) {
+                                selections.remove(participant.participantId);
+                              }
+                            }),
+                    );
+                  }).toList(),
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('취소'),
+                ),
+                FilledButton(
+                  onPressed: selections.length == 3
+                      ? () => Navigator.pop(context, selections.toList())
+                      : null,
+                  child: const Text('대리 투표 완료'),
+                ),
+              ],
+            ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    await _run(<String, dynamic>{
+      'action': 'PROXY_VOTE',
+      'voterParticipantId': voter.participantId,
+      'selectedParticipantIds': selected,
+    });
   }
 
   Future<void> _publish() async {

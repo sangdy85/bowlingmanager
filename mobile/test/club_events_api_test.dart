@@ -146,10 +146,10 @@ void main() {
         'team-1',
         'event-1',
         <String, dynamic>{
-          'action': 'SET_MANUAL_GROUPING',
+          'action': 'SET_MANUAL_GROUP',
           'participantKind': 'GUEST',
           'participantId': 'guest-1',
-          'manualGroupingScore': 190,
+          'manualGroup': 'B',
         },
       );
       expect(result.overall, isEmpty);
@@ -161,7 +161,7 @@ void main() {
       expect(payload['title'], '정기전 9월 모임');
       expect(payload['location'], '서울 볼링장');
       expect(requests.last.path, '/teams/team-1/events/event-1/competition');
-      expect((requests.last.data as Map)['manualGroupingScore'], 190);
+      expect((requests.last.data as Map)['manualGroup'], 'B');
     },
   );
 

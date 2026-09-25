@@ -1,18 +1,36 @@
 class ClubEventCompetitionParticipant {
   const ClubEventCompetitionParticipant({
     required this.participantId,
+    required this.participantKind,
     required this.memberId,
+    required this.guestId,
     required this.name,
   });
   final String participantId;
-  final String memberId;
+  final String participantKind;
+  final String? memberId;
+  final String? guestId;
   final String name;
   factory ClubEventCompetitionParticipant.fromJson(Map<String, dynamic> json) =>
       ClubEventCompetitionParticipant(
         participantId: _string(json['participantId']),
-        memberId: _string(json['memberId']),
+        participantKind: _participantKind(json),
+        memberId: json['memberId'] as String?,
+        guestId: json['guestId'] as String?,
         name: _string(json['name']),
       );
+}
+
+String _participantKind(Map<String, dynamic> json) {
+  final Object? value =
+      json['participantKind'] ?? (json['guestId'] == null ? 'MEMBER' : 'GUEST');
+  if (value != 'MEMBER' && value != 'GUEST') {
+    throw const FormatException('Invalid participant kind.');
+  }
+  if ((json['memberId'] == null) == (json['guestId'] == null)) {
+    throw const FormatException('Invalid participant identity.');
+  }
+  return value as String;
 }
 
 class ClubEventVotingState {
@@ -20,15 +38,20 @@ class ClubEventVotingState {
     required this.submittedCount,
     required this.pendingCount,
     required this.mySelections,
+    required this.submittedParticipantIds,
   });
   final int submittedCount;
   final int pendingCount;
   final List<String> mySelections;
+  final List<String> submittedParticipantIds;
   factory ClubEventVotingState.fromJson(Map<String, dynamic> json) =>
       ClubEventVotingState(
         submittedCount: _nonNegativeInt(json['submittedCount']),
         pendingCount: _nonNegativeInt(json['pendingCount']),
         mySelections: _stringList(json['mySelections']),
+        submittedParticipantIds: _stringList(
+          json['submittedParticipantIds'] ?? const <Object>[],
+        ),
       );
 }
 

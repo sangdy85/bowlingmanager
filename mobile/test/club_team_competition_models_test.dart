@@ -72,6 +72,38 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test('parses guest participants and lucky draw history', () {
+    final Map<String, dynamic> json = teamCompetitionJson()
+      ..['status'] = 'LUCKY_DRAW'
+      ..['remainingParticipants'] = <Object>[
+        <String, Object?>{
+          'participantId': 'participant-guest',
+          'participantKind': 'GUEST',
+          'memberId': null,
+          'guestId': 'guest-1',
+          'name': '게스트A',
+          'assignmentType': null,
+          'assignmentOrder': null,
+          'laneSlot': null,
+        },
+      ]
+      ..['history'] = <Object>[
+        <String, Object>{
+          'id': 'pick-3',
+          'pickNumber': 3,
+          'roundNumber': 2,
+          'pickType': 'LUCKY_DRAW_MISS',
+          'teamName': 'TEAM 1',
+          'selectedDisplayName': '꽝',
+        },
+      ];
+    final state = ClubTeamCompetitionState.fromJson(json);
+    expect(state.polling, isTrue);
+    expect(state.remainingParticipants.single.participantKind, 'GUEST');
+    expect(state.remainingParticipants.single.guestId, 'guest-1');
+    expect(state.history.single.pickType, 'LUCKY_DRAW_MISS');
+  });
 }
 
 Map<String, dynamic> teamCompetitionJson() => <String, dynamic>{

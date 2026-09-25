@@ -13,6 +13,7 @@ import {
 type Direction = "FORWARD" | "REVERSE";
 type LaneSlot = { id: string; laneNumber: number; position: number };
 type LaneTeam = { id: string; lanePriority: number; memberIds: string[] };
+export const LUCKY_DRAW_RANDOM_BOUND = 2;
 
 export class TeamCompetitionError extends Error {
     constructor(public readonly code: string, message: string, public readonly status: number) { super(message); }
@@ -47,6 +48,13 @@ export function secureShuffle<T>(values: readonly T[], pick = randomInt) {
     return output;
 }
 
+export function luckyDrawWins(consecutiveMisses: number, teamCount: number, pick = randomInt) {
+    if (!Number.isSafeInteger(consecutiveMisses) || consecutiveMisses < 0 || !Number.isSafeInteger(teamCount) || teamCount < 2) {
+        throw new TeamCompetitionError("INVALID_DRAFT_STATE", "행운권 상태를 계산할 수 없습니다.", 400);
+    }
+    return consecutiveMisses >= Math.max(1, teamCount - 1) || pick(LUCKY_DRAW_RANDOM_BOUND) === 0;
+}
+
 export function allocateTeamLaneBlocks(teams: readonly LaneTeam[], slots: readonly LaneSlot[]) {
     const orderedTeams = [...teams].sort((a, b) => a.lanePriority - b.lanePriority || a.id.localeCompare(b.id));
     const orderedSlots = [...slots].sort((a, b) => a.laneNumber - b.laneNumber || a.position - b.position || a.id.localeCompare(b.id));
@@ -74,25 +82,31 @@ export async function getTeamCompetitionState(actorUserId: string, teamId: strin
     const participants = currentParticipants(event);
     const availableParticipants = participants.length > 0
         ? participants.filter((item) => !item.competitionTeamId).map(serializeParticipant)
-        : attendingMembers(event).map((member) => ({
-            memberId: member.id, name: displayName(member), assignmentType: null,
-            assignmentOrder: null, laneSlot: null,
-        }));
+        : [
+            ...attendingMembers(event).map((member) => ({
+                participantId: `member:${member.id}`, participantKind: "MEMBER", memberId: member.id, guestId: null,
+                name: displayName(member), assignmentType: null, assignmentOrder: null, laneSlot: null,
+            })),
+            ...event.guests.map((guest) => ({
+                participantId: `guest:${guest.id}`, participantKind: "GUEST", memberId: null, guestId: guest.id,
+                name: guest.name, assignmentType: null, assignmentOrder: null, laneSlot: null,
+            })),
+        ];
     const history = event.competitionDraftPicks.filter((item) => item.generation === generation);
     const plan = teams.length >= 2 ? draftPlan(participants.length, teams.length) : null;
-    const turn = event.competitionStatus === "DRAFT_IN_PROGRESS" && plan && event.currentPickNumber <= plan.draftTotal
+    const turn = (event.competitionStatus === "DRAFT_IN_PROGRESS" || event.competitionStatus === "LUCKY_DRAW") && plan
         ? snakeDraftTurn(event.currentPickNumber, teams.length) : null;
     const currentTeam = turn ? teams.find((item) => item.draftOrder === turn.draftOrder) ?? null : null;
     const actorMember = event.team.members.find((item) => item.userId === actorUserId)!;
     const isManager = event.team.ownerId === actorUserId || event.team.User.some((item) => item.id === actorUserId);
-    let result = event.competitionStatus === "PUBLISHED" ? publishedTeamResult(event) : await calculateResults(event);
+    let result: Awaited<ReturnType<typeof calculateResults>> = event.competitionStatus === "PUBLISHED" ? publishedTeamResult(event) : await calculateResults(event);
     if (event.competitionStatus !== "PUBLISHED" && result.complete) {
         const seasonPoints = await getSeasonPointPreview(prisma, event);
         const ranked = rankFinalTeams(result.teams);
         result = { ...result, teams: ranked.map((team) => ({
             ...team, finalRankPreview: team.finalRank,
             seasonPointPreview: seasonPointsForRank(seasonPoints, team.finalRank),
-        })) };
+        })) } as typeof result;
     }
     return {
         eventId, generation, status: event.competitionStatus, competitionMode: event.competitionMode, canManage: isManager,
@@ -111,14 +125,17 @@ export async function getTeamCompetitionState(actorUserId: string, teamId: strin
             roundNumber: item.roundNumber, direction: item.direction, pickType: item.pickType,
             competitionTeamId: item.competitionTeamId, teamName: item.competitionTeam.name,
             captainMemberId: item.captainMemberId,
-            selectedMemberId: item.selectedParticipant.memberId,
+            selectedParticipantId: item.selectedParticipantId,
+            selectedMemberId: item.selectedParticipant?.memberId ?? null,
+            selectedGuestId: item.selectedParticipant?.guestId ?? null,
             selectedDisplayName: item.selectedDisplayNameSnapshot,
             createdAt: item.createdAt.toISOString(),
         })),
-        myTeam: teams.find((team) => team.participants.some((item) => item.member.userId === actorUserId))?.id ?? null,
+        myTeam: teams.find((team) => team.participants.some((item) => item.member?.userId === actorUserId))?.id ?? null,
         results: result,
         policies: {
-            guests: "EXCLUDED_V1_NO_STABLE_SCORE_IDENTITY",
+            guests: "INCLUDED_BY_EVENT_GUEST_ID",
+            luckyDraw: `SERVER_RANDOM_1_IN_${LUCKY_DRAW_RANDOM_BOUND}_FORCED_AFTER_${Math.max(1, teams.length - 1)}_MISSES`,
             memberSlotOrder: "MANAGER_EXPLICIT_ORDER",
             finalPinTieBreak: "POINTS_EFFECTIVE_PINS_MEMBER_COUNT_HANDICAP_STABLE_ID",
             teamHandicapApplication: "EFFECTIVE_PIN_PLUS_TEAM_HANDICAP_PER_GAME",
@@ -132,7 +149,9 @@ export async function updateTeamCompetition(actorUserId: string, teamId: string,
         case "LOCK_ATTENDANCE": return lockAttendance(actorUserId, teamId, eventId);
         case "CONFIGURE_CAPTAINS": return configureCaptains(actorUserId, teamId, eventId, body.captains);
         case "START_DRAFT": return startDraft(actorUserId, teamId, eventId);
-        case "PICK": return pickParticipant(actorUserId, teamId, eventId, body.memberId);
+        case "PICK": return pickParticipant(actorUserId, teamId, eventId, body.participantId ?? body.memberId);
+        case "LUCKY_DRAW": return luckyDraw(actorUserId, teamId, eventId);
+        case "AUTO_ASSIGN_REMAINDER": return autoAssignRemainder(actorUserId, teamId, eventId);
         case "RESET": return resetDraft(actorUserId, teamId, eventId);
         case "ASSIGN_LANES": return assignTeamLanes(actorUserId, teamId, eventId, body.teams);
         case "SET_HANDICAP": return setTeamHandicap(actorUserId, teamId, eventId, body.competitionTeamId, body.teamHandicap);
@@ -168,7 +187,7 @@ async function lockAttendance(actorUserId: string, teamId: string, eventId: stri
     const event = await loadEvent(actorUserId, teamId, eventId); requireManager(event, actorUserId); requireTeamCompetition(event);
     if (event.competitionStatus !== "ATTENDANCE_OPEN") throw stateError();
     const attending = attendingMembers(event);
-    if (attending.length < 2) throw new TeamCompetitionError("NOT_ENOUGH_PARTICIPANTS", "참석자가 2명 이상 필요합니다.", 409);
+    if (attending.length + event.guests.length < 2) throw new TeamCompetitionError("NOT_ENOUGH_PARTICIPANTS", "참석자와 게스트가 2명 이상 필요합니다.", 409);
     await prisma.teamEvent.update({ where: { id: eventId }, data: { competitionStatus: "ATTENDANCE_LOCKED" } });
     return { status: "ATTENDANCE_LOCKED" };
 }
@@ -195,7 +214,7 @@ async function configureCaptains(actorUserId: string, teamId: string, eventId: s
     if (captains.some((item) => !attendingIds.has(item.memberId))) {
         throw new TeamCompetitionError("CAPTAIN_NOT_ATTENDING", "참석 확정 회원만 팀장이 될 수 있습니다.", 409);
     }
-    draftPlan(attending.length, captains.length);
+    draftPlan(attending.length + event.guests.length, captains.length);
     await prisma.$transaction(async (tx) => {
         const claimed = await tx.teamEvent.updateMany({
             where: { id: eventId, teamId, competitionStatus: "ATTENDANCE_LOCKED", draftGeneration: event.draftGeneration },
@@ -206,6 +225,9 @@ async function configureCaptains(actorUserId: string, teamId: string, eventId: s
         for (const member of attending) {
             const participant = await tx.teamCompetitionParticipant.create({ data: { eventId, generation: event.draftGeneration, memberId: member.id } });
             participantByMember.set(member.id, participant.id);
+        }
+        for (const guest of event.guests) {
+            await tx.teamCompetitionParticipant.create({ data: { eventId, generation: event.draftGeneration, guestId: guest.id } });
         }
         for (const captain of captains.sort((a, b) => a.draftOrder - b.draftOrder)) {
             const team = await tx.teamCompetitionTeam.create({ data: {
@@ -226,16 +248,18 @@ async function startDraft(actorUserId: string, teamId: string, eventId: string) 
     if (event.competitionStatus !== "DRAFT_READY") throw stateError();
     const teams = currentTeams(event); const participants = currentParticipants(event); const plan = draftPlan(participants.length, teams.length);
     if (plan.draftTotal === 0) {
-        await prisma.$transaction((tx) => finalizeRandomRemainder(tx, eventId, event.draftGeneration, teams, participants, 0));
-        return { status: "TEAMS_FINALIZED" };
+        const remaining = participants.some((item) => !item.competitionTeamId);
+        const status = remaining ? "LUCKY_DRAW" : "TEAMS_FINALIZED";
+        await prisma.teamEvent.update({ where: { id: eventId }, data: { competitionStatus: status, currentPickNumber: 1 } });
+        return { status };
     }
     const updated = await prisma.teamEvent.updateMany({ where: { id: eventId, competitionStatus: "DRAFT_READY" }, data: { competitionStatus: "DRAFT_IN_PROGRESS", currentPickNumber: 1 } });
     if (updated.count !== 1) throw stateError();
     return { status: "DRAFT_IN_PROGRESS", plan };
 }
 
-async function pickParticipant(actorUserId: string, teamId: string, eventId: string, memberId: unknown) {
-    if (typeof memberId !== "string" || !memberId) throw new TeamCompetitionError("INVALID_PARTICIPANT", "선택할 참가자를 확인해주세요.", 400);
+async function pickParticipant(actorUserId: string, teamId: string, eventId: string, participantIdentity: unknown) {
+    if (typeof participantIdentity !== "string" || !participantIdentity) throw new TeamCompetitionError("INVALID_PARTICIPANT", "선택할 참가자를 확인해주세요.", 400);
     try {
         return await prisma.$transaction(async (tx) => {
             const event = await tx.teamEvent.findFirst({ where: {
@@ -251,7 +275,7 @@ async function pickParticipant(actorUserId: string, teamId: string, eventId: str
             if (!actorMember || team.captainMemberId !== actorMember.id) {
                 throw new TeamCompetitionError("NOT_CURRENT_CAPTAIN", "현재 선택 순서의 팀장만 선수를 선택할 수 있습니다.", 403);
             }
-            const participant = participants.find((item) => item.memberId === memberId);
+            const participant = participants.find((item) => item.id === participantIdentity || item.memberId === participantIdentity || item.guestId === participantIdentity);
             if (!participant) throw new TeamCompetitionError("INVALID_PARTICIPANT", "참가자를 찾을 수 없습니다.", 404);
             if (participant.competitionTeamId) throw new TeamCompetitionError("PLAYER_ALREADY_DRAFTED", "이미 배정된 참가자입니다.", 409);
             const claimed = await tx.teamCompetitionParticipant.updateMany({ where: { id: participant.id, competitionTeamId: null }, data: {
@@ -262,7 +286,7 @@ async function pickParticipant(actorUserId: string, teamId: string, eventId: str
                 eventId, generation: event.draftGeneration, pickNumber: event.currentPickNumber,
                 roundNumber: turn.roundNumber, direction: turn.direction, captainMemberId: team.captainMemberId,
                 competitionTeamId: team.id, selectedParticipantId: participant.id,
-                selectedDisplayNameSnapshot: displayName(participant.member), pickType: "CAPTAIN_PICK",
+                selectedDisplayNameSnapshot: participantName(participant), pickType: "MANUAL_PICK",
             } });
             const advanced = await tx.teamEvent.updateMany({ where: {
                 id: eventId, competitionStatus: "DRAFT_IN_PROGRESS", currentPickNumber: event.currentPickNumber,
@@ -271,7 +295,12 @@ async function pickParticipant(actorUserId: string, teamId: string, eventId: str
             if (event.currentPickNumber === plan.draftTotal) {
                 const freshParticipants = participants.map((item) => item.id === participant.id
                     ? { ...item, competitionTeamId: team.id } : item);
-                await finalizeRandomRemainder(tx, eventId, event.draftGeneration, teams, freshParticipants, plan.draftTotal);
+                const remaining = freshParticipants.some((item) => !item.competitionTeamId);
+                if (remaining) {
+                    await tx.teamEvent.update({ where: { id: eventId }, data: { competitionStatus: "LUCKY_DRAW" } });
+                    return { status: "LUCKY_DRAW", pickNumber: event.currentPickNumber };
+                }
+                await tx.teamEvent.update({ where: { id: eventId }, data: { competitionStatus: "TEAMS_FINALIZED" } });
                 return { status: "TEAMS_FINALIZED", pickNumber: event.currentPickNumber };
             }
             return { status: "DRAFT_IN_PROGRESS", pickNumber: event.currentPickNumber };
@@ -283,6 +312,63 @@ async function pickParticipant(actorUserId: string, teamId: string, eventId: str
         }
         throw error;
     }
+}
+
+async function luckyDraw(actorUserId: string, teamId: string, eventId: string) {
+    return prisma.$transaction(async (tx) => {
+        const event = await tx.teamEvent.findFirst({ where: {
+            id: eventId, teamId, competitionEnabled: true, competitionType: "TEAM",
+            team: { bowlerHiddenEnabled: true, members: { some: { userId: actorUserId } } },
+        }, include: competitionInclude });
+        if (!event) throw new TeamCompetitionError("EVENT_NOT_FOUND", "TEAM 대회를 찾을 수 없습니다.", 404);
+        if (event.competitionStatus !== "LUCKY_DRAW") throw stateError();
+        const teams = currentTeams(event); const participants = currentParticipants(event);
+        const remaining = participants.filter((item) => !item.competitionTeamId);
+        if (remaining.length === 0) throw stateError();
+        const turn = snakeDraftTurn(event.currentPickNumber, teams.length);
+        const team = teams.find((item) => item.draftOrder === turn.draftOrder)!;
+        const actorMember = event.team.members.find((item) => item.userId === actorUserId);
+        if (!actorMember || team.captainMemberId !== actorMember.id) {
+            throw new TeamCompetitionError("NOT_CURRENT_CAPTAIN", "현재 순서의 팀장만 행운권을 뽑을 수 있습니다.", 403);
+        }
+        const trailingMisses = [...event.competitionDraftPicks]
+            .filter((item) => item.generation === event.draftGeneration)
+            .reverse().findIndex((item) => item.pickType !== "LUCKY_DRAW_MISS");
+        const consecutiveMisses = trailingMisses === -1
+            ? event.competitionDraftPicks.filter((item) => item.generation === event.draftGeneration).length
+            : trailingMisses;
+        const won = luckyDrawWins(consecutiveMisses, teams.length);
+        const participant = won ? secureShuffle(remaining)[0] : null;
+        if (participant) {
+            const claimed = await tx.teamCompetitionParticipant.updateMany({ where: { id: participant.id, competitionTeamId: null }, data: {
+                competitionTeamId: team.id, assignmentType: "LUCKY_DRAW", assignmentOrder: event.currentPickNumber,
+            } });
+            if (claimed.count !== 1) throw new TeamCompetitionError("PLAYER_ALREADY_DRAFTED", "이미 배정된 참가자입니다.", 409);
+        }
+        await tx.teamCompetitionDraftPick.create({ data: {
+            eventId, generation: event.draftGeneration, pickNumber: event.currentPickNumber,
+            roundNumber: turn.roundNumber, direction: turn.direction, captainMemberId: team.captainMemberId,
+            competitionTeamId: team.id, selectedParticipantId: participant?.id ?? null,
+            selectedDisplayNameSnapshot: participant ? participantName(participant) : "꽝",
+            pickType: participant ? "LUCKY_DRAW_WIN" : "LUCKY_DRAW_MISS",
+        } });
+        const remainingAfter = participant ? remaining.length - 1 : remaining.length;
+        const status = remainingAfter === 0 ? "TEAMS_FINALIZED" : "LUCKY_DRAW";
+        const advanced = await tx.teamEvent.updateMany({ where: {
+            id: eventId, competitionStatus: "LUCKY_DRAW", currentPickNumber: event.currentPickNumber,
+        }, data: { competitionStatus: status, currentPickNumber: { increment: 1 } } });
+        if (advanced.count !== 1) throw new TeamCompetitionError("DRAFT_TURN_CONFLICT", "행운권 순서가 변경되었습니다.", 409);
+        return { status, won: participant != null, participant: participant ? serializeParticipant(participant) : null };
+    });
+}
+
+async function autoAssignRemainder(actorUserId: string, teamId: string, eventId: string) {
+    const event = await loadEvent(actorUserId, teamId, eventId); requireManager(event, actorUserId); requireTeamCompetition(event);
+    if (event.competitionStatus !== "LUCKY_DRAW" && event.competitionStatus !== "DRAFT_IN_PROGRESS") throw stateError();
+    await prisma.$transaction((tx) => finalizeRandomRemainder(
+        tx, eventId, event.draftGeneration, currentTeams(event), currentParticipants(event), event.currentPickNumber - 1,
+    ));
+    return { status: "TEAMS_FINALIZED" };
 }
 
 async function resetDraft(actorUserId: string, teamId: string, eventId: string) {
@@ -309,20 +395,21 @@ async function assignTeamLanes(actorUserId: string, teamId: string, eventId: str
     const teams = currentTeams(event); const participants = currentParticipants(event);
     const input: LaneTeam[] = raw.map((value) => {
         const item = asRecord(value);
-        if (typeof item.competitionTeamId !== "string" || !Number.isSafeInteger(item.lanePriority) || !Array.isArray(item.memberIds) ||
-            item.memberIds.some((id) => typeof id !== "string")) throw new TeamCompetitionError("INVALID_LANE_TEAMS", "팀별 레인 순서를 확인해주세요.", 400);
-        return { id: item.competitionTeamId, lanePriority: item.lanePriority as number, memberIds: item.memberIds as string[] };
+        const participantIds = item.participantIds ?? item.memberIds;
+        if (typeof item.competitionTeamId !== "string" || !Number.isSafeInteger(item.lanePriority) || !Array.isArray(participantIds) ||
+            participantIds.some((id) => typeof id !== "string")) throw new TeamCompetitionError("INVALID_LANE_TEAMS", "팀별 레인 순서를 확인해주세요.", 400);
+        return { id: item.competitionTeamId, lanePriority: item.lanePriority as number, memberIds: participantIds as string[] };
     });
     const priorities = new Set(input.map((item) => item.lanePriority));
     if (input.length !== teams.length || new Set(input.map((item) => item.id)).size !== teams.length || priorities.size !== teams.length ||
         [...priorities].some((value) => value < 1 || value > teams.length)) throw new TeamCompetitionError("INVALID_LANE_TEAMS", "레인 우선순위는 1부터 이어져야 합니다.", 400);
-    const expectedByTeam = new Map(teams.map((team) => [team.id, new Set(team.participants.map((item) => item.memberId))]));
+    const expectedByTeam = new Map(teams.map((team) => [team.id, new Set(team.participants.map((item) => item.id))]));
     const submitted = input.flatMap((item) => item.memberIds);
     if (new Set(submitted).size !== participants.length || submitted.length !== participants.length || input.some((item) => {
         const expected = expectedByTeam.get(item.id); return !expected || item.memberIds.length !== expected.size || item.memberIds.some((id) => !expected.has(id));
     })) throw new TeamCompetitionError("INVALID_MEMBER_ORDER", "각 팀의 모든 참가자 순서를 명시해주세요.", 400);
     const blocks = allocateTeamLaneBlocks(input, event.laneSlots);
-    const participantByMember = new Map(participants.map((item) => [item.memberId, item]));
+    const participantById = new Map(participants.map((item) => [item.id, item]));
     await prisma.$transaction(async (tx) => {
         const claimed = await tx.teamEvent.updateMany({
             where: { id: eventId, draftGeneration: event.draftGeneration, competitionStatus: "TEAMS_FINALIZED" },
@@ -333,10 +420,10 @@ async function assignTeamLanes(actorUserId: string, teamId: string, eventId: str
         for (const block of blocks) {
             await tx.teamCompetitionTeam.update({ where: { id: block.competitionTeamId }, data: { lanePriority: block.lanePriority } });
             for (const assignment of block.assignments) {
-                const participant = participantByMember.get(assignment.memberId)!;
+                const participant = participantById.get(assignment.memberId)!;
                 await tx.teamEventLaneAssignment.create({ data: {
-                    eventId, slotId: assignment.slot.id, memberId: assignment.memberId, guestId: null,
-                    participantKind: "MEMBER", participantDisplayName: displayName(participant.member),
+                    eventId, slotId: assignment.slot.id, memberId: participant.memberId, guestId: participant.guestId,
+                    participantKind: participant.memberId ? "MEMBER" : "GUEST", participantDisplayName: participantName(participant),
                 } });
             }
         }
@@ -366,10 +453,10 @@ async function publishTeamCompetition(actorUserId: string, teamId: string, event
             ...team, seasonPoint: seasonPointsForRank(pointTable, team.finalRank),
         }));
         const rankByTeam = new Map(publishedTeams.map((team) => [team.competitionTeamId, team.finalRank]));
-        const awards = currentParticipants(event).filter((item) => item.competitionTeamId).map((participant) => {
+        const awards = currentParticipants(event).filter((item) => item.competitionTeamId && item.memberId && item.member).map((participant) => {
             const rank = rankByTeam.get(participant.competitionTeamId!) ?? null;
             return {
-                memberId: participant.memberId, memberDisplayName: displayName(participant.member),
+                memberId: participant.memberId!, memberDisplayName: displayName(participant.member!),
                 competitionTeamId: participant.competitionTeamId, finalRank: rank,
                 points: seasonPointsForRank(pointTable, rank),
             };
@@ -431,7 +518,7 @@ async function finalizeRandomRemainder(
         await tx.teamCompetitionDraftPick.create({ data: {
             eventId, generation, pickNumber, roundNumber: 0, direction: "AUTOMATIC", captainMemberId: null,
             competitionTeamId: team.id, selectedParticipantId: participant.id,
-            selectedDisplayNameSnapshot: displayName(participant.member), pickType: "RANDOM_REMAINDER",
+            selectedDisplayNameSnapshot: participantName(participant), pickType: "AUTO_REMAINDER",
         } });
         sizes.set(team.id, sizes.get(team.id)! + 1);
     }
@@ -444,12 +531,13 @@ const competitionInclude = {
         members: { select: { id: true, userId: true, alias: true, user: { select: { name: true } } } },
     } },
     attendances: { include: { member: { select: { id: true, userId: true, alias: true, user: { select: { name: true } } } } } },
+    guests: { select: { id: true, name: true } },
     competitionTeams: { include: {
         captain: { select: { id: true, userId: true, alias: true, user: { select: { name: true } } } },
-        participants: { include: { member: { select: { id: true, userId: true, alias: true, user: { select: { name: true } } } } }, orderBy: [{ assignmentOrder: "asc" as const }, { id: "asc" as const }] },
+        participants: { include: { member: { select: { id: true, userId: true, alias: true, user: { select: { name: true } } } }, guest: { select: { id: true, name: true } } }, orderBy: [{ assignmentOrder: "asc" as const }, { id: "asc" as const }] },
     } },
-    competitionParticipants: { include: { member: { select: { id: true, userId: true, alias: true, user: { select: { name: true } } } } } },
-    competitionDraftPicks: { include: { competitionTeam: { select: { name: true } }, selectedParticipant: { select: { memberId: true } } }, orderBy: { pickNumber: "asc" as const } },
+    competitionParticipants: { include: { member: { select: { id: true, userId: true, alias: true, user: { select: { name: true } } } }, guest: { select: { id: true, name: true } } } },
+    competitionDraftPicks: { include: { competitionTeam: { select: { name: true } }, selectedParticipant: { select: { memberId: true, guestId: true } } }, orderBy: { pickNumber: "asc" as const } },
     laneSlots: { orderBy: [{ laneNumber: "asc" as const }, { position: "asc" as const }] },
     laneAssignments: { include: { slot: true } },
     seasonPublications: { where: { revokedAt: null }, orderBy: { revision: "desc" as const }, take: 1, select: { resultSnapshot: true, publishedAt: true } },
@@ -478,12 +566,17 @@ function attendingMembers(event: CompetitionEvent) {
 function currentTeams(event: CompetitionEvent) { return event.competitionTeams.filter((item) => item.generation === event.draftGeneration).sort((a, b) => a.draftOrder - b.draftOrder); }
 function currentParticipants(event: CompetitionEvent) { return event.competitionParticipants.filter((item) => item.generation === event.draftGeneration); }
 function displayName(member: { alias: string | null; user: { name: string } }) { return member.alias?.trim() || member.user.name; }
-function serializeParticipant(item: ReturnType<typeof currentParticipants>[number]) { return { memberId: item.memberId, name: displayName(item.member), assignmentType: item.assignmentType, assignmentOrder: item.assignmentOrder }; }
+function participantName(item: ReturnType<typeof currentParticipants>[number]) { return item.member ? displayName(item.member) : item.guest?.name ?? "게스트"; }
+function serializeParticipant(item: ReturnType<typeof currentParticipants>[number]) { return {
+    participantId: item.id, participantKind: item.memberId ? "MEMBER" : "GUEST",
+    memberId: item.memberId, guestId: item.guestId, name: participantName(item),
+    assignmentType: item.assignmentType, assignmentOrder: item.assignmentOrder,
+}; }
 function serializeTeam(team: ReturnType<typeof currentTeams>[number], event: CompetitionEvent) {
-    const assignments = new Map(event.laneAssignments.filter((item) => item.memberId).map((item) => [item.memberId!, `${item.slot.laneNumber}-${item.slot.position}`]));
+    const assignments = new Map(event.laneAssignments.map((item) => [item.memberId ?? item.guestId!, `${item.slot.laneNumber}-${item.slot.position}`]));
     return { id: team.id, name: team.name, draftOrder: team.draftOrder, lanePriority: team.lanePriority,
         teamHandicap: team.teamHandicap, captainMemberId: team.captainMemberId, captainName: displayName(team.captain),
-        members: team.participants.map((item) => ({ ...serializeParticipant(item), laneSlot: assignments.get(item.memberId) ?? null })),
+        members: team.participants.map((item) => ({ ...serializeParticipant(item), laneSlot: assignments.get(item.memberId ?? item.guestId!) ?? null })),
     };
 }
 function stateError() { return new TeamCompetitionError("INVALID_COMPETITION_STATE", "현재 TEAM 대회 단계에서는 수행할 수 없습니다.", 409); }
@@ -492,13 +585,13 @@ function asRecord(value: unknown): Record<string, unknown> {
     return value as Record<string, unknown>;
 }
 
-function publishedTeamResult(event: CompetitionEvent) {
+function publishedTeamResult(event: CompetitionEvent): Awaited<ReturnType<typeof calculateResults>> {
     const publication = event.seasonPublications[0];
     if (!publication) throw new TeamCompetitionError("INVALID_RESULT_SNAPSHOT", "발표된 TEAM 결과를 불러올 수 없습니다.", 500);
     try {
         const snapshot = JSON.parse(publication.resultSnapshot) as { version?: unknown; complete?: unknown; teams?: unknown; individual?: unknown; games?: unknown };
         if (snapshot.version !== 1 || snapshot.complete !== true || !Array.isArray(snapshot.teams) || !Array.isArray(snapshot.individual) || !Array.isArray(snapshot.games)) throw new Error("invalid snapshot");
-        return snapshot;
+        return snapshot as unknown as Awaited<ReturnType<typeof calculateResults>>;
     } catch { throw new TeamCompetitionError("INVALID_RESULT_SNAPSHOT", "발표된 TEAM 결과를 불러올 수 없습니다.", 500); }
 }
 
@@ -508,20 +601,35 @@ async function calculateResults(event: CompetitionEvent, db: ScoreReader = prism
     if (teams.length === 0 || participants.length === 0) return { complete: false, individual: [], games: [], teams: [], requiresPinTieBreakPolicy: false };
     const day = new Date(event.eventDate.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const start = new Date(`${day}T00:00:00+09:00`); const end = new Date(`${day}T23:59:59.999+09:00`);
+    const memberUserIds = participants.flatMap((item) => item.member ? [item.member.userId] : []);
+    const guestIds = participants.flatMap((item) => item.guestId ? [item.guestId] : []);
+    const guestNames = participants.flatMap((item) => item.guest ? [item.guest.name] : []);
     const rows = await db.score.findMany({ where: {
-        teamId: event.teamId, userId: { in: participants.map((item) => item.member.userId) }, score: { gte: 0, lte: 300 },
+        teamId: event.teamId, OR: [
+            { userId: { in: memberUserIds } },
+            { teamEventGuestId: { in: guestIds } },
+            { teamEventId: event.id, guestName: { in: guestNames } },
+        ], score: { gte: 0, lte: 300 },
         gameDate: { gte: start, lte: end }, ...(event.gameType ? { gameType: event.gameType } : {}),
-    }, orderBy: [{ gameDate: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true, userId: true, score: true } });
-    const scoresByUser = new Map<string, number[]>();
-    for (const row of rows) if (row.userId) { const values = scoresByUser.get(row.userId); if (values) values.push(row.score); else scoresByUser.set(row.userId, [row.score]); }
-    const gameCount = Math.max(0, ...participants.map((item) => scoresByUser.get(item.member.userId)?.length ?? 0));
-    const complete = gameCount > 0 && participants.every((item) => (scoresByUser.get(item.member.userId)?.length ?? 0) === gameCount);
+    }, orderBy: [{ gameDate: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true, userId: true, teamEventGuestId: true, guestName: true, score: true } });
+    const scoresByParticipant = new Map<string, number[]>();
+    const participantKey = (item: typeof participants[number]) => item.member ? `U:${item.member.userId}` : `G:${item.guestId}`;
+    const guestByName = uniqueGuestIdsByName(
+        participants.flatMap((item) => item.guestId && item.guest ? [{ id: item.guestId, name: item.guest.name }] : []),
+    );
+    for (const row of rows) {
+        const key = row.userId ? `U:${row.userId}` : row.teamEventGuestId ? `G:${row.teamEventGuestId}` : row.guestName && guestByName.has(row.guestName) ? `G:${guestByName.get(row.guestName)}` : null;
+        if (!key) continue;
+        const values = scoresByParticipant.get(key); if (values) values.push(row.score); else scoresByParticipant.set(key, [row.score]);
+    }
+    const gameCount = Math.max(0, ...participants.map((item) => scoresByParticipant.get(participantKey(item))?.length ?? 0));
+    const complete = gameCount > 0 && participants.every((item) => (scoresByParticipant.get(participantKey(item))?.length ?? 0) === gameCount);
     const effectivePlayerCount = Math.min(...teams.map((team) => team.participants.length));
     const points = new Map(readRankPoints(event.rankPoints).map((item) => [item.rank, item.points]));
     const teamTotals = new Map(teams.map((team) => [team.id, { points: 0, raw: 0, effective: 0, applied: 0 }]));
     const games = Array.from({ length: gameCount }, (_, gameIndex) => {
         const values = teams.map((team) => {
-            const teamScores = team.participants.map((item) => scoresByUser.get(item.member.userId)?.[gameIndex] ?? null);
+            const teamScores = team.participants.map((item) => scoresByParticipant.get(participantKey(item))?.[gameIndex] ?? null);
             if (teamScores.some((score) => score === null)) return { teamId: team.id, teamName: team.name, complete: false, rawTeamTotal: null, excludedScores: [], normalizedTeamTotal: null, handicapAppliedTotal: null, rank: null, points: null };
             const numeric = teamScores as number[]; const sorted = [...numeric].sort((a, b) => a - b);
             const excludedScores = sorted.slice(0, Math.max(0, sorted.length - effectivePlayerCount));
@@ -547,9 +655,10 @@ async function calculateResults(event: CompetitionEvent, db: ScoreReader = prism
         return { gameNumber: gameIndex + 1, complete: values.every((item) => item.complete), teams: values };
     });
     const individual = participants.map((item) => {
-        const scores = scoresByUser.get(item.member.userId) ?? []; const total = scores.reduce((sum, score) => sum + score, 0);
-        return { memberId: item.memberId, name: displayName(item.member), competitionTeamId: item.competitionTeamId!, scores, total, average: scores.length ? Number((total / scores.length).toFixed(1)) : null };
-    }).sort((a, b) => b.total - a.total || a.memberId.localeCompare(b.memberId)).map((item, index) => ({ rank: index + 1, ...item }));
+        const scores = scoresByParticipant.get(participantKey(item)) ?? []; const total = scores.reduce((sum, score) => sum + score, 0);
+        return { participantId: item.id, participantKind: item.memberId ? "MEMBER" : "GUEST", memberId: item.memberId, guestId: item.guestId,
+            name: participantName(item), competitionTeamId: item.competitionTeamId!, scores, total, average: scores.length ? Number((total / scores.length).toFixed(1)) : null };
+    }).sort((a, b) => b.total - a.total || a.participantId.localeCompare(b.participantId)).map((item, index) => ({ rank: index + 1, ...item }));
     const teamResults = teams.map((team) => ({
         competitionTeamId: team.id, name: team.name, memberCount: team.participants.length,
         teamHandicap: team.teamHandicap, totalPoints: teamTotals.get(team.id)!.points,
@@ -566,4 +675,10 @@ async function calculateResults(event: CompetitionEvent, db: ScoreReader = prism
         })),
         requiresPinTieBreakPolicy: false,
     };
+}
+
+function uniqueGuestIdsByName(guests: readonly { id: string; name: string }[]) {
+    const grouped = new Map<string, string[]>();
+    for (const guest of guests) grouped.set(guest.name, [...(grouped.get(guest.name) ?? []), guest.id]);
+    return new Map([...grouped].flatMap(([name, ids]) => ids.length === 1 ? [[name, ids[0]] as const] : []));
 }

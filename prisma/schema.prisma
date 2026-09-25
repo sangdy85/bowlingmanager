@@ -30,6 +30,7 @@ model User {
   inquiries                    Inquiry[]
   mobileRefreshTokens          MobileRefreshToken[]
   createdTeamEvents            TeamEvent[]                    @relation("TeamEventCreator")
+  enteredEventBallots          EventCompetitionBallot[]       @relation("EventBallotEnteredBy")
 }
 
 model VerificationToken {
@@ -439,22 +440,26 @@ model TeamCompetitionParticipant {
   id                String                     @id @default(cuid())
   eventId           String
   generation        Int
-  memberId          String
+  memberId          String?
+  guestId           String?
   competitionTeamId String?
   assignmentType    String?
   assignmentOrder   Int?
   createdAt         DateTime                   @default(now())
   event             TeamEvent                  @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  member            TeamMember                 @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  member            TeamMember?                @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  guest             TeamEventGuest?            @relation(fields: [guestId], references: [id], onDelete: Restrict)
   competitionTeam   TeamCompetitionTeam?       @relation(fields: [competitionTeamId], references: [id], onDelete: SetNull)
   selectedInPicks   TeamCompetitionDraftPick[]
 
   @@unique([eventId, generation, memberId])
+  @@unique([eventId, generation, guestId])
   @@index([competitionTeamId])
+  @@index([guestId])
 }
 
 model TeamCompetitionDraftPick {
-  id                          String                     @id @default(cuid())
+  id                          String                      @id @default(cuid())
   eventId                     String
   generation                  Int
   pickNumber                  Int
@@ -462,14 +467,14 @@ model TeamCompetitionDraftPick {
   direction                   String
   captainMemberId             String?
   competitionTeamId           String
-  selectedParticipantId       String
+  selectedParticipantId       String?
   selectedDisplayNameSnapshot String
   pickType                    String
-  createdAt                   DateTime                   @default(now())
-  event                       TeamEvent                  @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  captain                     TeamMember?                @relation("CompetitionPickCaptain", fields: [captainMemberId], references: [id], onDelete: SetNull)
-  competitionTeam             TeamCompetitionTeam        @relation(fields: [competitionTeamId], references: [id], onDelete: Cascade)
-  selectedParticipant         TeamCompetitionParticipant @relation(fields: [selectedParticipantId], references: [id], onDelete: Cascade)
+  createdAt                   DateTime                    @default(now())
+  event                       TeamEvent                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  captain                     TeamMember?                 @relation("CompetitionPickCaptain", fields: [captainMemberId], references: [id], onDelete: SetNull)
+  competitionTeam             TeamCompetitionTeam         @relation(fields: [competitionTeamId], references: [id], onDelete: Cascade)
+  selectedParticipant         TeamCompetitionParticipant? @relation(fields: [selectedParticipantId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, generation, pickNumber])
   @@index([eventId, generation, createdAt])
@@ -478,31 +483,38 @@ model TeamCompetitionDraftPick {
 model EventCompetitionParticipant {
   id          String                     @id @default(cuid())
   eventId     String
-  memberId    String
+  memberId    String?
+  guestId     String?
   revealOrder Int
   revealedAt  DateTime?
   createdAt   DateTime                   @default(now())
   event       TeamEvent                  @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  member      TeamMember                 @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  member      TeamMember?                @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  guest       TeamEventGuest?            @relation(fields: [guestId], references: [id], onDelete: Restrict)
   ballot      EventCompetitionBallot?
   selectedIn  EventCompetitionVotePick[]
 
   @@unique([eventId, memberId])
+  @@unique([eventId, guestId])
   @@unique([eventId, revealOrder])
   @@index([memberId])
+  @@index([guestId])
 }
 
 model EventCompetitionBallot {
   id                 String                      @id @default(cuid())
   eventId            String
   voterParticipantId String                      @unique
+  enteredByUserId    String?
   submittedAt        DateTime                    @default(now())
   updatedAt          DateTime                    @updatedAt
   event              TeamEvent                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   voter              EventCompetitionParticipant @relation(fields: [voterParticipantId], references: [id], onDelete: Cascade)
+  enteredBy          User?                       @relation("EventBallotEnteredBy", fields: [enteredByUserId], references: [id], onDelete: SetNull)
   selections         EventCompetitionVotePick[]
 
   @@index([eventId])
+  @@index([enteredByUserId])
 }
 
 model EventCompetitionVotePick {
@@ -519,16 +531,17 @@ model EventCompetitionVotePick {
 }
 
 model TeamEventAttendance {
-  id                String      @id @default(cuid())
-  eventId           String
-  memberId          String?
-  memberDisplayName String
-  status            String      @default("UNANSWERED")
-  manualGroupingScore  Int?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  event             TeamEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  member            TeamMember? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  id                  String      @id @default(cuid())
+  eventId             String
+  memberId            String?
+  memberDisplayName   String
+  status              String      @default("UNANSWERED")
+  manualGroupingScore Int?
+  manualGroup         String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  event               TeamEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member              TeamMember? @relation(fields: [memberId], references: [id], onDelete: SetNull)
 
   @@unique([eventId, memberId])
   @@index([eventId, status])
@@ -536,13 +549,17 @@ model TeamEventAttendance {
 }
 
 model TeamEventGuest {
-  id         String                   @id @default(cuid())
-  eventId    String
-  name       String
-  manualGroupingScore Int?
-  createdAt  DateTime                 @default(now())
-  event      TeamEvent                @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  assignment TeamEventLaneAssignment?
+  id                           String                        @id @default(cuid())
+  eventId                      String
+  name                         String
+  manualGroupingScore          Int?
+  manualGroup                  String?
+  createdAt                    DateTime                      @default(now())
+  event                        TeamEvent                     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  assignment                   TeamEventLaneAssignment?
+  teamCompetitionParticipants  TeamCompetitionParticipant[]
+  eventCompetitionParticipants EventCompetitionParticipant[]
+  scores                       Score[]
 
   @@index([eventId])
 }
@@ -795,22 +812,25 @@ model PostImage {
 }
 
 model Score {
-  id              String     @id
-  score           Int
-  gameDate        DateTime
-  gameType        String?
-  userId          String?
-  teamId          String?
-  memo            String?
-  guestName       String?
-  competitionMode String?
-  teamEventId     String?
-  createdAt       DateTime   @default(now())
-  Team            Team?      @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  User            User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  TeamEvent       TeamEvent? @relation(fields: [teamEventId], references: [id], onDelete: SetNull)
+  id               String          @id
+  score            Int
+  gameDate         DateTime
+  gameType         String?
+  userId           String?
+  teamId           String?
+  memo             String?
+  guestName        String?
+  competitionMode  String?
+  teamEventId      String?
+  teamEventGuestId String?
+  createdAt        DateTime        @default(now())
+  Team             Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  User             User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  TeamEvent        TeamEvent?      @relation(fields: [teamEventId], references: [id], onDelete: SetNull)
+  TeamEventGuest   TeamEventGuest? @relation(fields: [teamEventGuestId], references: [id], onDelete: SetNull)
 
   @@index([teamEventId])
+  @@index([teamEventGuestId])
   @@index([competitionMode])
 }
 

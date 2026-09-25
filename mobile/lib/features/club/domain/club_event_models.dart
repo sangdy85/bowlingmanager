@@ -188,6 +188,10 @@ class ClubCompetitionPreview {
     required this.recent12Average,
     required this.regularExpectedScore,
     required this.manualGroupingScore,
+    required this.autoGroupingScore,
+    required this.autoGroup,
+    required this.manualGroup,
+    required this.effectiveGroup,
     required this.groupingScore,
     required this.groupingSource,
     required this.ratingStatus,
@@ -204,6 +208,10 @@ class ClubCompetitionPreview {
   final num? recent12Average;
   final num? regularExpectedScore;
   final int? manualGroupingScore;
+  final num? autoGroupingScore;
+  final String? autoGroup;
+  final String? manualGroup;
+  final String? effectiveGroup;
   final num? groupingScore;
   final String groupingSource;
   final String ratingStatus;
@@ -218,6 +226,14 @@ class ClubCompetitionPreview {
         json['regularExpectedScore'] ?? json['expectedScore'];
     final Object? manual = json['manualGroupingScore'];
     final Object? grouping = json['groupingScore'];
+    final Object? autoGrouping = json['autoGroupingScore'] ?? grouping;
+    final Object? autoGroup = json['autoGroup'] ?? json['baseTier'];
+    final Object? manualGroup = json['manualGroup'];
+    final Object? effectiveGroup =
+        json['effectiveGroup'] ??
+        (const <String>{'A', 'B', 'C', 'D', 'E'}.contains(json['finalGroup'])
+            ? json['finalGroup']
+            : null);
     final Object? status = json['ratingStatus'];
     final String kind = (json['participantKind'] ?? 'MEMBER') as String;
     final String source =
@@ -231,8 +247,15 @@ class ClubCompetitionPreview {
         (expected != null && expected is! num) ||
         (manual != null && (manual is! int || manual < 0)) ||
         (grouping != null && grouping is! num) ||
+        (autoGrouping != null && autoGrouping is! num) ||
         !const <String>{'MEMBER', 'GUEST'}.contains(kind) ||
-        !const <String>{'AUTO', 'MANUAL', 'MANUAL_REQUIRED'}.contains(source) ||
+        !const <String>{
+          'AUTO',
+          'MANUAL',
+          'MANUAL_REQUIRED',
+          'MANUAL_OVERRIDE',
+          'LEGACY_MANUAL_SCORE',
+        }.contains(source) ||
         status is! String ||
         (json['baseTier'] != null &&
             !const <String>{
@@ -242,7 +265,19 @@ class ClubCompetitionPreview {
               'D',
               'E',
             }.contains(json['baseTier'])) ||
-        (json['finalGroup'] != null && json['finalGroup'] is! String)) {
+        (json['finalGroup'] != null && json['finalGroup'] is! String) ||
+        (autoGroup != null &&
+            !const <String>{'A', 'B', 'C', 'D', 'E'}.contains(autoGroup)) ||
+        (manualGroup != null &&
+            !const <String>{'A', 'B', 'C', 'D', 'E'}.contains(manualGroup)) ||
+        (effectiveGroup != null &&
+            !const <String>{
+              'A',
+              'B',
+              'C',
+              'D',
+              'E',
+            }.contains(effectiveGroup))) {
       throw const FormatException('Invalid competition preview.');
     }
     final String? memberId = json['memberId'] as String?;
@@ -260,6 +295,10 @@ class ClubCompetitionPreview {
       recent12Average: recent12 as num?,
       regularExpectedScore: expected as num?,
       manualGroupingScore: manual as int?,
+      autoGroupingScore: autoGrouping as num?,
+      autoGroup: autoGroup as String?,
+      manualGroup: manualGroup as String?,
+      effectiveGroup: effectiveGroup as String?,
       groupingScore: grouping as num?,
       groupingSource: source,
       ratingStatus: status,
@@ -275,11 +314,15 @@ class ClubCompetitionResult {
     required this.overall,
     required this.participantPreview,
     required this.myPreview,
+    required this.missingGroupCount,
+    required this.groupAssignmentComplete,
   });
   final String status;
   final List<ClubCompetitionRankingRow> overall;
   final List<ClubCompetitionPreview>? participantPreview;
   final ClubCompetitionPreview? myPreview;
+  final int missingGroupCount;
+  final bool groupAssignmentComplete;
 
   factory ClubCompetitionResult.fromJson(Map<String, dynamic> json) {
     final Object? status = json['status'];
@@ -287,6 +330,8 @@ class ClubCompetitionResult {
         status is! String ||
         (json['groupingPolicy'] != 'PENDING_PRODUCT_DECISION' &&
             json['groupingPolicy'] != 'WEIGHTED_30_40_30_MANUAL_FALLBACK' &&
+            json['groupingPolicy'] !=
+                'WEIGHTED_30_40_30_WITH_EXPLICIT_GROUP_OVERRIDE' &&
             json['groupingPolicy'] != 'PUBLISHED_IMMUTABLE_SNAPSHOT')) {
       throw const FormatException('Invalid competition result.');
     }
@@ -299,6 +344,12 @@ class ClubCompetitionResult {
       myPreview: json['myPreview'] == null
           ? null
           : ClubCompetitionPreview.fromJson(_map(json['myPreview'])),
+      missingGroupCount: json['missingGroupCount'] is int
+          ? json['missingGroupCount'] as int
+          : 0,
+      groupAssignmentComplete: json['groupAssignmentComplete'] is bool
+          ? json['groupAssignmentComplete'] as bool
+          : true,
     );
   }
 }

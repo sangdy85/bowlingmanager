@@ -94,7 +94,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-    expect(find.textContaining('Effective 650'), findsWidgets);
+      expect(find.textContaining('Effective 650'), findsWidgets);
       expect(find.textContaining('핸디 10'), findsWidgets);
       expect(find.textContaining('적용 660'), findsWidgets);
       expect(find.textContaining('정책 확정이 필요'), findsNothing);

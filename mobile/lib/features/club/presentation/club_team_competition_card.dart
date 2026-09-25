@@ -139,23 +139,36 @@ class _ClubTeamCompetitionCardState
         const Divider(height: 28),
         const Text('내 차례입니다.', style: TextStyle(fontWeight: FontWeight.w700)),
         const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: state.remainingParticipants
-              .map(
-                (participant) => ActionChip(
-                  label: Text('${participant.name} 선택'),
-                  onPressed: _working
-                      ? null
-                      : () => _run(<String, dynamic>{
-                          'action': 'PICK',
-                          'memberId': participant.memberId,
-                        }),
-                ),
-              )
-              .toList(),
-        ),
+        if (state.status == 'LUCKY_DRAW') ...<Widget>[
+          Text(
+            '남은 참가자: ${state.remainingParticipants.map((participant) => participant.name).join(', ')}',
+          ),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: _working
+                ? null
+                : () => _run(const <String, dynamic>{'action': 'LUCKY_DRAW'}),
+            icon: const Icon(Icons.casino_outlined),
+            label: const Text('행운권 뽑기'),
+          ),
+        ] else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: state.remainingParticipants
+                .map(
+                  (participant) => ActionChip(
+                    label: Text('${participant.name} 선택'),
+                    onPressed: _working
+                        ? null
+                        : () => _run(<String, dynamic>{
+                            'action': 'PICK',
+                            'participantId': participant.participantId,
+                          }),
+                  ),
+                )
+                .toList(),
+          ),
       ],
       if (state.teams.isNotEmpty) ...<Widget>[
         const Divider(height: 28),
@@ -173,7 +186,11 @@ class _ClubTeamCompetitionCardState
               child: Text('${item.pickNumber}'),
             ),
             title: Text(
-              item.automatic
+              item.pickType == 'LUCKY_DRAW_MISS'
+                  ? '${item.teamName} · 행운권 꽝'
+                  : item.pickType == 'LUCKY_DRAW_WIN'
+                  ? '${item.teamName} · 행운권 당첨 → ${item.selectedDisplayName}'
+                  : item.automatic
                   ? '자동 배정 → ${item.selectedDisplayName} → ${item.teamName}'
                   : '${item.teamName} → ${item.selectedDisplayName} 선택',
             ),
@@ -324,6 +341,17 @@ class _ClubTeamCompetitionCardState
             child: const Text('드래프트 시작'),
           ),
         );
+      case 'LUCKY_DRAW':
+        actions.add(
+          FilledButton.tonal(
+            onPressed: _working
+                ? null
+                : () => _run(const <String, dynamic>{
+                    'action': 'AUTO_ASSIGN_REMAINDER',
+                  }),
+            child: const Text('남은 인원 자동 배정'),
+          ),
+        );
       case 'TEAMS_FINALIZED':
         actions.add(
           FilledButton(
@@ -403,23 +431,27 @@ class _ClubTeamCompetitionCardState
                 width: 420,
                 child: ListView(
                   shrinkWrap: true,
-                  children: state.remainingParticipants.map((participant) {
-                    final int order = selected.indexOf(participant.memberId);
-                    return CheckboxListTile(
-                      value: order >= 0,
-                      title: Text(participant.name),
-                      subtitle: order >= 0
-                          ? Text('드래프트 순서 ${order + 1}')
-                          : null,
-                      onChanged: (bool? checked) => setDialogState(() {
-                        if (checked == true) {
-                          selected.add(participant.memberId);
-                        } else {
-                          selected.remove(participant.memberId);
-                        }
-                      }),
-                    );
-                  }).toList(),
+                  children: state.remainingParticipants
+                      .where((participant) => participant.memberId != null)
+                      .map((participant) {
+                        final String memberId = participant.memberId!;
+                        final int order = selected.indexOf(memberId);
+                        return CheckboxListTile(
+                          value: order >= 0,
+                          title: Text(participant.name),
+                          subtitle: order >= 0
+                              ? Text('드래프트 순서 ${order + 1}')
+                              : null,
+                          onChanged: (bool? checked) => setDialogState(() {
+                            if (checked == true) {
+                              selected.add(memberId);
+                            } else {
+                              selected.remove(memberId);
+                            }
+                          }),
+                        );
+                      })
+                      .toList(),
                 ),
               ),
               actions: <Widget>[
@@ -580,8 +612,8 @@ class _ClubTeamCompetitionCardState
           <String, dynamic>{
             'competitionTeamId': teams[index].id,
             'lanePriority': index + 1,
-            'memberIds': members[teams[index].id]!
-                .map((member) => member.memberId)
+            'participantIds': members[teams[index].id]!
+                .map((member) => member.participantId)
                 .toList(),
           },
       ],
@@ -681,6 +713,7 @@ String _statusLabel(String status) => switch (status) {
   'ATTENDANCE_LOCKED' => '참석 마감',
   'DRAFT_READY' => '드래프트 준비',
   'DRAFT_IN_PROGRESS' => '드래프트 진행',
+  'LUCKY_DRAW' => '행운권 추첨',
   'TEAMS_FINALIZED' => '팀 확정',
   'LANES_ASSIGNED' => '레인 배정 완료',
   'PUBLISHED' => '결과 발표',

@@ -39,6 +39,7 @@ export type ScoreCreateRecord = {
     memo: string | null;
     competitionMode?: string | null;
     teamEventId?: string | null;
+    teamEventGuestId?: string | null;
 };
 
 export type ScoreBulkDependencies = {
@@ -54,6 +55,7 @@ export type CompetitionEventProvenance = {
     eventDate: Date;
     gameType: string | null;
     competitionMode: string | null;
+    guests?: readonly { id: string; name: string }[];
 };
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -118,18 +120,22 @@ const defaultDependencies: ScoreBulkDependencies = {
                 })), tx);
                 const events = await tx.teamEvent.findMany({
                     where: { competitionEnabled: true, OR: records.map((record) => ({ teamId: record.teamId, eventDate: competitionEventDateForScore(record.gameDate), gameType: record.gameType })) },
-                    select: { id: true, teamId: true, eventDate: true, gameType: true, competitionMode: true },
+                    select: { id: true, teamId: true, eventDate: true, gameType: true, competitionMode: true, guests: { select: { id: true, name: true } } },
                 });
                 const eventByKey = indexUniqueCompetitionEvents(events);
                 for (const record of records) {
-                    const { userId, teamId, ...data } = record;
+                    const { userId, teamId, teamEventId: _teamEventId, teamEventGuestId: _teamEventGuestId, ...data } = record;
                     const event = eventByKey.get(competitionEventKey(teamId, record.gameDate, record.gameType)) ?? null;
+                    const matchingGuests = event && record.guestName
+                        ? (event.guests ?? []).filter((guest) => guest.name === record.guestName)
+                        : [];
                     await tx.score.create({
                         data: {
                             ...data, competitionMode: event?.competitionMode ?? null,
                             User: userId ? { connect: { id: userId } } : undefined,
                             Team: { connect: { id: teamId } },
                             TeamEvent: event ? { connect: { id: event.id } } : undefined,
+                            TeamEventGuest: matchingGuests.length === 1 ? { connect: { id: matchingGuests[0].id } } : undefined,
                         },
                     });
                 }

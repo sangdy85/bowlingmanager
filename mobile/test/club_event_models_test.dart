@@ -148,6 +148,16 @@ void main() {
     final manual = ClubCompetitionPreview.fromJson(preview('MANUAL', 191, 191));
     expect(automatic.groupingSource, 'AUTO');
     expect(manual.manualGroupingScore, 191);
+    final overridden = ClubCompetitionPreview.fromJson(
+      preview('MANUAL_OVERRIDE', 198.2, null)
+        ..['autoGroupingScore'] = 198.2
+        ..['autoGroup'] = 'B'
+        ..['manualGroup'] = 'C'
+        ..['effectiveGroup'] = 'C',
+    );
+    expect(overridden.autoGroup, 'B');
+    expect(overridden.manualGroup, 'C');
+    expect(overridden.effectiveGroup, 'C');
     expect(
       () => ClubCompetitionPreview.fromJson(preview('MANUAL', 191, -1)),
       throwsFormatException,
