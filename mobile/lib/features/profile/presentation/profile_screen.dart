@@ -71,6 +71,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               }
             },
           ),
+          if (user.role == 'SUPER_ADMIN') ...<Widget>[
+            const SizedBox(height: 14),
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: ListTile(
+                key: const Key('profile-super-admin'),
+                leading: const Icon(
+                  Icons.admin_panel_settings_outlined,
+                  color: AppColors.primaryBright,
+                ),
+                title: const Text('슈퍼 관리자'),
+                subtitle: const Text('동호회 기능 활성화를 관리합니다.'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push('/super-admin'),
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           OutlinedButton.icon(
             key: const Key('profile-logout'),

@@ -1,6 +1,7 @@
 import 'package:bowlingmanager_mobile/features/auth/presentation/login_screen.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_state.dart';
+import 'package:bowlingmanager_mobile/features/admin/presentation/super_admin_screens.dart';
 import 'package:bowlingmanager_mobile/features/capture/presentation/capture_screen.dart';
 import 'package:bowlingmanager_mobile/features/capture/presentation/capture_review_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_detail_screen.dart';
@@ -289,6 +290,18 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
             path: '/profile',
             builder: (BuildContext context, GoRouterState state) =>
                 const ProfileScreen(),
+          ),
+          GoRoute(
+            path: '/super-admin',
+            builder: (BuildContext context, GoRouterState state) =>
+                const SuperAdminScreen(),
+            routes: <RouteBase>[
+              GoRoute(
+                path: 'team-features',
+                builder: (BuildContext context, GoRouterState state) =>
+                    const SuperAdminTeamFeaturesScreen(),
+              ),
+            ],
           ),
         ],
       ),
