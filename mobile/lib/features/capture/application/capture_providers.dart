@@ -100,7 +100,10 @@ class CaptureController extends AsyncNotifier<CaptureState> {
         current.copyWith(
           isAnalyzing: false,
           players: List<CapturePlayerDraft>.unmodifiable(
-            result.map(CapturePlayerDraft.fromOcr),
+            result.indexed.map(
+              ((int, OcrPlayer) item) =>
+                  CapturePlayerDraft.fromOcr(item.$2, inputId: item.$1),
+            ),
           ),
           clearError: true,
         ),

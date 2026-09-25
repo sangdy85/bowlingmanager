@@ -125,10 +125,10 @@ void main() {
       await api.createEvent(
         'team-1',
         const ClubEventDraft(
-          title: '개인전',
+          title: '정기전 9월 모임',
           date: '2026-09-22',
           time: '19:00',
-          location: '볼링장',
+          location: '서울 볼링장',
           gameType: '정기전',
           attendanceEnabled: true,
           laneDrawEnabled: false,
@@ -158,6 +158,8 @@ void main() {
       );
       expect(payload['competitionEnabled'], isTrue);
       expect(payload['competitionType'], 'INDIVIDUAL');
+      expect(payload['title'], '정기전 9월 모임');
+      expect(payload['location'], '서울 볼링장');
       expect(requests.last.path, '/teams/team-1/events/event-1/competition');
       expect((requests.last.data as Map)['manualGroupingScore'], 190);
     },

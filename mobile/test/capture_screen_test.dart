@@ -59,6 +59,62 @@ void main() {
     expect(find.byKey(const Key('remove-player-1')), findsNothing);
     expect(find.text('250'), findsOneWidget);
   });
+
+  testWidgets(
+    'review preserves Korean IME composing while player name updates',
+    (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(600, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final FakeCaptureRepository repository = FakeCaptureRepository();
+      await _pumpApp(tester, repository, FakeCaptureImagePicker());
+      await tester.tap(find.text('촬영'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('capture-gallery')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('capture-analyze')));
+      await tester.pumpAndSettle();
+
+      final Finder nameField = find.byKey(const Key('player-name-0'));
+      await tester.tap(nameField);
+      Future<void> expectComposing(String text) async {
+        tester.testTextInput.updateEditingValue(
+          TextEditingValue(
+            text: text,
+            selection: TextSelection.collapsed(offset: text.length),
+            composing: TextRange(start: 0, end: text.length),
+          ),
+        );
+        await tester.pump();
+        final EditableText editable = tester.widget<EditableText>(
+          find.descendant(of: nameField, matching: find.byType(EditableText)),
+        );
+        expect(editable.controller.value.text, text);
+        expect(
+          editable.controller.value.composing,
+          TextRange(start: 0, end: text.length),
+        );
+      }
+
+      await expectComposing('ㄱ');
+      await expectComposing('가');
+      await expectComposing('ㅎ');
+      await expectComposing('하');
+      await expectComposing('한');
+
+      tester.testTextInput.updateEditingValue(
+        const TextEditingValue(
+          text: '홍길동',
+          selection: TextSelection.collapsed(offset: 3),
+          composing: TextRange.empty,
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('review-save')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(repository.savedPlayers?.first.name, '홍길동');
+    },
+  );
 }
 
 Future<void> _pumpApp(

@@ -79,7 +79,7 @@ class _ReviewContent extends StatelessWidget {
         const SizedBox(height: 20),
         for (int index = 0; index < state.players.length; index++) ...<Widget>[
           _PlayerCard(
-            key: ValueKey<String>('player-$index-${state.players[index].name}'),
+            key: ValueKey<int>(state.players[index].inputId),
             index: index,
             player: state.players[index],
             enabled: !state.isSaving,

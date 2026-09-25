@@ -10,7 +10,9 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "seed:test": "node scripts/seed-test-fixtures.cjs"
+    "seed:test": "node scripts/seed-test-fixtures.cjs",
+    "qa:create": "node scripts/production-qa-fixture.cjs create",
+    "qa:remove": "node scripts/production-qa-fixture.cjs remove"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

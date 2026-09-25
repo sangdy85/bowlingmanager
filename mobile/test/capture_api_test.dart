@@ -93,6 +93,7 @@ void main() {
       memo: null,
       players: const <CapturePlayerDraft>[
         CapturePlayerDraft(
+          inputId: 0,
           name: '회원',
           scoreTexts: <String>['200'],
           memberId: 'member-1',

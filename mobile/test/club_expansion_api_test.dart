@@ -134,8 +134,8 @@ void main() {
       });
     final postId = await ClubExpansionApi(dio).savePost(
       'team-1',
-      title: '제목',
-      content: '본문',
+      title: '테스트',
+      content: '안녕하세요 테스트입니다.',
       existingImages: const <ClubPostImage>[ClubPostImage(id: 'image-old')],
       newImages: <CaptureImageData>[
         CaptureImageData(
@@ -148,7 +148,13 @@ void main() {
 
     expect(postId, 'post-1');
     expect(
-      sent?.fields.any((entry) => entry.key == 'title' && entry.value == '제목'),
+      sent?.fields.any((entry) => entry.key == 'title' && entry.value == '테스트'),
+      isTrue,
+    );
+    expect(
+      sent?.fields.any(
+        (entry) => entry.key == 'content' && entry.value == '안녕하세요 테스트입니다.',
+      ),
       isTrue,
     );
     expect(

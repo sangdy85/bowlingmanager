@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm } from "node:fs/promises";
-import { basename, extname, resolve, sep } from "node:path";
+import { extname, resolve } from "node:path";
 import sharp from "sharp";
+import {
+    removeStoredPostImagePathsStrict,
+    storedPostImagePath as resolveStoredPostImagePath,
+} from "./post-image-storage-path.cjs";
 
 export const POST_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 export const TEAM_POST_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
@@ -58,8 +62,9 @@ export async function removeStoredPostImages(images: readonly Pick<StoredPostIma
 }
 
 export async function removeStoredPostImagesStrict(images: readonly Pick<StoredPostImage, "path">[]) {
-    const results = await Promise.allSettled(images.map((image) => rm(image.path, { force: true })));
-    if (results.some((result) => result.status === "rejected")) {
+    try {
+        await removeStoredPostImagePathsStrict(images.map((image) => image.path));
+    } catch {
         throw new PostImageStorageError(
             "IMAGE_CLEANUP_FAILED",
             "게시글은 삭제되었지만 일부 첨부 이미지 정리가 완료되지 않았습니다.",
@@ -69,16 +74,7 @@ export async function removeStoredPostImagesStrict(images: readonly Pick<StoredP
 }
 
 export function storedPostImagePath(url: string) {
-    const prefixes = ["/api/images/", "/uploads/"];
-    const prefix = prefixes.find((candidate) => url.startsWith(candidate));
-    if (!prefix) return null;
-    const encoded = url.slice(prefix.length);
-    let filename: string;
-    try { filename = decodeURIComponent(encoded); } catch { return null; }
-    if (!filename || filename !== basename(filename) || !/^[A-Za-z0-9._-]+$/.test(filename)) return null;
-    const directory = uploadDirectory();
-    const path = resolve(directory, filename);
-    return path.startsWith(`${directory}${sep}`) ? path : null;
+    return resolveStoredPostImagePath(url);
 }
 
 export async function readStoredPostImage(url: string) {

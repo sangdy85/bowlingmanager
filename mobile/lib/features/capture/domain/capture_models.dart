@@ -138,17 +138,23 @@ class OcrPlayer {
 
 class CapturePlayerDraft {
   const CapturePlayerDraft({
+    required this.inputId,
     required this.name,
     required this.scoreTexts,
     required this.memberId,
   });
 
-  factory CapturePlayerDraft.fromOcr(OcrPlayer player) => CapturePlayerDraft(
+  factory CapturePlayerDraft.fromOcr(
+    OcrPlayer player, {
+    required int inputId,
+  }) => CapturePlayerDraft(
+    inputId: inputId,
     name: player.name,
     scoreTexts: player.scores.map((int score) => '$score').toList(),
     memberId: player.matchedMemberId,
   );
 
+  final int inputId;
   final String name;
   final List<String> scoreTexts;
   final String? memberId;
@@ -159,6 +165,7 @@ class CapturePlayerDraft {
     String? memberId,
     bool clearMemberId = false,
   }) => CapturePlayerDraft(
+    inputId: inputId,
     name: name ?? this.name,
     scoreTexts: scoreTexts ?? this.scoreTexts,
     memberId: clearMemberId ? null : memberId ?? this.memberId,

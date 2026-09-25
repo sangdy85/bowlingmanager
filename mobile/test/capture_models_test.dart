@@ -55,6 +55,7 @@ void main() {
 
   test('draft validation accepts integers only from zero through 300', () {
     const CapturePlayerDraft valid = CapturePlayerDraft(
+      inputId: 0,
       name: '회원',
       scoreTexts: <String>['0', '300'],
       memberId: null,
@@ -70,4 +71,27 @@ void main() {
     );
     expect(valid.copyWith(scoreTexts: <String>['']).validatedScores(), isNull);
   });
+
+  test(
+    'draft keeps Korean, English, numbers, spaces and punctuation unchanged',
+    () {
+      const CapturePlayerDraft draft = CapturePlayerDraft(
+        inputId: 7,
+        name: 'initial',
+        scoreTexts: <String>['200'],
+        memberId: null,
+      );
+      for (final String value in <String>[
+        '테스트',
+        '배볼러',
+        '정기전 9월 모임',
+        '서울 볼링장',
+        '안녕하세요 테스트입니다.',
+        '홍길동',
+        'Bowler 123!',
+      ]) {
+        expect(draft.copyWith(name: value).name, value);
+      }
+    },
+  );
 }
