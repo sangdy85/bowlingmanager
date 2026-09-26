@@ -8,6 +8,7 @@ import 'package:bowlingmanager_mobile/features/club/presentation/club_detail_scr
 import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_detail_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_form_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_lane_draw_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_competition_score_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_events_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_activity_detail_screen.dart';
@@ -146,15 +147,6 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                             ),
                         routes: <RouteBase>[
                           GoRoute(
-                            path: 'scores',
-                            builder:
-                                (BuildContext context, GoRouterState state) =>
-                                    ClubCompetitionScoreScreen(
-                                      teamId: state.pathParameters['teamId']!,
-                                      eventId: state.pathParameters['eventId']!,
-                                    ),
-                          ),
-                          GoRoute(
                             path: 'edit',
                             builder:
                                 (BuildContext context, GoRouterState state) =>
@@ -174,6 +166,14 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                           teamId: state.pathParameters['teamId']!,
                         ),
                     routes: <RouteBase>[
+                      GoRoute(
+                        path: 'past',
+                        builder: (BuildContext context, GoRouterState state) =>
+                            ClubEventsScreen(
+                              teamId: state.pathParameters['teamId']!,
+                              past: true,
+                            ),
+                      ),
                       GoRoute(
                         path: 'new',
                         builder: (BuildContext context, GoRouterState state) =>
@@ -196,6 +196,24 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                             builder:
                                 (BuildContext context, GoRouterState state) =>
                                     ClubEventFormScreen(
+                                      teamId: state.pathParameters['teamId']!,
+                                      eventId: state.pathParameters['eventId']!,
+                                    ),
+                          ),
+                          GoRoute(
+                            path: 'scores',
+                            builder:
+                                (BuildContext context, GoRouterState state) =>
+                                    ClubCompetitionScoreScreen(
+                                      teamId: state.pathParameters['teamId']!,
+                                      eventId: state.pathParameters['eventId']!,
+                                    ),
+                          ),
+                          GoRoute(
+                            path: 'draw',
+                            builder:
+                                (BuildContext context, GoRouterState state) =>
+                                    ClubLaneDrawScreen(
                                       teamId: state.pathParameters['teamId']!,
                                       eventId: state.pathParameters['eventId']!,
                                     ),

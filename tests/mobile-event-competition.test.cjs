@@ -51,9 +51,9 @@ test('vote validation requires exactly three unique attending others', () => {
   assert.throws(() => service.validateVoteSelection('p1', ['p2', 'p3', 'outside'], ids), e => e.code === 'INVALID_PARTICIPANT');
 });
 
-test('server voting window opens at start and closes exactly after 30 minutes', () => {
+test('server voting opens after finalization and closes exactly after the deadline', () => {
   const start = new Date('2026-09-22T10:00:00Z');
-  assert.equal(service.votingPhase(start, 30, new Date('2026-09-22T09:59:59Z')).open, false);
+  assert.equal(service.votingPhase(start, 30, new Date('2026-09-22T09:59:59Z')).open, true);
   assert.equal(service.votingPhase(start, 30, start).open, true);
   assert.equal(service.votingPhase(start, 30, new Date('2026-09-22T10:29:59Z')).open, true);
   const close = service.votingPhase(start, 30, new Date('2026-09-22T10:30:00Z'));

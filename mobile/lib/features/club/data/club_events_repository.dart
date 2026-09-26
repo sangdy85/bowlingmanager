@@ -8,8 +8,10 @@ class ClubEventsRepository {
   ClubEventsRepository(this._api);
   final ClubEventsApi _api;
 
-  Future<ClubEventsEnvelope> fetchEvents(String teamId) =>
-      _api.fetchEvents(teamId);
+  Future<ClubEventsEnvelope> fetchEvents(
+    String teamId,
+    ClubEventListScope scope,
+  ) => _api.fetchEvents(teamId, scope);
   Future<ClubEvent> fetchEvent(String teamId, String eventId) =>
       _api.fetchEvent(teamId, eventId);
   Future<ClubCompetitionResult> fetchCompetition(
@@ -73,7 +75,7 @@ class ClubEventsRepository {
   ) => _api.replaceLaneSlots(teamId, eventId, slots);
   Future<void> startDraw(String teamId, String eventId) =>
       _api.startDraw(teamId, eventId);
-  Future<void> drawMine(String teamId, String eventId) =>
+  Future<ClubEventLaneAssignment> drawMine(String teamId, String eventId) =>
       _api.drawMine(teamId, eventId);
   Future<void> drawGuest(String teamId, String eventId, String guestId) =>
       _api.drawGuest(teamId, eventId, guestId);

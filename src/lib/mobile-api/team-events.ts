@@ -162,10 +162,33 @@ export function assertCompetitionModeChangeAllowed(input: {
     }
 }
 
-export async function listTeamEvents(actorUserId: string, teamId: string) {
+export type TeamEventListScope = "ALL" | "UPCOMING" | "PAST";
+
+export function parseTeamEventListScope(value: string | null): TeamEventListScope {
+    if (value == null || value === "") return "ALL";
+    if (value === "UPCOMING" || value === "PAST") return value;
+    throw new TeamEventError("INVALID_SCOPE", "일정 조회 범위를 확인해주세요.", 400);
+}
+
+export function teamEventListQuery(scope: TeamEventListScope, now = new Date()) {
+    const today = dateKeyToDate(kstDateKey(now));
+    return {
+        date: scope === "UPCOMING" ? { gte: today } : scope === "PAST" ? { lt: today } : undefined,
+        orderBy: scope === "PAST"
+            ? [{ eventDate: "desc" as const }, { eventTime: "desc" as const }, { id: "desc" as const }]
+            : [{ eventDate: "asc" as const }, { eventTime: "asc" as const }, { id: "asc" as const }],
+    };
+}
+
+export async function listTeamEvents(actorUserId: string, teamId: string, scope: TeamEventListScope = "ALL", now = new Date()) {
     const access = await getAccess(actorUserId, teamId);
+    const query = teamEventListQuery(scope, now);
     const events = await prisma.teamEvent.findMany({
-        where: { teamId }, orderBy: [{ eventDate: "asc" }, { eventTime: "asc" }, { id: "asc" }],
+        where: {
+            teamId,
+            ...(query.date ? { eventDate: query.date } : {}),
+        },
+        orderBy: query.orderBy,
         include: eventInclude,
     });
     return { role: access.role, events: events.map((event) => serializeEvent(event, access)) };
@@ -402,6 +425,7 @@ async function drawIndividual(teamId: string, eventId: string, target: DrawParti
 const eventInclude = {
     team: {
         select: {
+            name: true,
             members: {
                 orderBy: { joinedAt: "asc" as const },
                 select: { id: true, alias: true, user: { select: { name: true } } },
@@ -452,7 +476,7 @@ function serializeEvent(event: EventWithRelations, access: Awaited<ReturnType<ty
         guests: event.guests.length,
     };
     return {
-        id: event.id, teamId: event.teamId, title: event.title,
+        id: event.id, teamId: event.teamId, teamName: event.team.name, title: event.title,
         date: formatEventDate(event.eventDate), time: event.eventTime, location: event.location,
         gameType: event.gameType, attendanceEnabled: event.attendanceEnabled,
         competitionType: competitionVisible ? event.competitionType : "NONE",

@@ -8,7 +8,11 @@ import 'package:bowlingmanager_mobile/features/club/domain/club_competition_scor
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 typedef ClubEventRequest = ({String userId, String teamId, String eventId});
-typedef ClubEventsRequest = ({String userId, String teamId});
+typedef ClubEventsRequest = ({
+  String userId,
+  String teamId,
+  ClubEventListScope scope,
+});
 
 final Provider<ClubEventsApi> clubEventsApiProvider = Provider<ClubEventsApi>(
   (Ref ref) => ClubEventsApi(ref.watch(apiClientProvider).dio),
@@ -22,7 +26,7 @@ final clubEventsProvider = FutureProvider.autoDispose
     .family<ClubEventsEnvelope, ClubEventsRequest>((Ref ref, request) {
       return ref
           .watch(clubEventsRepositoryProvider)
-          .fetchEvents(request.teamId);
+          .fetchEvents(request.teamId, request.scope);
     }, retry: (int retryCount, Object error) => null);
 
 final clubEventProvider = FutureProvider.autoDispose
@@ -66,7 +70,11 @@ void invalidateClubEvents(
   String teamId, [
   String? eventId,
 ]) {
-  ref.invalidate(clubEventsProvider((userId: userId, teamId: teamId)));
+  for (final scope in ClubEventListScope.values) {
+    ref.invalidate(
+      clubEventsProvider((userId: userId, teamId: teamId, scope: scope)),
+    );
+  }
   if (eventId != null) {
     ref.invalidate(
       clubEventProvider((userId: userId, teamId: teamId, eventId: eventId)),

@@ -89,6 +89,27 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               children: <Widget>[
                 _eventCard(event),
+                if (event.laneDrawEnabled &&
+                    event.competition?.type != ClubCompetitionType.team &&
+                    event.myAttendance ==
+                        ClubEventAttendance.attending) ...<Widget>[
+                  const SizedBox(height: 12),
+                  _myLaneAction(event),
+                ],
+                if (event.attendanceEnabled) ...<Widget>[
+                  const SizedBox(height: 12),
+                  KeyedSubtree(
+                    key: _attendanceKey,
+                    child: _attendanceCard(event, user.id),
+                  ),
+                ],
+                if (event.canManage &&
+                    event.laneDrawEnabled &&
+                    event.competition?.type !=
+                        ClubCompetitionType.team) ...<Widget>[
+                  const SizedBox(height: 12),
+                  KeyedSubtree(key: _laneKey, child: _drawCard(event, user.id)),
+                ],
                 if (event.competition != null) ...<Widget>[
                   const SizedBox(height: 12),
                   if (event.competition!.type == ClubCompetitionType.team)
@@ -116,39 +137,26 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                       key: _competitionKey,
                       child: _competitionCard(event, user.id),
                     ),
-                  if (event.canManage &&
-                      _canEnterCompetitionScores(event)) ...<Widget>[
-                    const SizedBox(height: 10),
-                    OutlinedButton.icon(
-                      key: const Key('competition-score-entry'),
-                      onPressed: () => context.push(
-                        '/club/${Uri.encodeComponent(widget.teamId)}/events/${Uri.encodeComponent(widget.eventId)}/scores',
-                      ),
-                      icon: const Icon(Icons.scoreboard_outlined),
-                      label: const Text('경기 점수 입력'),
+                ],
+                if (event.canManage &&
+                    _canEnterCompetitionScores(event)) ...<Widget>[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    key: const Key('competition-score-entry'),
+                    onPressed: () => context.push(
+                      '/club/${Uri.encodeComponent(widget.teamId)}/events/${Uri.encodeComponent(widget.eventId)}/scores',
                     ),
-                  ],
-                ],
-                if (event.attendanceEnabled) ...<Widget>[
-                  const SizedBox(height: 12),
-                  KeyedSubtree(
-                    key: _attendanceKey,
-                    child: _attendanceCard(event, user.id),
+                    icon: const Icon(Icons.scoreboard_outlined),
+                    label: const Text('경기 점수 입력'),
                   ),
-                ],
-                if (event.canManage) ...<Widget>[
-                  const SizedBox(height: 12),
-                  _adminCard(event, user.id),
-                ],
-                if (event.laneDrawEnabled &&
-                    event.competition?.type !=
-                        ClubCompetitionType.team) ...<Widget>[
-                  const SizedBox(height: 12),
-                  KeyedSubtree(key: _laneKey, child: _drawCard(event, user.id)),
                 ],
                 if (event.assignments.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 12),
                   _resultsCard(event),
+                ],
+                if (event.canManage) ...<Widget>[
+                  const SizedBox(height: 12),
+                  _adminCard(event, user.id),
                 ],
               ],
             ),
@@ -202,6 +210,13 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(event.title, style: Theme.of(context).textTheme.headlineSmall),
+          if (event.teamName != null) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              event.teamName!,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ],
           if (event.competition
               case final ClubCompetitionConfig competition) ...<Widget>[
             const SizedBox(height: 8),
@@ -232,6 +247,35 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
       ),
     ),
   );
+
+  Widget _myLaneAction(ClubEvent event) {
+    final ClubEventLaneAssignment? assignment = event.myAssignment;
+    final bool canDraw =
+        event.laneDrawMode == ClubEventDrawMode.individual &&
+        event.laneDrawStatus == ClubEventDrawStatus.open &&
+        assignment == null;
+    final String label = assignment != null
+        ? '내 레인 ${assignment.label}'
+        : canDraw
+        ? '레인 추첨하기'
+        : '레인 추첨 대기';
+    return Card(
+      key: const Key('my-lane-action'),
+      child: ListTile(
+        leading: const Icon(Icons.grid_view_rounded),
+        title: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+        subtitle: assignment == null
+            ? null
+            : Text('${assignment.label} 레인 배정 완료'),
+        trailing: canDraw ? const Icon(Icons.chevron_right_rounded) : null,
+        onTap: canDraw
+            ? () => context.push(
+                '/club/${Uri.encodeComponent(widget.teamId)}/events/${Uri.encodeComponent(widget.eventId)}/draw',
+              )
+            : null,
+      ),
+    );
+  }
 
   Widget _attendanceCard(ClubEvent event, String userId) => Card(
     child: Padding(
@@ -601,7 +645,10 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Text('관리', style: TextStyle(fontWeight: FontWeight.w700)),
+          const Text(
+            '기타 관리자 설정',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 10),
           ...event.guests.map(
             (guest) => ListTile(
@@ -640,15 +687,6 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
               icon: const Icon(Icons.person_add_alt_1_rounded),
               label: const Text('게스트 추가'),
             ),
-          if (event.laneDrawEnabled &&
-              !event.isLocked &&
-              (event.competition?.type != ClubCompetitionType.team ||
-                  event.competition?.status == 'TEAMS_FINALIZED'))
-            OutlinedButton.icon(
-              onPressed: _working ? null : () => _configureSlots(event, userId),
-              icon: const Icon(Icons.grid_view_rounded),
-              label: Text('레인 좌석 설정 (${event.slots.length}개)'),
-            ),
         ],
       ),
     ),
@@ -660,11 +698,17 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Text('레인 추첨', style: TextStyle(fontWeight: FontWeight.w700)),
+          const Text('레인 운영', style: TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           Text(
             '참가 ${event.counts.attending + event.counts.guests}명 · 좌석 ${event.slots.length}개',
           ),
+          if (!event.isLocked)
+            OutlinedButton.icon(
+              onPressed: _working ? null : () => _configureSlots(event, userId),
+              icon: const Icon(Icons.grid_view_rounded),
+              label: Text('레인 좌석 설정 (${event.slots.length}개)'),
+            ),
           if (event.canManage &&
               event.laneDrawStatus == ClubEventDrawStatus.notStarted)
             FilledButton(
@@ -680,24 +724,6 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
             ),
           if (event.laneDrawMode == ClubEventDrawMode.individual &&
               event.laneDrawStatus == ClubEventDrawStatus.open) ...<Widget>[
-            FilledButton(
-              onPressed:
-                  _working ||
-                      event.myAssignment != null ||
-                      event.myAttendance != ClubEventAttendance.attending
-                  ? null
-                  : () => _action(
-                      userId,
-                      () => ref
-                          .read(clubEventsRepositoryProvider)
-                          .drawMine(widget.teamId, widget.eventId),
-                    ),
-              child: Text(
-                event.myAssignment == null
-                    ? '내 레인 추첨'
-                    : '내 레인 ${event.myAssignment!.label}',
-              ),
-            ),
             if (event.canManage)
               ...event.guests.map((guest) {
                 final bool assigned = event.assignments.any(

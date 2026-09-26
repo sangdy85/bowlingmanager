@@ -32,6 +32,7 @@ class _ClubEventCompetitionCardState
   Timer? _poll;
   bool _shouldPoll = false;
   bool _working = false;
+  bool _votingExpanded = false;
   final Set<String> _selected = <String>{};
   bool _selectionInitialized = false;
 
@@ -151,45 +152,62 @@ class _ClubEventCompetitionCardState
             state.isParticipant &&
             (state.voting?.mySelections.isEmpty ?? true)) ...<Widget>[
           const Divider(height: 28),
-          const Text('내 투표', style: TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
-          Text(
-            '남은 시간 ${_remaining(state.voteCloseAt)}',
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-          const Text('다른 참가자 정확히 3명을 선택하세요.'),
-          ...state.participants.map((participant) {
-            final bool self =
-                participant.participantId == state.myParticipantId;
-            return CheckboxListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              value: _selected.contains(participant.participantId),
-              title: Text(participant.name),
-              subtitle: self ? const Text('본인') : null,
-              onChanged: self || _working
-                  ? null
-                  : (checked) => setState(() {
-                      if (checked == true && _selected.length < 3) {
-                        _selected.add(participant.participantId);
-                      } else if (checked == false) {
-                        _selected.remove(participant.participantId);
-                      }
-                    }),
-            );
-          }),
           SizedBox(
             width: double.infinity,
-            child: FilledButton(
-              onPressed: _working || _selected.length != 3
+            child: FilledButton.tonalIcon(
+              onPressed: _working
                   ? null
-                  : () => _run(<String, dynamic>{
-                      'action': 'VOTE',
-                      'selectedParticipantIds': _selected.toList(),
-                    }),
-              child: Text('투표 완료 (${_selected.length} / 3)'),
+                  : () => setState(() => _votingExpanded = true),
+              icon: const Icon(Icons.how_to_vote_outlined),
+              label: const Text('투표하러 가기'),
             ),
           ),
+          if (_votingExpanded) ...<Widget>[
+            const SizedBox(height: 12),
+            const Text(
+              '내 투표',
+              key: Key('event-vote-action'),
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '남은 시간 ${_remaining(state.voteCloseAt)}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const Text('다른 참가자 정확히 3명을 선택하세요.'),
+            ...state.participants.map((participant) {
+              final bool self =
+                  participant.participantId == state.myParticipantId;
+              return CheckboxListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                value: _selected.contains(participant.participantId),
+                title: Text(participant.name),
+                subtitle: self ? const Text('본인') : null,
+                onChanged: self || _working
+                    ? null
+                    : (checked) => setState(() {
+                        if (checked == true && _selected.length < 3) {
+                          _selected.add(participant.participantId);
+                        } else if (checked == false) {
+                          _selected.remove(participant.participantId);
+                        }
+                      }),
+              );
+            }),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _working || _selected.length != 3
+                    ? null
+                    : () => _run(<String, dynamic>{
+                        'action': 'VOTE',
+                        'selectedParticipantIds': _selected.toList(),
+                      }),
+                child: Text('투표 완료 (${_selected.length} / 3)'),
+              ),
+            ),
+          ],
         ],
         if (state.canManage) ...<Widget>[
           const SizedBox(height: 12),

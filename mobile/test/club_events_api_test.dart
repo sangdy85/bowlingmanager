@@ -32,6 +32,22 @@ void main() {
             'data': <String, Object>{'event': _eventJson()},
           });
         }
+        if (options.path.endsWith('/draw/mine')) {
+          return _json(200, <String, Object>{
+            'success': true,
+            'data': <String, Object>{
+              'assignment': <String, Object?>{
+                'id': 'assignment-1',
+                'memberId': 'member-1',
+                'guestId': null,
+                'name': '회원',
+                'laneNumber': 12,
+                'position': 2,
+                'label': '12-2',
+              },
+            },
+          });
+        }
         return _json(200, <String, Object>{
           'success': true,
           'data': <String, Object>{'status': 'ATTENDING'},
@@ -39,7 +55,10 @@ void main() {
       });
     final ClubEventsApi api = ClubEventsApi(dio);
 
-    final ClubEventsEnvelope list = await api.fetchEvents('team-1');
+    final ClubEventsEnvelope list = await api.fetchEvents(
+      'team-1',
+      ClubEventListScope.upcoming,
+    );
     final ClubEvent detail = await api.fetchEvent('team-1', 'event-1');
     await api.setAttendance('team-1', 'event-1', ClubEventAttendance.attending);
     await api.replaceLaneSlots(
@@ -50,6 +69,7 @@ void main() {
     await api.drawMine('team-1', 'event-1');
 
     expect(list.events.single.id, 'event-1');
+    expect(requests.first.queryParameters['scope'], 'UPCOMING');
     expect(detail.laneDrawMode, ClubEventDrawMode.individual);
     expect(
       requests.map((RequestOptions item) => '${item.method} ${item.path}'),
@@ -75,7 +95,7 @@ void main() {
         }),
       );
     await expectLater(
-      ClubEventsApi(dio).fetchEvents('team-1'),
+      ClubEventsApi(dio).fetchEvents('team-1', ClubEventListScope.upcoming),
       throwsA(isA<ApiException>()),
     );
 
@@ -84,7 +104,7 @@ void main() {
         (_) => _json(200, <String, Object>{'success': true, 'data': 'bad'}),
       );
     await expectLater(
-      ClubEventsApi(dio).fetchEvents('team-1'),
+      ClubEventsApi(dio).fetchEvents('team-1', ClubEventListScope.upcoming),
       throwsA(
         isA<ApiException>().having(
           (ApiException error) => error.kind,

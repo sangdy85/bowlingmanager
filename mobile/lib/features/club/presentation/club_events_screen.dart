@@ -9,19 +9,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class ClubEventsScreen extends ConsumerWidget {
-  const ClubEventsScreen({required this.teamId, super.key});
+  const ClubEventsScreen({required this.teamId, this.past = false, super.key});
   final String teamId;
+  final bool past;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AuthUser? user = ref.watch(authControllerProvider).user;
     if (user == null) return const Center(child: CircularProgressIndicator());
-    final request = (userId: user.id, teamId: teamId);
+    final request = (
+      userId: user.id,
+      teamId: teamId,
+      scope: past ? ClubEventListScope.past : ClubEventListScope.upcoming,
+    );
     final provider = clubEventsProvider(request);
     final AsyncValue<ClubEventsEnvelope> state = ref.watch(provider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('동호회 일정')),
+      appBar: AppBar(title: Text(past ? '지난 경기 기록' : '동호회 일정')),
       body: state.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (Object error, StackTrace _) => Center(
@@ -45,18 +50,31 @@ class ClubEventsScreen extends ConsumerWidget {
           child: envelope.events.isEmpty
               ? ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  children: const <Widget>[
-                    SizedBox(height: 180),
-                    Icon(Icons.event_available_outlined, size: 56),
-                    SizedBox(height: 12),
-                    Center(child: Text('등록된 일정이 없습니다.')),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                  children: <Widget>[
+                    const SizedBox(height: 140),
+                    const Icon(Icons.event_available_outlined, size: 56),
+                    const SizedBox(height: 12),
+                    Center(
+                      child: Text(past ? '지난 일정이 없습니다.' : '예정된 일정이 없습니다.'),
+                    ),
+                    if (!past) ...<Widget>[
+                      const SizedBox(height: 28),
+                      _pastEventsButton(context),
+                    ],
                   ],
                 )
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-                  itemCount: envelope.events.length,
+                  itemCount: envelope.events.length + (past ? 0 : 1),
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (BuildContext context, int index) {
+                    if (index == envelope.events.length) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: _pastEventsButton(context),
+                      );
+                    }
                     final ClubEvent event = envelope.events[index];
                     return Card(
                       child: ListTile(
@@ -98,4 +116,12 @@ class ClubEventsScreen extends ConsumerWidget {
           : null,
     );
   }
+
+  Widget _pastEventsButton(BuildContext context) => OutlinedButton.icon(
+    key: const Key('club-past-events'),
+    onPressed: () =>
+        context.push('/club/${Uri.encodeComponent(teamId)}/events/past'),
+    icon: const Icon(Icons.history_rounded),
+    label: const Text('지난 경기 기록 보기'),
+  );
 }

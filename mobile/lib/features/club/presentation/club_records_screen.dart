@@ -570,7 +570,6 @@ class _MemberStatisticsTableState extends State<_MemberStatisticsTable> {
                     background: i.isOdd
                         ? AppColors.surfaceElevated.withValues(alpha: 0.45)
                         : null,
-                    alignLeft: true,
                   ),
               ],
             ),
@@ -699,14 +698,12 @@ class _StatCell extends StatelessWidget {
     this.header = false,
     this.onTap,
     this.background,
-    this.alignLeft = false,
   });
   final String text;
   final double width;
   final bool header;
   final VoidCallback? onTap;
   final Color? background;
-  final bool alignLeft;
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: onTap,
@@ -714,7 +711,7 @@ class _StatCell extends StatelessWidget {
       height: _MemberStatisticsTableState._rowHeight,
       width: width,
       color: background ?? (header ? AppColors.surfaceElevated : null),
-      alignment: alignLeft ? Alignment.centerLeft : Alignment.center,
+      alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Text(
         text,
@@ -1124,10 +1121,11 @@ class _ActivityResultTable extends StatelessWidget {
 
   static const double _headerHeight = 38;
   static const double _rowHeight = 46;
-  static const double _nameWidth = 70;
-  static const double _scoreWidth = 37;
-  static const double _totalWidth = 48;
-  static const double _averageWidth = 48;
+  static const double _rankWidth = 32;
+  static const double _nameWidth = 62;
+  static const double _scoreWidth = 34;
+  static const double _totalWidth = 44;
+  static const double _averageWidth = 46;
 
   final ClubActivityFeedItem activity;
   final int maxGames;
@@ -1170,6 +1168,11 @@ class _ScoreHeader extends StatelessWidget {
     color: AppColors.surfaceElevated,
     child: Row(
       children: <Widget>[
+        const _TableCell(
+          width: _ActivityResultTable._rankWidth,
+          text: '순위',
+          header: true,
+        ),
         const _TableCell(
           width: _ActivityResultTable._nameWidth,
           text: '이름',
@@ -1220,6 +1223,11 @@ class _ScoreParticipantRow extends StatelessWidget {
     color: _rowColor(highlighted, alternate),
     child: Row(
       children: <Widget>[
+        _TableCell(
+          width: _ActivityResultTable._rankWidth,
+          text: '${participant.rank}',
+          emphasized: participant.rank <= 3,
+        ),
         _TableCell(
           width: _ActivityResultTable._nameWidth,
           text: participant.name,

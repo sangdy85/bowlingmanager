@@ -72,6 +72,8 @@ void main() {
     expect(find.textContaining('게스트A'), findsWidgets);
     expect(find.text('행운권 뽑기'), findsOneWidget);
     expect(find.text('남은 인원 자동 배정'), findsOneWidget);
+    expect(find.text('기타 설정 · 팀 핸디캡'), findsOneWidget);
+    expect(find.byKey(const Key('team-handicap-ct-1')), findsOneWidget);
     expect(find.textContaining('행운권 당첨 → 게스트B'), findsNothing);
     await tester.tap(find.text('드래프트 기록'));
     await tester.pumpAndSettle();
@@ -103,6 +105,9 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
+      expect(find.text('투표하러 가기'), findsOneWidget);
+      await tester.tap(find.text('투표하러 가기'));
       await tester.pumpAndSettle();
       expect(find.text('게스트A'), findsWidgets);
       expect(find.text('투표 완료 (0 / 3)'), findsOneWidget);
@@ -145,6 +150,9 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
+    expect(find.text('투표하러 가기'), findsOneWidget);
+    await tester.tap(find.text('투표하러 가기'));
     await tester.pumpAndSettle();
     expect(find.text('투표 완료 (0 / 3)'), findsOneWidget);
     expect(find.text('대리 투표'), findsNothing);

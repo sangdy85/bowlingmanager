@@ -146,7 +146,10 @@ export function validateVoteSelection(voterParticipantId: string, selectedPartic
 
 export function votingPhase(startAt: Date, durationMinutes: number, now = new Date()) {
     const closeAt = new Date(startAt.getTime() + durationMinutes * 60_000);
-    return { open: now >= startAt && now < closeAt, closed: now >= closeAt, closeAt };
+    // Participant finalization changes the persisted status to EVENT_READY.
+    // From that point voting is open immediately, including before the scheduled
+    // event time, and remains open until the configured deadline.
+    return { open: now < closeAt, closed: now >= closeAt, closeAt };
 }
 
 export function nextRevealStep(currentIndex: number, totalCount: number) {

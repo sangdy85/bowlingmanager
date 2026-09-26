@@ -172,7 +172,7 @@ class _ClubTeamCompetitionCardState
       ],
       if (state.teams.isNotEmpty) ...<Widget>[
         const Divider(height: 28),
-        ...state.teams.map((team) => _teamTile(team, state.canManage)),
+        ...state.teams.map(_teamTile),
       ],
       if (state.history.isNotEmpty) ...<Widget>[
         const Divider(height: 28),
@@ -213,6 +213,28 @@ class _ClubTeamCompetitionCardState
       if (state.results.teams.isNotEmpty) ...<Widget>[
         const Divider(height: 28),
         ..._resultWidgets(state),
+      ],
+      if (state.canManage && state.teams.isNotEmpty) ...<Widget>[
+        const Divider(height: 28),
+        const Text(
+          '기타 설정 · 팀 핸디캡',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 6),
+        ...state.teams.map(
+          (team) => ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text(team.name),
+            subtitle: Text('현재 핸디 ${team.teamHandicap}'),
+            trailing: IconButton(
+              key: Key('team-handicap-${team.id}'),
+              tooltip: '팀 핸디캡 수정',
+              onPressed: _working ? null : () => _editHandicap(team),
+              icon: const Icon(Icons.edit_outlined),
+            ),
+          ),
+        ),
       ],
     ],
   );
@@ -406,7 +428,7 @@ class _ClubTeamCompetitionCardState
     return Wrap(spacing: 8, runSpacing: 8, children: actions);
   }
 
-  Widget _teamTile(ClubCompetitionTeam team, bool canManage) {
+  Widget _teamTile(ClubCompetitionTeam team) {
     final bool mine =
         team.id ==
         ref.read(clubTeamCompetitionProvider(_request)).value?.myTeam;
@@ -418,13 +440,6 @@ class _ClubTeamCompetitionCardState
         '팀장 ${team.captainName} · 핸디 ${team.teamHandicap}'
         '${team.lanePriority == null ? '' : ' · 레인 우선 ${team.lanePriority}'}',
       ),
-      trailing: canManage
-          ? IconButton(
-              tooltip: '팀 핸디캡 수정',
-              onPressed: _working ? null : () => _editHandicap(team),
-              icon: const Icon(Icons.edit_outlined),
-            )
-          : null,
       children: team.members
           .map(
             (member) => ListTile(

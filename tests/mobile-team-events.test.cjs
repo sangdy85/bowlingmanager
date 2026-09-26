@@ -93,6 +93,20 @@ test('attendance parser only permits an explicit attending decision', () => {
   }
 });
 
+test('event list scope accepts upcoming and past while preserving legacy all', () => {
+  assert.equal(service.parseTeamEventListScope(null), 'ALL');
+  assert.equal(service.parseTeamEventListScope('UPCOMING'), 'UPCOMING');
+  assert.equal(service.parseTeamEventListScope('PAST'), 'PAST');
+  assert.throws(() => service.parseTeamEventListScope('future'), error => error.code === 'INVALID_SCOPE');
+  const now = new Date('2026-09-21T16:30:00.000Z'); // 2026-09-22 01:30 KST
+  const upcoming = service.teamEventListQuery('UPCOMING', now);
+  const past = service.teamEventListQuery('PAST', now);
+  assert.equal(upcoming.date.gte.toISOString(), '2026-09-21T15:00:00.000Z');
+  assert.equal(past.date.lt.toISOString(), '2026-09-21T15:00:00.000Z');
+  assert.equal(upcoming.orderBy[0].eventDate, 'asc');
+  assert.equal(past.orderBy[0].eventDate, 'desc');
+});
+
 test('lane slots enforce range and event-local uniqueness', () => {
   assert.deepEqual(service.parseLaneSlots({ slots: [
     { laneNumber: 1, position: 1 }, { laneNumber: 24, position: 6 },
@@ -204,7 +218,8 @@ test('event routes require authentication and keep actor/team/event scope', asyn
   const fakes = {
     '@/lib/mobile-api/auth': { getMobileApiUserId: async request => request.headers.get('x-user') },
     '@/lib/mobile-api/team-events': {
-      listTeamEvents: async (userId, teamId) => { call = { userId, teamId }; return { role: 'MEMBER', events: [] }; },
+      parseTeamEventListScope: value => value ?? 'ALL',
+      listTeamEvents: async (userId, teamId, scope) => { call = { userId, teamId, scope }; return { role: 'MEMBER', events: [] }; },
       createTeamEvent: async () => ({ id: 'event-1' }),
       TeamEventError: service.TeamEventError,
     },
@@ -214,9 +229,9 @@ test('event routes require authentication and keep actor/team/event scope', asyn
   assert.equal(response.status, 401);
   assert.equal(call, null);
 
-  response = await route.GET(new Request('https://example.test/events', { headers: { 'x-user': 'member-1' } }), { params: Promise.resolve({ teamId: 'team-1' }) });
+  response = await route.GET(new Request('https://example.test/events?scope=UPCOMING', { headers: { 'x-user': 'member-1' } }), { params: Promise.resolve({ teamId: 'team-1' }) });
   assert.equal(response.status, 200);
-  assert.deepEqual(call, { userId: 'member-1', teamId: 'team-1' });
+  assert.deepEqual(call, { userId: 'member-1', teamId: 'team-1', scope: 'UPCOMING' });
   assert.deepEqual(await response.json(), { success: true, data: { role: 'MEMBER', events: [] } });
 });
 

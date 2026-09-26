@@ -44,6 +44,14 @@ enum ClubEventDrawStatus {
   );
 }
 
+enum ClubEventListScope {
+  upcoming('UPCOMING'),
+  past('PAST');
+
+  const ClubEventListScope(this.apiValue);
+  final String apiValue;
+}
+
 enum ClubCompetitionType {
   individual('INDIVIDUAL', '개인전'),
   team('TEAM', '팀전'),
@@ -518,6 +526,7 @@ class ClubEvent {
   const ClubEvent({
     required this.id,
     required this.teamId,
+    this.teamName,
     required this.title,
     required this.date,
     required this.time,
@@ -541,6 +550,7 @@ class ClubEvent {
 
   final String id;
   final String teamId;
+  final String? teamName;
   final String title;
   final String date;
   final String time;
@@ -578,6 +588,7 @@ class ClubEvent {
     return ClubEvent(
       id: _requiredString(json['id']),
       teamId: _requiredString(json['teamId']),
+      teamName: json['teamName'] as String?,
       title: _requiredString(json['title']),
       date: _dateString(json['date']),
       time: _timeString(json['time']),

@@ -441,8 +441,20 @@ class _FakeClubEventsApi extends ClubEventsApi {
   }
 
   @override
-  Future<void> drawMine(String teamId, String eventId) async {
+  Future<ClubEventLaneAssignment> drawMine(
+    String teamId,
+    String eventId,
+  ) async {
     drawCount += 1;
+    return const ClubEventLaneAssignment(
+      id: 'assignment-1',
+      memberId: 'member-1',
+      guestId: null,
+      name: '회원',
+      laneNumber: 12,
+      position: 2,
+      label: '12-2',
+    );
   }
 }
 

@@ -69,6 +69,38 @@ void main() {
     );
   });
 
+  test('accepts nullable legacy event context and participant fields', () {
+    final entry = ClubCompetitionScoreEntry.fromJson(<String, dynamic>{
+      'event': <String, Object?>{
+        'id': 'legacy-event',
+        'teamName': '테스트 동호회',
+        'title': '기존 일정',
+        'date': '2026-09-26',
+        'gameType': null,
+        'competitionType': 'EVENT',
+        'competitionMode': null,
+        'status': 'EVENT_READY',
+      },
+      'gameCount': 3,
+      'readOnly': false,
+      'participants': <Object>[
+        <String, Object?>{
+          'participantId': 'guest:g1',
+          'participantKind': 'GUEST',
+          'memberId': null,
+          'guestId': 'g1',
+          'name': '게스트',
+          'group': null,
+          'competitionTeamName': null,
+          'scores': <int>[],
+        },
+      ],
+    });
+    expect(entry.gameType, isNull);
+    expect(entry.competitionMode, isNull);
+    expect(entry.participants.single.group, isNull);
+  });
+
   test('matches OCR by member id or a unique exact name only', () {
     final entry = _entry(<ClubCompetitionScoreParticipant>[
       _participant('member:1', '동명이인', memberId: 'm1'),

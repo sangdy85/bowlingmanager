@@ -9,11 +9,15 @@ class ClubEventsApi {
   ClubEventsApi(this._dio);
   final Dio _dio;
 
-  Future<ClubEventsEnvelope> fetchEvents(String teamId) => _request(
+  Future<ClubEventsEnvelope> fetchEvents(
+    String teamId,
+    ClubEventListScope scope,
+  ) => _request(
     () async => ClubEventsEnvelope.fromJson(
       _data(
         (await _dio.get<dynamic>(
           '/teams/${Uri.encodeComponent(teamId)}/events',
+          queryParameters: <String, dynamic>{'scope': scope.apiValue},
         )).data,
       ),
     ),
@@ -210,8 +214,20 @@ class ClubEventsApi {
 
   Future<void> startDraw(String teamId, String eventId) =>
       _postAction(teamId, eventId, 'draw/start');
-  Future<void> drawMine(String teamId, String eventId) =>
-      _postAction(teamId, eventId, 'draw/mine');
+  Future<ClubEventLaneAssignment> drawMine(String teamId, String eventId) =>
+      _request(() async {
+        final Map<String, dynamic> data = _data(
+          (await _dio.post<dynamic>('${_eventPath(teamId, eventId)}/draw/mine'))
+              .data,
+        );
+        final Object? assignment = data['assignment'];
+        if (assignment is! Map) {
+          throw const FormatException('Invalid lane assignment response.');
+        }
+        return ClubEventLaneAssignment.fromJson(
+          Map<String, dynamic>.from(assignment),
+        );
+      });
   Future<void> drawGuest(String teamId, String eventId, String guestId) =>
       _postAction(
         teamId,
