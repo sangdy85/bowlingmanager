@@ -599,18 +599,15 @@ type ScoreReader = { score: { findMany: typeof prisma.score.findMany } };
 async function calculateResults(event: CompetitionEvent, db: ScoreReader = prisma) {
     const teams = currentTeams(event); const participants = currentParticipants(event).filter((item) => item.competitionTeamId);
     if (teams.length === 0 || participants.length === 0) return { complete: false, individual: [], games: [], teams: [], requiresPinTieBreakPolicy: false };
-    const day = new Date(event.eventDate.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const start = new Date(`${day}T00:00:00+09:00`); const end = new Date(`${day}T23:59:59.999+09:00`);
     const memberUserIds = participants.flatMap((item) => item.member ? [item.member.userId] : []);
     const guestIds = participants.flatMap((item) => item.guestId ? [item.guestId] : []);
     const guestNames = participants.flatMap((item) => item.guest ? [item.guest.name] : []);
     const rows = await db.score.findMany({ where: {
-        teamId: event.teamId, OR: [
+        teamEventId: event.id, teamId: event.teamId, OR: [
             { userId: { in: memberUserIds } },
             { teamEventGuestId: { in: guestIds } },
-            { teamEventId: event.id, guestName: { in: guestNames } },
+            { guestName: { in: guestNames } },
         ], score: { gte: 0, lte: 300 },
-        gameDate: { gte: start, lte: end }, ...(event.gameType ? { gameType: event.gameType } : {}),
     }, orderBy: [{ gameDate: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true, userId: true, teamEventGuestId: true, guestName: true, score: true } });
     const scoresByParticipant = new Map<string, number[]>();
     const participantKey = (item: typeof participants[number]) => item.member ? `U:${item.member.userId}` : `G:${item.guestId}`;

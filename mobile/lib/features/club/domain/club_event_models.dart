@@ -136,6 +136,8 @@ class ClubCompetitionRankingRow {
   const ClubCompetitionRankingRow({
     required this.rank,
     required this.memberId,
+    required this.participantId,
+    required this.guestId,
     required this.name,
     required this.scores,
     required this.total,
@@ -143,7 +145,9 @@ class ClubCompetitionRankingRow {
     required this.points,
   });
   final int rank;
-  final String memberId;
+  final String? memberId;
+  final String participantId;
+  final String? guestId;
   final String name;
   final List<int> scores;
   final int total;
@@ -166,7 +170,9 @@ class ClubCompetitionRankingRow {
     }
     return ClubCompetitionRankingRow(
       rank: json['rank'] as int,
-      memberId: _requiredString(json['memberId']),
+      memberId: json['memberId'] as String?,
+      participantId: _requiredString(json['participantId'] ?? json['memberId']),
+      guestId: json['guestId'] as String?,
       name: _requiredString(json['name']),
       scores: List<int>.unmodifiable(scores.cast<int>()),
       total: json['total'] as int,
@@ -313,6 +319,7 @@ class ClubCompetitionResult {
     required this.status,
     required this.overall,
     required this.participantPreview,
+    required this.groupAssignments,
     required this.myPreview,
     required this.missingGroupCount,
     required this.groupAssignmentComplete,
@@ -320,6 +327,7 @@ class ClubCompetitionResult {
   final String status;
   final List<ClubCompetitionRankingRow> overall;
   final List<ClubCompetitionPreview>? participantPreview;
+  final List<ClubGroupAssignment>? groupAssignments;
   final ClubCompetitionPreview? myPreview;
   final int missingGroupCount;
   final bool groupAssignmentComplete;
@@ -341,6 +349,9 @@ class ClubCompetitionResult {
       participantPreview: json['participantPreview'] == null
           ? null
           : _list(json['participantPreview'], ClubCompetitionPreview.fromJson),
+      groupAssignments: json['groupAssignments'] == null
+          ? null
+          : _list(json['groupAssignments'], ClubGroupAssignment.fromJson),
       myPreview: json['myPreview'] == null
           ? null
           : ClubCompetitionPreview.fromJson(_map(json['myPreview'])),
@@ -350,6 +361,30 @@ class ClubCompetitionResult {
       groupAssignmentComplete: json['groupAssignmentComplete'] is bool
           ? json['groupAssignmentComplete'] as bool
           : true,
+    );
+  }
+}
+
+class ClubGroupAssignment {
+  const ClubGroupAssignment({
+    required this.participantId,
+    required this.name,
+    required this.effectiveGroup,
+  });
+  final String participantId;
+  final String name;
+  final String? effectiveGroup;
+
+  factory ClubGroupAssignment.fromJson(Map<String, dynamic> json) {
+    final Object? group = json['effectiveGroup'];
+    if (group != null &&
+        !const <String>{'A', 'B', 'C', 'D', 'E'}.contains(group)) {
+      throw const FormatException('Invalid group assignment.');
+    }
+    return ClubGroupAssignment(
+      participantId: _requiredString(json['participantId']),
+      name: _requiredString(json['name']),
+      effectiveGroup: group as String?,
     );
   }
 }

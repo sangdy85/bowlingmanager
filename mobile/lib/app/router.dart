@@ -7,6 +7,7 @@ import 'package:bowlingmanager_mobile/features/capture/presentation/capture_revi
 import 'package:bowlingmanager_mobile/features/club/presentation/club_detail_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_detail_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_form_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_competition_score_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_events_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_activity_detail_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_activity_edit_screen.dart';
@@ -143,6 +144,15 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                               postId: state.pathParameters['postId']!,
                             ),
                         routes: <RouteBase>[
+                          GoRoute(
+                            path: 'scores',
+                            builder:
+                                (BuildContext context, GoRouterState state) =>
+                                    ClubCompetitionScoreScreen(
+                                      teamId: state.pathParameters['teamId']!,
+                                      eventId: state.pathParameters['eventId']!,
+                                    ),
+                          ),
                           GoRoute(
                             path: 'edit',
                             builder:

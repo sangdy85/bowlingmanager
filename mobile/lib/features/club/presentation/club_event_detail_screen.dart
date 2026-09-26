@@ -116,6 +116,18 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                       key: _competitionKey,
                       child: _competitionCard(event, user.id),
                     ),
+                  if (event.canManage &&
+                      _canEnterCompetitionScores(event)) ...<Widget>[
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      key: const Key('competition-score-entry'),
+                      onPressed: () => context.push(
+                        '/club/${Uri.encodeComponent(widget.teamId)}/events/${Uri.encodeComponent(widget.eventId)}/scores',
+                      ),
+                      icon: const Icon(Icons.scoreboard_outlined),
+                      label: const Text('경기 점수 입력'),
+                    ),
+                  ],
                 ],
                 if (event.attendanceEnabled) ...<Widget>[
                   const SizedBox(height: 12),
@@ -144,6 +156,19 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
         },
       ),
     );
+  }
+
+  bool _canEnterCompetitionScores(ClubEvent event) {
+    final competition = event.competition;
+    if (competition == null || competition.status == 'PUBLISHED') return false;
+    return switch (competition.type) {
+      ClubCompetitionType.individual => competition.status == 'GROUPS_READY',
+      ClubCompetitionType.team => const <String>{
+        'TEAMS_FINALIZED',
+        'LANES_ASSIGNED',
+      }.contains(competition.status),
+      ClubCompetitionType.event => competition.status == 'EVENT_READY',
+    };
   }
 
   void _scheduleInitialSection() {
@@ -371,7 +396,15 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                   '조 편성 대기 · 미배정 ${result.missingGroupCount}명',
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 )
-              else if (result.participantPreview != null) ...<Widget>[
+              else if (result.groupAssignments != null) ...<Widget>[
+                if (result.myPreview?.effectiveGroup != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      '내 조 · ${result.myPreview!.effectiveGroup}조',
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ),
                 for (final String group in const <String>[
                   'A',
                   'B',
@@ -379,7 +412,7 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                   'D',
                   'E',
                 ])
-                  if (result.participantPreview!.any(
+                  if (result.groupAssignments!.any(
                     (item) => item.effectiveGroup == group,
                   ))
                     Padding(
@@ -397,7 +430,7 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  result.participantPreview!
+                                  result.groupAssignments!
                                       .where(
                                         (item) => item.effectiveGroup == group,
                                       )
@@ -502,7 +535,7 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                           result.status == 'PUBLISHED' ? 'REOPEN' : 'PUBLISH',
                         ),
                   child: Text(
-                    result.status == 'PUBLISHED' ? '결과 다시 열기' : '결과 발표',
+                    result.status == 'PUBLISHED' ? '결과 다시 열기' : '경기 결과 발표',
                   ),
                 ),
               ],

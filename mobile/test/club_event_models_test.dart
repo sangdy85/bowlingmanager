@@ -95,6 +95,13 @@ void main() {
           },
         ],
         'participantPreview': <Object>[],
+        'groupAssignments': <Object>[
+          <String, Object?>{
+            'participantId': 'member-1',
+            'name': '회원',
+            'effectiveGroup': 'B',
+          },
+        ],
         'myPreview': <String, Object?>{
           'memberId': 'member-1',
           'participantKind': 'MEMBER',
@@ -118,6 +125,7 @@ void main() {
     expect(result.overall.single.total, 410);
     expect(result.myPreview?.recent12Average, 205.0);
     expect(result.myPreview?.groupingSource, 'MANUAL_REQUIRED');
+    expect(result.groupAssignments?.single.effectiveGroup, 'B');
   });
 
   test('parses automatic and manual grouping sources without hiding insufficient data', () {

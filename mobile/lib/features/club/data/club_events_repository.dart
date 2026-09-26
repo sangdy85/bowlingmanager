@@ -2,6 +2,7 @@ import 'package:bowlingmanager_mobile/features/club/data/club_events_api.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_competition_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_team_competition_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_competition_score_models.dart';
 
 class ClubEventsRepository {
   ClubEventsRepository(this._api);
@@ -38,6 +39,15 @@ class ClubEventsRepository {
     String eventId,
     Map<String, dynamic> action,
   ) => _api.eventCompetitionAction(teamId, eventId, action);
+  Future<ClubCompetitionScoreEntry> fetchCompetitionScores(
+    String teamId,
+    String eventId,
+  ) => _api.fetchCompetitionScores(teamId, eventId);
+  Future<void> saveCompetitionScores(
+    String teamId,
+    String eventId,
+    Map<String, dynamic> body,
+  ) => _api.saveCompetitionScores(teamId, eventId, body);
   Future<ClubEvent> createEvent(String teamId, ClubEventDraft draft) =>
       _api.createEvent(teamId, draft);
   Future<ClubEvent> updateEvent(

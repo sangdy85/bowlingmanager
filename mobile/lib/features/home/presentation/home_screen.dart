@@ -271,7 +271,7 @@ class _NextEventCardState extends ConsumerState<_NextEventCard> {
                 icon: Icons.groups_2_outlined,
                 text: event.individualGroup == null
                     ? '조 편성 대기'
-                    : '개인전 ${event.individualGroup}조',
+                    : '개인전 · ${event.individualGroup}조',
                 onTap: () => _open('individual'),
               ),
             if (event.hiddenEnabled &&

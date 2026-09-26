@@ -105,6 +105,16 @@ test('group assignment completes only when every attending member and guest has 
   ]), { missingGroupCount: 1, groupAssignmentComplete: false });
 });
 
+test('completed groups are public while temporary grouping remains manager-only', () => {
+  const previews = [
+    { participantKind: 'MEMBER', participantId: 'm1', memberId: 'm1', guestId: null, name: '회원', effectiveGroup: 'A' },
+    { participantKind: 'GUEST', participantId: 'g1', memberId: null, guestId: 'g1', name: '게스트', effectiveGroup: 'E' },
+  ];
+  assert.equal(hidden.visibleGroupAssignments(previews, 'ATTENDANCE_OPEN', false), null);
+  assert.equal(hidden.visibleGroupAssignments(previews, 'ATTENDANCE_OPEN', true).length, 2);
+  assert.deepEqual(hidden.visibleGroupAssignments(previews, 'GROUPS_READY', false).map(item => item.effectiveGroup), ['A', 'E']);
+});
+
 test('automatic grouping fixtures enforce total fifty and regular twelve thresholds', async () => {
   const specifications = [
     { total: 60, regular: 35, score: index => 101 + index },
@@ -294,6 +304,57 @@ test('manual grouping permits managers and same-event captains while preserving 
   await assert.rejects(() => service.updateBowlerHiddenCompetition('owner', 'team-1', 'event-1', {
     action: 'SET_MANUAL_GROUP', participantKind: 'MEMBER', participantId: 'target-member', manualGroup: 'F',
   }), error => error.code === 'INVALID_MANUAL_GROUP');
+});
+
+test('group completion is independent from scores while publication requires exact event member and guest games', async () => {
+  const event = {
+    id: 'event-1', teamId: 'team-1', title: '개인전', eventDate: new Date('2026-09-26T00:00:00+09:00'),
+    seasonId: null, seasonPublicationRevision: 1, gameType: '정기전', competitionEnabled: true,
+    competitionType: 'INDIVIDUAL', competitionMode: 'MINI', competitionStatus: 'GROUPS_READY', competitionGameCount: 2,
+    team: { ownerId: 'owner', bowlerHiddenEnabled: true, User: [] },
+    attendances: [{ status: 'ATTENDING', memberDisplayName: '회원', manualGroup: 'A', member: {
+      id: 'member-1', userId: 'user-1', alias: null, user: { name: '회원' },
+    } }],
+    guests: [{ id: 'guest-1', name: '게스트', manualGroup: 'E' }],
+  };
+  let scoreRows = [];
+  const tx = {
+    teamEvent: {
+      findFirst: async args => {
+        assert.equal(args.where.id, 'event-1');
+        return event;
+      },
+      updateMany: async () => ({ count: 1 }),
+    },
+    score: { findMany: async args => {
+      assert.equal(args.where.teamEventId, 'event-1');
+      return scoreRows;
+    } },
+  };
+  const prisma = {
+    teamEvent: { findFirst: async () => event },
+    $transaction: async callback => callback(tx),
+  };
+  const service = loadTs('src/lib/mobile-api/bowler-hidden.ts', {
+    '@/lib/prisma': prisma,
+    '@/lib/mobile-api/unified-season': {
+      getPublicationPointTable: async () => [], getSeasonPointPreview: async () => [],
+      createSeasonPointPublication: async () => ({ seasonId: null, publicationId: null }),
+      revokeSeasonPointPublication: async () => {}, readSeasonPointTable: () => [], seasonPointsForRank: () => 0,
+    },
+  });
+  await assert.rejects(
+    () => service.updateBowlerHiddenCompetition('owner', 'team-1', 'event-1', { action: 'PUBLISH' }),
+    error => error.code === 'SCORES_INCOMPLETE' && /경기 점수/.test(error.message),
+  );
+  scoreRows = [
+    { userId: 'user-1', teamEventGuestId: null, score: 200 },
+    { userId: 'user-1', teamEventGuestId: null, score: 210 },
+    { userId: null, teamEventGuestId: 'guest-1', score: 180 },
+    { userId: null, teamEventGuestId: 'guest-1', score: 190 },
+  ];
+  const result = await service.updateBowlerHiddenCompetition('owner', 'team-1', 'event-1', { action: 'PUBLISH' });
+  assert.equal(result.status, 'PUBLISHED');
 });
 
 test('migration is additive and defaults all existing teams to off', () => {

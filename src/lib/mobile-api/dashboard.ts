@@ -196,9 +196,10 @@ const defaultDependencies: MobileDashboardDependencies = {
 
         const attendance = selected.attendances[0];
         const assignment = selected.laneAssignments[0]?.slot;
-        let individualGroup = attendance?.manualGroup ?? null;
+        let individualGroup: string | null = null;
         if (selected.team.bowlerHiddenEnabled && selected.competitionEnabled &&
-            selected.competitionType === "INDIVIDUAL" && attendance?.status === "ATTENDING") {
+            selected.competitionType === "INDIVIDUAL" && attendance?.status === "ATTENDING" &&
+            selected.competitionStatus === "GROUPS_READY") {
             try {
                 const state = await getBowlerHiddenCompetition(user.id, selected.teamId, selected.id);
                 individualGroup = state.myPreview?.effectiveGroup ?? state.myPreview?.finalGroup ?? individualGroup;

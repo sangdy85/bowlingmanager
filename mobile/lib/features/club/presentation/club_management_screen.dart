@@ -43,6 +43,16 @@ class ClubManagementScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 20),
                 _ManagementLink(
+                  key: const Key('management-competition-score-link'),
+                  icon: Icons.emoji_events_outlined,
+                  title: '대회 점수 입력',
+                  subtitle: '일정을 선택해 개인전·팀전·이벤트전 점수를 기록합니다.',
+                  onTap: () => context.push(
+                    '/club/${Uri.encodeComponent(teamId)}/events',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _ManagementLink(
                   key: const Key('management-manual-link'),
                   icon: Icons.edit_note_rounded,
                   title: '점수 직접 입력',

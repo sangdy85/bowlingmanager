@@ -420,18 +420,15 @@ async function calculateForEvent(
     seasonPoints: readonly { rank: number; points: number }[] = readRankPoints(event.rankPoints),
 ) {
     if (!event.competitionGameCount) return { complete: false, rows: [] as ReturnType<typeof calculateEventResults> };
-    const day = new Date(event.eventDate.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const start = new Date(`${day}T00:00:00+09:00`); const end = new Date(`${day}T23:59:59.999+09:00`);
     const memberUserIds = event.eventCompetitionParticipants.flatMap((item) => item.member ? [item.member.userId] : []);
     const guestIds = event.eventCompetitionParticipants.flatMap((item) => item.guestId ? [item.guestId] : []);
     const guestNames = event.eventCompetitionParticipants.flatMap((item) => item.guest ? [item.guest.name] : []);
     const rows = await db.score.findMany({ where: {
-        teamId: event.teamId, OR: [
+        teamEventId: event.id, teamId: event.teamId, OR: [
             { userId: { in: memberUserIds } },
             { teamEventGuestId: { in: guestIds } },
-            { teamEventId: event.id, guestName: { in: guestNames } },
+            { guestName: { in: guestNames } },
         ], score: { gte: 0, lte: 300 },
-        gameDate: { gte: start, lte: end }, ...(event.gameType ? { gameType: event.gameType } : {}),
     }, orderBy: [{ gameDate: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { userId: true, teamEventGuestId: true, guestName: true, score: true } });
     const scores = new Map<string, number[]>();
     const guestByName = uniqueGuestIdsByName(

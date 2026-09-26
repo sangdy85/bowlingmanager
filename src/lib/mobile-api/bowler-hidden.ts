@@ -176,6 +176,17 @@ export function groupAssignmentState(previews: readonly { effectiveGroup: string
     return { missingGroupCount, groupAssignmentComplete: missingGroupCount === 0 };
 }
 
+export function visibleGroupAssignments<T extends {
+    participantKind: string; participantId: string; memberId: string | null; guestId: string | null;
+    name: string; effectiveGroup: string | null;
+}>(previews: readonly T[], status: string, isManager: boolean) {
+    if (!isManager && status !== "GROUPS_READY") return null;
+    return previews.map((item) => ({
+        participantKind: item.participantKind, participantId: item.participantId,
+        memberId: item.memberId, guestId: item.guestId, name: item.name, effectiveGroup: item.effectiveGroup,
+    }));
+}
+
 export async function getBowlerHiddenCompetition(actorUserId: string, teamId: string, eventId: string) {
     const event = await prisma.teamEvent.findFirst({
         where: { id: eventId, teamId, team: { isActive: true, members: { some: { userId: actorUserId } } } },
@@ -220,7 +231,7 @@ export async function getBowlerHiddenCompetition(actorUserId: string, teamId: st
             return {
                 enabled: true, competitionType: event.competitionType, competitionMode: event.competitionMode, status: "PUBLISHED",
                 rankPoints: readSeasonPointTable(publication.pointTableSnapshot), overall: snapshot.rows,
-                participantPreview: null, myPreview: null, groupingPolicy: "PUBLISHED_IMMUTABLE_SNAPSHOT",
+                participantPreview: null, groupAssignments: null, myPreview: null, groupingPolicy: "PUBLISHED_IMMUTABLE_SNAPSHOT",
                 publishedAt: publication.publishedAt.toISOString(),
             };
         } catch { throw new BowlerHiddenError("INVALID_RESULT_SNAPSHOT", "발표 결과를 불러올 수 없습니다.", 500); }
@@ -229,20 +240,14 @@ export async function getBowlerHiddenCompetition(actorUserId: string, teamId: st
         ? [{ memberId: item.memberId, userId: item.member.userId, name: item.memberDisplayName }]
         : []);
     const userIds = participants.map((item) => item.userId);
-    const start = new Date(`${kstDateKey(event.eventDate)}T00:00:00+09:00`);
-    const end = new Date(`${kstDateKey(event.eventDate)}T23:59:59.999+09:00`);
-    const [eventScores, personalScores, leagueScores, tournamentScores] = userIds.length === 0
-        ? [[], [], [], []] as const
+    const eventScores = await prisma.score.findMany({
+        where: { teamEventId: event.id, teamId, score: { gte: 0, lte: 300 } },
+        orderBy: [{ gameDate: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+        select: { id: true, userId: true, teamEventGuestId: true, score: true },
+    });
+    const [personalScores, leagueScores, tournamentScores] = userIds.length === 0
+        ? [[], [], []] as const
         : await Promise.all([
-            prisma.score.findMany({
-                where: {
-                    teamId, userId: { in: userIds }, score: { gte: 0, lte: 300 },
-                    gameDate: { gte: start, lte: end },
-                    ...(event.gameType ? { gameType: event.gameType } : {}),
-                },
-                orderBy: [{ gameDate: "asc" }, { createdAt: "asc" }, { id: "asc" }],
-                select: { id: true, userId: true, score: true },
-            }),
             prisma.score.findMany({
                 where: { userId: { in: userIds }, score: { gte: 0, lte: 300 } },
                 orderBy: [{ gameDate: "desc" }, { createdAt: "desc" }, { id: "desc" }],
@@ -265,20 +270,27 @@ export async function getBowlerHiddenCompetition(actorUserId: string, teamId: st
 
     const seasonPointTable = await getSeasonPointPreview(prisma, event);
     const points = new Map(seasonPointTable.map((item) => [item.rank, item.points]));
-    const eventByUser = new Map<string, number[]>();
+    const resultParticipants = [
+        ...participants.map((item) => ({ participantId: `member:${item.memberId}`, memberId: item.memberId, guestId: null, userId: item.userId, name: item.name })),
+        ...event.guests.map((item) => ({ participantId: `guest:${item.id}`, memberId: null, guestId: item.id, userId: null, name: item.name })),
+    ];
+    const eventByParticipant = new Map<string, number[]>();
     for (const row of eventScores) {
-        if (!row.userId) continue;
-        const existing = eventByUser.get(row.userId);
+        const participant = row.userId
+            ? resultParticipants.find((item) => item.userId === row.userId)
+            : resultParticipants.find((item) => item.guestId === row.teamEventGuestId);
+        if (!participant) continue;
+        const existing = eventByParticipant.get(participant.participantId);
         if (existing) existing.push(row.score);
-        else eventByUser.set(row.userId, [row.score]);
+        else eventByParticipant.set(participant.participantId, [row.score]);
     }
-    const overall = participants.map((participant, index) => {
-        const scores = eventByUser.get(participant.userId) ?? [];
+    const overall = resultParticipants.map((participant, index) => {
+        const scores = eventByParticipant.get(participant.participantId) ?? [];
         return { ...participant, order: index, scores, total: scores.reduce((sum, score) => sum + score, 0) };
     }).filter((item) => item.scores.length > 0)
         .sort((left, right) => right.total - left.total || left.order - right.order)
         .map((item, index) => ({
-            rank: index + 1, memberId: item.memberId, name: item.name,
+            rank: index + 1, participantId: item.participantId, memberId: item.memberId, guestId: item.guestId, name: item.name,
             scores: item.scores, gameCount: item.scores.length, total: item.total,
             average: Number((item.total / item.scores.length).toFixed(1)), points: points.get(index + 1) ?? 0,
         }));
@@ -341,6 +353,7 @@ export async function getBowlerHiddenCompetition(actorUserId: string, teamId: st
         enabled: true, competitionType: event.competitionType, competitionMode: event.competitionMode, status: event.competitionStatus,
         rankPoints: seasonPointTable, overall,
         participantPreview: isManager ? previews : null,
+        groupAssignments: visibleGroupAssignments(previews, event.competitionStatus, isManager),
         myPreview: previews.find((item) => participants.find((participant) => participant.memberId === item.memberId)?.userId === actorUserId) ?? null,
         groupingPolicy: "WEIGHTED_30_40_30_WITH_EXPLICIT_GROUP_OVERRIDE",
         missingGroupCount,
@@ -445,6 +458,7 @@ const individualPublishInclude = {
         where: { status: "ATTENDING" }, orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
         include: { member: { select: { id: true, userId: true, alias: true, user: { select: { name: true } } } } },
     },
+    guests: { orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }] },
 } satisfies Prisma.TeamEventInclude;
 type IndividualPublishEvent = Prisma.TeamEventGetPayload<{ include: typeof individualPublishInclude }>;
 
@@ -456,27 +470,47 @@ async function publishIndividual(actorUserId: string, teamId: string, eventId: s
     return prisma.$transaction(async (tx) => {
         const event = await tx.teamEvent.findFirst({ where: { id: eventId, teamId, competitionStatus: { not: "PUBLISHED" } }, include: individualPublishInclude });
         requireIndividualManager(event, actorUserId);
-        const participants = event!.attendances.flatMap((item) => item.member ? [item.member] : []);
+        if (event!.competitionStatus !== "GROUPS_READY") {
+            throw new BowlerHiddenError("INVALID_COMPETITION_STATE", "조 편성을 완료한 뒤 경기 결과를 발표해주세요.", 409);
+        }
+        const participants = [
+            ...event!.attendances.flatMap((item) => item.member ? [{
+                participantId: `member:${item.member.id}`, memberId: item.member.id, guestId: null,
+                userId: item.member.userId, name: item.member.alias?.trim() || item.member.user.name,
+            }] : []),
+            ...event!.guests.map((guest) => ({
+                participantId: `guest:${guest.id}`, memberId: null, guestId: guest.id,
+                userId: null, name: guest.name,
+            })),
+        ];
         if (participants.length === 0) throw new BowlerHiddenError("SCORES_INCOMPLETE", "참석 확정 참가자와 점수를 확인해주세요.", 409);
-        const day = kstDateKey(event!.eventDate); const start = new Date(`${day}T00:00:00+09:00`); const end = new Date(`${day}T23:59:59.999+09:00`);
         const scoreRows = await tx.score.findMany({ where: {
-            teamId, userId: { in: participants.map((item) => item.userId) }, score: { gte: 0, lte: 300 },
-            gameDate: { gte: start, lte: end }, ...(event!.gameType ? { gameType: event!.gameType } : {}),
-        }, orderBy: [{ gameDate: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { userId: true, score: true } });
-        const byUser = new Map<string, number[]>();
-        for (const row of scoreRows) if (row.userId) { const values = byUser.get(row.userId); if (values) values.push(row.score); else byUser.set(row.userId, [row.score]); }
-        if (participants.some((item) => (byUser.get(item.userId)?.length ?? 0) === 0)) throw new BowlerHiddenError("SCORES_INCOMPLETE", "모든 참가자의 점수 입력을 완료해주세요.", 409);
+            teamEventId: eventId, teamId, score: { gte: 0, lte: 300 },
+        }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: { userId: true, teamEventGuestId: true, score: true } });
+        const byParticipant = new Map<string, number[]>();
+        for (const row of scoreRows) {
+            const participant = row.userId
+                ? participants.find((item) => item.userId === row.userId)
+                : participants.find((item) => item.guestId === row.teamEventGuestId);
+            if (!participant) continue;
+            const values = byParticipant.get(participant.participantId);
+            if (values) values.push(row.score); else byParticipant.set(participant.participantId, [row.score]);
+        }
+        const expectedGameCount = event!.competitionGameCount ?? Math.max(0, ...participants.map((item) => byParticipant.get(item.participantId)?.length ?? 0));
+        if (!expectedGameCount || participants.some((item) => (byParticipant.get(item.participantId)?.length ?? 0) !== expectedGameCount)) {
+            throw new BowlerHiddenError("SCORES_INCOMPLETE", "모든 참가자의 경기 점수 입력을 완료해주세요.", 409);
+        }
         const pointTable = await getPublicationPointTable(tx, event!);
-        const rows = participants.map((member) => {
-            const scores = byUser.get(member.userId)!; return {
-                memberId: member.id, name: member.alias?.trim() || member.user.name,
+        const rows = participants.map((participant) => {
+            const scores = byParticipant.get(participant.participantId)!; return {
+                participantId: participant.participantId, memberId: participant.memberId, guestId: participant.guestId, name: participant.name,
                 scores, gameCount: scores.length, total: scores.reduce((sum, score) => sum + score, 0),
             };
-        }).sort((left, right) => right.total - left.total || left.memberId.localeCompare(right.memberId))
+        }).sort((left, right) => right.total - left.total || left.participantId.localeCompare(right.participantId))
             .map((row, index) => ({ rank: index + 1, ...row, average: Number((row.total / row.gameCount).toFixed(1)), points: seasonPointsForRank(pointTable, index + 1) }));
         const publication = await createSeasonPointPublication(tx, {
             event: event!, pointTable, publishedAt, resultSnapshot: { version: 1, rows },
-            awards: rows.map((row) => ({ memberId: row.memberId, memberDisplayName: row.name, finalRank: row.rank, points: row.points })),
+            awards: rows.flatMap((row) => row.memberId ? [{ memberId: row.memberId, memberDisplayName: row.name, finalRank: row.rank, points: row.points }] : []),
         });
         const updated = await tx.teamEvent.updateMany({ where: { id: eventId, competitionStatus: { not: "PUBLISHED" } }, data: { competitionStatus: "PUBLISHED" } });
         if (updated.count !== 1) throw new BowlerHiddenError("PUBLICATION_CONFLICT", "다른 발표 요청이 먼저 처리되었습니다.", 409);

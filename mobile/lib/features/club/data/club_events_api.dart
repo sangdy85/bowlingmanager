@@ -2,6 +2,7 @@ import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_competition_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_team_competition_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_competition_score_models.dart';
 import 'package:dio/dio.dart';
 
 class ClubEventsApi {
@@ -96,6 +97,29 @@ class ClubEventsApi {
       (await _dio.post<dynamic>(
         '${_eventPath(teamId, eventId)}/competition/event',
         data: action,
+      )).data,
+    );
+  });
+
+  Future<ClubCompetitionScoreEntry> fetchCompetitionScores(
+    String teamId,
+    String eventId,
+  ) => _request(() async {
+    final Response<dynamic> response = await _dio.get<dynamic>(
+      '${_eventPath(teamId, eventId)}/scores',
+    );
+    return ClubCompetitionScoreEntry.fromJson(_data(response.data));
+  });
+
+  Future<void> saveCompetitionScores(
+    String teamId,
+    String eventId,
+    Map<String, dynamic> body,
+  ) => _request(() async {
+    _data(
+      (await _dio.post<dynamic>(
+        '${_eventPath(teamId, eventId)}/scores',
+        data: body,
       )).data,
     );
   });

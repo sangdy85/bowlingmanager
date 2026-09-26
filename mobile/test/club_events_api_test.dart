@@ -7,6 +7,7 @@ import 'package:bowlingmanager_mobile/features/club/data/club_events_api.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_competition_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_team_competition_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_competition_score_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -240,6 +241,63 @@ void main() {
     expect(requests.map((item) => '${item.method} ${item.path}'), <String>[
       'GET /teams/team-1/events/event-1/competition/event',
       'POST /teams/team-1/events/event-1/competition/event',
+    ]);
+  });
+
+  test('loads and saves event-linked competition scores', () async {
+    final List<RequestOptions> requests = <RequestOptions>[];
+    final Dio dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
+      ..httpClientAdapter = _Adapter((RequestOptions options) {
+        requests.add(options);
+        return _json(200, <String, Object?>{
+          'success': true,
+          'data': options.method == 'GET'
+              ? <String, Object?>{
+                  'event': <String, Object?>{
+                    'id': 'event-1',
+                    'teamName': '테스트 동호회',
+                    'title': '개인전',
+                    'date': '2026-09-26',
+                    'gameType': '정기전',
+                    'competitionType': 'INDIVIDUAL',
+                    'competitionMode': 'OFFICIAL',
+                    'status': 'GROUPS_READY',
+                  },
+                  'gameCount': 2,
+                  'readOnly': false,
+                  'participants': <Object>[
+                    <String, Object?>{
+                      'participantId': 'member:m1',
+                      'participantKind': 'MEMBER',
+                      'memberId': 'm1',
+                      'guestId': null,
+                      'name': '회원',
+                      'group': 'A',
+                      'competitionTeamName': null,
+                      'scores': <int>[200, 210],
+                    },
+                  ],
+                }
+              : <String, Object>{'savedCount': 2},
+        });
+      });
+    final ClubEventsApi api = ClubEventsApi(dio);
+    final ClubCompetitionScoreEntry entry = await api.fetchCompetitionScores(
+      'team-1',
+      'event-1',
+    );
+    await api.saveCompetitionScores('team-1', 'event-1', <String, dynamic>{
+      'participants': <Object>[
+        <String, Object>{
+          'participantId': 'member:m1',
+          'scores': <int>[201, 211],
+        },
+      ],
+    });
+    expect(entry.participants.single.group, 'A');
+    expect(requests.map((item) => '${item.method} ${item.path}'), <String>[
+      'GET /teams/team-1/events/event-1/scores',
+      'POST /teams/team-1/events/event-1/scores',
     ]);
   });
 }

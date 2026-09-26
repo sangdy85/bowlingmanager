@@ -186,7 +186,7 @@ void main() {
     expect(find.text('NEXT EVENT'), findsOneWidget);
     expect(find.text('9월 정기전'), findsOneWidget);
     expect(find.text('내 레인 12-2'), findsOneWidget);
-    expect(find.text('개인전 B조'), findsOneWidget);
+    expect(find.text('개인전 · B조'), findsOneWidget);
   });
 
   testWidgets('Home answers attendance and starts an individual lane draw', (
