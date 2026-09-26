@@ -6,6 +6,7 @@ import 'package:bowlingmanager_mobile/features/auth/application/auth_state.dart'
 import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
+import 'package:bowlingmanager_mobile/features/notifications/application/notification_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -88,12 +89,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
           ],
+          const SizedBox(height: 14),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: <Widget>[
+                ListTile(
+                  key: const Key('profile-notifications'),
+                  leading: const Icon(Icons.notifications_outlined),
+                  title: const Text('알림'),
+                  subtitle: const Text('경기 운영 알림을 확인합니다.'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/notifications'),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  key: const Key('profile-notification-permission'),
+                  leading: const Icon(Icons.notifications_active_outlined),
+                  title: const Text('푸시 알림 설정'),
+                  subtitle: Text(
+                    _notificationPermissionLabel(
+                      ref.watch(notificationCoordinatorProvider).permission,
+                    ),
+                  ),
+                  onTap: () => _requestNotificationPermission(),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 24),
           OutlinedButton.icon(
             key: const Key('profile-logout'),
             onPressed: isLoggingOut
                 ? null
-                : () => ref.read(authControllerProvider.notifier).logout(),
+                : () async {
+                    await ref
+                        .read(notificationCoordinatorProvider)
+                        .revokeCurrentDevice();
+                    await ref.read(authControllerProvider.notifier).logout();
+                  },
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
               foregroundColor: AppColors.error,
@@ -134,7 +168,56 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (!mounted || ref.read(authControllerProvider).user?.id != userId) return;
     setState(() => _profileRefreshError = profileError);
   }
+
+  Future<void> _requestNotificationPermission() async {
+    final coordinator = ref.read(notificationCoordinatorProvider);
+    if (coordinator.permission == MobileNotificationPermission.unavailable) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Firebase 알림 설정이 필요한 빌드입니다.')),
+        );
+      }
+      return;
+    }
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('경기 운영 알림'),
+        content: const Text('레인 추첨, 조 편성, 팀 드래프트와 이벤트 투표 시작을 알려드립니다.'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('나중에'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('알림 허용'),
+          ),
+        ],
+      ),
+    );
+    if (accepted == true) {
+      try {
+        await coordinator.requestPermission();
+      } on Object {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('알림 설정을 저장하지 못했습니다. 다시 시도해주세요.')),
+          );
+        }
+      }
+      if (mounted) setState(() {});
+    }
+  }
 }
+
+String _notificationPermissionLabel(MobileNotificationPermission value) =>
+    switch (value) {
+      MobileNotificationPermission.enabled => '허용됨',
+      MobileNotificationPermission.denied => '거부됨 · Android 설정에서 변경할 수 있습니다.',
+      MobileNotificationPermission.notDetermined => '알림을 받으려면 권한을 허용해주세요.',
+      MobileNotificationPermission.unavailable => 'Firebase 설정 필요',
+    };
 
 class _ProfileCard extends StatelessWidget {
   const _ProfileCard({required this.user});

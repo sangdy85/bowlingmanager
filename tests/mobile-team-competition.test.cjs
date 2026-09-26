@@ -108,13 +108,14 @@ test('19/4 draft enforces every snake turn and records twelve picks plus three b
     participants: [participants[index]],
   }));
   const event = {
-    id: 'event-draft', teamId: 'team-1', competitionEnabled: true, competitionType: 'TEAM',
+    id: 'event-draft', teamId: 'team-1', title: '9월 팀전', competitionEnabled: true, competitionType: 'TEAM',
     competitionStatus: 'DRAFT_READY', draftGeneration: 1, currentPickNumber: 1,
     team: { ownerId: 'user-1', bowlerHiddenEnabled: true, User: [], members },
     attendances: members.slice(0, 17).map(item => ({ status: 'ATTENDING', member: item })), guests: [{ id: 'guest-1', name: '게스트1' }, { id: 'guest-2', name: '게스트2' }],
     competitionTeams: teams, competitionParticipants: participants, competitionDraftPicks: [],
     laneSlots: [], laneAssignments: [], seasonPublications: [], rankPoints: '{}',
   };
+  const notifications = [];
   const prisma = {
     teamEvent: {
       findFirst: async args => args.where.id === event.id && args.where.teamId === event.teamId ? { ...event } : null,
@@ -153,6 +154,14 @@ test('19/4 draft enforces every snake turn and records twelve picks plus three b
         return event.competitionDraftPicks.at(-1);
       },
     },
+    mobileNotification: { upsert: async ({ where, create }) => {
+      const existing = notifications.find(item => item.dedupeKey === where.dedupeKey);
+      if (existing) return existing;
+      const row = { id: `notification-${notifications.length + 1}`, ...create };
+      notifications.push(row); return row;
+    } },
+    mobilePushDevice: { findMany: async () => [] },
+    mobileNotificationDelivery: { upsert: async () => ({}) },
   };
   prisma.$transaction = async callback => callback(prisma);
   const service = loadTs('src/lib/mobile-api/team-competition.ts', {
@@ -190,6 +199,14 @@ test('19/4 draft enforces every snake turn and records twelve picks plus three b
   assert.ok(Math.max(...sizes) - Math.min(...sizes) <= 1);
   assert.deepEqual(event.competitionDraftPicks.slice(0, 12).map(item => Number(item.competitionTeamId.slice(-1))), actorOrder);
   assert.equal(event.competitionDraftPicks.slice(12).every(item => item.pickType === 'AUTO_REMAINDER'), true);
+  const turns = notifications.filter(item => item.type === 'TEAM_DRAFT_TURN');
+  const selected = notifications.filter(item => item.type === 'TEAM_MEMBER_SELECTED');
+  assert.equal(turns.length, 13);
+  assert.equal(new Set(turns.map(item => item.dedupeKey)).size, 13);
+  assert.ok(turns.some(item => item.dedupeKey.includes(':4:member-4')));
+  assert.ok(turns.some(item => item.dedupeKey.includes(':5:member-4')), 'same captain gets a distinct consecutive turn');
+  assert.equal(selected.length, 13, 'member picks notify while guest assignments do not');
+  assert.equal(new Set(selected.map(item => item.dedupeKey)).size, 13);
 });
 
 test('lucky draw server policy supports wins, misses and forces a bounded win', () => {

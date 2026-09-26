@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
+import { enqueueMobileNotifications, MOBILE_NOTIFICATION_TYPES } from "@/lib/mobile-api/notifications";
 import {
     createSeasonPointPublication,
     getPublicationPointTable,
@@ -445,11 +446,36 @@ async function completeGroupAssignment(actorUserId: string, teamId: string, even
     if (!state.groupAssignmentComplete) {
         throw new BowlerHiddenError("GROUP_ASSIGNMENT_INCOMPLETE", `미배정 참가자가 ${state.missingGroupCount}명 있습니다.`, 409);
     }
-    const updated = await prisma.teamEvent.updateMany({
-        where: { id: eventId, teamId, competitionType: "INDIVIDUAL", competitionStatus: { in: ["ATTENDANCE_OPEN", "GROUPS_READY"] } },
-        data: { competitionStatus: "GROUPS_READY" },
+    await prisma.$transaction(async (tx) => {
+        const event = await tx.teamEvent.findFirst({
+            where: { id: eventId, teamId, competitionType: "INDIVIDUAL", competitionStatus: { in: ["ATTENDANCE_OPEN", "GROUPS_READY"] } },
+            select: {
+                title: true, draftGeneration: true,
+                attendances: { where: { status: "ATTENDING", memberId: { not: null } }, select: {
+                    memberId: true, manualGroup: true, member: { select: { userId: true } },
+                } },
+            },
+        });
+        if (!event) throw new BowlerHiddenError("INVALID_COMPETITION_STATE", "현재 단계에서는 조 편성을 완료할 수 없습니다.", 409);
+        const groupByUser = new Map(state.participantPreview!.flatMap((item) => item.participantKind === "MEMBER"
+            ? [[item.participantId, item.effectiveGroup] as const] : []));
+        const updated = await tx.teamEvent.updateMany({
+            where: { id: eventId, teamId, competitionType: "INDIVIDUAL", competitionStatus: { in: ["ATTENDANCE_OPEN", "GROUPS_READY"] } },
+            data: { competitionStatus: "GROUPS_READY" },
+        });
+        if (updated.count !== 1) throw new BowlerHiddenError("INVALID_COMPETITION_STATE", "현재 단계에서는 조 편성을 완료할 수 없습니다.", 409);
+        await enqueueMobileNotifications(tx, event.attendances.flatMap((attendance) => {
+            const group = groupByUser.get(attendance.memberId!); if (!group || !attendance.member) return [];
+            return [{
+                userId: attendance.member.userId,
+                dedupeKey: `${MOBILE_NOTIFICATION_TYPES.individualGroupReady}:${eventId}:${event.draftGeneration}:${attendance.member.userId}`,
+                type: MOBILE_NOTIFICATION_TYPES.individualGroupReady,
+                title: "개인전 조 편성이 완료되었습니다",
+                body: `${event.title} · ${group}조로 배정되었습니다.`,
+                teamId, eventId, target: "INDIVIDUAL_GROUP" as const,
+            }];
+        }));
     });
-    if (updated.count !== 1) throw new BowlerHiddenError("INVALID_COMPETITION_STATE", "현재 단계에서는 조 편성을 완료할 수 없습니다.", 409);
     return { status: "GROUPS_READY", missingGroupCount: 0 };
 }
 

@@ -34,6 +34,8 @@ model User {
   enteredSeasonPointAdjustments SeasonPointAdjustment[]        @relation("SeasonPointAdjustmentEnteredBy")
   enteredSeasonLegacyImports    SeasonLegacyImportBatch[]      @relation("SeasonLegacyImportEnteredBy")
   reversedSeasonLegacyImports   SeasonLegacyImportBatch[]      @relation("SeasonLegacyImportReversedBy")
+  mobilePushDevices             MobilePushDevice[]
+  mobileNotifications           MobileNotification[]
 }
 
 model VerificationToken {
@@ -58,6 +60,59 @@ model MobileRefreshToken {
   @@index([familyId])
   @@index([userId])
   @@index([expiresAt])
+}
+
+model MobilePushDevice {
+  id         String                       @id @default(cuid())
+  userId     String
+  token      String                       @unique
+  platform   String
+  enabled    Boolean                      @default(true)
+  createdAt  DateTime                     @default(now())
+  updatedAt  DateTime                     @updatedAt
+  lastSeenAt DateTime                     @default(now())
+  revokedAt  DateTime?
+  user       User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries MobileNotificationDelivery[]
+
+  @@index([userId, enabled])
+}
+
+model MobileNotification {
+  id         String                       @id @default(cuid())
+  userId     String
+  dedupeKey  String                       @unique
+  type       String
+  title      String
+  body       String
+  teamId     String
+  eventId    String?
+  data       String
+  createdAt  DateTime                     @default(now())
+  readAt     DateTime?
+  user       User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries MobileNotificationDelivery[]
+
+  @@index([userId, createdAt])
+  @@index([teamId, eventId, createdAt])
+}
+
+model MobileNotificationDelivery {
+  id             String             @id @default(cuid())
+  notificationId String
+  deviceId       String
+  status         String             @default("PENDING")
+  retryCount     Int                @default(0)
+  lastErrorCode  String?
+  nextAttemptAt  DateTime           @default(now())
+  sentAt         DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  notification   MobileNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  device         MobilePushDevice   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, deviceId])
+  @@index([status, nextAttemptAt])
 }
 
 model BowlingCenter {

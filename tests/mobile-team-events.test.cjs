@@ -187,8 +187,17 @@ test('BULK and INDIVIDUAL lane flows assign every attending member and guest exa
         },
       },
     };
+    const notifications = [];
+    prisma.mobileNotification = { upsert: async ({ where, create }) => {
+      const existing = notifications.find(item => item.dedupeKey === where.dedupeKey);
+      if (existing) return existing;
+      const row = { id: `notification-${notifications.length + 1}`, ...create };
+      notifications.push(row); return row;
+    } };
+    prisma.mobilePushDevice = { findMany: async () => [] };
+    prisma.mobileNotificationDelivery = { upsert: async () => ({}) };
     prisma.$transaction = async callback => callback(prisma);
-    return { event, prisma };
+    return { event, prisma, notifications };
   }
 
   const bulk = harness('BULK');
@@ -197,10 +206,13 @@ test('BULK and INDIVIDUAL lane flows assign every attending member and guest exa
   assert.equal(bulk.event.laneAssignments.length, 4);
   assert.equal(new Set(bulk.event.laneAssignments.map(item => item.slotId)).size, 4);
   assert.deepEqual(new Set(bulk.event.laneAssignments.map(item => item.memberId ?? item.guestId)), new Set(['member-1', 'member-2', 'member-3', 'guest-1']));
+  assert.deepEqual(bulk.notifications.map(item => item.type), ['LANE_ASSIGNED', 'LANE_ASSIGNED', 'LANE_ASSIGNED']);
+  assert.equal(new Set(bulk.notifications.map(item => item.userId)).size, 3);
 
   const individual = harness('INDIVIDUAL');
   service = loadTs('src/lib/mobile-api/team-events.ts', { '@/lib/prisma': individual.prisma });
   assert.equal((await service.startEventDraw('user-1', 'team-1', individual.event.id, new Date('2026-09-22T03:00:00.000Z'))).status, 'OPEN');
+  assert.deepEqual(individual.notifications.map(item => item.type), ['LANE_DRAW_OPENED', 'LANE_DRAW_OPENED', 'LANE_DRAW_OPENED']);
   const first = await service.drawMyEventLane('user-1', 'team-1', individual.event.id);
   const repeated = await service.drawMyEventLane('user-1', 'team-1', individual.event.id);
   assert.equal(repeated.id, first.id);

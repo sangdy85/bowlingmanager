@@ -1,6 +1,7 @@
 import { randomInt } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
+import { enqueueMobileNotifications, MOBILE_NOTIFICATION_TYPES } from "@/lib/mobile-api/notifications";
 import { readRankPoints } from "@/lib/mobile-api/bowler-hidden";
 import {
     createSeasonPointPublication,
@@ -258,6 +259,14 @@ async function prepare(actorUserId: string, teamId: string, eventId: string, now
         for (let index = 0; index < shuffled.length; index += 1) {
             await tx.eventCompetitionParticipant.create({ data: { eventId, memberId: shuffled[index].memberId, guestId: shuffled[index].guestId, revealOrder: index + 1 } });
         }
+        await enqueueMobileNotifications(tx, attendingMembers(event).map((member) => ({
+            userId: member.userId,
+            dedupeKey: `${MOBILE_NOTIFICATION_TYPES.eventVotingOpened}:${eventId}:${event.draftGeneration}:${member.userId}`,
+            type: MOBILE_NOTIFICATION_TYPES.eventVotingOpened,
+            title: "이벤트전 투표가 시작되었습니다",
+            body: "투표할 3명을 선택해 주세요.",
+            teamId, eventId, target: "EVENT_VOTING",
+        })));
     });
     return { status: "EVENT_READY", participantCount: shuffled.length };
 }

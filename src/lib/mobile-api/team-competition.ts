@@ -1,6 +1,7 @@
 import { randomInt } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
+import { enqueueMobileNotifications, MOBILE_NOTIFICATION_TYPES } from "@/lib/mobile-api/notifications";
 import {
     createSeasonPointPublication,
     getPublicationPointTable,
@@ -238,6 +239,15 @@ async function configureCaptains(actorUserId: string, teamId: string, eventId: s
                 where: { id: participantByMember.get(captain.memberId)! },
                 data: { competitionTeamId: team.id, assignmentType: "CAPTAIN", assignmentOrder: 0 },
             });
+            const member = attending.find((item) => item.id === captain.memberId)!;
+            await enqueueMobileNotifications(tx, [{
+                userId: member.userId,
+                dedupeKey: `${MOBILE_NOTIFICATION_TYPES.teamCaptainSelected}:${eventId}:${event.draftGeneration}:${captain.memberId}`,
+                type: MOBILE_NOTIFICATION_TYPES.teamCaptainSelected,
+                title: "팀장으로 선정되었습니다",
+                body: `${event.title}에서 ${captain.draftOrder}팀 팀장으로 선정되었습니다.`,
+                teamId, eventId, target: "TEAM_DRAFT",
+            }]);
         }
     });
     return { status: "DRAFT_READY" };
@@ -253,8 +263,11 @@ async function startDraft(actorUserId: string, teamId: string, eventId: string) 
         await prisma.teamEvent.update({ where: { id: eventId }, data: { competitionStatus: status, currentPickNumber: 1 } });
         return { status };
     }
-    const updated = await prisma.teamEvent.updateMany({ where: { id: eventId, competitionStatus: "DRAFT_READY" }, data: { competitionStatus: "DRAFT_IN_PROGRESS", currentPickNumber: 1 } });
-    if (updated.count !== 1) throw stateError();
+    await prisma.$transaction(async (tx) => {
+        const updated = await tx.teamEvent.updateMany({ where: { id: eventId, competitionStatus: "DRAFT_READY" }, data: { competitionStatus: "DRAFT_IN_PROGRESS", currentPickNumber: 1 } });
+        if (updated.count !== 1) throw stateError();
+        await enqueueDraftTurn(tx, event, teams, 1, teamId, eventId);
+    });
     return { status: "DRAFT_IN_PROGRESS", plan };
 }
 
@@ -292,17 +305,20 @@ async function pickParticipant(actorUserId: string, teamId: string, eventId: str
                 id: eventId, competitionStatus: "DRAFT_IN_PROGRESS", currentPickNumber: event.currentPickNumber,
             }, data: { currentPickNumber: { increment: 1 } } });
             if (advanced.count !== 1) throw new TeamCompetitionError("DRAFT_TURN_CONFLICT", "드래프트 순서가 변경되었습니다.", 409);
+            await enqueueParticipantAssigned(tx, event, participant, team, teamId, eventId);
             if (event.currentPickNumber === plan.draftTotal) {
                 const freshParticipants = participants.map((item) => item.id === participant.id
                     ? { ...item, competitionTeamId: team.id } : item);
                 const remaining = freshParticipants.some((item) => !item.competitionTeamId);
                 if (remaining) {
                     await tx.teamEvent.update({ where: { id: eventId }, data: { competitionStatus: "LUCKY_DRAW" } });
+                    await enqueueDraftTurn(tx, event, teams, event.currentPickNumber + 1, teamId, eventId);
                     return { status: "LUCKY_DRAW", pickNumber: event.currentPickNumber };
                 }
                 await tx.teamEvent.update({ where: { id: eventId }, data: { competitionStatus: "TEAMS_FINALIZED" } });
                 return { status: "TEAMS_FINALIZED", pickNumber: event.currentPickNumber };
             }
+            await enqueueDraftTurn(tx, event, teams, event.currentPickNumber + 1, teamId, eventId);
             return { status: "DRAFT_IN_PROGRESS", pickNumber: event.currentPickNumber };
         });
     } catch (error) {
@@ -358,6 +374,8 @@ async function luckyDraw(actorUserId: string, teamId: string, eventId: string) {
             id: eventId, competitionStatus: "LUCKY_DRAW", currentPickNumber: event.currentPickNumber,
         }, data: { competitionStatus: status, currentPickNumber: { increment: 1 } } });
         if (advanced.count !== 1) throw new TeamCompetitionError("DRAFT_TURN_CONFLICT", "행운권 순서가 변경되었습니다.", 409);
+        if (participant) await enqueueParticipantAssigned(tx, event, participant, team, teamId, eventId);
+        if (status === "LUCKY_DRAW") await enqueueDraftTurn(tx, event, teams, event.currentPickNumber + 1, teamId, eventId);
         return { status, won: participant != null, participant: participant ? serializeParticipant(participant) : null };
     });
 }
@@ -367,6 +385,7 @@ async function autoAssignRemainder(actorUserId: string, teamId: string, eventId:
     if (event.competitionStatus !== "LUCKY_DRAW" && event.competitionStatus !== "DRAFT_IN_PROGRESS") throw stateError();
     await prisma.$transaction((tx) => finalizeRandomRemainder(
         tx, eventId, event.draftGeneration, currentTeams(event), currentParticipants(event), event.currentPickNumber - 1,
+        teamId, event.title,
     ));
     return { status: "TEAMS_FINALIZED" };
 }
@@ -425,6 +444,14 @@ async function assignTeamLanes(actorUserId: string, teamId: string, eventId: str
                     eventId, slotId: assignment.slot.id, memberId: participant.memberId, guestId: participant.guestId,
                     participantKind: participant.memberId ? "MEMBER" : "GUEST", participantDisplayName: participantName(participant),
                 } });
+                if (participant.member?.userId) await enqueueMobileNotifications(tx, [{
+                    userId: participant.member.userId,
+                    dedupeKey: `${MOBILE_NOTIFICATION_TYPES.laneAssigned}:${eventId}:${participant.member.userId}`,
+                    type: MOBILE_NOTIFICATION_TYPES.laneAssigned,
+                    title: "레인이 배정되었습니다",
+                    body: `${event.title} · ${assignment.slot.laneNumber}-${assignment.slot.position} 레인을 확인해 주세요.`,
+                    teamId, eventId, target: "EVENT_DETAIL",
+                }]);
             }
         }
     });
@@ -506,6 +533,7 @@ export function rankFinalTeams<T extends {
 async function finalizeRandomRemainder(
     tx: Prisma.TransactionClient, eventId: string, generation: number,
     teams: ReturnType<typeof currentTeams>, participants: ReturnType<typeof currentParticipants>, directPicks: number,
+    teamId: string, eventTitle: string,
 ) {
     const remaining = secureShuffle(participants.filter((item) => !item.competitionTeamId));
     const sizes = new Map(teams.map((team) => [team.id, participants.filter((item) => item.competitionTeamId === team.id).length]));
@@ -520,9 +548,57 @@ async function finalizeRandomRemainder(
             competitionTeamId: team.id, selectedParticipantId: participant.id,
             selectedDisplayNameSnapshot: participantName(participant), pickType: "AUTO_REMAINDER",
         } });
+        if (participant.member?.userId) await enqueueMobileNotifications(tx, [{
+            userId: participant.member.userId,
+            dedupeKey: `${MOBILE_NOTIFICATION_TYPES.teamMemberSelected}:${eventId}:${generation}:${participant.id}`,
+            type: MOBILE_NOTIFICATION_TYPES.teamMemberSelected,
+            title: "팀이 정해졌습니다",
+            body: `${eventTitle} · ${team.draftOrder}팀에 배정되었습니다.`,
+            teamId, eventId, target: "TEAM_DETAIL",
+        }]);
         sizes.set(team.id, sizes.get(team.id)! + 1);
     }
     await tx.teamEvent.update({ where: { id: eventId }, data: { competitionStatus: "TEAMS_FINALIZED", currentPickNumber: directPicks + 1 } });
+}
+
+async function enqueueParticipantAssigned(
+    tx: Prisma.TransactionClient,
+    event: CompetitionEvent,
+    participant: ReturnType<typeof currentParticipants>[number],
+    team: ReturnType<typeof currentTeams>[number],
+    teamId: string,
+    eventId: string,
+) {
+    if (!participant.member?.userId) return;
+    await enqueueMobileNotifications(tx, [{
+        userId: participant.member.userId,
+        dedupeKey: `${MOBILE_NOTIFICATION_TYPES.teamMemberSelected}:${eventId}:${event.draftGeneration}:${participant.id}`,
+        type: MOBILE_NOTIFICATION_TYPES.teamMemberSelected,
+        title: "팀이 정해졌습니다",
+        body: `${event.title} · ${team.draftOrder}팀에 배정되었습니다.`,
+        teamId, eventId, target: "TEAM_DETAIL",
+    }]);
+}
+
+async function enqueueDraftTurn(
+    tx: Prisma.TransactionClient,
+    event: CompetitionEvent,
+    teams: ReturnType<typeof currentTeams>,
+    pickNumber: number,
+    teamId: string,
+    eventId: string,
+) {
+    const turn = snakeDraftTurn(pickNumber, teams.length);
+    const team = teams.find((item) => item.draftOrder === turn.draftOrder);
+    if (!team?.captain.userId) return;
+    await enqueueMobileNotifications(tx, [{
+        userId: team.captain.userId,
+        dedupeKey: `${MOBILE_NOTIFICATION_TYPES.teamDraftTurn}:${eventId}:${event.draftGeneration}:${pickNumber}:${team.captainMemberId}`,
+        type: MOBILE_NOTIFICATION_TYPES.teamDraftTurn,
+        title: "선수 선택 차례입니다",
+        body: `${event.title}에서 선수를 선택해 주세요.`,
+        teamId, eventId, target: "TEAM_DRAFT",
+    }]);
 }
 
 const competitionInclude = {

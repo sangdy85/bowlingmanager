@@ -1,6 +1,7 @@
 import { randomInt } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
+import { enqueueMobileNotifications, MOBILE_NOTIFICATION_TYPES } from "@/lib/mobile-api/notifications";
 import {
     BOWLER_HIDDEN_COMPETITION_TYPES,
     serializeRankPoints,
@@ -369,8 +370,20 @@ export async function startEventDraw(actorUserId: string, teamId: string, eventI
         throw new TeamEventError("PARTICIPANT_SLOT_MISMATCH", `참석자와 게스트(${participantCount}명) 수가 선택 좌석(${event.laneSlots.length}개)과 같아야 합니다.`, 409);
     }
     if (event.laneDrawMode === "INDIVIDUAL") {
-        const updated = await prisma.teamEvent.updateMany({ where: { id: eventId, laneDrawStatus: "NOT_STARTED" }, data: { laneDrawStatus: "OPEN" } });
-        if (updated.count !== 1) throw new TeamEventError("DRAW_CONFLICT", "추첨 상태가 변경되었습니다. 새로고침해주세요.", 409);
+        await prisma.$transaction(async (tx) => {
+            const updated = await tx.teamEvent.updateMany({ where: { id: eventId, laneDrawStatus: "NOT_STARTED" }, data: { laneDrawStatus: "OPEN" } });
+            if (updated.count !== 1) throw new TeamEventError("DRAW_CONFLICT", "추첨 상태가 변경되었습니다. 새로고침해주세요.", 409);
+            const memberIds = event.attendances.filter((item) => item.status === "ATTENDING" && item.memberId).map((item) => item.memberId!);
+            const members = event.team.members.filter((member) => memberIds.includes(member.id));
+            await enqueueMobileNotifications(tx, members.map((member) => ({
+                userId: member.userId,
+                dedupeKey: `${MOBILE_NOTIFICATION_TYPES.laneDrawOpened}:${eventId}:${member.userId}`,
+                type: MOBILE_NOTIFICATION_TYPES.laneDrawOpened,
+                title: "레인 추첨이 시작되었습니다",
+                body: `${event.title} 레인을 직접 뽑아주세요.`,
+                teamId, eventId, target: "LANE_DRAW",
+            })));
+        });
         return { status: "OPEN" as DrawStatus };
     }
     await prisma.$transaction(async (tx) => {
@@ -381,6 +394,20 @@ export async function startEventDraw(actorUserId: string, teamId: string, eventI
         for (let index = 0; index < participants.length; index += 1) {
             await tx.teamEventLaneAssignment.create({ data: assignmentData(eventId, participants[index], slots[index].id) });
         }
+        const memberAssignments = participants.flatMap((participant, index) => participant.kind === "MEMBER"
+            ? [{ memberId: participant.id, slot: slots[index] }] : []);
+        const members = event.team.members.filter((member) => memberAssignments.some((item) => item.memberId === member.id));
+        const userByMember = new Map(members.map((member) => [member.id, member.userId]));
+        await enqueueMobileNotifications(tx, memberAssignments.flatMap(({ memberId, slot }) => {
+            const userId = userByMember.get(memberId); if (!userId) return [];
+            return [{
+                userId, dedupeKey: `${MOBILE_NOTIFICATION_TYPES.laneAssigned}:${eventId}:${userId}`,
+                type: MOBILE_NOTIFICATION_TYPES.laneAssigned,
+                title: "레인이 배정되었습니다",
+                body: `${event.title} · ${slot.laneNumber}-${slot.position} 레인을 확인해 주세요.`,
+                teamId, eventId, target: "EVENT_DETAIL" as const,
+            }];
+        }));
     });
     return { status: "COMPLETED" as DrawStatus };
 }
@@ -450,7 +477,7 @@ const eventInclude = {
             name: true,
             members: {
                 orderBy: { joinedAt: "asc" as const },
-                select: { id: true, alias: true, user: { select: { name: true } } },
+                select: { id: true, userId: true, alias: true, user: { select: { name: true } } },
             },
         },
     },

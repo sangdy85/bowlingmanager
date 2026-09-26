@@ -29,6 +29,7 @@ import 'package:bowlingmanager_mobile/features/club/presentation/club_season_fin
 import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dart';
 import 'package:bowlingmanager_mobile/features/home/presentation/home_screen.dart';
 import 'package:bowlingmanager_mobile/features/profile/presentation/profile_screen.dart';
+import 'package:bowlingmanager_mobile/features/notifications/presentation/notification_screen.dart';
 import 'package:bowlingmanager_mobile/features/records/presentation/records_screen.dart';
 import 'package:bowlingmanager_mobile/features/splash/presentation/splash_screen.dart';
 import 'package:bowlingmanager_mobile/shared/widgets/app_scaffold.dart';
@@ -348,6 +349,11 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
             path: '/profile',
             builder: (BuildContext context, GoRouterState state) =>
                 const ProfileScreen(),
+          ),
+          GoRoute(
+            path: '/notifications',
+            builder: (BuildContext context, GoRouterState state) =>
+                const NotificationScreen(),
           ),
           GoRoute(
             path: '/super-admin',
