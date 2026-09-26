@@ -22,6 +22,7 @@ import 'package:bowlingmanager_mobile/features/club/presentation/club_post_detai
 import 'package:bowlingmanager_mobile/features/club/presentation/club_post_form_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_team_settings_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_season_points_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_legacy_import_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_records_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_season_ranking_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_season_finals_screen.dart';
@@ -250,6 +251,14 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                             builder:
                                 (BuildContext context, GoRouterState state) =>
                                     ClubSeasonPointsScreen(
+                                      teamId: state.pathParameters['teamId']!,
+                                    ),
+                          ),
+                          GoRoute(
+                            path: 'season-import',
+                            builder:
+                                (BuildContext context, GoRouterState state) =>
+                                    ClubLegacyImportScreen(
                                       teamId: state.pathParameters['teamId']!,
                                     ),
                           ),

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/capture/domain/capture_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_legacy_import_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_season_final_models.dart';
 import 'package:dio/dio.dart';
 
@@ -122,6 +123,61 @@ class ClubExpansionApi {
       throw const FormatException('Invalid season adjustment.');
     }
     return data['totalPoints'] as int;
+  });
+  Future<ClubLegacyImportPreview> previewSeasonLegacyImport(
+    String teamId,
+    String seasonId, {
+    required String mode,
+    required List<ClubLegacyImportRow> rows,
+  }) async => _guard(() async {
+    final response = await _dio.post<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/legacy-imports/preview',
+      data: <String, Object>{
+        'mode': mode,
+        'rows': rows.map((row) => row.toJson()).toList(growable: false),
+      },
+    );
+    return ClubLegacyImportPreview.fromJson(_data(response.data));
+  });
+  Future<void> createSeasonLegacyImport(
+    String teamId,
+    String seasonId, {
+    required String mode,
+    required List<ClubLegacyImportRow> rows,
+    required String importHash,
+  }) async => _guard(() async {
+    await _dio.post<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/legacy-imports',
+      data: <String, Object>{
+        'mode': mode,
+        'rows': rows.map((row) => row.toJson()).toList(growable: false),
+        'importHash': importHash,
+      },
+    );
+  });
+  Future<List<ClubLegacyImportBatch>> fetchSeasonLegacyImports(
+    String teamId,
+    String seasonId,
+  ) async => _guard(() async {
+    final response = await _dio.get<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/legacy-imports',
+    );
+    final batches = _data(response.data)['batches'];
+    if (batches is! List) throw const FormatException('Invalid import list.');
+    return List<ClubLegacyImportBatch>.unmodifiable(
+      batches.map((item) => ClubLegacyImportBatch.fromJson(_map(item))),
+    );
+  });
+  Future<void> reverseSeasonLegacyImport(
+    String teamId,
+    String seasonId,
+    String batchId,
+    String reason,
+  ) async => _guard(() async {
+    await _dio.post<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/legacy-imports/${Uri.encodeComponent(batchId)}/reverse',
+      data: <String, String>{'reason': reason},
+    );
   });
   Future<ClubPostsPage> fetchPosts(String teamId, int page) async =>
       _guard(() async {

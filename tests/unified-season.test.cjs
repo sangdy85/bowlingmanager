@@ -163,6 +163,7 @@ test('ranking batches mixed ledgers, multiple monthly events and zero points wit
         reason: '운영 보정', createdAt: new Date('2026-03-25T03:00:00.000Z'),
       }];
     } },
+    seasonLegacyPointEntry: { findMany: async () => [] },
   };
   const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': fakePrisma });
   const result = await service.getUnifiedSeasonRanking('viewer', 'team-a');
@@ -224,6 +225,7 @@ test('exact unified season fixture totals 50 + 20 + 30 while MINI contributes no
       teamSeason: { findMany: async () => [season] },
       seasonPointEntry: { findMany: async () => officialEntries },
       seasonPointAdjustment: { findMany: async () => [] },
+      seasonLegacyPointEntry: { findMany: async () => [] },
     },
   });
   const result = await rankingService.getUnifiedSeasonRanking('viewer', 'team-a');
@@ -238,6 +240,47 @@ test('exact unified season fixture totals 50 + 20 + 30 while MINI contributes no
   assert.equal(new Set(officialEntries.map(item => item.id)).size, officialEntries.length);
 });
 
+test('legacy Jan through Mar and October automatic points produce exact 130 total and monthly history', async () => {
+  const legacy = [
+    { id: 'legacy-jan', memberId: 'member-a', eventDate: new Date('2025-12-31T15:00:00.000Z'), competitionType: 'TEAM', placement: 3, points: 10, note: null, createdAt: new Date('2026-09-01T00:00:00.000Z'), batch: { id: 'batch-1', mode: 'DETAILED' } },
+    { id: 'legacy-feb', memberId: 'member-a', eventDate: new Date('2026-01-31T15:00:00.000Z'), competitionType: 'INDIVIDUAL', placement: 3, points: 30, note: null, createdAt: new Date('2026-09-01T00:00:01.000Z'), batch: { id: 'batch-1', mode: 'DETAILED' } },
+    { id: 'legacy-mar', memberId: 'member-a', eventDate: new Date('2026-02-28T15:00:00.000Z'), competitionType: 'INDIVIDUAL', placement: 1, points: 50, note: null, createdAt: new Date('2026-09-01T00:00:02.000Z'), batch: { id: 'batch-1', mode: 'DETAILED' } },
+  ];
+  const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': {
+    team: { findFirst: async () => ({ id: 'team-a', bowlerHiddenEnabled: true, seasonRankingEnabled: true, members: [member('member-a', 'A')] }) },
+    teamSeason: { findMany: async () => [season] },
+    seasonPointEntry: { findMany: async () => [entry('oct-auto', 'member-a', 'INDIVIDUAL', '2026-10-10T03:00:00.000Z', 2, 40)] },
+    seasonPointAdjustment: { findMany: async () => [] },
+    seasonLegacyPointEntry: { findMany: async () => legacy },
+  } });
+  const row = (await service.getUnifiedSeasonRanking('viewer', 'team-a')).rankings[0];
+  assert.equal(row.totalPoints, 130);
+  assert.equal(row.legacyPoints, 90);
+  assert.deepEqual([0, 1, 2, 9].map(index => row.monthlyHistory[index].reduce((sum, item) => sum + item.points, 0)), [10, 30, 50, 40]);
+  assert.deepEqual(row.entries.map(item => item.sourceType), ['LEGACY_IMPORT', 'LEGACY_IMPORT', 'LEGACY_IMPORT', 'AUTOMATIC']);
+});
+
+test('opening balance changes only total and never creates monthly competition history', async () => {
+  const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': {
+    team: { findFirst: async () => ({ id: 'team-a', bowlerHiddenEnabled: true, seasonRankingEnabled: true, members: [member('member-a', 'A')] }) },
+    teamSeason: { findMany: async () => [season] },
+    seasonPointEntry: { findMany: async () => [] },
+    seasonPointAdjustment: { findMany: async () => [] },
+    seasonLegacyPointEntry: { findMany: async () => [{
+      id: 'opening-a', memberId: 'member-a', eventDate: null, competitionType: null,
+      placement: null, points: 218, note: null, createdAt: new Date('2026-10-01T00:00:00.000Z'),
+      batch: { id: 'opening-batch', mode: 'OPENING_BALANCE' },
+    }] },
+  } });
+  const row = (await service.getUnifiedSeasonRanking('viewer', 'team-a')).rankings[0];
+  assert.equal(row.totalPoints, 218);
+  assert.equal(row.openingBalancePoints, 218);
+  assert.equal(row.competitionsPlayed, 0);
+  assert.equal(row.monthlyHistory.flat().length, 0);
+  assert.equal(row.entries[0].sourceType, 'LEGACY_OPENING_BALANCE');
+  assert.equal(row.entries[0].competitionDate, null);
+});
+
 test('competition type and season filters remain isolated', async () => {
   let where = null;
   const fakePrisma = {
@@ -248,6 +291,7 @@ test('competition type and season filters remain isolated', async () => {
     teamSeason: { findMany: async () => [season] },
     seasonPointEntry: { findMany: async args => { where = args.where; return []; } },
     seasonPointAdjustment: { findMany: async () => [] },
+    seasonLegacyPointEntry: { findMany: async () => [] },
   };
   const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': fakePrisma });
   await service.getUnifiedSeasonRanking('viewer', 'team-a', {

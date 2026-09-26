@@ -8,30 +8,32 @@ datasource db {
 }
 
 model User {
-  id                           String                         @id @default(cuid())
-  email                        String                         @unique
-  password                     String?
-  name                         String
-  role                         String                         @default("USER")
-  handicap                     Int?
-  createdAt                    DateTime                       @default(now())
-  updatedAt                    DateTime                       @updatedAt
-  emailVerified                DateTime?
-  ownedCenters                 BowlingCenter[]                @relation("CenterOwner")
-  CenterMember                 CenterMember[]
-  LeagueMatchupIndividualScore LeagueMatchupIndividualScore[]
-  posts                        Post[]
-  Score                        Score[]
-  teamMemberships              TeamMember[]
-  tournamentRegistrations      TournamentRegistration[]
-  UserApiUsage                 UserApiUsage[]
-  managedCenters               BowlingCenter[]                @relation("CenterManagers")
-  Team                         Team[]                         @relation("TeamManagers")
-  inquiries                    Inquiry[]
-  mobileRefreshTokens          MobileRefreshToken[]
-  createdTeamEvents            TeamEvent[]                    @relation("TeamEventCreator")
-  enteredEventBallots          EventCompetitionBallot[]       @relation("EventBallotEnteredBy")
+  id                            String                         @id @default(cuid())
+  email                         String                         @unique
+  password                      String?
+  name                          String
+  role                          String                         @default("USER")
+  handicap                      Int?
+  createdAt                     DateTime                       @default(now())
+  updatedAt                     DateTime                       @updatedAt
+  emailVerified                 DateTime?
+  ownedCenters                  BowlingCenter[]                @relation("CenterOwner")
+  CenterMember                  CenterMember[]
+  LeagueMatchupIndividualScore  LeagueMatchupIndividualScore[]
+  posts                         Post[]
+  Score                         Score[]
+  teamMemberships               TeamMember[]
+  tournamentRegistrations       TournamentRegistration[]
+  UserApiUsage                  UserApiUsage[]
+  managedCenters                BowlingCenter[]                @relation("CenterManagers")
+  Team                          Team[]                         @relation("TeamManagers")
+  inquiries                     Inquiry[]
+  mobileRefreshTokens           MobileRefreshToken[]
+  createdTeamEvents             TeamEvent[]                    @relation("TeamEventCreator")
+  enteredEventBallots           EventCompetitionBallot[]       @relation("EventBallotEnteredBy")
   enteredSeasonPointAdjustments SeasonPointAdjustment[]        @relation("SeasonPointAdjustmentEnteredBy")
+  enteredSeasonLegacyImports    SeasonLegacyImportBatch[]      @relation("SeasonLegacyImportEnteredBy")
+  reversedSeasonLegacyImports   SeasonLegacyImportBatch[]      @relation("SeasonLegacyImportReversedBy")
 }
 
 model VerificationToken {
@@ -105,25 +107,27 @@ model Team {
 }
 
 model TeamSeason {
-  id                     String                   @id @default(cuid())
+  id                     String                    @id @default(cuid())
   teamId                 String
   name                   String
   startDate              DateTime
   endDate                DateTime
-  enabled                Boolean                  @default(true)
-  status                 String                   @default("DRAFT")
-  scoringMode            String                   @default("PODIUM")
-  pointsConfig           String                   @default("[5,3,1]")
-  individualPointsConfig String                   @default("{}")
-  teamPointsConfig       String                   @default("{}")
-  eventPointsConfig      String                   @default("{}")
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-  team                   Team                     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  enabled                Boolean                   @default(true)
+  status                 String                    @default("DRAFT")
+  scoringMode            String                    @default("PODIUM")
+  pointsConfig           String                    @default("[5,3,1]")
+  individualPointsConfig String                    @default("{}")
+  teamPointsConfig       String                    @default("{}")
+  eventPointsConfig      String                    @default("{}")
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+  team                   Team                      @relation(fields: [teamId], references: [id], onDelete: Cascade)
   events                 TeamEvent[]
   publications           SeasonPointPublication[]
   pointEntries           SeasonPointEntry[]
   pointAdjustments       SeasonPointAdjustment[]
+  legacyImportBatches    SeasonLegacyImportBatch[]
+  legacyPointEntries     SeasonLegacyPointEntry[]
   finals                 SeasonFinalTournament[]
 
   @@index([teamId, enabled])
@@ -147,6 +151,7 @@ model TeamMember {
   eventCompetitionParticipants EventCompetitionParticipant[]
   seasonFinalParticipants      SeasonFinalParticipant[]
   seasonPointAdjustments       SeasonPointAdjustment[]
+  seasonLegacyPointEntries     SeasonLegacyPointEntry[]
 
   @@unique([userId, teamId])
 }
@@ -433,6 +438,46 @@ model SeasonPointAdjustment {
   @@index([seasonId, createdAt])
   @@index([seasonId, memberId, createdAt])
   @@index([enteredByUserId, createdAt])
+}
+
+model SeasonLegacyImportBatch {
+  id               String                   @id @default(cuid())
+  seasonId         String
+  mode             String
+  importHash       String
+  note             String?
+  enteredByUserId  String
+  createdAt        DateTime                 @default(now())
+  reversedAt       DateTime?
+  reversedByUserId String?
+  reversalReason   String?
+  season           TeamSeason               @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  enteredBy        User                     @relation("SeasonLegacyImportEnteredBy", fields: [enteredByUserId], references: [id], onDelete: Restrict)
+  reversedBy       User?                    @relation("SeasonLegacyImportReversedBy", fields: [reversedByUserId], references: [id], onDelete: Restrict)
+  entries          SeasonLegacyPointEntry[]
+
+  @@unique([seasonId, importHash])
+  @@index([seasonId, reversedAt, createdAt])
+  @@index([enteredByUserId, createdAt])
+}
+
+model SeasonLegacyPointEntry {
+  id              String                  @id @default(cuid())
+  batchId         String
+  seasonId        String
+  memberId        String
+  eventDate       DateTime?
+  competitionType String?
+  placement       Int?
+  points          Int
+  note            String?
+  createdAt       DateTime                @default(now())
+  batch           SeasonLegacyImportBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  season          TeamSeason              @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  member          TeamMember              @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@index([seasonId, memberId, eventDate])
+  @@index([batchId, memberId])
 }
 
 model TeamCompetitionTeam {

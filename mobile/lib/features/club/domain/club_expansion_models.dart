@@ -250,17 +250,19 @@ class ClubSeasonPointEntry {
   final String id;
   final String? eventId;
   final String competitionType;
-  final DateTime competitionDate;
+  final DateTime? competitionDate;
   final String competitionTitle;
   final int? finalRank;
   final int points;
-  final int month;
+  final int? month;
   final String participationStatus;
   final String sourceType;
   final String? reason;
 
   factory ClubSeasonPointEntry.fromJson(Map<String, dynamic> json) {
-    final date = DateTime.tryParse(json['competitionDate'] as String? ?? '');
+    final date = json['competitionDate'] == null
+        ? null
+        : DateTime.tryParse(json['competitionDate'] as String? ?? '');
     if (json['id'] is! String ||
         (json['eventId'] != null && json['eventId'] is! String) ||
         !const <String>{
@@ -268,14 +270,16 @@ class ClubSeasonPointEntry {
           'TEAM',
           'EVENT',
           'MANUAL_ADJUSTMENT',
+          'LEGACY_OPENING_BALANCE',
         }.contains(json['competitionType']) ||
-        date == null ||
+        (json['competitionDate'] != null && date == null) ||
         json['competitionTitle'] is! String ||
         (json['finalRank'] != null && json['finalRank'] is! int) ||
         json['points'] is! int ||
-        json['month'] is! int ||
-        (json['month'] as int) < 1 ||
-        (json['month'] as int) > 12 ||
+        (json['month'] != null &&
+            (json['month'] is! int ||
+                (json['month'] as int) < 1 ||
+                (json['month'] as int) > 12)) ||
         !const <String>{
           'PARTICIPATED',
           'ABSENT',
@@ -283,6 +287,8 @@ class ClubSeasonPointEntry {
         !const <String>{
           'AUTOMATIC',
           'MANUAL_ADJUSTMENT',
+          'LEGACY_IMPORT',
+          'LEGACY_OPENING_BALANCE',
         }.contains(json['sourceType'] ?? 'AUTOMATIC') ||
         (json['reason'] != null && json['reason'] is! String)) {
       throw const FormatException('Invalid season point entry.');
@@ -295,7 +301,7 @@ class ClubSeasonPointEntry {
       competitionTitle: json['competitionTitle'] as String,
       finalRank: json['finalRank'] as int?,
       points: json['points'] as int,
-      month: json['month'] as int,
+      month: json['month'] as int?,
       participationStatus:
           (json['participationStatus'] ?? 'PARTICIPATED') as String,
       sourceType: (json['sourceType'] ?? 'AUTOMATIC') as String,
@@ -363,6 +369,8 @@ class ClubSeasonRankingRow {
     this.teamPoints = 0,
     this.eventPoints = 0,
     this.adjustmentPoints = 0,
+    this.legacyPoints = 0,
+    this.openingBalancePoints = 0,
     this.competitionsPlayed = 0,
     this.individualWins = 0,
     this.teamWins = 0,
@@ -384,6 +392,8 @@ class ClubSeasonRankingRow {
   final int teamPoints;
   final int eventPoints;
   final int adjustmentPoints;
+  final int legacyPoints;
+  final int openingBalancePoints;
   final int competitionsPlayed;
   final int individualWins;
   final int teamWins;
@@ -408,6 +418,8 @@ class ClubSeasonRankingRow {
         (json['teamPoints'] ?? 0) is! int ||
         (json['eventPoints'] ?? 0) is! int ||
         (json['adjustmentPoints'] ?? 0) is! int ||
+        (json['legacyPoints'] ?? 0) is! int ||
+        (json['openingBalancePoints'] ?? 0) is! int ||
         (json['competitionsPlayed'] ?? json['attended']) is! int ||
         (json['individualWins'] ?? 0) is! int ||
         (json['teamWins'] ?? 0) is! int ||
@@ -435,6 +447,8 @@ class ClubSeasonRankingRow {
       teamPoints: (json['teamPoints'] ?? 0) as int,
       eventPoints: (json['eventPoints'] ?? 0) as int,
       adjustmentPoints: (json['adjustmentPoints'] ?? 0) as int,
+      legacyPoints: (json['legacyPoints'] ?? 0) as int,
+      openingBalancePoints: (json['openingBalancePoints'] ?? 0) as int,
       competitionsPlayed:
           (json['competitionsPlayed'] ?? json['attended']) as int,
       individualWins: (json['individualWins'] ?? 0) as int,

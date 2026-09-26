@@ -415,7 +415,10 @@ class _MyCompetitionHistory extends StatelessWidget {
     final Map<int, List<ClubSeasonPointEntry>> byMonth =
         <int, List<ClubSeasonPointEntry>>{};
     for (final ClubSeasonPointEntry item in items) {
-      byMonth.putIfAbsent(item.month, () => <ClubSeasonPointEntry>[]).add(item);
+      final month = item.month;
+      if (month != null) {
+        byMonth.putIfAbsent(month, () => <ClubSeasonPointEntry>[]).add(item);
+      }
     }
     return Column(
       children: <Widget>[

@@ -204,6 +204,16 @@ class _ClubTeamSettingsScreenState
                         icon: const Icon(Icons.tune),
                         label: const Text('포인트 관리'),
                       ),
+                      OutlinedButton.icon(
+                        key: const Key('season-legacy-import-link'),
+                        onPressed: profile.activeSeason == null
+                            ? null
+                            : () => context.push(
+                                '/club/${Uri.encodeComponent(widget.teamId)}/manage/team/season-import',
+                              ),
+                        icon: const Icon(Icons.upload_file),
+                        label: const Text('기존 시즌 데이터 가져오기'),
+                      ),
                     ],
                   ],
                 ],

@@ -203,7 +203,7 @@ export async function createSeasonPointAdjustment(
                 const member = team.members[0];
                 if (!member) throw new UnifiedSeasonError("MEMBER_NOT_FOUND", "조정할 팀 회원을 찾을 수 없습니다.", 404);
 
-                const [automatic, manual] = await Promise.all([
+                const [automatic, manual, legacy] = await Promise.all([
                     tx.seasonPointEntry.aggregate({
                         where: { seasonId, memberId: member.id, publication: { revokedAt: null } },
                         _sum: { points: true },
@@ -212,8 +212,12 @@ export async function createSeasonPointAdjustment(
                         where: { seasonId, memberId: member.id },
                         _sum: { delta: true },
                     }),
+                    tx.seasonLegacyPointEntry.aggregate({
+                        where: { seasonId, memberId: member.id, batch: { reversedAt: null } },
+                        _sum: { points: true },
+                    }),
                 ]);
-                const currentTotal = (automatic._sum.points ?? 0) + (manual._sum.delta ?? 0);
+                const currentTotal = (automatic._sum.points ?? 0) + (manual._sum.delta ?? 0) + (legacy._sum.points ?? 0);
                 const newTotal = currentTotal + parsed.delta;
                 if (newTotal < 0) {
                     throw new UnifiedSeasonError(
@@ -289,7 +293,7 @@ export async function getUnifiedSeasonRanking(
         throw new UnifiedSeasonError("INVALID_COMPETITION_TYPE", "대회 유형을 확인해주세요.", 400);
     }
     if (!season) return { enabled: true, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType, rankings: [] };
-    const [entries, adjustments] = await Promise.all([
+    const [entries, adjustments, legacyEntries] = await Promise.all([
         prisma.seasonPointEntry.findMany({
             where: {
                 seasonId: season.id, publication: { revokedAt: null },
@@ -307,9 +311,22 @@ export async function getUnifiedSeasonRanking(
             orderBy: [{ createdAt: "asc" }, { id: "asc" }],
             select: { id: true, memberId: true, delta: true, reason: true, createdAt: true },
         }) : Promise.resolve([]),
+        prisma.seasonLegacyPointEntry.findMany({
+            where: {
+                seasonId: season.id,
+                batch: { reversedAt: null },
+                ...(competitionType === "ALL" ? {} : { competitionType }),
+            },
+            orderBy: [{ eventDate: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+            select: {
+                id: true, memberId: true, eventDate: true, competitionType: true,
+                placement: true, points: true, note: true, createdAt: true,
+                batch: { select: { id: true, mode: true } },
+            },
+        }),
     ]);
     const rows = new Map<string, {
-        id: string; name: string; totalPoints: number; individualPoints: number; teamPoints: number; eventPoints: number; adjustmentPoints: number;
+        id: string; name: string; totalPoints: number; individualPoints: number; teamPoints: number; eventPoints: number; adjustmentPoints: number; legacyPoints: number; openingBalancePoints: number;
         competitionsPlayed: number; individualWins: number; teamWins: number; eventWins: number;
         entries: SeasonLedgerEntry[];
     }>();
@@ -340,6 +357,31 @@ export async function getUnifiedSeasonRanking(
             finalRank: null, points: adjustment.delta, month: kstMonth(adjustment.createdAt),
             sourceType: "MANUAL_ADJUSTMENT", reason: adjustment.reason,
             createdAt: adjustment.createdAt.toISOString(),
+        });
+    }
+    for (const entry of legacyEntries) {
+        const row = rows.get(entry.memberId);
+        if (!row) continue;
+        const opening = entry.batch.mode === "OPENING_BALANCE";
+        row.totalPoints += entry.points;
+        row.legacyPoints += entry.points;
+        if (opening) {
+            row.openingBalancePoints += entry.points;
+        } else {
+            if (entry.competitionType === "INDIVIDUAL") { row.individualPoints += entry.points; if (entry.placement === 1) row.individualWins += 1; }
+            if (entry.competitionType === "TEAM") { row.teamPoints += entry.points; if (entry.placement === 1) row.teamWins += 1; }
+            if (entry.competitionType === "EVENT") { row.eventPoints += entry.points; if (entry.placement === 1) row.eventWins += 1; }
+            row.competitionsPlayed += 1;
+        }
+        row.entries.push({
+            id: entry.id, eventId: null,
+            competitionType: entry.competitionType ?? "LEGACY_OPENING_BALANCE",
+            competitionDate: entry.eventDate?.toISOString() ?? null,
+            competitionTitle: opening ? "기존 누적 포인트" : entry.note || "기존 시즌 경기",
+            finalRank: entry.placement, points: entry.points,
+            month: entry.eventDate ? kstMonth(entry.eventDate) : null,
+            sourceType: opening ? "LEGACY_OPENING_BALANCE" : "LEGACY_IMPORT",
+            reason: entry.note, createdAt: entry.createdAt.toISOString(), batchId: entry.batch.id,
         });
     }
     for (const row of rows.values()) {
@@ -376,7 +418,7 @@ export async function getUnifiedSeasonMemberDetail(
 
 function emptyRankingRow(id: string, name: string) {
     return {
-        id, name, totalPoints: 0, individualPoints: 0, teamPoints: 0, eventPoints: 0, adjustmentPoints: 0,
+        id, name, totalPoints: 0, individualPoints: 0, teamPoints: 0, eventPoints: 0, adjustmentPoints: 0, legacyPoints: 0, openingBalancePoints: 0,
         competitionsPlayed: 0, individualWins: 0, teamWins: 0, eventWins: 0,
         entries: [] as SeasonLedgerEntry[],
     };
@@ -386,14 +428,15 @@ type SeasonLedgerEntry = {
     id: string;
     eventId: string | null;
     competitionType: string;
-    competitionDate: string;
+    competitionDate: string | null;
     competitionTitle: string;
     finalRank: number | null;
     points: number;
-    month: number;
-    sourceType: "AUTOMATIC" | "MANUAL_ADJUSTMENT";
+    month: number | null;
+    sourceType: "AUTOMATIC" | "MANUAL_ADJUSTMENT" | "LEGACY_IMPORT" | "LEGACY_OPENING_BALANCE";
     reason: string | null;
     createdAt: string;
+    batchId?: string;
 };
 
 function parseSeasonPointAdjustment(value: unknown) {

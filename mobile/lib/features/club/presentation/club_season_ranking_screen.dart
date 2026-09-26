@@ -291,6 +291,7 @@ class _SeasonMemberSheet extends ConsumerWidget {
                   Text('개인 ${member.individualPoints}P'),
                   Text('팀 ${member.teamPoints}P'),
                   Text('이벤트 ${member.eventPoints}P'),
+                  Text('기존 기록 ${member.legacyPoints}P'),
                   Text('조정 ${_signedPoints(member.adjustmentPoints)}P'),
                 ],
               ),
@@ -305,6 +306,8 @@ class _SeasonMemberSheet extends ConsumerWidget {
                     subtitle: Text(
                       entry.sourceType == 'MANUAL_ADJUSTMENT'
                           ? '${entry.month}월 · 수동 조정'
+                          : entry.sourceType == 'LEGACY_OPENING_BALANCE'
+                          ? '기존 누적 포인트 · 경기 기록 없음'
                           : '${entry.month}월 · ${_type(entry.competitionType)} · '
                                 '${entry.finalRank == null ? '순위 없음' : '${entry.finalRank}위'}',
                     ),
@@ -339,6 +342,10 @@ class _Empty extends StatelessWidget {
 String _entryLabel(ClubSeasonPointEntry entry) =>
     entry.sourceType == 'MANUAL_ADJUSTMENT'
     ? '조정(${_signedPoints(entry.points)})'
+    : entry.sourceType == 'LEGACY_OPENING_BALANCE'
+    ? '기존 누적(${_signedPoints(entry.points)})'
+    : entry.sourceType == 'LEGACY_IMPORT'
+    ? '기존 ${_type(entry.competitionType)} ${entry.finalRank}위(${_signedPoints(entry.points)})'
     : '${_type(entry.competitionType)} ${entry.finalRank == null ? '-' : '${entry.finalRank}위'}(${_signedPoints(entry.points)})';
 String _signedPoints(int value) => value > 0 ? '+$value' : '$value';
 String _type(String value) => switch (value) {
@@ -346,6 +353,7 @@ String _type(String value) => switch (value) {
   'TEAM' => '팀전',
   'EVENT' => '이벤트전',
   'MANUAL_ADJUSTMENT' => '수동 조정',
+  'LEGACY_OPENING_BALANCE' => '기존 누적 포인트',
   _ => value,
 };
 String _status(String value) => switch (value) {
