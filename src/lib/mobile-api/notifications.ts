@@ -47,17 +47,58 @@ export async function registerMobilePushDevice(userId: string, value: unknown) {
     if (token.length < 20 || token.length > 4096 || input.platform !== "ANDROID") {
         throw new MobileNotificationError("INVALID_DEVICE", "기기 알림 정보를 확인해주세요.", 400);
     }
-    const existing = await prisma.mobilePushDevice.findUnique({ where: { token }, select: { userId: true } });
-    if (existing && existing.userId !== userId) {
-        throw new MobileNotificationError("DEVICE_TOKEN_CONFLICT", "이 기기는 다른 계정에 등록되어 있습니다.", 409);
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        const existing = await prisma.mobilePushDevice.findUnique({
+            where: { token },
+            select: { id: true, userId: true, enabled: true, revokedAt: true },
+        });
+        const now = new Date();
+        if (!existing) {
+            try {
+                return await prisma.mobilePushDevice.create({
+                    data: { userId, token, platform: "ANDROID", lastSeenAt: now },
+                    select: { id: true, platform: true, enabled: true, lastSeenAt: true },
+                });
+            } catch (error) {
+                if (isUniqueConstraintError(error)) continue;
+                throw error;
+            }
+        }
+        if (existing.userId === userId) {
+            const updated = await prisma.mobilePushDevice.updateMany({
+                where: { id: existing.id, userId },
+                data: { platform: "ANDROID", enabled: true, revokedAt: null, lastSeenAt: now },
+            });
+            if (updated.count === 1) return registeredDevice(existing.id, now);
+            continue;
+        }
+        if (existing.enabled || existing.revokedAt === null) {
+            throw deviceTokenConflict();
+        }
+        const reassigned = await prisma.$transaction(async (tx) => {
+            const updated = await tx.mobilePushDevice.updateMany({
+                where: {
+                    id: existing.id,
+                    userId: existing.userId,
+                    enabled: false,
+                    revokedAt: { not: null },
+                },
+                data: { userId, platform: "ANDROID", enabled: true, revokedAt: null, lastSeenAt: now },
+            });
+            if (updated.count !== 1) return false;
+            await tx.mobileNotificationDelivery.updateMany({
+                where: { deviceId: existing.id, status: { in: ["PENDING", "PROCESSING", "FAILED"] } },
+                data: {
+                    status: "FAILED",
+                    lastErrorCode: "device/reassigned",
+                    nextAttemptAt: new Date("9999-12-31T00:00:00.000Z"),
+                },
+            });
+            return true;
+        });
+        if (reassigned) return registeredDevice(existing.id, now);
     }
-    const device = await prisma.mobilePushDevice.upsert({
-        where: { token },
-        create: { userId, token, platform: "ANDROID" },
-        update: { enabled: true, revokedAt: null, lastSeenAt: new Date() },
-        select: { id: true, platform: true, enabled: true, lastSeenAt: true },
-    });
-    return device;
+    throw deviceTokenConflict();
 }
 
 export async function revokeMobilePushDevice(userId: string, value: unknown) {
@@ -181,6 +222,18 @@ function configuredSender(): MessageSender | null {
     catch { throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON."); }
     const app = getApps()[0] ?? initializeApp({ credential: cert(serviceAccount) });
     return (message) => getMessaging(app).send(message);
+}
+
+function registeredDevice(id: string, lastSeenAt: Date) {
+    return { id, platform: "ANDROID", enabled: true, lastSeenAt };
+}
+
+function deviceTokenConflict() {
+    return new MobileNotificationError("DEVICE_TOKEN_CONFLICT", "이 기기는 다른 계정에 등록되어 있습니다.", 409);
+}
+
+function isUniqueConstraintError(error: unknown) {
+    return typeof error === "object" && error !== null && "code" in error && error.code === "P2002";
 }
 
 function retryAt(now: Date, retryCount: number) {
