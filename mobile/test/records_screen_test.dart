@@ -2,6 +2,7 @@ import 'package:bowlingmanager_mobile/app/app.dart';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/auth_fakes.dart';
+import 'support/club_fakes.dart';
 import 'support/dashboard_fakes.dart';
 import 'support/records_fakes.dart';
 
@@ -161,6 +163,57 @@ void main() {
     expect(find.textContaining('벙개'), findsWidgets);
     expect(find.byKey(const Key('record-rank-1')), findsNothing);
     expect(find.byType(Icon), findsWidgets);
+  });
+
+  testWidgets('team Records card opens the exact club activity', (
+    WidgetTester tester,
+  ) async {
+    final GameSession session = GameSession(
+      id: 'linked-session',
+      source: GameSessionSource.personal,
+      gameDate: DateTime.utc(2026, 9, 19),
+      gameType: '정기전',
+      team: const GameSessionTeam(id: 'team-1', name: '테스트 동호회'),
+      scores: const <GameSessionScore>[
+        GameSessionScore(id: 'linked-score', score: 210, memo: null),
+      ],
+      total: 210,
+      average: 210,
+      gameCount: 1,
+      activityId: '2026-09-19~REGULAR',
+    );
+    final FakeScoresRepository scoresRepository = FakeScoresRepository()
+      ..pages[1] = scoresPage(page: 1, total: 1, items: <GameSession>[session]);
+    final FakeClubRepository clubRepository = FakeClubRepository();
+
+    await _openRecords(
+      tester,
+      scoresRepository,
+      clubRepository: clubRepository,
+    );
+    await tester.tap(find.byKey(const Key('record-session-linked-session')));
+    await tester.pump();
+    final Finder targetCard = find.byKey(
+      Key('club-activity-${testClubActivityFeedItem.id}'),
+    );
+    for (
+      int attempt = 0;
+      attempt < 20 && targetCard.evaluate().isEmpty;
+      attempt++
+    ) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byKey(const Key('club-activities-list')), findsOneWidget);
+    final Card highlighted = tester.widget<Card>(targetCard);
+    expect(highlighted.color, isNotNull);
+    expect(tester.getTopLeft(targetCard).dy, greaterThanOrEqualTo(0));
+    expect(tester.getBottomLeft(targetCard).dy, lessThanOrEqualTo(800));
+    expect(clubRepository.requestedActivityFeedTargets, <String?>[
+      '2026-09-19~REGULAR',
+    ]);
+    await tester.pump(const Duration(seconds: 3));
   });
 
   testWidgets('Records card scrolls twelve scores on a 360px scaled layout', (
@@ -317,6 +370,7 @@ Future<void> _openRecords(
   WidgetTester tester,
   FakeScoresRepository scoresRepository, {
   bool settleRecords = true,
+  FakeClubRepository? clubRepository,
 }) async {
   final FakeAuthRepository authRepository = FakeAuthRepository()
     ..bootstrapResult = testUser;
@@ -327,6 +381,9 @@ Future<void> _openRecords(
         authRepositoryProvider.overrideWithValue(authRepository),
         dashboardRepositoryProvider.overrideWithValue(dashboardRepository),
         scoresRepositoryProvider.overrideWithValue(scoresRepository),
+        clubRepositoryProvider.overrideWithValue(
+          clubRepository ?? FakeClubRepository(),
+        ),
       ],
       child: const BowlingManagerApp(),
     ),

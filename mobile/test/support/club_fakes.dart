@@ -246,6 +246,7 @@ class FakeClubApi implements ClubApi {
     required List<ClubRecordFilter> types,
     required int page,
     required int limit,
+    String? targetActivityId,
   }) async {
     if (error case final Object currentError) throw currentError;
     return testClubActivityFeedPage(page: page);
@@ -318,6 +319,7 @@ class FakeClubRepository implements ClubRepository {
       <int, ClubActivityFeedPage>{};
   final Map<int, Object> activityPageErrors = <int, Object>{};
   final List<int> requestedActivityFeedPages = <int>[];
+  final List<String?> requestedActivityFeedTargets = <String?>[];
   int createCalls = 0;
   int updateCalls = 0;
   int deleteCalls = 0;
@@ -414,8 +416,10 @@ class FakeClubRepository implements ClubRepository {
     required List<ClubRecordFilter> types,
     required int page,
     required int limit,
+    String? targetActivityId,
   }) async {
     requestedActivityFeedPages.add(page);
+    requestedActivityFeedTargets.add(targetActivityId);
     if (activityPageErrors[page] case final Object error) throw error;
     if (activitiesError case final Object error) throw error;
     final ClubActivityFeedPage source = activityFeedPages[page] ?? activityFeed;

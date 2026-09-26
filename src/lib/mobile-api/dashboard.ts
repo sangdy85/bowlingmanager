@@ -12,8 +12,10 @@ import { kstDateKey } from "@/lib/mobile-api/team-events";
 import { groupScores } from "@/lib/score-groups";
 import {
     calculateTeamStatistics,
+    createTeamActivityId,
     createTeamActivityDetail,
     teamActivityDateKey,
+    teamRecordFilterForGameType,
     type TeamRecordMember,
     type TeamRecordScore,
 } from "@/lib/team-records";
@@ -272,8 +274,20 @@ export async function getMobileDashboard(
         : (compatiblePersonal.myYearlyScores?.length
             ?? personal.integratedRecords.filter((record) => record.source === "PERSONAL").length)
             + personal.officialRecords.length;
+    const summary = summarizeIntegratedRecords(personal.integratedRecords, year);
     return {
-        ...summarizeIntegratedRecords(personal.integratedRecords, year),
+        ...summary,
+        recentSessions: summary.recentSessions.map((session) => {
+            const filter = session.source === "PERSONAL" && session.team
+                ? teamRecordFilterForGameType(session.gameType)
+                : null;
+            return {
+                ...session,
+                activityId: filter
+                    ? createTeamActivityId(teamActivityDateKey(session.gameDate), filter)
+                    : null,
+            };
+        }),
         totalGameCount,
         regularAverage: categoryAverage(allRecords.filter((record) =>
             record.source === "PERSONAL" && record.gameType === "정기전")),

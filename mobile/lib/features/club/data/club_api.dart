@@ -26,6 +26,7 @@ abstract interface class ClubApi {
     required List<ClubRecordFilter> types,
     required int page,
     required int limit,
+    String? targetActivityId,
   });
   Future<ClubActivityDetail> fetchClubActivity({
     required String teamId,
@@ -196,18 +197,21 @@ class MobileClubApi implements ClubApi {
     required List<ClubRecordFilter> types,
     required int page,
     required int limit,
+    String? targetActivityId,
   }) async {
     try {
+      final Map<String, Object> queryParameters = <String, Object>{
+        'year': year,
+        'types': types.map((ClubRecordFilter type) => type.apiValue).join(','),
+        'page': page,
+        'limit': limit,
+      };
+      if (targetActivityId != null) {
+        queryParameters['target'] = targetActivityId;
+      }
       final Response<dynamic> response = await _dio.get<dynamic>(
         '/teams/${Uri.encodeComponent(teamId)}/activities/feed',
-        queryParameters: <String, Object>{
-          'year': year,
-          'types': types
-              .map((ClubRecordFilter type) => type.apiValue)
-              .join(','),
-          'page': page,
-          'limit': limit,
-        },
+        queryParameters: queryParameters,
       );
       return ClubActivityFeedPage.fromJson(_readData(response.data));
     } on DioException catch (error) {

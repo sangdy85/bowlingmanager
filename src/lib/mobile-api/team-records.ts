@@ -130,6 +130,14 @@ export function parseTeamActivityFeedQuery(searchParams: URLSearchParams): TeamA
     return types.length > 0 ? { year, types } : null;
 }
 
+export function parseTargetActivityId(searchParams: URLSearchParams) {
+    const targets = searchParams.getAll("target");
+    if (targets.length === 0) return null;
+    if (targets.length !== 1) return undefined;
+    const [target] = targets;
+    return parseTeamActivityId(target) ? target : undefined;
+}
+
 export async function getMobileTeamStatistics(
     userId: string,
     teamId: string,
@@ -194,6 +202,7 @@ export async function getMobileTeamActivityFeed(
     page: number,
     limit: number,
     dependencies: TeamRecordsDependencies = defaultDependencies,
+    targetActivityId: string | null = null,
 ) {
     const access = await dependencies.findAccessibleTeam(userId, teamId);
     if (!access) return null;
@@ -209,7 +218,11 @@ export async function getMobileTeamActivityFeed(
         mapMembers(memberRows),
         query.types,
     );
-    const startIndex = (page - 1) * limit;
+    const targetIndex = targetActivityId
+        ? allItems.findIndex((item) => item.id === targetActivityId)
+        : -1;
+    const resolvedPage = targetIndex >= 0 ? Math.floor(targetIndex / limit) + 1 : page;
+    const startIndex = (resolvedPage - 1) * limit;
     const canManage = access.ownerId === userId
         || access.User?.some((manager) => manager.id === userId) === true;
     const currentMemberId = memberRows.find((member) => member.userId === userId)?.id ?? null;
@@ -222,11 +235,12 @@ export async function getMobileTeamActivityFeed(
             canManage,
         })),
         pagination: {
-            page,
+            page: resolvedPage,
             limit,
             total: allItems.length,
             totalPages: Math.ceil(allItems.length / limit),
         },
+        targetFound: targetActivityId === null ? null : targetIndex >= 0,
     };
 }
 

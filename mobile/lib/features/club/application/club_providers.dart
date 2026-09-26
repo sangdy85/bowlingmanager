@@ -25,6 +25,7 @@ typedef ClubActivityFeedRequest = ({
   String teamId,
   int year,
   String typesKey,
+  String? targetActivityId,
 });
 
 const int clubActivitiesPageLimit = 20;
@@ -242,10 +243,13 @@ class ClubActivityFeedController extends AsyncNotifier<ClubActivityFeedState> {
   @override
   Future<ClubActivityFeedState> build() {
     _repository = ref.watch(clubRepositoryProvider);
-    return _fetchPage(1);
+    return _fetchPage(1, includeTarget: true);
   }
 
-  Future<ClubActivityFeedState> _fetchPage(int page) async {
+  Future<ClubActivityFeedState> _fetchPage(
+    int page, {
+    bool includeTarget = false,
+  }) async {
     final List<ClubRecordFilter> types = _types;
     if (types.isEmpty) {
       return const ClubActivityFeedState(
@@ -261,8 +265,9 @@ class ClubActivityFeedController extends AsyncNotifier<ClubActivityFeedState> {
       types: types,
       page: page,
       limit: clubActivityFeedPageLimit,
+      targetActivityId: includeTarget ? request.targetActivityId : null,
     );
-    if (result.page != page ||
+    if ((!includeTarget && result.page != page) ||
         result.year != request.year ||
         clubActivityTypesKey(result.types) != request.typesKey) {
       throw ApiException.malformedResponse();
@@ -286,7 +291,10 @@ class ClubActivityFeedController extends AsyncNotifier<ClubActivityFeedState> {
   Future<void> refreshActivities() async {
     final ClubActivityFeedState? current = state.value;
     try {
-      final ClubActivityFeedState refreshed = await _fetchPage(1);
+      final ClubActivityFeedState refreshed = await _fetchPage(
+        1,
+        includeTarget: true,
+      );
       if (ref.mounted) state = AsyncData<ClubActivityFeedState>(refreshed);
     } on Object catch (error, stackTrace) {
       if (!ref.mounted) return;

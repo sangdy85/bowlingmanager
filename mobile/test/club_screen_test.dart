@@ -391,6 +391,42 @@ void main() {
     expect(repository.memberTeamIds, <String>['team-1']);
   });
 
+  testWidgets('Club detail menu cards keep equal heights at mobile scale', (
+    WidgetTester tester,
+  ) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 1.2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final FakeClubRepository repository = FakeClubRepository()
+      ..detail = const ClubDetail(
+        id: 'team-1',
+        name: '테스트 동호회',
+        myRole: ClubRole.owner,
+        memberCount: 3,
+      );
+    await _openClubs(tester, repository, surfaceSize: const Size(360, 720));
+    await tester.tap(find.byKey(const Key('club-team-1')));
+    await tester.pumpAndSettle();
+
+    final List<Key> menuKeys = <Key>[
+      const Key('club-records-link'),
+      const Key('club-events-link'),
+      const Key('club-members-link'),
+      const Key('club-board-link'),
+      const Key('club-management-link'),
+    ];
+    final Set<double> heights = <double>{};
+    for (final Key key in menuKeys) {
+      await tester.scrollUntilVisible(
+        find.byKey(key),
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+      heights.add(tester.getSize(find.byKey(key)).height);
+    }
+    expect(heights, <double>{88});
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Club overview and member detail fit a 360px screen', (
     WidgetTester tester,
   ) async {
@@ -674,6 +710,11 @@ void main() {
       expect(find.text('1월'), findsOneWidget);
       expect(find.text('9월'), findsOneWidget);
       expect(find.text('210'), findsWidgets);
+      expect(find.textContaining('ACE'), findsNothing);
+      expect(
+        find.byKey(const Key('club-statistics-scroll-hint')),
+        findsOneWidget,
+      );
 
       await tester.tap(find.byKey(const Key('club-records-year')));
       await tester.pumpAndSettle();
@@ -853,6 +894,8 @@ void main() {
   testWidgets('Club records avoids overflow with long names and many scores', (
     WidgetTester tester,
   ) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 1.2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     const String longName = '아주 긴 이름을 사용하는 동호회 회원 테스트 볼러';
     final List<ClubMemberStatistics> members =
         List<ClubMemberStatistics>.generate(
@@ -961,9 +1004,15 @@ void main() {
 
     await tester.tap(find.text('상세 기록'));
     await tester.pumpAndSettle();
+    expect(find.byTooltip(longName), findsOneWidget);
+    expect(find.text('4G'), findsOneWidget);
     expect(find.text('12G'), findsOneWidget);
     expect(find.text('2,466'), findsOneWidget);
     expect(find.text('205.5'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('AVG').last).dx,
+      lessThan(tester.getTopLeft(find.text('5G')).dx),
+    );
     expect(tester.takeException(), isNull);
   });
 

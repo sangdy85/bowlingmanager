@@ -109,6 +109,63 @@ void main() {
     expect(find.text('AVG 202.0'), findsOneWidget);
   });
 
+  testWidgets('Home team session opens the exact club activity', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(600, 2000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final FakeDashboardRepository dashboardRepository =
+        FakeDashboardRepository()
+          ..result = Dashboard(
+            year: 2026,
+            average: 210,
+            highScore: 220,
+            gameCount: 2,
+            recentAverage: 210,
+            recentScores: const <DashboardScore>[],
+            recentSessions: <GameSession>[
+              GameSession(
+                id: 'team-session',
+                source: GameSessionSource.personal,
+                gameDate: DateTime.utc(2026, 9, 19),
+                gameType: '정기전',
+                team: const GameSessionTeam(id: 'team-1', name: '테스트 동호회'),
+                scores: const <GameSessionScore>[
+                  GameSessionScore(id: 'score-1', score: 200, memo: null),
+                  GameSessionScore(id: 'score-2', score: 220, memo: null),
+                ],
+                total: 420,
+                average: 210,
+                gameCount: 2,
+                activityId: '2026-09-19~REGULAR',
+              ),
+            ],
+          );
+    final FakeClubRepository clubRepository = FakeClubRepository();
+
+    await _pumpAuthenticatedApp(
+      tester,
+      dashboardRepository,
+      clubRepository: clubRepository,
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('home-session-team-session')),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('home-session-team-session')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('club-activities-list')), findsOneWidget);
+    expect(
+      find.byKey(Key('club-activity-${testClubActivityFeedItem.id}')),
+      findsOneWidget,
+    );
+    expect(clubRepository.requestedActivityFeedTargets, <String?>[
+      '2026-09-19~REGULAR',
+    ]);
+  });
+
   testWidgets('Home shows loading while dashboard request is pending', (
     WidgetTester tester,
   ) async {
@@ -313,6 +370,7 @@ Future<void> _pumpAuthenticatedApp(
   WidgetTester tester,
   FakeDashboardRepository dashboardRepository, {
   _FakeClubEventsApi? eventsApi,
+  FakeClubRepository? clubRepository,
 }) {
   final FakeAuthRepository authRepository = FakeAuthRepository()
     ..bootstrapResult = testUser;
@@ -321,7 +379,9 @@ Future<void> _pumpAuthenticatedApp(
       overrides: [
         authRepositoryProvider.overrideWithValue(authRepository),
         dashboardRepositoryProvider.overrideWithValue(dashboardRepository),
-        clubRepositoryProvider.overrideWithValue(FakeClubRepository()),
+        clubRepositoryProvider.overrideWithValue(
+          clubRepository ?? FakeClubRepository(),
+        ),
         if (eventsApi != null)
           clubEventsRepositoryProvider.overrideWithValue(
             ClubEventsRepository(eventsApi),

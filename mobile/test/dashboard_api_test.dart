@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/home/data/dashboard_api.dart';
 import 'package:bowlingmanager_mobile/features/home/domain/dashboard.dart';
@@ -27,6 +28,29 @@ void main() {
     expect(dashboard.average, 187.4);
     expect(dashboard.recentScores.single.score, 215);
     expect(dashboard.recentSessions.single.average, 215);
+    final route = Uri.parse(
+      clubActivityRouteForSession(dashboard.recentSessions.single)!,
+    );
+    expect(route.path, '/club/team-1/records');
+    expect(route.queryParameters['target'], '2026-09-15~REGULAR');
+    expect(
+      clubActivityRouteForSession(
+        GameSession(
+          id: 'personal-session',
+          source: GameSessionSource.personal,
+          gameDate: DateTime.utc(2026, 9, 15),
+          gameType: '연습',
+          team: null,
+          scores: const <GameSessionScore>[
+            GameSessionScore(id: 'personal-score', score: 180, memo: null),
+          ],
+          total: 180,
+          average: 180,
+          gameCount: 1,
+        ),
+      ),
+      isNull,
+    );
     dio.close(force: true);
   });
 
@@ -97,9 +121,9 @@ const Map<String, Object> _dashboardEnvelope = <String, Object>{
         'source': 'PERSONAL',
         'score': 215,
         'gameDate': '2026-09-15T00:00:00.000Z',
-        'gameType': null,
+        'gameType': '정기전',
         'memo': null,
-        'team': null,
+        'team': <String, Object>{'id': 'team-1', 'name': '테스트 팀'},
       },
     ],
     'recentSessions': <Object>[
@@ -107,8 +131,9 @@ const Map<String, Object> _dashboardEnvelope = <String, Object>{
         'id': 'session-1',
         'source': 'PERSONAL',
         'gameDate': '2026-09-15T00:00:00.000Z',
-        'gameType': null,
-        'team': null,
+        'gameType': '정기전',
+        'team': <String, Object>{'id': 'team-1', 'name': '테스트 팀'},
+        'activityId': '2026-09-15~REGULAR',
         'scores': <Object>[
           <String, Object?>{'id': 'score-1', 'score': 215, 'memo': null},
         ],

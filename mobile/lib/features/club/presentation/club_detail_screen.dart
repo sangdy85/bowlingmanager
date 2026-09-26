@@ -75,104 +75,51 @@ class ClubDetailScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Card(
-              clipBehavior: Clip.antiAlias,
-              child: ListTile(
-                key: const Key('club-records-link'),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                leading: const Icon(
-                  Icons.query_stats_rounded,
-                  color: AppColors.primaryBright,
-                ),
-                title: const Text('동호회 기록'),
-                subtitle: const Text('종합 순위, 종합 기록, 상세 기록'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push(
-                  '/club/${Uri.encodeComponent(teamId)}/records',
-                ),
-              ),
+            _ClubMenuCard(
+              tileKey: const Key('club-records-link'),
+              icon: Icons.query_stats_rounded,
+              title: '동호회 기록',
+              subtitle: '종합 순위, 종합 기록, 상세 기록',
+              onTap: () =>
+                  context.push('/club/${Uri.encodeComponent(teamId)}/records'),
             ),
             const SizedBox(height: 12),
-            Card(
-              clipBehavior: Clip.antiAlias,
-              child: ListTile(
-                key: const Key('club-events-link'),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                leading: const Icon(
-                  Icons.event_note_rounded,
-                  color: AppColors.primaryBright,
-                ),
-                title: const Text('일정'),
-                subtitle: const Text('참석 조사, 게스트, 레인 좌석 추첨'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () =>
-                    context.push('/club/${Uri.encodeComponent(teamId)}/events'),
-              ),
+            _ClubMenuCard(
+              tileKey: const Key('club-events-link'),
+              icon: Icons.event_note_rounded,
+              title: '일정',
+              subtitle: '참석 조사, 게스트, 레인 좌석 추첨',
+              onTap: () =>
+                  context.push('/club/${Uri.encodeComponent(teamId)}/events'),
             ),
             const SizedBox(height: 12),
-            Card(
-              clipBehavior: Clip.antiAlias,
-              child: ListTile(
-                key: const Key('club-members-link'),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                leading: const Icon(
-                  Icons.people_outline_rounded,
-                  color: AppColors.primaryBright,
-                ),
-                title: const Text('전체 회원 보기'),
-                subtitle: Text('${club.memberCount}명의 회원'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push(
-                  '/club/${Uri.encodeComponent(teamId)}/members',
-                ),
-              ),
+            _ClubMenuCard(
+              tileKey: const Key('club-members-link'),
+              icon: Icons.people_outline_rounded,
+              title: '전체 회원 보기',
+              subtitle: '${club.memberCount}명의 회원',
+              onTap: () =>
+                  context.push('/club/${Uri.encodeComponent(teamId)}/members'),
             ),
             const SizedBox(height: 12),
-            Card(
-              child: ListTile(
-                key: const Key('club-board-link'),
-                leading: const Icon(
-                  Icons.forum_outlined,
-                  color: AppColors.primaryBright,
-                ),
-                title: const Text('게시판'),
-                subtitle: const Text('동호회 게시글'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () =>
-                    context.push('/club/${Uri.encodeComponent(teamId)}/board'),
-              ),
+            _ClubMenuCard(
+              tileKey: const Key('club-board-link'),
+              icon: Icons.forum_outlined,
+              title: '게시판',
+              subtitle: '동호회 게시글',
+              onTap: () =>
+                  context.push('/club/${Uri.encodeComponent(teamId)}/board'),
             ),
             if (club.myRole == ClubRole.owner ||
                 club.myRole == ClubRole.manager) ...<Widget>[
               const SizedBox(height: 12),
-              Card(
-                clipBehavior: Clip.antiAlias,
-                child: ListTile(
-                  key: const Key('club-management-link'),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
-                  leading: const Icon(
-                    Icons.admin_panel_settings_outlined,
-                    color: AppColors.primaryBright,
-                  ),
-                  title: const Text('관리'),
-                  subtitle: const Text('점수 기록, 기록 관리, 팀원 관리'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push(
-                    '/club/${Uri.encodeComponent(teamId)}/manage',
-                  ),
-                ),
+              _ClubMenuCard(
+                tileKey: const Key('club-management-link'),
+                icon: Icons.admin_panel_settings_outlined,
+                title: '관리',
+                subtitle: '점수 기록, 기록 관리, 팀원 관리',
+                onTap: () =>
+                    context.push('/club/${Uri.encodeComponent(teamId)}/manage'),
               ),
             ],
           ],
@@ -180,6 +127,40 @@ class ClubDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _ClubMenuCard extends StatelessWidget {
+  const _ClubMenuCard({
+    required this.tileKey,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final Key tileKey;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    clipBehavior: Clip.antiAlias,
+    child: SizedBox(
+      height: 88,
+      child: ListTile(
+        key: tileKey,
+        minTileHeight: 88,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+        leading: Icon(icon, size: 24, color: AppColors.primaryBright),
+        title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: onTap,
+      ),
+    ),
+  );
 }
 
 class _DetailFrame extends StatelessWidget {

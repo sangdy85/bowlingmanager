@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bowlingmanager_mobile/core/theme/app_colors.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_text_styles.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
@@ -19,11 +21,17 @@ class ClubRecordsScreen extends ConsumerStatefulWidget {
   const ClubRecordsScreen({
     required this.teamId,
     this.initialSection = 0,
+    this.initialYear,
+    this.targetActivityId,
+    this.targetFilter,
     super.key,
   });
 
   final String teamId;
   final int initialSection;
+  final int? initialYear;
+  final String? targetActivityId;
+  final ClubRecordFilter? targetFilter;
 
   @override
   ConsumerState<ClubRecordsScreen> createState() => _ClubRecordsScreenState();
@@ -32,16 +40,17 @@ class ClubRecordsScreen extends ConsumerStatefulWidget {
 class _ClubRecordsScreenState extends ConsumerState<ClubRecordsScreen> {
   late int _year;
   ClubRecordFilter _filter = ClubRecordFilter.regular;
-  final Set<ClubRecordFilter> _activityFilters = <ClubRecordFilter>{
-    ClubRecordFilter.regular,
-  };
+  late final Set<ClubRecordFilter> _activityFilters;
   late int _section;
 
   @override
   void initState() {
     super.initState();
-    _year = DateTime.now().year;
+    _year = widget.initialYear ?? DateTime.now().year;
     _section = widget.initialSection.clamp(0, 2);
+    _activityFilters = <ClubRecordFilter>{
+      widget.targetFilter ?? ClubRecordFilter.regular,
+    };
   }
 
   @override
@@ -59,6 +68,7 @@ class _ClubRecordsScreenState extends ConsumerState<ClubRecordsScreen> {
       teamId: widget.teamId,
       year: _year,
       typesKey: clubActivityTypesKey(_activityFilters),
+      targetActivityId: widget.targetActivityId,
     );
     final AsyncValue<ClubStatistics> statistics = ref.watch(
       clubStatisticsProvider(request),
@@ -235,7 +245,10 @@ class _ClubRecordsScreenState extends ConsumerState<ClubRecordsScreen> {
               year: _year,
             ),
             1 => _StatisticsBody(request: request, value: statistics),
-            _ => _ActivitiesBody(request: feedRequest),
+            _ => _ActivitiesBody(
+              request: feedRequest,
+              targetActivityId: widget.targetActivityId,
+            ),
           },
         ),
       ],
@@ -553,9 +566,7 @@ class _MemberStatisticsTableState extends State<_MemberStatisticsTable> {
                 for (int i = 0; i < rows.length; i++)
                   _StatCell(
                     width: _nameWidth,
-                    text: rows[i].aceRank == null
-                        ? rows[i].name
-                        : 'ACE ${rows[i].aceRank} · ${rows[i].name}',
+                    text: rows[i].name,
                     background: i.isOdd
                         ? AppColors.surfaceElevated.withValues(alpha: 0.45)
                         : null,
@@ -565,94 +576,114 @@ class _MemberStatisticsTableState extends State<_MemberStatisticsTable> {
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              key: const Key('club-statistics-horizontal'),
-              scrollDirection: Axis.horizontal,
-              child: Column(
-                children: <Widget>[
-                  Row(
+            child: Stack(
+              children: <Widget>[
+                SingleChildScrollView(
+                  key: const Key('club-statistics-horizontal'),
+                  scrollDirection: Axis.horizontal,
+                  child: Column(
                     children: <Widget>[
-                      _StatCell(
-                        text: '출석률',
-                        width: 104,
-                        header: true,
-                        onTap: () => _select(_StatisticsSort.attendance),
+                      Row(
+                        children: <Widget>[
+                          _StatCell(
+                            text: '출석률',
+                            width: 104,
+                            header: true,
+                            onTap: () => _select(_StatisticsSort.attendance),
+                          ),
+                          _StatCell(
+                            text: '게임',
+                            header: true,
+                            onTap: () => _select(_StatisticsSort.games),
+                          ),
+                          _StatCell(
+                            text: '평균',
+                            width: 76,
+                            header: true,
+                            onTap: () => _select(_StatisticsSort.average),
+                          ),
+                          for (int month = 0; month < 12; month++)
+                            _StatCell(
+                              text: '${month + 1}월',
+                              header: true,
+                              onTap: () =>
+                                  _select(_StatisticsSort.month, month),
+                            ),
+                          _StatCell(
+                            text: '총점',
+                            width: 84,
+                            header: true,
+                            onTap: () => _select(_StatisticsSort.total),
+                          ),
+                        ],
                       ),
-                      _StatCell(
-                        text: '게임',
-                        header: true,
-                        onTap: () => _select(_StatisticsSort.games),
-                      ),
-                      for (int month = 0; month < 12; month++)
-                        _StatCell(
-                          text: '${month + 1}월',
-                          header: true,
-                          onTap: () => _select(_StatisticsSort.month, month),
+                      for (int i = 0; i < rows.length; i++)
+                        Row(
+                          children: <Widget>[
+                            _StatCell(
+                              text:
+                                  '${rows[i].attendanceRate.toStringAsFixed(1)}% (${rows[i].attended}/${rows[i].activityCount})',
+                              width: 104,
+                              background: i.isOdd
+                                  ? AppColors.surfaceElevated.withValues(
+                                      alpha: 0.45,
+                                    )
+                                  : null,
+                            ),
+                            _StatCell(
+                              text: '${rows[i].gameCount}',
+                              background: i.isOdd
+                                  ? AppColors.surfaceElevated.withValues(
+                                      alpha: 0.45,
+                                    )
+                                  : null,
+                            ),
+                            _StatCell(
+                              text: rows[i].average.toStringAsFixed(1),
+                              width: 76,
+                              background: i.isOdd
+                                  ? AppColors.surfaceElevated.withValues(
+                                      alpha: 0.45,
+                                    )
+                                  : null,
+                            ),
+                            for (int month = 0; month < 12; month++)
+                              _StatCell(
+                                text:
+                                    '${rows[i].monthlyAverages[month] ?? '-'}',
+                                background: i.isOdd
+                                    ? AppColors.surfaceElevated.withValues(
+                                        alpha: 0.45,
+                                      )
+                                    : null,
+                              ),
+                            _StatCell(
+                              text: _number(rows[i].total),
+                              width: 84,
+                              background: i.isOdd
+                                  ? AppColors.surfaceElevated.withValues(
+                                      alpha: 0.45,
+                                    )
+                                  : null,
+                            ),
+                          ],
                         ),
-                      _StatCell(
-                        text: '총점',
-                        header: true,
-                        onTap: () => _select(_StatisticsSort.total),
-                      ),
-                      _StatCell(
-                        text: '평균',
-                        header: true,
-                        onTap: () => _select(_StatisticsSort.average),
-                      ),
                     ],
                   ),
-                  for (int i = 0; i < rows.length; i++)
-                    Row(
-                      children: <Widget>[
-                        _StatCell(
-                          text:
-                              '${rows[i].attendanceRate.toStringAsFixed(1)}% (${rows[i].attended}/${rows[i].activityCount})',
-                          width: 104,
-                          background: i.isOdd
-                              ? AppColors.surfaceElevated.withValues(
-                                  alpha: 0.45,
-                                )
-                              : null,
-                        ),
-                        _StatCell(
-                          text: '${rows[i].gameCount}',
-                          background: i.isOdd
-                              ? AppColors.surfaceElevated.withValues(
-                                  alpha: 0.45,
-                                )
-                              : null,
-                        ),
-                        for (int month = 0; month < 12; month++)
-                          _StatCell(
-                            text: '${rows[i].monthlyAverages[month] ?? '-'}',
-                            background: i.isOdd
-                                ? AppColors.surfaceElevated.withValues(
-                                    alpha: 0.45,
-                                  )
-                                : null,
-                          ),
-                        _StatCell(
-                          text: _number(rows[i].total),
-                          width: 84,
-                          background: i.isOdd
-                              ? AppColors.surfaceElevated.withValues(
-                                  alpha: 0.45,
-                                )
-                              : null,
-                        ),
-                        _StatCell(
-                          text: rows[i].average.toStringAsFixed(1),
-                          width: 76,
-                          background: i.isOdd
-                              ? AppColors.surfaceElevated.withValues(
-                                  alpha: 0.45,
-                                )
-                              : null,
-                        ),
-                      ],
+                ),
+                const Positioned(
+                  top: 7,
+                  right: 4,
+                  child: IgnorePointer(
+                    child: Icon(
+                      Icons.swipe_left_rounded,
+                      key: Key('club-statistics-scroll-hint'),
+                      size: 22,
+                      color: AppColors.primaryBright,
                     ),
-                ],
-              ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -735,13 +766,41 @@ class _MedalLeaders extends StatelessWidget {
   }
 }
 
-class _ActivitiesBody extends ConsumerWidget {
-  const _ActivitiesBody({required this.request});
+class _ActivitiesBody extends ConsumerStatefulWidget {
+  const _ActivitiesBody({required this.request, this.targetActivityId});
 
   final ClubActivityFeedRequest request;
+  final String? targetActivityId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ActivitiesBody> createState() => _ActivitiesBodyState();
+}
+
+class _ActivitiesBodyState extends ConsumerState<_ActivitiesBody> {
+  final GlobalKey _targetKey = GlobalKey();
+  Timer? _highlightTimer;
+  bool _scrollScheduled = false;
+  bool _highlightTarget = true;
+
+  @override
+  void didUpdateWidget(covariant _ActivitiesBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.targetActivityId != widget.targetActivityId) {
+      _scrollScheduled = false;
+      _highlightTarget = true;
+      _highlightTimer?.cancel();
+    }
+  }
+
+  @override
+  void dispose() {
+    _highlightTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final request = widget.request;
     if (request.typesKey.isEmpty) {
       return ListView(
         key: const Key('club-activities-empty-selection'),
@@ -763,49 +822,87 @@ class _ActivitiesBody extends ConsumerWidget {
           ),
         ],
       ),
-      data: (ClubActivityFeedState data) => RefreshIndicator(
-        onRefresh: controller.refreshActivities,
-        child: ListView(
-          key: const Key('club-activities-list'),
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-          children: <Widget>[
-            if (data.refreshErrorMessage case final String message) ...[
-              ClubErrorCard(
-                message: message,
-                onRetry: controller.refreshActivities,
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (data.items.isEmpty)
-              const _EmptyCard(message: '선택한 경기 방식의 활동 기록이 없습니다.')
-            else
-              for (final ClubActivityFeedItem activity in data.items) ...[
-                _ActivityFeedCard(
-                  request: request,
-                  activity: activity,
-                  currentMemberId: data.currentMemberId,
+      data: (ClubActivityFeedState data) {
+        _scheduleTargetScroll(data);
+        return RefreshIndicator(
+          onRefresh: controller.refreshActivities,
+          child: ListView(
+            key: const Key('club-activities-list'),
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+            children: <Widget>[
+              if (data.refreshErrorMessage case final String message) ...[
+                ClubErrorCard(
+                  message: message,
+                  onRetry: controller.refreshActivities,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
               ],
-            if (data.isLoadingMore)
-              const Padding(
-                padding: EdgeInsets.all(18),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (data.paginationErrorMessage case final String message)
-              ClubErrorCard(message: message, onRetry: controller.loadNextPage)
-            else if (data.hasNextPage)
-              OutlinedButton.icon(
-                key: const Key('club-activities-load-more'),
-                onPressed: controller.loadNextPage,
-                icon: const Icon(Icons.expand_more_rounded),
-                label: const Text('더 보기'),
-              ),
-          ],
-        ),
-      ),
+              if (data.items.isEmpty)
+                const _EmptyCard(message: '선택한 경기 방식의 활동 기록이 없습니다.')
+              else
+                for (final ClubActivityFeedItem activity in data.items) ...[
+                  Container(
+                    key: activity.id == widget.targetActivityId
+                        ? _targetKey
+                        : null,
+                    child: _ActivityFeedCard(
+                      request: request,
+                      activity: activity,
+                      currentMemberId: data.currentMemberId,
+                      targetHighlighted:
+                          _highlightTarget &&
+                          activity.id == widget.targetActivityId,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              if (data.isLoadingMore)
+                const Padding(
+                  padding: EdgeInsets.all(18),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (data.paginationErrorMessage case final String message)
+                ClubErrorCard(
+                  message: message,
+                  onRetry: controller.loadNextPage,
+                )
+              else if (data.hasNextPage)
+                OutlinedButton.icon(
+                  key: const Key('club-activities-load-more'),
+                  onPressed: controller.loadNextPage,
+                  icon: const Icon(Icons.expand_more_rounded),
+                  label: const Text('더 보기'),
+                ),
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  void _scheduleTargetScroll(ClubActivityFeedState data) {
+    if (_scrollScheduled ||
+        widget.targetActivityId == null ||
+        !data.items.any((item) => item.id == widget.targetActivityId)) {
+      return;
+    }
+    _scrollScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final targetContext = _targetKey.currentContext;
+      if (targetContext == null) return;
+      await Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 300),
+        alignment: 0.12,
+      );
+      if (!mounted) return;
+      _highlightTimer?.cancel();
+      _highlightTimer = Timer(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _highlightTarget = false);
+      });
+    });
   }
 }
 
@@ -816,11 +913,13 @@ class _ActivityFeedCard extends ConsumerStatefulWidget {
     required this.request,
     required this.activity,
     required this.currentMemberId,
+    this.targetHighlighted = false,
   });
 
   final ClubActivityFeedRequest request;
   final ClubActivityFeedItem activity;
   final String? currentMemberId;
+  final bool targetHighlighted;
 
   @override
   ConsumerState<_ActivityFeedCard> createState() => _ActivityFeedCardState();
@@ -839,6 +938,15 @@ class _ActivityFeedCardState extends ConsumerState<_ActivityFeedCard> {
     );
     return Card(
       key: Key('club-activity-${activity.id}'),
+      color: widget.targetHighlighted
+          ? AppColors.primary.withValues(alpha: 0.14)
+          : null,
+      shape: widget.targetHighlighted
+          ? RoundedRectangleBorder(
+              side: const BorderSide(color: AppColors.primaryBright, width: 2),
+              borderRadius: BorderRadius.circular(12),
+            )
+          : null,
       clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
@@ -1016,11 +1124,10 @@ class _ActivityResultTable extends StatelessWidget {
 
   static const double _headerHeight = 38;
   static const double _rowHeight = 46;
-  static const double _fixedWidth = 142;
-  static const double _rankWidth = 48;
-  static const double _scoreWidth = 52;
-  static const double _totalWidth = 68;
-  static const double _averageWidth = 64;
+  static const double _nameWidth = 70;
+  static const double _scoreWidth = 37;
+  static const double _totalWidth = 48;
+  static const double _averageWidth = 48;
 
   final ClubActivityFeedItem activity;
   final int maxGames;
@@ -1033,155 +1140,24 @@ class _ActivityResultTable extends StatelessWidget {
         border: Border.all(color: AppColors.divider),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(9),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: SingleChildScrollView(
+        key: Key('activity-score-scroll-${activity.id}'),
+        scrollDirection: Axis.horizontal,
+        child: Column(
           children: <Widget>[
-            SizedBox(
-              width: _fixedWidth,
-              child: Column(
-                children: <Widget>[
-                  const _FixedTableRow(
-                    height: _headerHeight,
-                    rank: WidgetOrString.text('순위'),
-                    name: WidgetOrString.text('이름'),
-                    header: true,
-                  ),
-                  for (
-                    int index = 0;
-                    index < activity.participants.length;
-                    index++
-                  )
-                    _FixedParticipantRow(
-                      participant: activity.participants[index],
-                      highlighted:
-                          activity.participants[index].id == currentMemberId,
-                      alternate: index.isOdd,
-                    ),
-                ],
+            _ScoreHeader(maxGames: maxGames),
+            for (int index = 0; index < activity.participants.length; index++)
+              _ScoreParticipantRow(
+                participant: activity.participants[index],
+                maxGames: maxGames,
+                highlighted: activity.participants[index].id == currentMemberId,
+                alternate: index.isOdd,
               ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                key: Key('activity-score-scroll-${activity.id}'),
-                scrollDirection: Axis.horizontal,
-                child: Column(
-                  children: <Widget>[
-                    _ScoreHeader(maxGames: maxGames),
-                    for (
-                      int index = 0;
-                      index < activity.participants.length;
-                      index++
-                    )
-                      _ScoreParticipantRow(
-                        participant: activity.participants[index],
-                        maxGames: maxGames,
-                        highlighted:
-                            activity.participants[index].id == currentMemberId,
-                        alternate: index.isOdd,
-                      ),
-                  ],
-                ),
-              ),
-            ),
           ],
         ),
       ),
     );
   }
-}
-
-class _FixedTableRow extends StatelessWidget {
-  const _FixedTableRow({
-    required this.height,
-    required this.rank,
-    required this.name,
-    this.header = false,
-    this.background,
-  });
-
-  final double height;
-  final WidgetOrString rank;
-  final WidgetOrString name;
-  final bool header;
-  final Color? background;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    height: height,
-    color: background ?? (header ? AppColors.surfaceElevated : null),
-    child: Row(
-      children: <Widget>[
-        SizedBox(
-          width: _ActivityResultTable._rankWidth,
-          child: Center(child: _cell(rank, header)),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: _cell(name, header),
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _cell(WidgetOrString value, bool bold) =>
-      value.widget ??
-      Text(
-        value.text!,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: bold ? AppColors.textSecondary : AppColors.textPrimary,
-          fontSize: 12,
-          fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
-        ),
-      );
-}
-
-class WidgetOrString {
-  const WidgetOrString.text(this.text) : widget = null;
-  const WidgetOrString.widget(this.widget) : text = null;
-  final String? text;
-  final Widget? widget;
-}
-
-class _FixedParticipantRow extends StatelessWidget {
-  const _FixedParticipantRow({
-    required this.participant,
-    required this.highlighted,
-    required this.alternate,
-  });
-  final ClubActivityParticipant participant;
-  final bool highlighted;
-  final bool alternate;
-
-  @override
-  Widget build(BuildContext context) => _FixedTableRow(
-    height: _ActivityResultTable._rowHeight,
-    background: _rowColor(highlighted, alternate),
-    rank: WidgetOrString.widget(_RankCell(rank: participant.rank)),
-    name: WidgetOrString.text(participant.name),
-  );
-}
-
-class _RankCell extends StatelessWidget {
-  const _RankCell({required this.rank});
-  final int rank;
-
-  @override
-  Widget build(BuildContext context) => rank <= 3
-      ? Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            BowlingMedalIcon(position: rank, size: 17),
-            Text('$rank', style: const TextStyle(fontSize: 11)),
-          ],
-        )
-      : Text('$rank', style: const TextStyle(fontWeight: FontWeight.w700));
 }
 
 class _ScoreHeader extends StatelessWidget {
@@ -1194,7 +1170,12 @@ class _ScoreHeader extends StatelessWidget {
     color: AppColors.surfaceElevated,
     child: Row(
       children: <Widget>[
-        for (int index = 0; index < maxGames; index++)
+        const _TableCell(
+          width: _ActivityResultTable._nameWidth,
+          text: '이름',
+          header: true,
+        ),
+        for (int index = 0; index < maxGames.clamp(0, 4); index++)
           _TableCell(
             width: _ActivityResultTable._scoreWidth,
             text: '${index + 1}G',
@@ -1210,6 +1191,12 @@ class _ScoreHeader extends StatelessWidget {
           text: 'AVG',
           header: true,
         ),
+        for (int index = 4; index < maxGames; index++)
+          _TableCell(
+            width: _ActivityResultTable._scoreWidth,
+            text: '${index + 1}G',
+            header: true,
+          ),
       ],
     ),
   );
@@ -1233,7 +1220,12 @@ class _ScoreParticipantRow extends StatelessWidget {
     color: _rowColor(highlighted, alternate),
     child: Row(
       children: <Widget>[
-        for (int index = 0; index < maxGames; index++)
+        _TableCell(
+          width: _ActivityResultTable._nameWidth,
+          text: participant.name,
+          tooltip: participant.name,
+        ),
+        for (int index = 0; index < maxGames.clamp(0, 4); index++)
           _TableCell(
             width: _ActivityResultTable._scoreWidth,
             text: index < participant.scores.length
@@ -1251,6 +1243,13 @@ class _ScoreParticipantRow extends StatelessWidget {
           emphasized: true,
           average: true,
         ),
+        for (int index = 4; index < maxGames; index++)
+          _TableCell(
+            width: _ActivityResultTable._scoreWidth,
+            text: index < participant.scores.length
+                ? '${participant.scores[index]}'
+                : '-',
+          ),
       ],
     ),
   );
@@ -1263,28 +1262,37 @@ class _TableCell extends StatelessWidget {
     this.header = false,
     this.emphasized = false,
     this.average = false,
+    this.tooltip,
   });
   final double width;
   final String text;
   final bool header;
   final bool emphasized;
   final bool average;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) => SizedBox(
     width: width,
     child: Center(
-      child: Text(
-        text,
-        maxLines: 1,
-        style: TextStyle(
-          color: average
-              ? AppColors.primaryBright
-              : header
-              ? AppColors.textSecondary
-              : AppColors.textPrimary,
-          fontSize: 12,
-          fontWeight: header || emphasized ? FontWeight.w800 : FontWeight.w500,
+      child: Tooltip(
+        message: tooltip ?? '',
+        excludeFromSemantics: tooltip == null,
+        child: Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: average
+                ? AppColors.primaryBright
+                : header
+                ? AppColors.textSecondary
+                : AppColors.textPrimary,
+            fontSize: 12,
+            fontWeight: header || emphasized
+                ? FontWeight.w800
+                : FontWeight.w500,
+          ),
         ),
       ),
     ),

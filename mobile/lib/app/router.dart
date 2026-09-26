@@ -5,6 +5,7 @@ import 'package:bowlingmanager_mobile/features/admin/presentation/super_admin_sc
 import 'package:bowlingmanager_mobile/features/capture/presentation/capture_screen.dart';
 import 'package:bowlingmanager_mobile/features/capture/presentation/capture_review_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_detail_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_detail_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_form_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_competition_score_screen.dart';
@@ -245,6 +246,13 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                                 'activities' => 2,
                                 _ => 0,
                               },
+                          initialYear: int.tryParse(
+                            state.uri.queryParameters['year'] ?? '',
+                          ),
+                          targetActivityId: state.uri.queryParameters['target'],
+                          targetFilter: _clubRecordFilter(
+                            state.uri.queryParameters['type'],
+                          ),
                         ),
                     routes: <RouteBase>[
                       GoRoute(
@@ -329,4 +337,14 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
 
 class _RouterRefreshNotifier extends ChangeNotifier {
   void refresh() => notifyListeners();
+}
+
+ClubRecordFilter? _clubRecordFilter(String? value) {
+  if (value == null) return null;
+  try {
+    final filter = ClubRecordFilter.fromJson(value);
+    return filter == ClubRecordFilter.all ? null : filter;
+  } on FormatException {
+    return null;
+  }
 }

@@ -153,6 +153,7 @@ test('group pagination happens after complete rows are grouped, so a boundary ca
     const first = await getMobileScoreGroups('user-1', 1, 2, dependencies);
     const second = await getMobileScoreGroups('user-1', 2, 2, dependencies);
     assert.deepEqual(first.items.map(group => group.gameCount), [2, 2]);
+    assert.equal(first.items[0].activityId, '2026-09-22~REGULAR');
     assert.deepEqual(second.items.map(group => group.gameCount), [1]);
     assert.deepEqual(first.pagination, { page: 1, limit: 2, total: 3, totalPages: 2 });
 });

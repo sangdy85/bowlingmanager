@@ -164,7 +164,7 @@ test('dashboard performs fixed batch loads for multiple teams and preserves lega
         id: 'user-a', name: '볼러',
         teamMemberships: [team('one', 'OWNER'), team('two', 'MEMBER')],
     };
-    const record = personal('p-1', 210, day(1), { gameType: null, team: null });
+    const record = personal('p-1', 210, day(1));
     const result = await dashboard.getMobileDashboard('user-a', 2026, {
         findUser: async () => { calls.user += 1; return user; },
         loadPersonal: async () => {
@@ -179,6 +179,7 @@ test('dashboard performs fixed batch loads for multiple teams and preserves lega
         { average: result.average, highScore: result.highScore, gameCount: result.gameCount, recentAverage: result.recentAverage },
         { average: 210, highScore: 210, gameCount: 1, recentAverage: 210 },
     );
+    assert.equal(result.recentSessions[0].activityId, '2026-09-01~REGULAR');
 });
 
 test('dashboard returns the additive next event without changing legacy metrics', async () => {

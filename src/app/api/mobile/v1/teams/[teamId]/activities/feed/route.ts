@@ -3,6 +3,7 @@ import {
     getMobileTeamActivityFeed,
     parseTeamActivitiesPagination,
     parseTeamActivityFeedQuery,
+    parseTargetActivityId,
 } from "@/lib/mobile-api/team-records";
 import {
     internalServerErrorResponse,
@@ -22,7 +23,8 @@ export async function GET(request: Request, context: RouteContext) {
         const searchParams = new URL(request.url).searchParams;
         const query = parseTeamActivityFeedQuery(searchParams);
         const pagination = parseTeamActivitiesPagination(searchParams);
-        if (!query || !pagination) {
+        const targetActivityId = parseTargetActivityId(searchParams);
+        if (!query || !pagination || targetActivityId === undefined) {
             return mobileApiError("INVALID_QUERY", "조회 조건을 확인해주세요.", 400);
         }
         const { teamId } = await context.params;
@@ -32,6 +34,8 @@ export async function GET(request: Request, context: RouteContext) {
             query,
             pagination.page,
             pagination.limit,
+            undefined,
+            targetActivityId,
         );
         if (!feed) return mobileApiError("TEAM_NOT_FOUND", "동호회를 찾을 수 없습니다.", 404);
         return mobileApiSuccess(feed);

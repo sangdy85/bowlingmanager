@@ -25,6 +25,7 @@ abstract interface class ClubRepository {
     required List<ClubRecordFilter> types,
     required int page,
     required int limit,
+    String? targetActivityId,
   });
   Future<ClubActivityDetail> fetchClubActivity({
     required String teamId,
@@ -103,12 +104,14 @@ class MobileClubRepository implements ClubRepository {
     required List<ClubRecordFilter> types,
     required int page,
     required int limit,
+    String? targetActivityId,
   }) => _api.fetchClubActivityFeed(
     teamId: teamId,
     year: year,
     types: types,
     page: page,
     limit: limit,
+    targetActivityId: targetActivityId,
   );
 
   @override

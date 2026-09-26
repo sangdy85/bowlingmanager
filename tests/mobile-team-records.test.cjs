@@ -321,6 +321,26 @@ test('feed query accepts comma and repeated types, normalizes taxonomy order and
     );
     assert.equal(service.parseTeamActivityFeedQuery(new URLSearchParams('year=2026&types=ALL')), null);
     assert.equal(service.parseTeamActivityFeedQuery(new URLSearchParams('year=2026&types=LEAGUE')), null);
+    assert.equal(service.parseTargetActivityId(new URLSearchParams()), null);
+    assert.equal(
+        service.parseTargetActivityId(new URLSearchParams('target=2026-09-19~REGULAR')),
+        '2026-09-19~REGULAR',
+    );
+    assert.equal(service.parseTargetActivityId(new URLSearchParams('target=../../bad')), undefined);
+    assert.equal(
+        service.parseTargetActivityId(new URLSearchParams('target=2026-09-19~REGULAR&target=2026-09-18~REGULAR')),
+        undefined,
+    );
+});
+
+test('expanded feed resolves the page containing a stable target activity', async () => {
+    const result = await service.getMobileTeamActivityFeed(
+        'user-a', 'team-1', { year: 2026, types: ['REGULAR'] }, 1, 1,
+        dependencies(), '2026-02-11~REGULAR',
+    );
+    assert.equal(result.pagination.page, 2);
+    assert.equal(result.items[0].id, '2026-02-11~REGULAR');
+    assert.equal(result.targetFound, true);
 });
 
 test('expanded feed paginates complete activities, exposes only membership identity and computes manager permission', async () => {
@@ -435,16 +455,23 @@ test('expanded feed route authenticates, validates and returns the standard enve
     route = loadTs('src/app/api/mobile/v1/teams/[teamId]/activities/feed/route.ts', routeOverrides({
         parseTeamActivityFeedQuery: () => null,
         parseTeamActivitiesPagination: () => ({ page: 1, limit: 10 }),
+        parseTargetActivityId: () => null,
     }));
     assert.equal((await route.GET(new Request('https://example.test'), context)).status, 400);
+    let receivedTarget;
     route = loadTs('src/app/api/mobile/v1/teams/[teamId]/activities/feed/route.ts', routeOverrides({
         parseTeamActivityFeedQuery: () => ({ year: 2026, types: ['REGULAR'] }),
         parseTeamActivitiesPagination: () => ({ page: 1, limit: 10 }),
-        getMobileTeamActivityFeed: async () => ({ items: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } }),
+        parseTargetActivityId: () => '2026-09-19~REGULAR',
+        getMobileTeamActivityFeed: async (...args) => {
+            receivedTarget = args[6];
+            return { items: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } };
+        },
     }));
-    const response = await route.GET(new Request('https://example.test'), context);
+    const response = await route.GET(new Request('https://example.test?target=2026-09-19~REGULAR'), context);
     assert.equal(response.status, 200);
     assert.equal((await response.json()).success, true);
+    assert.equal(receivedTarget, '2026-09-19~REGULAR');
 });
 
 test('mobile helper output matches the legacy web calculation fixture', () => {

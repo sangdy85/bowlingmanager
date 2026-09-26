@@ -495,32 +495,30 @@ class _SummaryCard extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
-        child: Column(
-          children: <Widget>[
-            Text(
-              label,
-              style: AppTextStyles.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+      child: Column(
+        children: <Widget>[
+          Text(
+            label,
+            style: AppTextStyles.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 7),
+          Text(
+            value,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
             ),
-            const SizedBox(height: 7),
-            Text(
-              value,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _ClubAchievementCard extends StatelessWidget {
@@ -1134,98 +1132,104 @@ class _RecentGameCard extends StatelessWidget {
     final String teamName = session.team?.name.trim().isNotEmpty == true
         ? session.team!.name.trim()
         : '개인 기록';
+    final String? activityRoute = clubActivityRouteForSession(session);
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(99),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: Key('home-session-${session.id}'),
+        onTap: activityRoute == null ? null : () => context.go(activityRoute),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  gameType,
+                  style: const TextStyle(
+                    color: AppColors.primaryBright,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
-              child: Text(
-                gameType,
+              const SizedBox(height: 8),
+              Text(
+                teamName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: AppColors.primaryBright,
-                  fontSize: 12,
+                  color: AppColors.textPrimary,
+                  fontSize: 17,
                   fontWeight: FontWeight.w800,
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              teamName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
+              const SizedBox(height: 5),
+              Text(
+                _formatDate(session.gameDate),
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                ),
               ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              _formatDate(session.gameDate),
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: session.scores
-                  .map(
-                    (GameSessionScore item) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 11,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceElevated,
-                        borderRadius: BorderRadius.circular(9),
-                        border: Border.all(color: AppColors.divider),
-                      ),
-                      child: Text(
-                        '${item.score}',
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: session.scores
+                    .map(
+                      (GameSessionScore item) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 11,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceElevated,
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(color: AppColors.divider),
+                        ),
+                        child: Text(
+                          '${item.score}',
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
+                    )
+                    .toList(growable: false),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 18,
+                runSpacing: 8,
+                children: <Widget>[
+                  Text('${session.gameCount}게임'),
+                  Text(
+                    '총점 ${session.total}',
+                    style: const TextStyle(
+                      color: AppColors.primaryBright,
+                      fontWeight: FontWeight.w800,
                     ),
-                  )
-                  .toList(growable: false),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 18,
-              runSpacing: 8,
-              children: <Widget>[
-                Text('${session.gameCount}게임'),
-                Text(
-                  '총점 ${session.total}',
-                  style: const TextStyle(
-                    color: AppColors.primaryBright,
-                    fontWeight: FontWeight.w800,
                   ),
-                ),
-                Text(
-                  'AVG ${session.average.toStringAsFixed(1)}',
-                  style: const TextStyle(
-                    color: AppColors.primaryBright,
-                    fontWeight: FontWeight.w800,
+                  Text(
+                    'AVG ${session.average.toStringAsFixed(1)}',
+                    style: const TextStyle(
+                      color: AppColors.primaryBright,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

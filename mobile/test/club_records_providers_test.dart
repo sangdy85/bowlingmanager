@@ -166,14 +166,22 @@ void main() {
         teamId: 'team-1',
         year: 2026,
         typesKey: 'REGULAR,CASUAL,HOUSE',
+        targetActivityId: null,
       ),
       (
         userId: 'user-2',
         teamId: 'team-1',
         year: 2026,
         typesKey: 'REGULAR,CASUAL,HOUSE',
+        targetActivityId: null,
       ),
-      (userId: 'user-1', teamId: 'team-1', year: 2026, typesKey: 'REGULAR'),
+      (
+        userId: 'user-1',
+        teamId: 'team-1',
+        year: 2026,
+        typesKey: 'REGULAR',
+        targetActivityId: null,
+      ),
     ]) {
       repository.activityFeed = ClubActivityFeedPage(
         year: 2026,
@@ -230,6 +238,7 @@ void main() {
         teamId: 'team-1',
         year: 2026,
         typesKey: 'REGULAR',
+        targetActivityId: null,
       );
       final provider = clubActivityFeedControllerProvider(request);
       await container.read(provider.future);
@@ -253,6 +262,36 @@ void main() {
         container.read(provider).value!.items.map((item) => item.id),
         <String>[testClubActivity.id, second.id],
       );
+    },
+  );
+
+  test(
+    'expanded feed asks the server to resolve a target activity page',
+    () async {
+      final FakeClubRepository repository = FakeClubRepository()
+        ..activityFeed = testClubActivityFeedPage(page: 3, totalPages: 4);
+      final ProviderContainer container = ProviderContainer(
+        overrides: [clubRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+      const ClubActivityFeedRequest request = (
+        userId: 'user-1',
+        teamId: 'team-1',
+        year: 2026,
+        typesKey: 'REGULAR',
+        targetActivityId: '2026-09-19~REGULAR',
+      );
+
+      final ClubActivityFeedState state = await container.read(
+        clubActivityFeedControllerProvider(request).future,
+      );
+
+      expect(repository.requestedActivityFeedPages, <int>[1]);
+      expect(repository.requestedActivityFeedTargets, <String?>[
+        '2026-09-19~REGULAR',
+      ]);
+      expect(state.page, 3);
+      expect(state.items.single.id, testClubActivityFeedItem.id);
     },
   );
 }

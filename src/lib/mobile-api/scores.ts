@@ -13,7 +13,9 @@ import {
 } from "@/lib/personal-statistics";
 import {
     createTeamActivityDetail,
+    createTeamActivityId,
     teamActivityDateKey,
+    teamRecordFilterForGameType,
     type TeamRecordMember,
     type TeamRecordScore,
 } from "@/lib/team-records";
@@ -248,7 +250,17 @@ export async function getMobileScoreGroups(
     return {
         items: ranked.map((group) => {
             const taxonomy = recordTaxonomy(group);
-            return { ...group, year: group.gameDate.getUTCFullYear(), ...taxonomy };
+            const activityFilter = group.source === "PERSONAL" && group.team
+                ? teamRecordFilterForGameType(group.gameType)
+                : null;
+            return {
+                ...group,
+                activityId: activityFilter
+                    ? createTeamActivityId(teamActivityDateKey(group.gameDate), activityFilter)
+                    : null,
+                year: group.gameDate.getUTCFullYear(),
+                ...taxonomy,
+            };
         }),
         availableYears,
         pagination: {

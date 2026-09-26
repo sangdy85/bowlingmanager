@@ -10,6 +10,7 @@ class GameSession {
     required this.average,
     required this.gameCount,
     this.rank,
+    this.activityId,
   });
 
   final String id;
@@ -22,6 +23,7 @@ class GameSession {
   final double average;
   final int gameCount;
   final GameSessionRank? rank;
+  final String? activityId;
 
   factory GameSession.fromJson(
     Map<String, dynamic> json, {
@@ -37,6 +39,7 @@ class GameSession {
     final Object? average = json['average'];
     final Object? gameCount = json['gameCount'];
     final Object? rank = json['rank'];
+    final Object? activityId = json['activityId'];
     final DateTime? parsedDate = gameDate is String
         ? DateTime.tryParse(gameDate)
         : null;
@@ -53,7 +56,8 @@ class GameSession {
         !average.isFinite ||
         gameCount is! int ||
         gameCount != scores.length ||
-        (rank != null && rank is! Map)) {
+        (rank != null && rank is! Map) ||
+        (activityId != null && (activityId is! String || activityId.isEmpty))) {
       throw const FormatException('Invalid game session response.');
     }
 
@@ -94,6 +98,7 @@ class GameSession {
       rank: rank == null
           ? null
           : GameSessionRank.fromJson(Map<String, dynamic>.from(rank as Map)),
+      activityId: activityId as String?,
     );
   }
 }
@@ -185,4 +190,22 @@ enum GameSessionSource {
     }
     throw const FormatException('Invalid game session source.');
   }
+}
+
+String? clubActivityRouteForSession(GameSession session) {
+  final team = session.team;
+  final activityId = session.activityId;
+  if (team == null || activityId == null) return null;
+  final match = RegExp(r'^(\d{4})-\d{2}-\d{2}~([A-Z]+)$')
+      .firstMatch(activityId);
+  if (match == null) return null;
+  return Uri(
+    path: '/club/${Uri.encodeComponent(team.id)}/records',
+    queryParameters: <String, String>{
+      'section': 'activities',
+      'year': match.group(1)!,
+      'type': match.group(2)!,
+      'target': activityId,
+    },
+  ).toString();
 }

@@ -213,6 +213,7 @@ void main() {
       ],
       page: 1,
       limit: 10,
+      targetActivityId: '2026-09-19~REGULAR',
     );
 
     expect(statistics.members.single.average, 205);
@@ -231,6 +232,7 @@ void main() {
       'types': 'REGULAR,CASUAL',
       'page': 1,
       'limit': 10,
+      'target': '2026-09-19~REGULAR',
     });
   });
 

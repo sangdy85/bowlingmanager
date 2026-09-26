@@ -9,6 +9,7 @@ import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart'
 import 'package:bowlingmanager_mobile/shared/widgets/bowling_medal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class RecordsScreen extends ConsumerWidget {
   const RecordsScreen({super.key});
@@ -482,122 +483,129 @@ class _RecordCard extends StatelessWidget {
         .where((String memo) => memo.isNotEmpty)
         .toSet()
         .toList(growable: false);
+    final String? activityRoute = clubActivityRouteForSession(session);
 
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        '${_formatGameDate(session.gameDate)} · $gameType',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
+      child: InkWell(
+        key: Key('record-session-${session.id}'),
+        onTap: activityRoute == null ? null : () => context.push(activityRoute),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          '${_formatGameDate(session.gameDate)} · $gameType',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        teamName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
+                        const SizedBox(height: 6),
+                        Text(
+                          teamName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                if (session.rank case final GameSessionRank rank) ...<Widget>[
-                  const SizedBox(width: 12),
-                  _RecordRankBadge(rank: rank),
+                  if (session.rank case final GameSessionRank rank) ...<Widget>[
+                    const SizedBox(width: 12),
+                    _RecordRankBadge(rank: rank),
+                  ],
                 ],
-              ],
-            ),
-            const SizedBox(height: 14),
-            SingleChildScrollView(
-              key: Key('record-scores-${session.id}'),
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: session.scores
-                    .map(
-                      (GameSessionScore item) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Container(
-                          constraints: const BoxConstraints(minWidth: 48),
-                          alignment: Alignment.center,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 9,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceElevated,
-                            borderRadius: BorderRadius.circular(9),
-                            border: Border.all(color: AppColors.divider),
-                          ),
-                          child: Text(
-                            '${item.score}',
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
+              ),
+              const SizedBox(height: 14),
+              SingleChildScrollView(
+                key: Key('record-scores-${session.id}'),
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: session.scores
+                      .map(
+                        (GameSessionScore item) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Container(
+                            constraints: const BoxConstraints(minWidth: 48),
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 9,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceElevated,
+                              borderRadius: BorderRadius.circular(9),
+                              border: Border.all(color: AppColors.divider),
+                            ),
+                            child: Text(
+                              '${item.score}',
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    )
-                    .toList(growable: false),
-              ),
-            ),
-            const SizedBox(height: 14),
-            const Divider(height: 1),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: <Widget>[
-                _SummaryBadge(
-                  label: 'AVG ${session.average.toStringAsFixed(1)}',
-                  emphasized: true,
+                      )
+                      .toList(growable: false),
                 ),
-                _SummaryBadge(label: '총핀 ${session.total}', emphasized: true),
-                _SummaryBadge(label: '${session.gameCount}게임'),
-              ],
-            ),
-            if (memos.isNotEmpty) ...<Widget>[
+              ),
               const SizedBox(height: 14),
               const Divider(height: 1),
-              const SizedBox(height: 12),
-              if (memos.length == 1)
-                Text(
-                  memos.single,
-                  style: const TextStyle(color: AppColors.textSecondary),
-                )
-              else
-                for (final GameSessionScore item in session.scores)
-                  if (item.memo?.trim().isNotEmpty == true)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        '${item.score} · ${item.memo!.trim()}',
-                        style: const TextStyle(color: AppColors.textSecondary),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: <Widget>[
+                  _SummaryBadge(
+                    label: 'AVG ${session.average.toStringAsFixed(1)}',
+                    emphasized: true,
+                  ),
+                  _SummaryBadge(label: '총핀 ${session.total}', emphasized: true),
+                  _SummaryBadge(label: '${session.gameCount}게임'),
+                ],
+              ),
+              if (memos.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 14),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                if (memos.length == 1)
+                  Text(
+                    memos.single,
+                    style: const TextStyle(color: AppColors.textSecondary),
+                  )
+                else
+                  for (final GameSessionScore item in session.scores)
+                    if (item.memo?.trim().isNotEmpty == true)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          '${item.score} · ${item.memo!.trim()}',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
                       ),
-                    ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
