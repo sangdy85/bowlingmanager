@@ -244,6 +244,8 @@ class ClubSeasonPointEntry {
     required this.points,
     required this.month,
     this.participationStatus = 'PARTICIPATED',
+    this.sourceType = 'AUTOMATIC',
+    this.reason,
   });
   final String id;
   final String? eventId;
@@ -254,6 +256,8 @@ class ClubSeasonPointEntry {
   final int points;
   final int month;
   final String participationStatus;
+  final String sourceType;
+  final String? reason;
 
   factory ClubSeasonPointEntry.fromJson(Map<String, dynamic> json) {
     final date = DateTime.tryParse(json['competitionDate'] as String? ?? '');
@@ -263,6 +267,7 @@ class ClubSeasonPointEntry {
           'INDIVIDUAL',
           'TEAM',
           'EVENT',
+          'MANUAL_ADJUSTMENT',
         }.contains(json['competitionType']) ||
         date == null ||
         json['competitionTitle'] is! String ||
@@ -274,7 +279,12 @@ class ClubSeasonPointEntry {
         !const <String>{
           'PARTICIPATED',
           'ABSENT',
-        }.contains(json['participationStatus'] ?? 'PARTICIPATED')) {
+        }.contains(json['participationStatus'] ?? 'PARTICIPATED') ||
+        !const <String>{
+          'AUTOMATIC',
+          'MANUAL_ADJUSTMENT',
+        }.contains(json['sourceType'] ?? 'AUTOMATIC') ||
+        (json['reason'] != null && json['reason'] is! String)) {
       throw const FormatException('Invalid season point entry.');
     }
     return ClubSeasonPointEntry(
@@ -288,6 +298,8 @@ class ClubSeasonPointEntry {
       month: json['month'] as int,
       participationStatus:
           (json['participationStatus'] ?? 'PARTICIPATED') as String,
+      sourceType: (json['sourceType'] ?? 'AUTOMATIC') as String,
+      reason: json['reason'] as String?,
     );
   }
 }
@@ -350,6 +362,7 @@ class ClubSeasonRankingRow {
     this.individualPoints = 0,
     this.teamPoints = 0,
     this.eventPoints = 0,
+    this.adjustmentPoints = 0,
     this.competitionsPlayed = 0,
     this.individualWins = 0,
     this.teamWins = 0,
@@ -370,6 +383,7 @@ class ClubSeasonRankingRow {
   final int individualPoints;
   final int teamPoints;
   final int eventPoints;
+  final int adjustmentPoints;
   final int competitionsPlayed;
   final int individualWins;
   final int teamWins;
@@ -393,6 +407,7 @@ class ClubSeasonRankingRow {
         (json['individualPoints'] ?? 0) is! int ||
         (json['teamPoints'] ?? 0) is! int ||
         (json['eventPoints'] ?? 0) is! int ||
+        (json['adjustmentPoints'] ?? 0) is! int ||
         (json['competitionsPlayed'] ?? json['attended']) is! int ||
         (json['individualWins'] ?? 0) is! int ||
         (json['teamWins'] ?? 0) is! int ||
@@ -419,6 +434,7 @@ class ClubSeasonRankingRow {
       individualPoints: (json['individualPoints'] ?? 0) as int,
       teamPoints: (json['teamPoints'] ?? 0) as int,
       eventPoints: (json['eventPoints'] ?? 0) as int,
+      adjustmentPoints: (json['adjustmentPoints'] ?? 0) as int,
       competitionsPlayed:
           (json['competitionsPlayed'] ?? json['attended']) as int,
       individualWins: (json['individualWins'] ?? 0) as int,

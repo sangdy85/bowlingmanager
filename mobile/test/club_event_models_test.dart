@@ -3,6 +3,42 @@ import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('TEAM draft serializes independent game point tables', () {
+    const draft = ClubEventDraft(
+      title: '팀전',
+      date: '2026-09-26',
+      time: '19:00',
+      location: '볼링장',
+      gameType: '정기전',
+      attendanceEnabled: true,
+      laneDrawEnabled: true,
+      laneDrawMode: ClubEventDrawMode.bulk,
+      competitionEnabled: true,
+      competitionType: ClubCompetitionType.team,
+      competitionMode: ClubCompetitionMode.official,
+      competitionGameCount: 2,
+      teamGamePointTables: <ClubTeamGamePointTable>[
+        ClubTeamGamePointTable(
+          gameNumber: 1,
+          points: <ClubRankPoint>[ClubRankPoint(rank: 1, points: 5)],
+        ),
+        ClubTeamGamePointTable(
+          gameNumber: 2,
+          points: <ClubRankPoint>[ClubRankPoint(rank: 1, points: 6)],
+        ),
+      ],
+    );
+    final json = draft.toJson();
+    expect(json['rankPoints'], isEmpty);
+    expect((json['teamGamePointTables'] as List).length, 2);
+    expect(
+      ((json['teamGamePointTables'] as List)[1] as Map)['points'],
+      <Map<String, int>>[
+        <String, int>{'rank': 1, 'points': 6},
+      ],
+    );
+  });
+
   test(
     'competition mode keeps OFFICIAL and MINI separate from competition type',
     () {

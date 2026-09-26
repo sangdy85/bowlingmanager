@@ -1,7 +1,6 @@
 import { randomInt } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
-import { readRankPoints } from "@/lib/mobile-api/bowler-hidden";
 import {
     createSeasonPointPublication,
     getPublicationPointTable,
@@ -9,6 +8,7 @@ import {
     revokeSeasonPointPublication,
     seasonPointsForRank,
 } from "@/lib/mobile-api/unified-season";
+import { readTeamGamePointTables } from "@/lib/mobile-api/team-game-points";
 
 type Direction = "FORWARD" | "REVERSE";
 type LaneSlot = { id: string; laneNumber: number; position: number };
@@ -619,12 +619,14 @@ async function calculateResults(event: CompetitionEvent, db: ScoreReader = prism
         if (!key) continue;
         const values = scoresByParticipant.get(key); if (values) values.push(row.score); else scoresByParticipant.set(key, [row.score]);
     }
-    const gameCount = Math.max(0, ...participants.map((item) => scoresByParticipant.get(participantKey(item))?.length ?? 0));
+    const gameCount = event.competitionGameCount
+        ?? Math.max(0, ...participants.map((item) => scoresByParticipant.get(participantKey(item))?.length ?? 0));
     const complete = gameCount > 0 && participants.every((item) => (scoresByParticipant.get(participantKey(item))?.length ?? 0) === gameCount);
     const effectivePlayerCount = Math.min(...teams.map((team) => team.participants.length));
-    const points = new Map(readRankPoints(event.rankPoints).map((item) => [item.rank, item.points]));
+    const gamePointTables = readTeamGamePointTables(event.rankPoints, gameCount);
     const teamTotals = new Map(teams.map((team) => [team.id, { points: 0, raw: 0, effective: 0, applied: 0 }]));
     const games = Array.from({ length: gameCount }, (_, gameIndex) => {
+        const points = new Map(gamePointTables[gameIndex].points.map((item) => [item.rank, item.points]));
         const values = teams.map((team) => {
             const teamScores = team.participants.map((item) => scoresByParticipant.get(participantKey(item))?.[gameIndex] ?? null);
             if (teamScores.some((score) => score === null)) return { teamId: team.id, teamName: team.name, complete: false, rawTeamTotal: null, excludedScores: [], normalizedTeamTotal: null, handicapAppliedTotal: null, rank: null, points: null };

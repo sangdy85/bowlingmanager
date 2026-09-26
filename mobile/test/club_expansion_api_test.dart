@@ -9,6 +9,24 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('parses signed manual season ledger entries additively', () {
+    final entry = ClubSeasonPointEntry.fromJson(<String, Object?>{
+      'id': 'adjustment-1',
+      'eventId': null,
+      'competitionType': 'MANUAL_ADJUSTMENT',
+      'competitionDate': '2026-09-20T03:00:00.000Z',
+      'competitionTitle': '운영 보정',
+      'finalRank': null,
+      'points': -10,
+      'month': 9,
+      'sourceType': 'MANUAL_ADJUSTMENT',
+      'reason': '잘못 지급 수정',
+    });
+    expect(entry.points, -10);
+    expect(entry.sourceType, 'MANUAL_ADJUSTMENT');
+    expect(entry.reason, '잘못 지급 수정');
+  });
+
   test('uses protected member, profile, ranking and board paths', () async {
     final requests = <RequestOptions>[];
     final dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
@@ -33,6 +51,8 @@ void main() {
           },
           ('GET', '/teams/team-1/season-ranking/members/member-1') =>
             <String, Object?>{'member': _rankingRowJson()},
+          ('POST', '/teams/team-1/seasons/season-1/point-adjustments') =>
+            <String, Object?>{'totalPoints': 40},
           ('GET', '/teams/team-1/posts') => <String, Object?>{
             'items': <Object>[],
             'pagination': <String, int>{
@@ -68,6 +88,16 @@ void main() {
       seasonId: 'season-1',
       competitionType: 'TEAM',
     );
+    expect(
+      await api.createSeasonPointAdjustment(
+        'team-1',
+        'season-1',
+        memberId: 'member-1',
+        delta: -10,
+        reason: '잘못 지급된 포인트 수정',
+      ),
+      40,
+    );
     await api.fetchPosts('team-1', 1);
     await api.fetchPost('team-1', 'post-1');
     await api.savePost('team-1', title: '제목', content: '본문');
@@ -78,6 +108,7 @@ void main() {
       requests.map((item) => '${item.method} ${item.path}'),
       containsAll(<String>[
         'GET /teams/team-1/members/member-1',
+        'POST /teams/team-1/seasons/season-1/point-adjustments',
         'GET /teams/team-1/profile',
         'PATCH /teams/team-1/profile',
         'GET /teams/team-1/season-ranking',
@@ -89,6 +120,14 @@ void main() {
         'DELETE /teams/team-1/posts/post-1',
       ]),
     );
+    final adjustment = requests.singleWhere(
+      (item) => item.path.endsWith('/point-adjustments'),
+    );
+    expect(adjustment.data, <String, Object>{
+      'memberId': 'member-1',
+      'delta': -10,
+      'reason': '잘못 지급된 포인트 수정',
+    });
     expect(requests.first.queryParameters['year'], 2026);
     expect(
       requests

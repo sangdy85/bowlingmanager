@@ -291,6 +291,7 @@ class _SeasonMemberSheet extends ConsumerWidget {
                   Text('개인 ${member.individualPoints}P'),
                   Text('팀 ${member.teamPoints}P'),
                   Text('이벤트 ${member.eventPoints}P'),
+                  Text('조정 ${_signedPoints(member.adjustmentPoints)}P'),
                 ],
               ),
               const Divider(height: 28),
@@ -300,12 +301,14 @@ class _SeasonMemberSheet extends ConsumerWidget {
                 for (final entry in member.entries)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(entry.competitionTitle),
+                    title: Text(entry.reason ?? entry.competitionTitle),
                     subtitle: Text(
-                      '${entry.month}월 · ${_type(entry.competitionType)} · '
-                      '${entry.finalRank == null ? '순위 없음' : '${entry.finalRank}위'}',
+                      entry.sourceType == 'MANUAL_ADJUSTMENT'
+                          ? '${entry.month}월 · 수동 조정'
+                          : '${entry.month}월 · ${_type(entry.competitionType)} · '
+                                '${entry.finalRank == null ? '순위 없음' : '${entry.finalRank}위'}',
                     ),
-                    trailing: Text('+${entry.points}P'),
+                    trailing: Text('${_signedPoints(entry.points)}P'),
                     onTap: entry.eventId == null
                         ? null
                         : () {
@@ -334,11 +337,15 @@ class _Empty extends StatelessWidget {
 }
 
 String _entryLabel(ClubSeasonPointEntry entry) =>
-    '${_type(entry.competitionType)} ${entry.finalRank == null ? '-' : '${entry.finalRank}위'}(+${entry.points})';
+    entry.sourceType == 'MANUAL_ADJUSTMENT'
+    ? '조정(${_signedPoints(entry.points)})'
+    : '${_type(entry.competitionType)} ${entry.finalRank == null ? '-' : '${entry.finalRank}위'}(${_signedPoints(entry.points)})';
+String _signedPoints(int value) => value > 0 ? '+$value' : '$value';
 String _type(String value) => switch (value) {
   'INDIVIDUAL' => '개인전',
   'TEAM' => '팀전',
   'EVENT' => '이벤트전',
+  'MANUAL_ADJUSTMENT' => '수동 조정',
   _ => value,
 };
 String _status(String value) => switch (value) {

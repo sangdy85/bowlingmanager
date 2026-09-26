@@ -5,6 +5,7 @@ import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -23,9 +24,9 @@ class _ClubTeamSettingsScreenState
   final _seasonName = TextEditingController();
   final _start = TextEditingController();
   final _end = TextEditingController();
-  final _individualPoints = TextEditingController();
-  final _teamPoints = TextEditingController();
-  final _eventPoints = TextEditingController();
+  List<int> _individualPoints = <int>[];
+  List<int> _teamPoints = <int>[];
+  List<int> _eventPoints = <int>[];
   bool _initialized = false;
   bool _ranking = false;
   bool _saving = false;
@@ -38,9 +39,6 @@ class _ClubTeamSettingsScreenState
       _seasonName,
       _start,
       _end,
-      _individualPoints,
-      _teamPoints,
-      _eventPoints,
     ]) {
       c.dispose();
     }
@@ -67,18 +65,20 @@ class _ClubTeamSettingsScreenState
             if (!_initialized) {
               _description.text = profile.description ?? '';
               _notice.text = profile.notice ?? '';
-              _ranking = profile.seasonRankingEnabled;
+              _ranking = profile.bowlerHiddenEnabled
+                  ? true
+                  : profile.seasonRankingEnabled;
               final season = profile.activeSeason;
               if (season != null) {
                 _seasonName.text = season.name;
                 _start.text = _date(season.startDate);
                 _end.text = _date(season.endDate);
                 _mode = season.scoringMode;
-                _individualPoints.text = profile.bowlerHiddenEnabled
+                _individualPoints = profile.bowlerHiddenEnabled
                     ? _formatPoints(season.individualPoints)
-                    : season.points.join(',');
-                _teamPoints.text = _formatPoints(season.teamPoints);
-                _eventPoints.text = _formatPoints(season.eventPoints);
+                    : <int>[...season.points];
+                _teamPoints = _formatPoints(season.teamPoints);
+                _eventPoints = _formatPoints(season.eventPoints);
               }
               _initialized = true;
             }
@@ -114,11 +114,12 @@ class _ClubTeamSettingsScreenState
                   decoration: const InputDecoration(labelText: '공지 사항'),
                 ),
                 if (canManage) ...<Widget>[
-                  SwitchListTile(
-                    title: const Text('시즌제 순위표 활성화'),
-                    value: _ranking,
-                    onChanged: (value) => setState(() => _ranking = value),
-                  ),
+                  if (!profile.bowlerHiddenEnabled)
+                    SwitchListTile(
+                      title: const Text('시즌제 순위표 활성화'),
+                      value: _ranking,
+                      onChanged: (value) => setState(() => _ranking = value),
+                    ),
                   if (_ranking) ...<Widget>[
                     TextField(
                       controller: _seasonName,
@@ -145,51 +146,63 @@ class _ClubTeamSettingsScreenState
                         ),
                       ],
                     ),
-                    DropdownButtonFormField<String>(
-                      key: const Key('season-scoring-mode'),
-                      initialValue: _mode,
-                      items: const <DropdownMenuItem<String>>[
-                        DropdownMenuItem(
-                          value: 'PODIUM',
-                          child: Text('입상 포인트'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'FULL_RANK',
-                          child: Text('전체 순위 포인트'),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) setState(() => _mode = value);
-                      },
-                      decoration: const InputDecoration(labelText: '점수 방식'),
-                    ),
-                    TextField(
+                    if (!profile.bowlerHiddenEnabled)
+                      DropdownButtonFormField<String>(
+                        key: const Key('season-scoring-mode'),
+                        initialValue: _mode,
+                        items: const <DropdownMenuItem<String>>[
+                          DropdownMenuItem(
+                            value: 'PODIUM',
+                            child: Text('입상 포인트'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'FULL_RANK',
+                            child: Text('전체 순위 포인트'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) setState(() => _mode = value);
+                        },
+                        decoration: const InputDecoration(labelText: '점수 방식'),
+                      ),
+                    _SeasonPointTableEditor(
                       key: Key(
                         profile.bowlerHiddenEnabled
                             ? 'season-individual-points'
                             : 'season-general-points',
                       ),
-                      controller: _individualPoints,
-                      decoration: InputDecoration(
-                        labelText: profile.bowlerHiddenEnabled
-                            ? '개인전 순위별 포인트 (예: 50,40,30)'
-                            : '순위별 포인트 (예: 5,3,1)',
-                      ),
+                      title: profile.bowlerHiddenEnabled
+                          ? '개인전 시즌 순위 포인트'
+                          : '시즌 순위 포인트',
+                      points: _individualPoints,
+                      onChanged: (value) =>
+                          setState(() => _individualPoints = value),
                     ),
                     if (profile.bowlerHiddenEnabled) ...<Widget>[
-                      TextField(
+                      _SeasonPointTableEditor(
                         key: const Key('season-team-points'),
-                        controller: _teamPoints,
-                        decoration: const InputDecoration(
-                          labelText: '팀전 순위별 포인트 (예: 35,20,10,5)',
-                        ),
+                        title: '팀전 시즌 순위 포인트',
+                        points: _teamPoints,
+                        onChanged: (value) =>
+                            setState(() => _teamPoints = value),
                       ),
-                      TextField(
+                      _SeasonPointTableEditor(
                         key: const Key('season-event-points'),
-                        controller: _eventPoints,
-                        decoration: const InputDecoration(
-                          labelText: '이벤트전 순위별 포인트 (예: 50,40,30)',
-                        ),
+                        title: '이벤트전 시즌 순위 포인트',
+                        points: _eventPoints,
+                        onChanged: (value) =>
+                            setState(() => _eventPoints = value),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        key: const Key('season-point-management-link'),
+                        onPressed: profile.activeSeason == null
+                            ? null
+                            : () => context.push(
+                                '/club/${Uri.encodeComponent(widget.teamId)}/manage/team/season-points',
+                              ),
+                        icon: const Icon(Icons.tune),
+                        label: const Text('포인트 관리'),
                       ),
                     ],
                   ],
@@ -218,7 +231,9 @@ class _ClubTeamSettingsScreenState
       };
       if (profile.myRole == ClubRole.owner ||
           profile.myRole == ClubRole.manager) {
-        body['seasonRankingEnabled'] = _ranking;
+        body['seasonRankingEnabled'] = profile.bowlerHiddenEnabled
+            ? true
+            : _ranking;
         if (_ranking) {
           body['season'] = <String, dynamic>{
             if (profile.activeSeason != null) 'id': profile.activeSeason!.id,
@@ -228,12 +243,12 @@ class _ClubTeamSettingsScreenState
             'scoringMode': _mode,
             if (profile.bowlerHiddenEnabled)
               'pointTables': <String, Object>{
-                'individual': _parsePoints(_individualPoints.text),
-                'team': _parsePoints(_teamPoints.text),
-                'event': _parsePoints(_eventPoints.text),
+                'individual': _pointRows(_individualPoints),
+                'team': _pointRows(_teamPoints),
+                'event': _pointRows(_eventPoints),
               }
             else
-              'points': _parsePoints(_individualPoints.text),
+              'points': _individualPoints,
           };
         }
       }
@@ -260,11 +275,74 @@ class _ClubTeamSettingsScreenState
 String _date(DateTime value) =>
     '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
 
-String _formatPoints(List<ClubSeasonRankPoint> points) =>
-    points.map((item) => item.points).join(',');
+List<int> _formatPoints(List<ClubSeasonRankPoint> points) =>
+    points.map((item) => item.points).toList();
 
-List<int> _parsePoints(String value) => value
-    .split(',')
-    .map((item) => int.tryParse(item.trim()))
-    .whereType<int>()
-    .toList();
+List<Map<String, int>> _pointRows(List<int> points) =>
+    List<Map<String, int>>.generate(
+      points.length,
+      (int index) => <String, int>{'rank': index + 1, 'points': points[index]},
+    );
+
+class _SeasonPointTableEditor extends StatelessWidget {
+  const _SeasonPointTableEditor({
+    super.key,
+    required this.title,
+    required this.points,
+    required this.onChanged,
+  });
+
+  final String title;
+  final List<int> points;
+  final ValueChanged<List<int>> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+          for (int index = 0; index < points.length; index++)
+            Row(
+              children: <Widget>[
+                SizedBox(width: 54, child: Text('${index + 1}위')),
+                Expanded(
+                  child: TextFormField(
+                    key: ValueKey<String>('$title-${index + 1}'),
+                    initialValue: '${points[index]}',
+                    keyboardType: TextInputType.number,
+                    inputFormatters: <TextInputFormatter>[
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    decoration: const InputDecoration(labelText: '포인트'),
+                    onChanged: (String value) {
+                      final int? point = int.tryParse(value);
+                      if (point == null || point < 0 || point > 1000) return;
+                      final next = <int>[...points]..[index] = point;
+                      onChanged(next);
+                    },
+                  ),
+                ),
+                IconButton(
+                  tooltip: '순위 삭제',
+                  onPressed: points.length <= 1
+                      ? null
+                      : () => onChanged(<int>[...points]..removeAt(index)),
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+              ],
+            ),
+          TextButton.icon(
+            onPressed: points.length >= 100
+                ? null
+                : () => onChanged(<int>[...points, 0]),
+            icon: const Icon(Icons.add),
+            label: const Text('순위 추가'),
+          ),
+        ],
+      ),
+    ),
+  );
+}

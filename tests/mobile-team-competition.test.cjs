@@ -304,7 +304,11 @@ test('5/5/5/4 scoring excludes each game own lowest player and accumulates game 
   const event = {
     id: 'event-exact-score', teamId: 'team-1', eventDate: new Date('2026-09-22T00:00:00+09:00'),
     gameType: '정기전', competitionEnabled: true, competitionType: 'TEAM', competitionStatus: 'TEAMS_FINALIZED',
-    draftGeneration: 1, currentPickNumber: 13, rankPoints: JSON.stringify({ 1: 5, 2: 3, 3: 2, 4: 1 }),
+    draftGeneration: 1, currentPickNumber: 13, competitionGameCount: 2,
+    rankPoints: JSON.stringify({ version: 2, games: [
+      { gameNumber: 1, points: { 1: 5, 2: 3, 3: 2, 4: 1 } },
+      { gameNumber: 2, points: { 1: 6, 2: 4, 3: 2, 4: 1 } },
+    ] }),
     team: { ownerId: 'user-1', bowlerHiddenEnabled: true, User: [], members },
     attendances: members.filter(item => item.userId !== guestUserId).map(item => ({ status: 'ATTENDING', member: item })),
     guests: [{ id: 'guest-score', name: '게스트점수' }],
@@ -319,7 +323,11 @@ test('5/5/5/4 scoring excludes each game own lowest player and accumulates game 
       }) },
       score: { findMany: async () => scores },
     },
-    '@/lib/mobile-api/bowler-hidden': { readRankPoints: value => Object.entries(JSON.parse(value)).map(([rank, points]) => ({ rank: Number(rank), points })) },
+    '@/lib/mobile-api/bowler-hidden': {
+      readRankPoints: value => Object.entries(JSON.parse(value)).map(([rank, points]) => ({ rank: Number(rank), points })),
+      parseRankPoints: value => value.map(item => ({ rank: item.rank, points: item.points })),
+      serializeRankPoints: value => JSON.stringify(Object.fromEntries(value.map(item => [item.rank, item.points]))),
+    },
   });
   const result = await service.getTeamCompetitionState('user-1', 'team-1', event.id);
   assert.equal(result.results.effectivePlayerCount, 4);
@@ -335,15 +343,15 @@ test('5/5/5/4 scoring excludes each game own lowest player and accumulates game 
       { id: 'team-4', raw: 594, normalized: 594, handicap: 15, applied: 609, excluded: [], rank: 4, points: 1 },
     ],
     [
-      { id: 'team-1', raw: 860, normalized: 760, handicap: 0, applied: 760, excluded: [100], rank: 1, points: 5 },
-      { id: 'team-2', raw: 804, normalized: 714, handicap: 5, applied: 719, excluded: [90], rank: 2, points: 3 },
+      { id: 'team-1', raw: 860, normalized: 760, handicap: 0, applied: 760, excluded: [100], rank: 1, points: 6 },
+      { id: 'team-2', raw: 804, normalized: 714, handicap: 5, applied: 719, excluded: [90], rank: 2, points: 4 },
       { id: 'team-3', raw: 714, normalized: 634, handicap: 10, applied: 644, excluded: [80], rank: 3, points: 2 },
       { id: 'team-4', raw: 594, normalized: 594, handicap: 15, applied: 609, excluded: [], rank: 4, points: 1 },
     ],
   ]);
   assert.deepEqual(result.results.teams.map(team => ({ id: team.competitionTeamId, points: team.totalPoints, rank: team.finalRank })), [
-    { id: 'team-1', points: 10, rank: 1 },
-    { id: 'team-2', points: 6, rank: 2 },
+    { id: 'team-1', points: 11, rank: 1 },
+    { id: 'team-2', points: 7, rank: 2 },
     { id: 'team-3', points: 4, rank: 3 },
     { id: 'team-4', points: 2, rank: 4 },
   ]);

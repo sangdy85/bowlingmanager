@@ -17,6 +17,7 @@ import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.d
 import 'package:bowlingmanager_mobile/features/club/presentation/club_post_form_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_post_detail_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_season_ranking_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_season_points_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_team_settings_screen.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/shared/widgets/bottom_navigation.dart';
@@ -84,16 +85,157 @@ void main() {
     }
 
     await pumpSettings(false);
+    expect(find.text('시즌제 순위표 활성화'), findsOneWidget);
+    expect(find.text('점수 방식'), findsOneWidget);
     expect(find.byKey(const Key('season-general-points')), findsOneWidget);
     expect(find.byKey(const Key('season-individual-points')), findsNothing);
     expect(find.byKey(const Key('season-team-points')), findsNothing);
     expect(find.byKey(const Key('season-event-points')), findsNothing);
 
     await pumpSettings(true);
+    expect(find.text('시즌제 순위표 활성화'), findsNothing);
+    expect(find.text('점수 방식'), findsNothing);
+    expect(find.text('개인전 시즌 순위 포인트'), findsOneWidget);
+    expect(find.text('팀전 시즌 순위 포인트'), findsOneWidget);
+    expect(find.text('이벤트전 시즌 순위 포인트'), findsOneWidget);
+    expect(find.text('순위 추가'), findsNWidgets(3));
     expect(find.byKey(const Key('season-general-points')), findsNothing);
     expect(find.byKey(const Key('season-individual-points')), findsOneWidget);
     expect(find.byKey(const Key('season-team-points')), findsOneWidget);
     expect(find.byKey(const Key('season-event-points')), findsOneWidget);
+    expect(
+      find.byKey(const Key('season-point-management-link')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'Hidden season point management is limited to OWNER and MANAGER',
+    (WidgetTester tester) async {
+      Future<void> pump(ClubTeamProfile profile) async {
+        final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+        await tester.pumpWidget(
+          ProviderScope(
+            key: ValueKey<String>(
+              '${profile.myRole.name}-${profile.bowlerHiddenEnabled}',
+            ),
+            overrides: [
+              authRepositoryProvider.overrideWithValue(authRepository),
+              clubTeamProfileProvider.overrideWith(
+                (ref, request) async => profile,
+              ),
+              clubSeasonRankingProvider.overrideWith(
+                (ref, request) async => _ranking,
+              ),
+            ],
+            child: const MaterialApp(
+              home: ClubSeasonPointsScreen(teamId: 'team-1'),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await pump(_profile);
+      expect(find.byKey(const Key('season-point-management')), findsOneWidget);
+      await pump(_profileWithRole(ClubRole.manager));
+      expect(find.byKey(const Key('season-point-management')), findsOneWidget);
+      await pump(_profileWithRole(ClubRole.member));
+      expect(find.text('시즌 포인트를 관리할 권한이 없습니다.'), findsOneWidget);
+      await pump(_profileWithHidden(false));
+      expect(find.text('시즌 포인트를 관리할 권한이 없습니다.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'season adjustments validate, confirm signed values and refresh safely',
+    (WidgetTester tester) async {
+      final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+      final api = _AdjustmentApi();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authRepositoryProvider.overrideWithValue(authRepository),
+            clubExpansionApiProvider.overrideWithValue(api),
+            clubTeamProfileProvider.overrideWith(
+              (ref, request) async => _profile,
+            ),
+            clubSeasonRankingProvider.overrideWith(
+              (ref, request) async => _ranking,
+            ),
+          ],
+          child: const MaterialApp(
+            home: ClubSeasonPointsScreen(teamId: 'team-1'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('팀장'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('season-adjustment-delta')),
+        '+20',
+      );
+      await tester.tap(find.byKey(const Key('review-season-adjustment')));
+      await tester.pump();
+      expect(find.text('조정 사유를 입력해주세요.'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const Key('season-adjustment-reason')),
+        '8월 개인전 누락 보정',
+      );
+      await tester.tap(find.byKey(const Key('review-season-adjustment')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('+20P를 적용합니다.'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('confirm-season-adjustment')));
+      await tester.pumpAndSettle();
+      expect(api.calls.single, ('member-1', 20, '8월 개인전 누락 보정'));
+      expect(find.text('시즌 포인트 조정을 적용했습니다.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('negative adjustment API failure keeps the management screen', (
+    WidgetTester tester,
+  ) async {
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    final api = _AdjustmentApi(fail: true);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubExpansionApiProvider.overrideWithValue(api),
+          clubTeamProfileProvider.overrideWith(
+            (ref, request) async => _profile,
+          ),
+          clubSeasonRankingProvider.overrideWith(
+            (ref, request) async => _ranking,
+          ),
+        ],
+        child: const MaterialApp(
+          home: ClubSeasonPointsScreen(teamId: 'team-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('팀장'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('season-adjustment-delta')),
+      '-10',
+    );
+    await tester.enterText(
+      find.byKey(const Key('season-adjustment-reason')),
+      '잘못 지급된 포인트 수정',
+    );
+    await tester.tap(find.byKey(const Key('review-season-adjustment')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('-10P를 적용합니다.'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('confirm-season-adjustment')));
+    await tester.pumpAndSettle();
+    expect(find.text('포인트 조정에 실패했습니다.'), findsOneWidget);
+    expect(find.byKey(const Key('season-point-management')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('post detail displays all protected attachment images', (
@@ -1212,6 +1354,17 @@ ClubTeamProfile _profileWithHidden(bool enabled) => ClubTeamProfile(
   activeSeason: _season,
 );
 
+ClubTeamProfile _profileWithRole(ClubRole role) => ClubTeamProfile(
+  id: _profile.id,
+  name: _profile.name,
+  description: _profile.description,
+  notice: _profile.notice,
+  myRole: role,
+  seasonRankingEnabled: true,
+  bowlerHiddenEnabled: true,
+  activeSeason: _season,
+);
+
 ClubSeasonRanking _rankingWithHidden(bool enabled) => ClubSeasonRanking(
   enabled: true,
   bowlerHiddenEnabled: enabled,
@@ -1294,5 +1447,31 @@ class _FailingPostUploadApi extends ClubExpansionApi {
       code: 'INVALID_IMAGE_TYPE',
       userMessage: '이미지를 업로드하지 못했습니다.',
     );
+  }
+}
+
+class _AdjustmentApi extends ClubExpansionApi {
+  _AdjustmentApi({this.fail = false}) : super(Dio());
+
+  final bool fail;
+  final List<(String, int, String)> calls = <(String, int, String)>[];
+
+  @override
+  Future<int> createSeasonPointAdjustment(
+    String teamId,
+    String seasonId, {
+    required String memberId,
+    required int delta,
+    required String reason,
+  }) async {
+    calls.add((memberId, delta, reason));
+    if (fail) {
+      throw const ApiException(
+        kind: ApiErrorKind.badRequest,
+        code: 'NEGATIVE_SEASON_TOTAL',
+        userMessage: '포인트 조정에 실패했습니다.',
+      );
+    }
+    return 25;
   }
 }

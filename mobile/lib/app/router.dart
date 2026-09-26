@@ -21,6 +21,7 @@ import 'package:bowlingmanager_mobile/features/club/presentation/club_board_scre
 import 'package:bowlingmanager_mobile/features/club/presentation/club_post_detail_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_post_form_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_team_settings_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_season_points_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_records_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_season_ranking_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_season_finals_screen.dart';
@@ -243,6 +244,16 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                             ClubTeamSettingsScreen(
                               teamId: state.pathParameters['teamId']!,
                             ),
+                        routes: <RouteBase>[
+                          GoRoute(
+                            path: 'season-points',
+                            builder:
+                                (BuildContext context, GoRouterState state) =>
+                                    ClubSeasonPointsScreen(
+                                      teamId: state.pathParameters['teamId']!,
+                                    ),
+                          ),
+                        ],
                       ),
                       GoRoute(
                         path: 'scores/new',

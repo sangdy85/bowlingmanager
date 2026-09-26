@@ -350,7 +350,7 @@ export async function getMobileTeamProfile(actorUserId: string, teamId: string) 
     });
     return {
         id: team.id, name: team.name, description: team.description, notice: team.notice,
-        myRole: roleOf(team, actorUserId), seasonRankingEnabled: team.seasonRankingEnabled,
+        myRole: roleOf(team, actorUserId), seasonRankingEnabled: team.seasonRankingEnabled || team.bowlerHiddenEnabled,
         bowlerHiddenEnabled: team.bowlerHiddenEnabled,
         activeSeason: activeSeason ? serializeSeason(activeSeason) : null,
     };
@@ -374,7 +374,9 @@ export async function updateMobileTeamProfile(actorUserId: string, teamId: strin
     const notice = body.notice === null ? null : typeof body.notice === "string" ? body.notice.trim() : team.notice;
     if ((description?.length ?? 0) > 2000 || (notice?.length ?? 0) > 2000) throw new ClubExpansionError("INVALID_SETTINGS", "소개와 공지는 2,000자 이하여야 합니다.", 400);
     const hasSeason = Object.hasOwn(body, "seasonRankingEnabled") || Object.hasOwn(body, "season");
-    const seasonEnabled = typeof body.seasonRankingEnabled === "boolean" ? body.seasonRankingEnabled : team.seasonRankingEnabled;
+    const seasonEnabled = team.bowlerHiddenEnabled
+        ? true
+        : typeof body.seasonRankingEnabled === "boolean" ? body.seasonRankingEnabled : team.seasonRankingEnabled;
     const season = body.season;
     let parsedSeason: {
         id: string | null; name: string; start: Date; end: Date; mode: SeasonScoringMode;
@@ -388,7 +390,7 @@ export async function updateMobileTeamProfile(actorUserId: string, teamId: strin
         const name = typeof value.name === "string" ? value.name.trim() : "";
         const start = parseKstSeasonDate(value.startDate, false);
         const end = parseKstSeasonDate(value.endDate, true);
-        const mode = value.scoringMode;
+        const mode = team.bowlerHiddenEnabled ? "FULL_RANK" : value.scoringMode;
         const id = typeof value.id === "string" && value.id ? value.id : null;
         const tables = value.pointTables && typeof value.pointTables === "object" && !Array.isArray(value.pointTables)
             ? value.pointTables as Record<string, unknown> : null;
@@ -504,7 +506,11 @@ export async function getMobileSeasonRanking(
             const memberId = team.members.find((member) => member.userId === actorUserId)?.id;
             const mine = result.rankings.find((row) => row.id === memberId);
             const myCompetitionHistory = memberId && result.season
-                ? await listMyOfficialCompetitionHistory(memberId, result.season.id, mine?.entries ?? [])
+                ? await listMyOfficialCompetitionHistory(
+                    memberId,
+                    result.season.id,
+                    mine?.entries.filter((entry) => entry.sourceType === "AUTOMATIC") ?? [],
+                )
                 : [];
             return {
                 ...result,
@@ -602,6 +608,14 @@ function seasonIncludesYear(season: { startDate: Date; endDate: Date }, year: nu
 
 function parsePointInput(value: unknown) {
     if (!Array.isArray(value) || value.length < 1 || value.length > 100) throw new Error("invalid points");
-    const normalized = value.map((item, index) => typeof item === "number" ? { rank: index + 1, points: item } : item);
+    const submittedRanks = new Set<number>();
+    const normalized = value.map((item, index) => {
+        if (typeof item === "number") return { rank: index + 1, points: item };
+        if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error("invalid points");
+        const { rank, points } = item as Record<string, unknown>;
+        if (!Number.isSafeInteger(rank) || (rank as number) < 1 || submittedRanks.has(rank as number)) throw new Error("invalid points");
+        submittedRanks.add(rank as number);
+        return { rank: index + 1, points };
+    });
     return readSeasonPointTable(serializeSeasonPointTable(normalized));
 }

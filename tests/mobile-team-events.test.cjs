@@ -33,7 +33,8 @@ test('event parser accepts the documented schedule and draw settings', () => {
   }), {
     title: '9월 정기전', date: '2026-09-22', time: '19:30', location: '테스트 볼링장',
     gameType: '정기전', attendanceEnabled: true, laneDrawEnabled: true, laneDrawMode: 'INDIVIDUAL',
-    competitionEnabled: false, competitionType: null, competitionMode: null, competitionGameCount: null, rankPoints: [],
+    competitionEnabled: false, competitionType: null, competitionMode: null, competitionGameCount: null,
+    rankPoints: [], teamGamePointTables: [],
   });
   for (const date of ['2026-02-30', '2026/09/22']) {
     assert.throws(() => service.parseTeamEventInput({
@@ -47,7 +48,8 @@ test('competition mode is independent, required for Bowler Hidden and absent for
   const base = {
     title: '미니 팀전', date: '2026-09-22', time: '19:30', location: '테스트 볼링장',
     gameType: '정기전', attendanceEnabled: true, laneDrawEnabled: true, laneDrawMode: 'BULK',
-    competitionEnabled: true, competitionType: 'TEAM', rankPoints: [{ rank: 1, points: 20 }],
+    competitionEnabled: true, competitionType: 'TEAM', competitionGameCount: 4,
+    rankPoints: [{ rank: 1, points: 20 }],
   };
   assert.equal(service.parseTeamEventInput({ ...base, competitionMode: 'MINI' }, true).competitionMode, 'MINI');
   assert.equal(service.parseTeamEventInput({ ...base, competitionMode: 'OFFICIAL' }, true).competitionMode, 'OFFICIAL');

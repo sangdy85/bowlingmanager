@@ -57,6 +57,17 @@ test('SUPER_ADMIN can list teams and toggle activation without team membership',
   ]);
 });
 
+test('Hidden activation normalizes legacy Season OFF state without a database migration', async () => {
+  const legacy = team({ bowlerHiddenEnabled: true, seasonRankingEnabled: false });
+  const deps = dependencies({
+    listTeams: async () => [legacy],
+    findTeam: async () => legacy,
+    updateBowlerHidden: async () => legacy,
+  });
+  assert.equal((await service.listMobileSuperAdminTeams('admin-1', deps))[0].seasonRankingEnabled, true);
+  assert.equal((await service.setMobileTeamBowlerHiddenEnabled('admin-1', 'team-1', true, deps)).seasonRankingEnabled, true);
+});
+
 for (const role of ['OWNER', 'MANAGER', 'MEMBER', 'OUTSIDER', 'USER']) {
   test(`${role} cannot list or mutate Bowler Hidden activation`, async () => {
     let reads = 0;

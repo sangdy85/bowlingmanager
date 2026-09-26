@@ -3,10 +3,14 @@ import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import {
     BOWLER_HIDDEN_COMPETITION_TYPES,
-    parseRankPoints,
-    readRankPoints,
     serializeRankPoints,
 } from "@/lib/mobile-api/bowler-hidden";
+import {
+    parseTeamGamePointTables,
+    readTeamGamePointTables,
+    serializeTeamGamePointTables,
+    type TeamGamePointTable,
+} from "@/lib/mobile-api/team-game-points";
 
 export const TEAM_EVENT_ATTENDANCE = ["UNANSWERED", "ATTENDING", "NOT_ATTENDING"] as const;
 export const TEAM_EVENT_DRAW_MODES = ["BULK", "INDIVIDUAL"] as const;
@@ -33,6 +37,7 @@ type EventInput = {
     competitionMode: "OFFICIAL" | "MINI" | null;
     competitionGameCount: number | null;
     rankPoints: { rank: number; points: number }[];
+    teamGamePointTables: TeamGamePointTable[];
 };
 
 export class TeamEventError extends Error {
@@ -94,25 +99,38 @@ export function parseTeamEventInput(value: unknown, bowlerHiddenEnabled = false)
         throw new TeamEventError("LANE_CONFIG_REQUIRED", "TEAM 대회는 레인 배정 설정이 필요합니다.", 400);
     }
     const competitionGameCount = body.competitionGameCount;
-    if (competitionEnabled && requestedType === "EVENT" &&
+    if (competitionEnabled && (requestedType === "TEAM" || requestedType === "EVENT") &&
         (!Number.isSafeInteger(competitionGameCount) || (competitionGameCount as number) < 1 || (competitionGameCount as number) > 12)) {
-        throw new TeamEventError("INVALID_GAME_COUNT", "EVENT 대회 게임 수는 1~12 사이여야 합니다.", 400);
+        throw new TeamEventError("INVALID_GAME_COUNT", "대회 게임 수는 1~12 사이여야 합니다.", 400);
     }
     let rankPoints: { rank: number; points: number }[] = [];
-    try { rankPoints = competitionEnabled ? parseRankPoints(body.rankPoints ?? []) : []; }
+    let teamGamePointTables: TeamGamePointTable[] = [];
+    try {
+        if (competitionEnabled && requestedType === "TEAM") {
+            teamGamePointTables = parseTeamGamePointTables(
+                body.teamGamePointTables,
+                competitionGameCount as number,
+                body.rankPoints,
+            );
+            rankPoints = teamGamePointTables[0]?.points ?? [];
+        } else {
+            rankPoints = [];
+        }
+    }
     catch (error) {
         if (error instanceof Error && "code" in error) {
             throw new TeamEventError("INVALID_RANK_POINTS", error.message, 400);
         }
-        throw error;
+        throw new TeamEventError("INVALID_RANK_POINTS", "게임별 팀전 포인트를 확인해주세요.", 400);
     }
     return {
         title, date, time, location, gameType, attendanceEnabled, laneDrawEnabled,
         laneDrawMode: laneDrawMode as DrawMode, competitionEnabled,
         competitionType: competitionEnabled ? requestedType as "INDIVIDUAL" | "TEAM" | "EVENT" : null,
         competitionMode: competitionEnabled ? requestedMode as "OFFICIAL" | "MINI" : null,
-        competitionGameCount: competitionEnabled && requestedType === "EVENT" ? competitionGameCount as number : null,
-        rankPoints,
+        competitionGameCount: competitionEnabled && (requestedType === "TEAM" || requestedType === "EVENT")
+            ? competitionGameCount as number : null,
+        rankPoints, teamGamePointTables,
     };
 }
 
@@ -216,7 +234,9 @@ export async function createTeamEvent(actorUserId: string, teamId: string, value
             competitionStartAt: input.competitionType === "EVENT" ? eventStartAt(input.date, input.time) : null,
             votingDurationMinutes: 30,
             competitionGameCount: input.competitionGameCount,
-            rankPoints: serializeRankPoints(input.rankPoints),
+            rankPoints: input.competitionType === "TEAM"
+                ? serializeTeamGamePointTables(input.teamGamePointTables)
+                : serializeRankPoints([]),
         },
         include: eventInclude,
     });
@@ -263,7 +283,9 @@ export async function updateTeamEvent(actorUserId: string, teamId: string, event
             competitionStatus: input.competitionEnabled
                 ? current.competitionEnabled ? current.competitionStatus : "ATTENDANCE_OPEN"
                 : "DRAFT",
-            rankPoints: serializeRankPoints(input.rankPoints),
+            rankPoints: input.competitionType === "TEAM"
+                ? serializeTeamGamePointTables(input.teamGamePointTables)
+                : serializeRankPoints([]),
         }, include: eventInclude,
     });
     return serializeEvent(event, access);
@@ -464,6 +486,9 @@ async function getAccess(userId: string, teamId: string) {
 
 function serializeEvent(event: EventWithRelations, access: Awaited<ReturnType<typeof getAccess>>) {
     const competitionVisible = access.bowlerHiddenEnabled && event.competitionEnabled;
+    const competitionGameCount = event.competitionType === "TEAM"
+        ? event.competitionGameCount ?? 4
+        : event.competitionGameCount;
     const attendanceByMember = new Map(event.attendances.map((item) => [item.memberId, item]));
     const myAttendance = attendanceByMember.get(access.member.id)?.status ?? "UNANSWERED";
     const assignments = event.laneAssignments.map(serializeAssignment).sort((a, b) => a.laneNumber - b.laneNumber || a.position - b.position);
@@ -489,13 +514,18 @@ function serializeEvent(event: EventWithRelations, access: Awaited<ReturnType<ty
             type: event.competitionType,
             mode: event.competitionMode,
             status: event.competitionStatus,
-            rankPoints: readRankPoints(event.rankPoints),
+            rankPoints: event.competitionType === "TEAM"
+                ? readTeamGamePointTables(event.rankPoints, competitionGameCount ?? 4)[0]?.points ?? []
+                : [],
+            teamGamePointTables: event.competitionType === "TEAM"
+                ? readTeamGamePointTables(event.rankPoints, competitionGameCount ?? 4)
+                : [],
             competitionStartAt: event.competitionStartAt?.toISOString() ?? null,
             voteCloseAt: event.competitionStartAt
                 ? new Date(event.competitionStartAt.getTime() + event.votingDurationMinutes * 60_000).toISOString()
                 : null,
             votingDurationMinutes: event.votingDurationMinutes,
-            gameCount: event.competitionGameCount,
+            gameCount: competitionGameCount,
         } : null,
         guests: event.guests.map((guest) => ({ id: guest.id, name: guest.name })),
         slots: event.laneSlots.map((slot) => ({ id: slot.id, laneNumber: slot.laneNumber, position: slot.position })),

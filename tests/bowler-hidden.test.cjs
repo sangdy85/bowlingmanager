@@ -192,10 +192,10 @@ test('event parser gates competitions and accepts implemented individual/team/ev
     rankPoints: [{ rank: 1, points: 20 }, { rank: 2, points: 17 }],
   };
   assert.throws(() => events.parseTeamEventInput(body, false), error => error.code === 'FEATURE_DISABLED');
-  assert.deepEqual(events.parseTeamEventInput(body, true).rankPoints, [
-    { rank: 1, points: 20 }, { rank: 2, points: 17 },
-  ]);
-  assert.equal(events.parseTeamEventInput({ ...body, laneDrawEnabled: true, competitionType: 'TEAM' }, true).competitionType, 'TEAM');
+  assert.deepEqual(events.parseTeamEventInput(body, true).rankPoints, []);
+  assert.equal(events.parseTeamEventInput({
+    ...body, laneDrawEnabled: true, competitionType: 'TEAM', competitionGameCount: 4,
+  }, true).competitionType, 'TEAM');
   assert.throws(() => events.parseTeamEventInput({ ...body, competitionType: 'TEAM' }, true),
     error => error.code === 'LANE_CONFIG_REQUIRED');
   const event = events.parseTeamEventInput({ ...body, competitionType: 'EVENT', competitionGameCount: 4 }, true);
@@ -341,6 +341,9 @@ test('group completion is independent from scores while publication requires exa
       getPublicationPointTable: async () => [], getSeasonPointPreview: async () => [],
       createSeasonPointPublication: async () => ({ seasonId: null, publicationId: null }),
       revokeSeasonPointPublication: async () => {}, readSeasonPointTable: () => [], seasonPointsForRank: () => 0,
+      memberSeasonAwards: rows => rows.filter(row => row.memberId).map((row, index) => ({
+        memberId: row.memberId, memberDisplayName: row.name, finalRank: index + 1, points: 0,
+      })),
     },
   });
   await assert.rejects(

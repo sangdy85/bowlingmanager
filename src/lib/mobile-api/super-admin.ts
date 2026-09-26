@@ -57,7 +57,10 @@ const defaultDependencies: MobileSuperAdminDependencies = {
     updateBowlerHidden(teamId, enabled) {
         return prisma.team.update({
             where: { id: teamId },
-            data: { bowlerHiddenEnabled: enabled },
+            data: {
+                bowlerHiddenEnabled: enabled,
+                ...(enabled ? { seasonRankingEnabled: true } : {}),
+            },
             select: teamSelect,
         });
     },
@@ -82,7 +85,7 @@ export async function listMobileSuperAdminTeams(
     dependencies: MobileSuperAdminDependencies = defaultDependencies,
 ) {
     await requireCurrentSuperAdmin(userId, dependencies);
-    return dependencies.listTeams();
+    return (await dependencies.listTeams()).map(normalizeManagedTeam);
 }
 
 export async function setMobileTeamBowlerHiddenEnabled(
@@ -100,5 +103,11 @@ export async function setMobileTeamBowlerHiddenEnabled(
             404,
         );
     }
-    return dependencies.updateBowlerHidden(team.id, enabled);
+    return normalizeManagedTeam(await dependencies.updateBowlerHidden(team.id, enabled));
+}
+
+function normalizeManagedTeam(team: ManagedTeamRecord): ManagedTeamRecord {
+    return team.bowlerHiddenEnabled && !team.seasonRankingEnabled
+        ? { ...team, seasonRankingEnabled: true }
+        : team;
 }

@@ -426,6 +426,7 @@ test('team profile lets managers configure type-specific season points and rejec
 
 test('season ranking reads active publication ledger in one batch and supports feature gating', async () => {
   let enabled = false;
+  let hidden = false;
   let entryWhere = null;
   let entryCalls = 0;
   let eventWhere = null;
@@ -437,7 +438,7 @@ test('season ranking reads active publication ledger in one batch and supports f
     individualPointsConfig: '{"1":50}', teamPointsConfig: '{"1":35}', eventPointsConfig: '{"1":50}',
   };
   const fakePrisma = {
-    team: { findFirst: async () => ({ ...fakeTeam(), bowlerHiddenEnabled: true, seasonRankingEnabled: enabled }) },
+    team: { findFirst: async () => ({ ...fakeTeam(), bowlerHiddenEnabled: hidden, seasonRankingEnabled: enabled }) },
     teamSeason: {
       findMany: async () => [season],
     },
@@ -452,6 +453,7 @@ test('season ranking reads active publication ledger in one batch and supports f
         }];
       },
     },
+    seasonPointAdjustment: { findMany: async () => [] },
     teamEvent: {
       findMany: async args => {
         eventWhere = args.where;
@@ -474,7 +476,7 @@ test('season ranking reads active publication ledger in one batch and supports f
   const disabled = await isolated.getMobileSeasonRanking('owner', 'team-1');
   assert.equal(disabled.enabled, false);
   assert.equal(entryCalls, 0);
-  enabled = true;
+  hidden = true;
   const result = await isolated.getMobileSeasonRanking('owner', 'team-1');
   assert.equal(result.enabled, true);
   assert.equal(result.season.name, '반기');
@@ -521,6 +523,7 @@ test('Hidden OFF uses the general season ranking and rejects Hidden competition 
       ],
     },
     seasonPointEntry: { findMany: async () => { pointEntryCalls += 1; return []; } },
+    seasonPointAdjustment: { findMany: async () => [] },
   };
   const isolated = loadTs('src/lib/mobile-api/club-expansion.ts', {
     '@/lib/prisma': fakePrisma,

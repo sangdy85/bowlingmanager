@@ -31,6 +31,7 @@ model User {
   mobileRefreshTokens          MobileRefreshToken[]
   createdTeamEvents            TeamEvent[]                    @relation("TeamEventCreator")
   enteredEventBallots          EventCompetitionBallot[]       @relation("EventBallotEnteredBy")
+  enteredSeasonPointAdjustments SeasonPointAdjustment[]        @relation("SeasonPointAdjustmentEnteredBy")
 }
 
 model VerificationToken {
@@ -122,6 +123,7 @@ model TeamSeason {
   events                 TeamEvent[]
   publications           SeasonPointPublication[]
   pointEntries           SeasonPointEntry[]
+  pointAdjustments       SeasonPointAdjustment[]
   finals                 SeasonFinalTournament[]
 
   @@index([teamId, enabled])
@@ -144,6 +146,7 @@ model TeamMember {
   competitionCaptainPicks      TeamCompetitionDraftPick[]    @relation("CompetitionPickCaptain")
   eventCompetitionParticipants EventCompetitionParticipant[]
   seasonFinalParticipants      SeasonFinalParticipant[]
+  seasonPointAdjustments       SeasonPointAdjustment[]
 
   @@unique([userId, teamId])
 }
@@ -413,6 +416,23 @@ model SeasonPointEntry {
   @@index([seasonId, competitionType, competitionDate])
   @@index([seasonId, memberId, competitionDate])
   @@index([eventId])
+}
+
+model SeasonPointAdjustment {
+  id              String     @id @default(cuid())
+  seasonId        String
+  memberId        String
+  delta           Int
+  reason          String
+  enteredByUserId String
+  createdAt       DateTime   @default(now())
+  season          TeamSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  member          TeamMember @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  enteredBy       User       @relation("SeasonPointAdjustmentEnteredBy", fields: [enteredByUserId], references: [id], onDelete: Restrict)
+
+  @@index([seasonId, createdAt])
+  @@index([seasonId, memberId, createdAt])
+  @@index([enteredByUserId, createdAt])
 }
 
 model TeamCompetitionTeam {

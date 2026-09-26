@@ -4,6 +4,7 @@ import {
     createSeasonPointPublication,
     getPublicationPointTable,
     getSeasonPointPreview,
+    memberSeasonAwards,
     readSeasonPointTable,
     revokeSeasonPointPublication,
     seasonPointsForRank,
@@ -510,7 +511,7 @@ async function publishIndividual(actorUserId: string, teamId: string, eventId: s
             .map((row, index) => ({ rank: index + 1, ...row, average: Number((row.total / row.gameCount).toFixed(1)), points: seasonPointsForRank(pointTable, index + 1) }));
         const publication = await createSeasonPointPublication(tx, {
             event: event!, pointTable, publishedAt, resultSnapshot: { version: 1, rows },
-            awards: rows.flatMap((row) => row.memberId ? [{ memberId: row.memberId, memberDisplayName: row.name, finalRank: row.rank, points: row.points }] : []),
+            awards: memberSeasonAwards(rows, pointTable),
         });
         const updated = await tx.teamEvent.updateMany({ where: { id: eventId, competitionStatus: { not: "PUBLISHED" } }, data: { competitionStatus: "PUBLISHED" } });
         if (updated.count !== 1) throw new BowlerHiddenError("PUBLICATION_CONFLICT", "다른 발표 요청이 먼저 처리되었습니다.", 409);

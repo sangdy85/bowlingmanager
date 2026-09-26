@@ -4,6 +4,7 @@ import 'package:bowlingmanager_mobile/features/club/application/club_event_provi
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -23,8 +24,8 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
   final _time = TextEditingController(text: '19:00');
   final _location = TextEditingController();
   String? _gameType;
-  final _rankPoints = TextEditingController(text: '1:20, 2:17, 3:15');
   final _gameCount = TextEditingController(text: '4');
+  List<List<int>> _teamGamePoints = _defaultTeamGamePoints(4);
   bool _attendanceEnabled = true;
   bool _laneDrawEnabled = false;
   ClubEventDrawMode _mode = ClubEventDrawMode.bulk;
@@ -40,7 +41,6 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
     _date.dispose();
     _time.dispose();
     _location.dispose();
-    _rankPoints.dispose();
     _gameCount.dispose();
     super.dispose();
   }
@@ -58,13 +58,21 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
     _mode = event.laneDrawMode;
     _competitionEnabled = event.competition != null;
     if (event.competition case final ClubCompetitionConfig competition) {
-      _rankPoints.text = competition.rankPoints
-          .map((ClubRankPoint item) => '${item.rank}:${item.points}')
-          .join(', ');
       _competitionType = competition.type;
       _competitionMode = competition.mode ?? ClubCompetitionMode.official;
       if (competition.gameCount != null) {
         _gameCount.text = '${competition.gameCount}';
+      }
+      if (competition.type == ClubCompetitionType.team) {
+        _teamGamePoints = competition.teamGamePointTables.isEmpty
+            ? _defaultTeamGamePoints(competition.gameCount ?? 4)
+            : competition.teamGamePointTables
+                  .map(
+                    (ClubTeamGamePointTable table) => table.points
+                        .map((ClubRankPoint item) => item.points)
+                        .toList(),
+                  )
+                  .toList();
       }
     }
   }
@@ -217,6 +225,7 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
                     _competitionType = value ?? _competitionType;
                     if (_competitionType == ClubCompetitionType.team) {
                       _laneDrawEnabled = true;
+                      _syncTeamGameCount();
                     }
                   }),
                 ),
@@ -240,14 +249,23 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
                       : '경기 결과에 따라 시즌 포인트가 지급됩니다.',
                 ),
                 const SizedBox(height: 12),
-                if (_competitionType == ClubCompetitionType.event) ...<Widget>[
+                if (_competitionType == ClubCompetitionType.event ||
+                    _competitionType == ClubCompetitionType.team) ...<Widget>[
                   TextFormField(
                     controller: _gameCount,
                     keyboardType: TextInputType.number,
+                    inputFormatters: <TextInputFormatter>[
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
                     decoration: const InputDecoration(
                       labelText: '경기 게임 수',
                       helperText: '참가자별 완료 판정에 사용합니다. (1~12게임)',
                     ),
+                    onChanged: (_) {
+                      if (_competitionType == ClubCompetitionType.team) {
+                        setState(_syncTeamGameCount);
+                      }
+                    },
                     validator: (String? value) {
                       final int? count = int.tryParse(value ?? '');
                       return count == null || count < 1 || count > 12
@@ -255,28 +273,29 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
                           : null;
                     },
                   ),
-                  const SizedBox(height: 12),
-                  const Text('투표는 경기 시작 시각부터 30분 동안 서버 시간 기준으로 진행됩니다.'),
-                  const Text('계정이 없는 게스트는 V1 투표와 순위에서 제외됩니다.'),
-                  const SizedBox(height: 12),
+                  if (_competitionType ==
+                      ClubCompetitionType.event) ...<Widget>[
+                    const SizedBox(height: 12),
+                    const Text('참가자 확정 후 투표가 시작되며 마감 시각 이후에는 투표할 수 없습니다.'),
+                    const SizedBox(height: 12),
+                  ],
                 ],
-                TextFormField(
-                  controller: _rankPoints,
-                  decoration: InputDecoration(
-                    labelText: _competitionType == ClubCompetitionType.team
-                        ? '게임별 팀 순위 포인트'
-                        : '개인 순위 포인트',
-                    helperText: '예: 1:20, 2:17, 3:15 · 미정의 순위는 0점',
+                if (_competitionType == ClubCompetitionType.team) ...<Widget>[
+                  const SizedBox(height: 16),
+                  const Text(
+                    '게임별 팀전 포인트',
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  validator: (String? value) {
-                    try {
-                      _parseRankPoints(value ?? '');
-                      return null;
-                    } on FormatException {
-                      return '순위:점수 형식의 중복 없는 0 이상 정수를 입력해주세요.';
-                    }
-                  },
-                ),
+                  const Text('각 게임의 팀 순위에 따라 지급되며 당일 최종 팀 순위를 결정합니다.'),
+                  const SizedBox(height: 8),
+                  for (int game = 0; game < _teamGamePoints.length; game++)
+                    _TeamGamePointEditor(
+                      gameNumber: game + 1,
+                      points: _teamGamePoints[game],
+                      onChanged: (List<int> value) =>
+                          setState(() => _teamGamePoints[game] = value),
+                    ),
+                ],
               ],
             ],
             const SizedBox(height: 24),
@@ -326,13 +345,30 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
       competitionMode: bowlerHiddenEnabled && _competitionEnabled
           ? _competitionMode
           : null,
-      rankPoints: bowlerHiddenEnabled && _competitionEnabled
-          ? _parseRankPoints(_rankPoints.text)
-          : const <ClubRankPoint>[],
+      rankPoints: const <ClubRankPoint>[],
+      teamGamePointTables:
+          bowlerHiddenEnabled &&
+              _competitionEnabled &&
+              _competitionType == ClubCompetitionType.team
+          ? List<ClubTeamGamePointTable>.generate(
+              _teamGamePoints.length,
+              (int game) => ClubTeamGamePointTable(
+                gameNumber: game + 1,
+                points: List<ClubRankPoint>.generate(
+                  _teamGamePoints[game].length,
+                  (int rank) => ClubRankPoint(
+                    rank: rank + 1,
+                    points: _teamGamePoints[game][rank],
+                  ),
+                ),
+              ),
+            )
+          : const <ClubTeamGamePointTable>[],
       competitionGameCount:
           bowlerHiddenEnabled &&
               _competitionEnabled &&
-              _competitionType == ClubCompetitionType.event
+              (_competitionType == ClubCompetitionType.event ||
+                  _competitionType == ClubCompetitionType.team)
           ? int.parse(_gameCount.text)
           : null,
     );
@@ -390,30 +426,97 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
     }
   }
 
-  List<ClubRankPoint> _parseRankPoints(String value) {
-    final Set<int> seen = <int>{};
-    final List<ClubRankPoint> result = value
-        .split(',')
-        .where((String part) => part.trim().isNotEmpty)
-        .map((String part) {
-          final List<String> pieces = part.split(':');
-          if (pieces.length != 2) throw const FormatException();
-          final int? rank = int.tryParse(pieces[0].trim());
-          final int? points = int.tryParse(pieces[1].trim());
-          if (rank == null ||
-              rank < 1 ||
-              points == null ||
-              points < 0 ||
-              !seen.add(rank)) {
-            throw const FormatException();
-          }
-          return ClubRankPoint(rank: rank, points: points);
-        })
-        .toList();
-    result.sort(
-      (ClubRankPoint left, ClubRankPoint right) =>
-          left.rank.compareTo(right.rank),
-    );
-    return result;
+  void _syncTeamGameCount() {
+    final int? count = int.tryParse(_gameCount.text);
+    if (count == null || count < 1 || count > 12) return;
+    if (_teamGamePoints.length > count) {
+      _teamGamePoints = _teamGamePoints.take(count).toList();
+    } else {
+      final defaults = _defaultTeamGamePoints(count);
+      while (_teamGamePoints.length < count) {
+        _teamGamePoints.add(defaults[_teamGamePoints.length]);
+      }
+    }
   }
+}
+
+List<List<int>> _defaultTeamGamePoints(int gameCount) =>
+    List<List<int>>.generate(
+      gameCount,
+      (int index) => gameCount >= 4 && index == gameCount - 1
+          ? <int>[6, 4, 2, 1]
+          : <int>[5, 3, 2, 1],
+    );
+
+class _TeamGamePointEditor extends StatelessWidget {
+  const _TeamGamePointEditor({
+    required this.gameNumber,
+    required this.points,
+    required this.onChanged,
+  });
+
+  final int gameNumber;
+  final List<int> points;
+  final ValueChanged<List<int>> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            '${gameNumber}G',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          for (int index = 0; index < points.length; index++)
+            Row(
+              children: <Widget>[
+                SizedBox(width: 54, child: Text('${index + 1}위')),
+                Expanded(
+                  child: TextFormField(
+                    key: ValueKey<String>(
+                      'team-game-$gameNumber-rank-${index + 1}',
+                    ),
+                    initialValue: '${points[index]}',
+                    keyboardType: TextInputType.number,
+                    inputFormatters: <TextInputFormatter>[
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    decoration: const InputDecoration(labelText: '팀전 포인트'),
+                    validator: (String? value) {
+                      final int? point = int.tryParse(value ?? '');
+                      return point == null || point < 0 || point > 1000
+                          ? '0~1000 정수를 입력해주세요.'
+                          : null;
+                    },
+                    onChanged: (String value) {
+                      final int? point = int.tryParse(value);
+                      if (point == null) return;
+                      final next = <int>[...points]..[index] = point;
+                      onChanged(next);
+                    },
+                  ),
+                ),
+                IconButton(
+                  tooltip: '순위 삭제',
+                  onPressed: points.length <= 1
+                      ? null
+                      : () => onChanged(<int>[...points]..removeAt(index)),
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+              ],
+            ),
+          TextButton.icon(
+            onPressed: points.length >= 100
+                ? null
+                : () => onChanged(<int>[...points, 0]),
+            icon: const Icon(Icons.add),
+            label: const Text('순위 추가'),
+          ),
+        ],
+      ),
+    ),
+  );
 }

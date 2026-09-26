@@ -18,6 +18,9 @@ export class UnifiedSeasonError extends Error {
     constructor(public readonly code: string, message: string, public readonly status: number) { super(message); }
 }
 
+const MAX_ADJUSTMENT_ABS = 100_000;
+const MAX_ADJUSTMENT_REASON_LENGTH = 500;
+
 type SeasonDb = Pick<Prisma.TransactionClient, "teamSeason" | "teamEvent" | "seasonPointPublication" | "seasonPointEntry">;
 
 type PublicationEvent = { teamId: string; eventDate: Date; seasonId: string | null; competitionType: string | null; competitionMode: string | null };
@@ -49,6 +52,25 @@ export function serializeSeasonPointTable(value: unknown): string {
 export function seasonPointsForRank(points: readonly SeasonRankPoint[], rank: number | null) {
     if (rank === null) return 0;
     return points.find((item) => item.rank === rank)?.points ?? 0;
+}
+
+export function memberSeasonAwards<T extends {
+    memberId: string | null;
+    name: string;
+    competitionTeamId?: string | null;
+}>(rows: readonly T[], pointTable: readonly SeasonRankPoint[]): SeasonAward[] {
+    let memberRank = 0;
+    return rows.flatMap((row) => {
+        if (!row.memberId) return [];
+        memberRank += 1;
+        return [{
+            memberId: row.memberId,
+            memberDisplayName: row.name,
+            competitionTeamId: row.competitionTeamId ?? null,
+            finalRank: memberRank,
+            points: seasonPointsForRank(pointTable, memberRank),
+        }];
+    });
 }
 
 export async function getSeasonPointPreview(
@@ -148,6 +170,86 @@ export async function revokeSeasonPointPublication(db: SeasonDb, eventId: string
     if (required && result.count !== 1) throw new UnifiedSeasonError("PUBLICATION_NOT_FOUND", "취소할 시즌 포인트 발표를 찾을 수 없습니다.", 409);
 }
 
+export async function createSeasonPointAdjustment(
+    actorUserId: string,
+    teamId: string,
+    seasonId: string,
+    input: unknown,
+) {
+    const parsed = parseSeasonPointAdjustment(input);
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+            return await prisma.$transaction(async (tx) => {
+                const team = await tx.team.findFirst({
+                    where: { id: teamId, isActive: true, members: { some: { userId: actorUserId } } },
+                    select: {
+                        ownerId: true, bowlerHiddenEnabled: true,
+                        User: { where: { id: actorUserId }, select: { id: true } },
+                        seasons: { where: { id: seasonId }, take: 1, select: { id: true } },
+                        members: {
+                            where: { id: parsed.memberId }, take: 1,
+                            select: { id: true, alias: true, user: { select: { name: true } } },
+                        },
+                    },
+                });
+                if (!team) throw new UnifiedSeasonError("TEAM_NOT_FOUND", "동호회를 찾을 수 없습니다.", 404);
+                if (!team.bowlerHiddenEnabled) {
+                    throw new UnifiedSeasonError("FEATURE_DISABLED", "Bowler Hidden 기능이 활성화되지 않은 팀입니다.", 404);
+                }
+                if (team.ownerId !== actorUserId && !team.User.some((manager) => manager.id === actorUserId)) {
+                    throw new UnifiedSeasonError("FORBIDDEN", "시즌 포인트를 조정할 권한이 없습니다.", 403);
+                }
+                if (team.seasons.length !== 1) throw new UnifiedSeasonError("SEASON_NOT_FOUND", "시즌을 찾을 수 없습니다.", 404);
+                const member = team.members[0];
+                if (!member) throw new UnifiedSeasonError("MEMBER_NOT_FOUND", "조정할 팀 회원을 찾을 수 없습니다.", 404);
+
+                const [automatic, manual] = await Promise.all([
+                    tx.seasonPointEntry.aggregate({
+                        where: { seasonId, memberId: member.id, publication: { revokedAt: null } },
+                        _sum: { points: true },
+                    }),
+                    tx.seasonPointAdjustment.aggregate({
+                        where: { seasonId, memberId: member.id },
+                        _sum: { delta: true },
+                    }),
+                ]);
+                const currentTotal = (automatic._sum.points ?? 0) + (manual._sum.delta ?? 0);
+                const newTotal = currentTotal + parsed.delta;
+                if (newTotal < 0) {
+                    throw new UnifiedSeasonError(
+                        "NEGATIVE_SEASON_TOTAL",
+                        `조정 후 시즌 포인트는 0보다 작을 수 없습니다. 현재 포인트는 ${currentTotal}P입니다.`,
+                        409,
+                    );
+                }
+                const adjustment = await tx.seasonPointAdjustment.create({
+                    data: {
+                        seasonId, memberId: member.id, delta: parsed.delta,
+                        reason: parsed.reason, enteredByUserId: actorUserId,
+                    },
+                    select: { id: true, seasonId: true, memberId: true, delta: true, reason: true, createdAt: true },
+                });
+                return {
+                    adjustment: {
+                        ...adjustment,
+                        memberName: member.alias || member.user.name,
+                        createdAt: adjustment.createdAt.toISOString(),
+                    },
+                    previousTotal: currentTotal,
+                    totalPoints: newTotal,
+                };
+            }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+                if (attempt === 0) continue;
+                throw new UnifiedSeasonError("ADJUSTMENT_CONFLICT", "포인트가 동시에 변경되었습니다. 다시 시도해주세요.", 409);
+            }
+            throw error;
+        }
+    }
+    throw new UnifiedSeasonError("ADJUSTMENT_CONFLICT", "포인트가 동시에 변경되었습니다. 다시 시도해주세요.", 409);
+}
+
 export function jointCompetitionRanks<T extends { totalPoints: number }>(rows: readonly T[]) {
     let previousPoints: number | null = null;
     let previousRank = 0;
@@ -173,7 +275,9 @@ export async function getUnifiedSeasonRanking(
     if (!team) throw new UnifiedSeasonError("TEAM_NOT_FOUND", "동호회를 찾을 수 없습니다.", 404);
     if (!team.bowlerHiddenEnabled) throw new UnifiedSeasonError("FEATURE_DISABLED", "Bowler Hidden 기능이 활성화되지 않은 팀입니다.", 404);
     const seasons = await prisma.teamSeason.findMany({ where: { teamId }, orderBy: [{ startDate: "desc" }, { id: "asc" }] });
-    if (!team.seasonRankingEnabled) return { enabled: false, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [] };
+    if (!team.seasonRankingEnabled && !team.bowlerHiddenEnabled) {
+        return { enabled: false, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [] };
+    }
     const season = options.seasonId
         ? seasons.find((item) => item.id === options.seasonId) ?? null
         : options.year
@@ -185,22 +289,29 @@ export async function getUnifiedSeasonRanking(
         throw new UnifiedSeasonError("INVALID_COMPETITION_TYPE", "대회 유형을 확인해주세요.", 400);
     }
     if (!season) return { enabled: true, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType, rankings: [] };
-    const entries = await prisma.seasonPointEntry.findMany({
-        where: {
-            seasonId: season.id, publication: { revokedAt: null },
-            ...(competitionType === "ALL" ? {} : { competitionType }),
-        },
-        orderBy: [{ competitionDate: "asc" }, { createdAt: "asc" }, { id: "asc" }],
-        select: {
-            id: true, publicationId: true, eventId: true, memberId: true, memberDisplayName: true,
-            competitionType: true, competitionDate: true, competitionTitle: true,
-            finalRank: true, points: true,
-        },
-    });
+    const [entries, adjustments] = await Promise.all([
+        prisma.seasonPointEntry.findMany({
+            where: {
+                seasonId: season.id, publication: { revokedAt: null },
+                ...(competitionType === "ALL" ? {} : { competitionType }),
+            },
+            orderBy: [{ competitionDate: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+            select: {
+                id: true, publicationId: true, eventId: true, memberId: true, memberDisplayName: true,
+                competitionType: true, competitionDate: true, competitionTitle: true,
+                finalRank: true, points: true, createdAt: true,
+            },
+        }),
+        competitionType === "ALL" ? prisma.seasonPointAdjustment.findMany({
+            where: { seasonId: season.id },
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+            select: { id: true, memberId: true, delta: true, reason: true, createdAt: true },
+        }) : Promise.resolve([]),
+    ]);
     const rows = new Map<string, {
-        id: string; name: string; totalPoints: number; individualPoints: number; teamPoints: number; eventPoints: number;
+        id: string; name: string; totalPoints: number; individualPoints: number; teamPoints: number; eventPoints: number; adjustmentPoints: number;
         competitionsPlayed: number; individualWins: number; teamWins: number; eventWins: number;
-        entries: { id: string; eventId: string | null; competitionType: string; competitionDate: string; competitionTitle: string; finalRank: number | null; points: number; month: number }[];
+        entries: SeasonLedgerEntry[];
     }>();
     for (const member of team.members) rows.set(member.id, emptyRankingRow(member.id, member.alias || member.user.name));
     for (const entry of entries) {
@@ -215,7 +326,24 @@ export async function getUnifiedSeasonRanking(
             id: entry.id, eventId: entry.eventId, competitionType: entry.competitionType,
             competitionDate: entry.competitionDate.toISOString(), competitionTitle: entry.competitionTitle,
             finalRank: entry.finalRank, points: entry.points, month: kstMonth(entry.competitionDate),
+            sourceType: "AUTOMATIC", reason: null, createdAt: entry.createdAt.toISOString(),
         });
+    }
+    for (const adjustment of adjustments) {
+        const row = rows.get(adjustment.memberId);
+        if (!row) continue;
+        row.totalPoints += adjustment.delta;
+        row.adjustmentPoints += adjustment.delta;
+        row.entries.push({
+            id: adjustment.id, eventId: null, competitionType: "MANUAL_ADJUSTMENT",
+            competitionDate: adjustment.createdAt.toISOString(), competitionTitle: adjustment.reason,
+            finalRank: null, points: adjustment.delta, month: kstMonth(adjustment.createdAt),
+            sourceType: "MANUAL_ADJUSTMENT", reason: adjustment.reason,
+            createdAt: adjustment.createdAt.toISOString(),
+        });
+    }
+    for (const row of rows.values()) {
+        row.entries.sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
     }
     const ranked = jointCompetitionRanks([...rows.values()].sort((left, right) =>
         right.totalPoints - left.totalPoints || left.name.localeCompare(right.name, "ko") || left.id.localeCompare(right.id),
@@ -248,10 +376,41 @@ export async function getUnifiedSeasonMemberDetail(
 
 function emptyRankingRow(id: string, name: string) {
     return {
-        id, name, totalPoints: 0, individualPoints: 0, teamPoints: 0, eventPoints: 0,
+        id, name, totalPoints: 0, individualPoints: 0, teamPoints: 0, eventPoints: 0, adjustmentPoints: 0,
         competitionsPlayed: 0, individualWins: 0, teamWins: 0, eventWins: 0,
-        entries: [] as { id: string; eventId: string | null; competitionType: string; competitionDate: string; competitionTitle: string; finalRank: number | null; points: number; month: number }[],
+        entries: [] as SeasonLedgerEntry[],
     };
+}
+
+type SeasonLedgerEntry = {
+    id: string;
+    eventId: string | null;
+    competitionType: string;
+    competitionDate: string;
+    competitionTitle: string;
+    finalRank: number | null;
+    points: number;
+    month: number;
+    sourceType: "AUTOMATIC" | "MANUAL_ADJUSTMENT";
+    reason: string | null;
+    createdAt: string;
+};
+
+function parseSeasonPointAdjustment(value: unknown) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw new UnifiedSeasonError("INVALID_ADJUSTMENT", "포인트 조정 내용을 확인해주세요.", 400);
+    }
+    const body = value as Record<string, unknown>;
+    const memberId = typeof body.memberId === "string" ? body.memberId.trim() : "";
+    const delta = body.delta;
+    const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+    if (!memberId || !Number.isSafeInteger(delta) || delta === 0 || Math.abs(delta as number) > MAX_ADJUSTMENT_ABS) {
+        throw new UnifiedSeasonError("INVALID_ADJUSTMENT", "회원과 0이 아닌 증감 포인트를 확인해주세요.", 400);
+    }
+    if (!reason || reason.length > MAX_ADJUSTMENT_REASON_LENGTH) {
+        throw new UnifiedSeasonError("INVALID_ADJUSTMENT_REASON", `사유는 1~${MAX_ADJUSTMENT_REASON_LENGTH}자로 입력해주세요.`, 400);
+    }
+    return { memberId, delta: delta as number, reason };
 }
 
 export function serializeSeasonSummary(season: {

@@ -139,7 +139,7 @@ const defaultDependencies: MobileDashboardDependencies = {
     async listClubAchievements(user) {
         return Promise.all(user.teamMemberships.map(async (membership) => {
             const team = membership.team;
-            if (!team.seasonRankingEnabled) return emptyClubAchievement(membership);
+            if (!team.seasonRankingEnabled && !team.bowlerHiddenEnabled) return emptyClubAchievement(membership);
             const ranking = await getMobileSeasonRanking(user.id, membership.teamId);
             const mine = ranking.rankings.find((row) => row.id === membership.id);
             const hiddenMine = mine && "individualPoints" in mine ? mine : null;

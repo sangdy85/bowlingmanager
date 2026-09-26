@@ -5,6 +5,7 @@ import { readRankPoints } from "@/lib/mobile-api/bowler-hidden";
 import {
     createSeasonPointPublication,
     getPublicationPointTable,
+    memberSeasonAwards,
     getSeasonPointPreview,
     revokeSeasonPointPublication,
     seasonPointsForRank,
@@ -345,10 +346,7 @@ async function publish(actorUserId: string, teamId: string, eventId: string) {
         const snapshot = JSON.stringify({ version: 1, publishedAt: publishedAt.toISOString(), rows: calculation.rows });
         await createSeasonPointPublication(tx, {
             event: fresh, pointTable, publishedAt,
-            awards: calculation.rows.filter((row) => row.memberId).map((row) => ({
-                memberId: row.memberId!, memberDisplayName: row.name, finalRank: row.rank,
-                points: seasonPointsForRank(pointTable, row.rank),
-            })),
+            awards: memberSeasonAwards(calculation.rows, pointTable),
             resultSnapshot: { version: 1, rows: calculation.rows },
         });
         const updated = await tx.teamEvent.updateMany({ where: { id: eventId, competitionStatus: "FINAL_READY", eventPublishedSnapshot: null }, data: {

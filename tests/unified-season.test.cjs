@@ -47,6 +47,19 @@ test('season point tables are independent, validated and preserve legacy arrays'
   );
 });
 
+test('member season awards exclude guests and recalculate member-only ranks', () => {
+  const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': {} });
+  assert.deepEqual(service.memberSeasonAwards([
+    { memberId: null, name: '게스트 1' },
+    { memberId: 'member-a', name: '회원 A' },
+    { memberId: null, name: '게스트 2' },
+    { memberId: 'member-b', name: '회원 B' },
+  ], [{ rank: 1, points: 50 }, { rank: 2, points: 30 }]), [
+    { memberId: 'member-a', memberDisplayName: '회원 A', competitionTeamId: null, finalRank: 1, points: 50 },
+    { memberId: 'member-b', memberDisplayName: '회원 B', competitionTeamId: null, finalRank: 2, points: 30 },
+  ]);
+});
+
 test('MINI publish never creates a season publication or zero-point ledger', async () => {
   const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': {} });
   let writes = 0;
@@ -143,6 +156,13 @@ test('ranking batches mixed ledgers, multiple monthly events and zero points wit
       assert.deepEqual(args.where.publication, { revokedAt: null });
       return entries;
     } },
+    seasonPointAdjustment: { findMany: async args => {
+      assert.equal(args.where.seasonId, season.id);
+      return [{
+        id: 'adjustment-1', memberId: 'member-b', delta: 70,
+        reason: '운영 보정', createdAt: new Date('2026-03-25T03:00:00.000Z'),
+      }];
+    } },
   };
   const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': fakePrisma });
   const result = await service.getUnifiedSeasonRanking('viewer', 'team-a');
@@ -154,9 +174,15 @@ test('ranking batches mixed ledgers, multiple monthly events and zero points wit
     { total: a.totalPoints, individual: a.individualPoints, team: a.teamPoints, event: a.eventPoints },
     { total: 105, individual: 80, team: 25, event: 0 },
   );
-  assert.equal(b.monthlyHistory[2].length, 2);
+  assert.equal(b.totalPoints, 120);
+  assert.equal(b.adjustmentPoints, 70);
+  assert.equal(b.monthlyHistory[2].length, 3);
+  assert.equal(b.entries.at(-1).sourceType, 'MANUAL_ADJUSTMENT');
+  assert.equal(b.entries.at(-1).reason, '운영 보정');
   assert.equal(c.totalPoints, 0);
-  assert.deepEqual(result.rankings.map(row => row.rank), [1, 2, 3]);
+  assert.deepEqual(result.rankings.map(row => [row.id, row.rank]), [
+    ['member-b', 1], ['member-a', 2], ['member-c', 3],
+  ]);
   for (const row of result.rankings) {
     assert.equal(Object.hasOwn(row, 'userId'), false);
     assert.equal(Object.hasOwn(row, 'email'), false);
@@ -197,6 +223,7 @@ test('exact unified season fixture totals 50 + 20 + 30 while MINI contributes no
       }) },
       teamSeason: { findMany: async () => [season] },
       seasonPointEntry: { findMany: async () => officialEntries },
+      seasonPointAdjustment: { findMany: async () => [] },
     },
   });
   const result = await rankingService.getUnifiedSeasonRanking('viewer', 'team-a');
@@ -220,6 +247,7 @@ test('competition type and season filters remain isolated', async () => {
     }) },
     teamSeason: { findMany: async () => [season] },
     seasonPointEntry: { findMany: async args => { where = args.where; return []; } },
+    seasonPointAdjustment: { findMany: async () => [] },
   };
   const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': fakePrisma });
   await service.getUnifiedSeasonRanking('viewer', 'team-a', {

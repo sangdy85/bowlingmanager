@@ -102,6 +102,27 @@ class ClubExpansionApi {
     );
     return ClubSeasonRankingRow.fromJson(_map(_data(response.data)['member']));
   });
+  Future<int> createSeasonPointAdjustment(
+    String teamId,
+    String seasonId, {
+    required String memberId,
+    required int delta,
+    required String reason,
+  }) async => _guard(() async {
+    final response = await _dio.post<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/point-adjustments',
+      data: <String, Object>{
+        'memberId': memberId,
+        'delta': delta,
+        'reason': reason,
+      },
+    );
+    final data = _data(response.data);
+    if (data['totalPoints'] is! int) {
+      throw const FormatException('Invalid season adjustment.');
+    }
+    return data['totalPoints'] as int;
+  });
   Future<ClubPostsPage> fetchPosts(String teamId, int page) async =>
       _guard(() async {
         final response = await _dio.get<dynamic>(

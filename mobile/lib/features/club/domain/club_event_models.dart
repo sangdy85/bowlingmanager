@@ -97,12 +97,38 @@ class ClubRankPoint {
   Map<String, int> toJson() => <String, int>{'rank': rank, 'points': points};
 }
 
+class ClubTeamGamePointTable {
+  const ClubTeamGamePointTable({
+    required this.gameNumber,
+    required this.points,
+  });
+  final int gameNumber;
+  final List<ClubRankPoint> points;
+
+  factory ClubTeamGamePointTable.fromJson(Map<String, dynamic> json) {
+    final Object? gameNumber = json['gameNumber'];
+    if (gameNumber is! int || gameNumber < 1) {
+      throw const FormatException('Invalid team game point table.');
+    }
+    return ClubTeamGamePointTable(
+      gameNumber: gameNumber,
+      points: _list(json['points'], ClubRankPoint.fromJson),
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'gameNumber': gameNumber,
+    'points': points.map((ClubRankPoint item) => item.toJson()).toList(),
+  };
+}
+
 class ClubCompetitionConfig {
   const ClubCompetitionConfig({
     required this.type,
     required this.mode,
     required this.status,
     required this.rankPoints,
+    this.teamGamePointTables = const <ClubTeamGamePointTable>[],
     required this.competitionStartAt,
     required this.voteCloseAt,
     required this.votingDurationMinutes,
@@ -112,6 +138,7 @@ class ClubCompetitionConfig {
   final ClubCompetitionMode? mode;
   final String status;
   final List<ClubRankPoint> rankPoints;
+  final List<ClubTeamGamePointTable> teamGamePointTables;
   final DateTime? competitionStartAt;
   final DateTime? voteCloseAt;
   final int? votingDurationMinutes;
@@ -130,6 +157,10 @@ class ClubCompetitionConfig {
           : ClubCompetitionMode.fromJson(json['mode']),
       status: status,
       rankPoints: _list(json['rankPoints'], ClubRankPoint.fromJson),
+      teamGamePointTables: _list(
+        json['teamGamePointTables'] ?? const <Object>[],
+        ClubTeamGamePointTable.fromJson,
+      ),
       competitionStartAt: _nullableDateTime(json['competitionStartAt']),
       voteCloseAt: _nullableDateTime(json['voteCloseAt']),
       votingDurationMinutes: _nullablePositiveInt(
@@ -643,6 +674,7 @@ class ClubEventDraft {
     this.competitionType,
     this.competitionMode,
     this.rankPoints = const <ClubRankPoint>[],
+    this.teamGamePointTables = const <ClubTeamGamePointTable>[],
     this.competitionGameCount,
   });
   final String title;
@@ -657,6 +689,7 @@ class ClubEventDraft {
   final ClubCompetitionType? competitionType;
   final ClubCompetitionMode? competitionMode;
   final List<ClubRankPoint> rankPoints;
+  final List<ClubTeamGamePointTable> teamGamePointTables;
   final int? competitionGameCount;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -673,6 +706,9 @@ class ClubEventDraft {
     'competitionMode': competitionEnabled ? competitionMode?.apiValue : null,
     'rankPoints': rankPoints
         .map((ClubRankPoint item) => item.toJson())
+        .toList(),
+    'teamGamePointTables': teamGamePointTables
+        .map((ClubTeamGamePointTable item) => item.toJson())
         .toList(),
     'competitionGameCount': competitionEnabled ? competitionGameCount : null,
   };
