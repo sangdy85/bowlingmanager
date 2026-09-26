@@ -51,3 +51,4 @@ next-env.d.ts
 # agent scratch
 /scratch/
 
+mobile/android/app/google-services.json

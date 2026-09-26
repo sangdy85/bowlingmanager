@@ -2,8 +2,19 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
+    id("com.google.gms.google-services") apply false
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val hasGoogleServicesConfig =
+    file("google-services.json").isFile ||
+        fileTree("src") {
+            include("**/google-services.json")
+        }.files.isNotEmpty()
+
+if (hasGoogleServicesConfig) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 val releaseSigningPropertiesFile = rootProject.file("key.properties")
