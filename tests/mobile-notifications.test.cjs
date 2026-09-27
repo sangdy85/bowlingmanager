@@ -209,6 +209,42 @@ test('outbox uses stable notification/device keys and supports multiple devices'
   assert.equal(deliveries.size, 2);
 });
 
+test('worker sends Android high priority notification and safe navigation data', async () => {
+  let sentMessage;
+  const row = {
+    id: 'delivery-1', deviceId: 'device-1', status: 'PENDING', retryCount: 0,
+    device: { id: 'device-1', token: 'fcm-token' },
+    notification: {
+      title: '레인 배정 완료', body: '내 레인을 확인해주세요.',
+      data: '{"type":"LANE_ASSIGNED","teamId":"team-1","eventId":"event-1","target":"LANE_DRAW"}',
+    },
+  };
+  const prisma = {
+    mobileNotificationDelivery: {
+      findMany: async () => [row],
+      updateMany: async () => ({ count: 1 }),
+      update: async () => {},
+    },
+  };
+  const service = loadService(prisma);
+  const result = await service.deliverPendingMobileNotifications(async message => {
+    sentMessage = message;
+  });
+  assert.deepEqual(result, { configured: true, attempted: 1, sent: 1, failed: 0, disabled: 0 });
+  assert.deepEqual(sentMessage.notification, {
+    title: '레인 배정 완료', body: '내 레인을 확인해주세요.',
+  });
+  assert.deepEqual(sentMessage.android, {
+    priority: 'high',
+    notification: { channelId: 'bowlingmanager_competition', sound: 'default' },
+  });
+  assert.deepEqual(sentMessage.data, {
+    type: 'LANE_ASSIGNED', teamId: 'team-1', eventId: 'event-1', target: 'LANE_DRAW',
+  });
+  assert.deepEqual(Object.keys(sentMessage.data).sort(), ['eventId', 'target', 'teamId', 'type']);
+  assert.doesNotMatch(JSON.stringify(sentMessage.data), /token|password|email|cookie|authorization/i);
+});
+
 test('invalid FCM token disables only that device while other deliveries continue', async () => {
   const deliveryUpdates = [];
   const deviceUpdates = [];

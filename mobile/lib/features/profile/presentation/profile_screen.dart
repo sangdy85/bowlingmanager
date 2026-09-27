@@ -179,11 +179,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
       return;
     }
+    final denied =
+        coordinator.permission == MobileNotificationPermission.denied;
     final accepted = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('경기 운영 알림'),
-        content: const Text('레인 추첨, 조 편성, 팀 드래프트와 이벤트 투표 시작을 알려드립니다.'),
+        title: Text(denied ? 'Android 알림 설정' : '경기 운영 알림'),
+        content: Text(
+          denied
+              ? '알림 권한이 거부되었습니다. Android 설정에서 볼링매니저 알림을 허용해주세요.'
+              : '레인 추첨, 조 편성, 팀 드래프트와 이벤트 투표 시작을 알려드립니다.',
+        ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -191,12 +197,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('알림 허용'),
+            child: Text(denied ? 'Android 설정 열기' : '알림 허용'),
           ),
         ],
       ),
     );
     if (accepted == true) {
+      if (denied) {
+        final opened = await coordinator.openNotificationSettings();
+        if (!opened && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Android 알림 설정을 열지 못했습니다.')),
+          );
+        }
+        return;
+      }
       try {
         await coordinator.requestPermission();
       } on Object {

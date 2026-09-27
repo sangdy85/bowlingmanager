@@ -171,7 +171,15 @@ export async function enqueueMobileNotifications(tx: DbClient, inputs: Notificat
     }
 }
 
-type MessageSender = (message: { token: string; notification: { title: string; body: string }; data: Record<string, string> }) => Promise<unknown>;
+type MessageSender = (message: {
+    token: string;
+    notification: { title: string; body: string };
+    data: Record<string, string>;
+    android: {
+        priority: "high";
+        notification: { channelId: "bowlingmanager_competition"; sound: "default" };
+    };
+}) => Promise<unknown>;
 
 export async function deliverPendingMobileNotifications(send?: MessageSender, now = new Date()) {
     const sender = send ?? configuredSender();
@@ -194,7 +202,16 @@ export async function deliverPendingMobileNotifications(send?: MessageSender, no
             await sender({
                 token: delivery.device.token,
                 notification: { title: delivery.notification.title, body: delivery.notification.body },
-                data: Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value == null ? "" : String(value)])),
+                data: {
+                    type: messageDataValue(data.type),
+                    teamId: messageDataValue(data.teamId),
+                    eventId: messageDataValue(data.eventId),
+                    target: messageDataValue(data.target),
+                },
+                android: {
+                    priority: "high",
+                    notification: { channelId: "bowlingmanager_competition", sound: "default" },
+                },
             });
             await prisma.mobileNotificationDelivery.update({ where: { id: delivery.id }, data: { status: "SENT", sentAt: now, lastErrorCode: null } });
             sent += 1;
@@ -250,6 +267,10 @@ function safeData(value: string): Record<string, unknown> {
         const parsed: unknown = JSON.parse(value);
         return asRecord(parsed);
     } catch { return {}; }
+}
+
+function messageDataValue(value: unknown) {
+    return typeof value === "string" ? value : "";
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

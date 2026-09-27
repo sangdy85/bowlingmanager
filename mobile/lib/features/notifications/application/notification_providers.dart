@@ -22,6 +22,158 @@ enum MobileNotificationPermission {
   enabled,
 }
 
+const String competitionNotificationChannelId = 'bowlingmanager_competition';
+const String competitionNotificationChannelName = '경기 알림';
+const String competitionNotificationChannelDescription =
+    '레인 배정, 조 편성, 팀전, 이벤트 투표 등 경기 진행 알림';
+
+const AndroidNotificationChannel competitionNotificationChannel =
+    AndroidNotificationChannel(
+      competitionNotificationChannelId,
+      competitionNotificationChannelName,
+      description: competitionNotificationChannelDescription,
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+const AndroidNotificationDetails competitionNotificationDetails =
+    AndroidNotificationDetails(
+      competitionNotificationChannelId,
+      competitionNotificationChannelName,
+      channelDescription: competitionNotificationChannelDescription,
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+class MobilePushMessage {
+  const MobilePushMessage({
+    required this.messageId,
+    required this.title,
+    required this.body,
+    required this.data,
+  });
+
+  final String? messageId;
+  final String? title;
+  final String? body;
+  final Map<String, dynamic> data;
+}
+
+abstract interface class MobileNotificationPlatform {
+  Future<void> initialize({
+    required void Function(Map<String, dynamic> data) onLocalTap,
+  });
+  Future<AuthorizationStatus> getAuthorizationStatus();
+  Future<AuthorizationStatus> requestPermission();
+  Future<String?> getToken();
+  Stream<String> get onTokenRefresh;
+  Stream<MobilePushMessage> get onMessageOpenedApp;
+  Stream<MobilePushMessage> get onForegroundMessage;
+  Future<MobilePushMessage?> getInitialMessage();
+  Future<void> showForeground(MobilePushMessage message);
+  Future<bool> openAppNotificationSettings();
+}
+
+class FirebaseMobileNotificationPlatform implements MobileNotificationPlatform {
+  FirebaseMobileNotificationPlatform({FlutterLocalNotificationsPlugin? local})
+    : _local = local ?? FlutterLocalNotificationsPlugin();
+
+  final FlutterLocalNotificationsPlugin _local;
+
+  @override
+  Future<void> initialize({
+    required void Function(Map<String, dynamic> data) onLocalTap,
+  }) async {
+    await Firebase.initializeApp();
+    await _local.initialize(
+      settings: const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      ),
+      onDidReceiveNotificationResponse: (response) {
+        final data = mobileNotificationDataFromPayload(response.payload);
+        if (data != null) onLocalTap(data);
+      },
+    );
+    await _local
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(competitionNotificationChannel);
+  }
+
+  @override
+  Future<AuthorizationStatus> getAuthorizationStatus() async =>
+      (await FirebaseMessaging.instance.getNotificationSettings())
+          .authorizationStatus;
+
+  @override
+  Future<AuthorizationStatus> requestPermission() async =>
+      (await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      )).authorizationStatus;
+
+  @override
+  Future<String?> getToken() => FirebaseMessaging.instance.getToken();
+
+  @override
+  Stream<String> get onTokenRefresh =>
+      FirebaseMessaging.instance.onTokenRefresh;
+
+  @override
+  Stream<MobilePushMessage> get onMessageOpenedApp =>
+      FirebaseMessaging.onMessageOpenedApp.map(_fromRemoteMessage);
+
+  @override
+  Stream<MobilePushMessage> get onForegroundMessage =>
+      FirebaseMessaging.onMessage.map(_fromRemoteMessage);
+
+  @override
+  Future<MobilePushMessage?> getInitialMessage() async {
+    final message = await FirebaseMessaging.instance.getInitialMessage();
+    return message == null ? null : _fromRemoteMessage(message);
+  }
+
+  @override
+  Future<void> showForeground(MobilePushMessage message) async {
+    await _local.show(
+      id: (message.messageId ?? message.data.toString()).hashCode,
+      title: message.title,
+      body: message.body,
+      notificationDetails: const NotificationDetails(
+        android: competitionNotificationDetails,
+      ),
+      payload: jsonEncode(message.data),
+    );
+  }
+
+  @override
+  Future<bool> openAppNotificationSettings() async =>
+      await _local.openAppNotificationSettings() ?? false;
+}
+
+MobilePushMessage _fromRemoteMessage(RemoteMessage message) =>
+    MobilePushMessage(
+      messageId: message.messageId,
+      title: message.notification?.title,
+      body: message.notification?.body,
+      data: message.data,
+    );
+
+Map<String, dynamic>? mobileNotificationDataFromPayload(String? payload) {
+  if (payload == null) return null;
+  try {
+    final value = jsonDecode(payload);
+    return value is Map ? Map<String, dynamic>.from(value) : null;
+  } on FormatException {
+    return null;
+  }
+}
+
 MobileNotificationPermission mobileNotificationPermissionFromAuthorization(
   AuthorizationStatus status,
 ) => switch (status) {
@@ -52,13 +204,22 @@ final Provider<MobileNotificationCoordinator> notificationCoordinatorProvider =
     });
 
 class MobileNotificationCoordinator {
-  MobileNotificationCoordinator(this._api);
+  MobileNotificationCoordinator(
+    this._api, {
+    MobileNotificationPlatform? platform,
+    bool enabled = mobileFcmEnabled,
+  }) : _platform = platform ?? FirebaseMobileNotificationPlatform(),
+       _enabled = enabled,
+       permission = enabled
+           ? MobileNotificationPermission.notDetermined
+           : MobileNotificationPermission.unavailable;
   final NotificationApi _api;
-  final FlutterLocalNotificationsPlugin _local =
-      FlutterLocalNotificationsPlugin();
+  final MobileNotificationPlatform _platform;
+  final bool _enabled;
   StreamSubscription<String>? _tokenSubscription;
-  StreamSubscription<RemoteMessage>? _openedSubscription;
-  StreamSubscription<RemoteMessage>? _foregroundSubscription;
+  StreamSubscription<MobilePushMessage>? _openedSubscription;
+  StreamSubscription<MobilePushMessage>? _foregroundSubscription;
+  final Set<String> _shownForegroundMessageIds = <String>{};
   bool _initialized = false;
   bool _authenticated = false;
   String? _registeredUserId;
@@ -66,46 +227,30 @@ class MobileNotificationCoordinator {
   String? _pendingPath;
   void Function(String path)? _navigate;
 
-  MobileNotificationPermission permission = mobileFcmEnabled
-      ? MobileNotificationPermission.notDetermined
-      : MobileNotificationPermission.unavailable;
+  MobileNotificationPermission permission;
 
   Future<void> initialize(void Function(String path) navigate) async {
     _navigate = navigate;
-    if (_initialized || !mobileFcmEnabled) return;
+    if (_initialized || !_enabled) return;
     _initialized = true;
     try {
-      await Firebase.initializeApp();
-      await _local.initialize(
-        settings: const InitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-        ),
-        onDidReceiveNotificationResponse: (response) async {
-          final payload = response.payload;
-          if (payload == null) return;
-          final value = jsonDecode(payload);
-          if (value is Map) _open(Map<String, dynamic>.from(value));
-        },
-      );
+      await _platform.initialize(onLocalTap: _open);
       permission = mobileNotificationPermissionFromAuthorization(
-        (await FirebaseMessaging.instance.getNotificationSettings())
-            .authorizationStatus,
+        await _platform.getAuthorizationStatus(),
       );
-      _token = await FirebaseMessaging.instance.getToken();
-      _tokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen((
-        token,
-      ) {
+      _token = await _platform.getToken();
+      _tokenSubscription = _platform.onTokenRefresh.listen((token) {
         final previous = _token;
         _token = token;
         if (_authenticated) unawaited(_replaceToken(previous, token));
       });
-      _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
+      _openedSubscription = _platform.onMessageOpenedApp.listen(
         (message) => _open(message.data),
       );
-      _foregroundSubscription = FirebaseMessaging.onMessage.listen(
-        _showForeground,
-      );
-      final initial = await FirebaseMessaging.instance.getInitialMessage();
+      _foregroundSubscription = _platform.onForegroundMessage.listen((message) {
+        unawaited(_showForeground(message));
+      });
+      final initial = await _platform.getInitialMessage();
       if (initial != null) _open(initial.data);
     } on Object {
       permission = MobileNotificationPermission.unavailable;
@@ -114,21 +259,21 @@ class MobileNotificationCoordinator {
 
   Future<MobileNotificationPermission> requestPermission() async {
     if (!_initialized) return permission;
-    final settings = await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
     permission = mobileNotificationPermissionFromAuthorization(
-      settings.authorizationStatus,
+      await _platform.requestPermission(),
     );
     if (permission == MobileNotificationPermission.enabled) {
-      _token = await FirebaseMessaging.instance.getToken();
+      _token = await _platform.getToken();
       if (_authenticated && _token != null) {
         await _api.registerDevice(_token!);
       }
     }
     return permission;
+  }
+
+  Future<bool> openNotificationSettings() async {
+    if (!_initialized) return false;
+    return _platform.openAppNotificationSettings();
   }
 
   Future<void> handleAuthState(AuthState state) async {
@@ -185,24 +330,11 @@ class MobileNotificationCoordinator {
     }
   }
 
-  Future<void> _showForeground(RemoteMessage message) async {
-    final notification = message.notification;
-    if (notification == null) return;
-    await _local.show(
-      id: message.messageId.hashCode,
-      title: notification.title,
-      body: notification.body,
-      notificationDetails: const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'competition_operations',
-          '경기 운영 알림',
-          channelDescription: '레인, 조 편성, 팀 드래프트 및 이벤트 투표 알림',
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-      ),
-      payload: jsonEncode(message.data),
-    );
+  Future<void> _showForeground(MobilePushMessage message) async {
+    if (message.title == null && message.body == null) return;
+    final messageId = message.messageId;
+    if (messageId != null && !_shownForegroundMessageIds.add(messageId)) return;
+    await _platform.showForeground(message);
   }
 
   void dispose() {

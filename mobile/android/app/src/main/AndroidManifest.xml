@@ -6,6 +6,9 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round">
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="bowlingmanager_competition" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
