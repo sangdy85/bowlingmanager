@@ -9,6 +9,81 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('season management API confirms mode changes and lists/updates manual competitions', () async {
+    final requests = <RequestOptions>[];
+    final dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
+      ..httpClientAdapter = _Adapter((options) {
+        requests.add(options);
+        final data = options.method == 'GET'
+            ? <String, Object?>{
+                'competitions': <Object>[
+                  <String, Object?>{
+                    'id': 'manual-1',
+                    'name': '1월 팀전',
+                    'eventDate': '2026-01-10T00:00:00.000Z',
+                    'competitionType': 'TEAM',
+                    'results': <Object>[
+                      <String, Object?>{
+                        'memberId': 'member-1',
+                        'memberDisplayName': '회원',
+                        'finalRank': 1,
+                        'points': 30,
+                      },
+                    ],
+                  },
+                ],
+              }
+            : <String, Object?>{};
+        return _json(200, <String, Object?>{'success': true, 'data': data});
+      });
+    final api = ClubExpansionApi(dio);
+    await api.updateSeasonRankingMode(
+      'team-1',
+      'season-1',
+      'IMAGE',
+      confirmed: true,
+    );
+    final competitions = await api.fetchManualCompetitions(
+      'team-1',
+      'season-1',
+    );
+    await api.updateManualCompetition(
+      'team-1',
+      'season-1',
+      'manual-1',
+      <String, Object>{'name': '수정 팀전'},
+    );
+    await api.saveStructuredSeasonRanking(
+      'team-1',
+      'season-1',
+      competitions: <Map<String, Object?>>[
+        <String, Object?>{
+          'id': null,
+          'name': '2월 개인전',
+          'eventDate': '2026-02-10',
+          'competitionType': 'INDIVIDUAL',
+          'results': <Object>[],
+        },
+      ],
+      targetTotals: <Map<String, Object>>[
+        <String, Object>{'memberId': 'member-1', 'targetTotal': 100},
+      ],
+    );
+
+    expect(competitions.single.name, '1월 팀전');
+    expect(requests.first.data, <String, Object>{
+      'rankingMode': 'IMAGE',
+      'confirmed': true,
+    });
+    expect(requests.map((item) => '${item.method} ${item.path}'), <String>[
+      'PATCH /teams/team-1/seasons/season-1/ranking-mode',
+      'GET /teams/team-1/seasons/season-1/manual-competitions',
+      'PATCH /teams/team-1/seasons/season-1/manual-competitions/manual-1',
+      'POST /teams/team-1/seasons/season-1/structured-ranking',
+    ]);
+    expect((requests.last.data as Map)['targetTotals'], isNotEmpty);
+  });
+
   test('parses signed manual season ledger entries additively', () {
     final entry = ClubSeasonPointEntry.fromJson(<String, Object?>{
       'id': 'adjustment-1',

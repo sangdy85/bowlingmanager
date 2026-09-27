@@ -4,6 +4,7 @@ import 'package:bowlingmanager_mobile/features/records/application/records_provi
 import 'package:bowlingmanager_mobile/features/records/application/records_state.dart';
 import 'package:bowlingmanager_mobile/features/records/data/scores_repository.dart';
 import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart';
+import 'package:bowlingmanager_mobile/features/home/domain/dashboard.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -204,7 +205,12 @@ void main() {
 class _RecordsHarness {
   _RecordsHarness(ScoresRepository repository)
     : container = ProviderContainer(
-        overrides: [scoresRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          scoresRepositoryProvider.overrideWithValue(repository),
+          recordsDashboardLoaderProvider.overrideWithValue(
+            (int year) async => _dashboard(year),
+          ),
+        ],
       ) {
     subscription = container.listen<AsyncValue<RecordsState>>(
       provider,
@@ -226,3 +232,13 @@ class _RecordsHarness {
     container.dispose();
   }
 }
+
+Dashboard _dashboard(int year) => Dashboard(
+  year: year,
+  average: 0,
+  highScore: 0,
+  gameCount: 0,
+  recentScores: const <DashboardScore>[],
+  recentSessions: const <GameSession>[],
+  recentAverage: 0,
+);

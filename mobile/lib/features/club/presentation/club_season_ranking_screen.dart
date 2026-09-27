@@ -102,7 +102,7 @@ class _ClubSeasonRankingScreenState
             onChanged: (value) => setState(() => _seasonId = value),
           ),
           const SizedBox(height: 12),
-          if (ranking.bowlerHiddenEnabled)
+          if (ranking.bowlerHiddenEnabled && ranking.rankingMode == 'DATA')
             SegmentedButton<String>(
               key: const Key('hidden-competition-filter'),
               segments: const <ButtonSegment<String>>[
@@ -118,6 +118,13 @@ class _ClubSeasonRankingScreenState
           const SizedBox(height: 16),
           if (ranking.season == null)
             const _Empty(message: '조회할 시즌이 없습니다.')
+          else if (ranking.rankingMode == 'IMAGE')
+            ClubRankingImageGallery(
+              userId: userId,
+              teamId: widget.teamId,
+              season: ranking.season!,
+              images: ranking.rankingImages,
+            )
           else if (ranking.rows.isEmpty)
             const _Empty(message: '발표된 시즌 포인트가 없습니다.')
           else ...<Widget>[
@@ -128,6 +135,7 @@ class _ClubSeasonRankingScreenState
             const SizedBox(height: 10),
             ClubSeasonRankingGrid(
               rows: ranking.rows,
+              competitionColumns: ranking.competitionColumns,
               hidden: ranking.bowlerHiddenEnabled,
               onMember: ranking.bowlerHiddenEnabled
                   ? (row) => _showMember(userId, ranking, row)
@@ -163,11 +171,13 @@ class ClubSeasonRankingGrid extends StatelessWidget {
     required this.rows,
     required this.onMember,
     required this.hidden,
+    this.competitionColumns = const <ClubSeasonCompetitionColumn>[],
     super.key,
   });
   final List<ClubSeasonRankingRow> rows;
   final ValueChanged<ClubSeasonRankingRow>? onMember;
   final bool hidden;
+  final List<ClubSeasonCompetitionColumn> competitionColumns;
 
   @override
   Widget build(BuildContext context) {
@@ -214,18 +224,34 @@ class ClubSeasonRankingGrid extends StatelessWidget {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: SizedBox(
-                width: hidden ? 12 * 64 + 176 : 12 * 112 + 20,
+                width: hidden && competitionColumns.isNotEmpty
+                    ? competitionColumns.length * 112 + 152
+                    : hidden
+                    ? 12 * 64 + 176
+                    : 12 * 112 + 20,
                 child: Column(
                   children: <Widget>[
                     _GridCell(
                       height: 46,
                       child: Row(
                         children: <Widget>[
-                          for (int month = 1; month <= 12; month++)
-                            SizedBox(
-                              width: hidden ? 64 : 112,
-                              child: Text('$month월'),
-                            ),
+                          if (hidden && competitionColumns.isNotEmpty)
+                            for (final column in competitionColumns)
+                              SizedBox(
+                                width: 112,
+                                child: Text(
+                                  '${column.month}월 ${_type(column.competitionType)}\n${column.displayName}',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              )
+                          else
+                            for (int month = 1; month <= 12; month++)
+                              SizedBox(
+                                width: hidden ? 64 : 112,
+                                child: Text('$month월'),
+                              ),
                           if (hidden) ...<Widget>[
                             const SizedBox(width: 76, child: Text('기초P')),
                             const SizedBox(width: 76, child: Text('조정P')),
@@ -238,7 +264,16 @@ class ClubSeasonRankingGrid extends StatelessWidget {
                         height: rowHeight,
                         child: Row(
                           children: <Widget>[
-                            if (hidden)
+                            if (hidden && competitionColumns.isNotEmpty)
+                              for (final column in competitionColumns)
+                                SizedBox(
+                                  width: 112,
+                                  child: Text(
+                                    _competitionCell(row, column.id),
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                )
+                            else if (hidden)
                               for (final points in row.monthlyPoints)
                                 SizedBox(
                                   width: 64,
@@ -282,6 +317,120 @@ class ClubSeasonRankingGrid extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+String _competitionCell(ClubSeasonRankingRow row, String columnId) {
+  ClubSeasonPointEntry? entry;
+  for (final item in row.entries) {
+    if (item.columnId == columnId) {
+      entry = item;
+      break;
+    }
+  }
+  if (entry == null) return '-';
+  final rank = entry.finalRank == null ? '순위 없음' : '${entry.finalRank}위';
+  return '$rank\n${_signedPoints(entry.points)}P';
+}
+
+class ClubRankingImageGallery extends ConsumerWidget {
+  const ClubRankingImageGallery({
+    super.key,
+    required this.userId,
+    required this.teamId,
+    required this.season,
+    required this.images,
+  });
+  final String userId;
+  final String teamId;
+  final ClubSeason season;
+  final List<ClubSeasonRankingImage> images;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (images.isEmpty) return const _Empty(message: '등록된 시즌 순위표 이미지가 없습니다.');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          '${season.name} 순위표',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 12),
+        for (final image in images)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _RankingImageTile(
+              request: (
+                userId: userId,
+                teamId: teamId,
+                seasonId: season.id,
+                imageId: image.id,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _RankingImageTile extends ConsumerWidget {
+  const _RankingImageTile({required this.request});
+  final ClubRankingImageRequest request;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final value = ref.watch(clubRankingImageProvider(request));
+    return value.when(
+      loading: () => const SizedBox(
+        height: 180,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, _) => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Text('이미지를 불러오지 못했습니다.'),
+        ),
+      ),
+      data: (bytes) => Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: Key('season-ranking-image-${request.imageId}'),
+          onTap: () => showDialog<void>(
+            context: context,
+            builder: (context) => Dialog.fullscreen(
+              child: Stack(
+                children: <Widget>[
+                  Positioned.fill(
+                    child: InteractiveViewer(
+                      minScale: .5,
+                      maxScale: 5,
+                      child: Center(
+                        child: Image.memory(bytes, fit: BoxFit.contain),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: IconButton.filled(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          child: Image.memory(
+            bytes,
+            height: 220,
+            width: double.infinity,
+            fit: BoxFit.contain,
+          ),
+        ),
       ),
     );
   }

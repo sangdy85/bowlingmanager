@@ -22,7 +22,7 @@ function loadTs(relative, overrides = {}, cache = new Map()) {
 function contextTeam(actor = 'owner') {
   return {
     ownerId: actor, bowlerHiddenEnabled: true, User: [],
-    seasons: [{ id: 'season-2026', startDate: new Date('2025-12-31T15:00:00.000Z'), endDate: new Date('2026-12-31T14:59:59.999Z') }],
+    seasons: [{ id: 'season-2026', startDate: new Date('2025-12-31T15:00:00.000Z'), endDate: new Date('2026-12-31T14:59:59.999Z'), rankingMode: 'DATA' }],
     members: [
       { id: 'member-a', alias: '회원 A', user: { name: 'Account A' } },
       { id: 'member-b', alias: null, user: { name: '회원 B' } },
@@ -36,6 +36,10 @@ function fakePrisma(options = {}) {
     team: { findFirst: async () => Object.hasOwn(options, 'team') ? options.team : contextTeam() },
     seasonPointEntry: { groupBy: async () => options.automatic ?? [] },
     seasonPointAdjustment: { groupBy: async () => options.adjustments ?? [] },
+    seasonManualCompetitionResult: {
+      groupBy: async () => options.manualCompetitions ?? [],
+      findMany: async () => options.manualOverlap ?? [],
+    },
     seasonLegacyPointEntry: {
       findFirst: async () => options.conflict ? { id: 'conflict' } : null,
       groupBy: async () => options.legacy ?? [],
@@ -105,6 +109,27 @@ test('same import and mixed opening/detail sources are rejected', async () => {
     }),
     error => error.code === 'LEGACY_SOURCE_CONFLICT',
   );
+});
+
+test('detailed Legacy import cannot duplicate an existing manual competition result', async () => {
+  const fake = fakePrisma({
+    manualOverlap: [{
+      memberId: 'member-a',
+      competition: {
+        eventDate: new Date('2025-12-31T15:00:00.000Z'),
+        competitionType: 'TEAM',
+      },
+    }],
+  });
+  const service = loadTs('src/lib/mobile-api/season-legacy-import.ts', { '@/lib/prisma': fake.db });
+  const preview = await service.previewSeasonLegacyImport('owner', 'team-a', 'season-2026', detailed);
+  await assert.rejects(
+    service.createSeasonLegacyImport('owner', 'team-a', 'season-2026', {
+      ...detailed, importHash: preview.importHash,
+    }),
+    error => error.code === 'LEGACY_MANUAL_DUPLICATE' && error.status === 409,
+  );
+  assert.equal(fake.created(), null);
 });
 
 test('member/outsider cannot import and guest-shaped member IDs are rejected', async () => {

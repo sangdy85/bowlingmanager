@@ -15,6 +15,17 @@ typedef ClubMemberProfileRequest = ({
 });
 typedef ClubPostRequest = ({String userId, String teamId, String postId});
 typedef ClubPostImageRequest = ({String userId, String teamId, String imageId});
+typedef ClubRankingImageRequest = ({
+  String userId,
+  String teamId,
+  String seasonId,
+  String imageId,
+});
+typedef ClubSeasonManagementRequest = ({
+  String userId,
+  String teamId,
+  String seasonId,
+});
 typedef ClubExpansionRequest = ({String userId, String teamId});
 typedef ClubSeasonRankingRequest = ({
   String userId,
@@ -110,5 +121,19 @@ final clubPostImageProvider = FutureProvider.autoDispose
       (ref, request) => ref
           .watch(clubExpansionApiProvider)
           .fetchPostImage(request.teamId, request.imageId),
+      retry: (_, _) => null,
+    );
+final clubRankingImageProvider = FutureProvider.autoDispose
+    .family<Uint8List, ClubRankingImageRequest>(
+      (ref, request) => ref
+          .watch(clubExpansionApiProvider)
+          .fetchRankingImage(request.teamId, request.seasonId, request.imageId),
+      retry: (_, _) => null,
+    );
+final clubSeasonManualCompetitionsProvider = FutureProvider.autoDispose
+    .family<List<ClubSeasonManualCompetition>, ClubSeasonManagementRequest>(
+      (ref, request) => ref
+          .watch(clubExpansionApiProvider)
+          .fetchManualCompetitions(request.teamId, request.seasonId),
       retry: (_, _) => null,
     );

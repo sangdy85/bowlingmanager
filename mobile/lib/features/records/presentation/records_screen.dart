@@ -6,6 +6,8 @@ import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_state.dart';
 import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart';
+import 'package:bowlingmanager_mobile/features/home/domain/dashboard.dart';
+import 'package:bowlingmanager_mobile/features/home/presentation/home_screen.dart';
 import 'package:bowlingmanager_mobile/shared/widgets/bowling_medal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,6 +72,12 @@ class _RecordsContent extends StatelessWidget {
         children: <Widget>[
           const _RecordsHeader(),
           const SizedBox(height: 18),
+          if (state.dashboard case final Dashboard dashboard) ...<Widget>[
+            _PersonalRecordsDashboard(dashboard: dashboard),
+            const SizedBox(height: 24),
+            const Text('경기 기록', style: AppTextStyles.title),
+            const SizedBox(height: 12),
+          ],
           _RecordsFilters(state: state, onChanged: onFilter),
           const SizedBox(height: 20),
           if (state.refreshErrorMessage case final String message) ...<Widget>[
@@ -102,6 +110,132 @@ class _RecordsContent extends StatelessWidget {
               label: const Text('더 보기'),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PersonalRecordsDashboard extends StatelessWidget {
+  const _PersonalRecordsDashboard({required this.dashboard});
+  final Dashboard dashboard;
+
+  @override
+  Widget build(BuildContext context) {
+    final regular = dashboard.personalStats.regular;
+    final official = dashboard.personalStats.official;
+    final hasRecords = dashboard.gameCount > 0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text('${dashboard.year} PLAYER PROFILE', style: AppTextStyles.title),
+        const SizedBox(height: 10),
+        Card(
+          key: const Key('records-profile-summary'),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: <Widget>[
+                Text(
+                  hasRecords
+                      ? '총평균 ${dashboard.average.toStringAsFixed(1)}'
+                      : '총평균 -',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _ProfileStatLine(label: '정기전', stats: regular),
+                const Divider(height: 22),
+                _ProfileStatLine(label: '볼링장 공식', stats: official),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        DashboardRadarCard(radar: dashboard.profileRadar),
+        const SizedBox(height: 16),
+        const Text('입상 기록', style: AppTextStyles.title),
+        const SizedBox(height: 8),
+        DashboardMedalsCard(medals: dashboard.medals),
+        const SizedBox(height: 16),
+        const Text('개인 통계', style: AppTextStyles.title),
+        const SizedBox(height: 8),
+        Card(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columns: const <DataColumn>[
+                DataColumn(label: Text('분류')),
+                DataColumn(label: Text('게임')),
+                DataColumn(label: Text('총점')),
+                DataColumn(label: Text('하이')),
+                DataColumn(label: Text('평균')),
+              ],
+              rows: dashboard.recordCategories
+                  .map(
+                    (item) => DataRow(
+                      cells: <DataCell>[
+                        DataCell(Text(item.label)),
+                        DataCell(Text('${item.gameCount}')),
+                        DataCell(
+                          Text(item.gameCount == 0 ? '-' : '${item.total}'),
+                        ),
+                        DataCell(
+                          Text(item.gameCount == 0 ? '-' : '${item.highScore}'),
+                        ),
+                        DataCell(
+                          Text(
+                            item.gameCount == 0
+                                ? '-'
+                                : item.average.toStringAsFixed(1),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileStatLine extends StatelessWidget {
+  const _ProfileStatLine({required this.label, required this.stats});
+  final String label;
+  final DashboardCategoryStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final empty = stats.gameCount == 0;
+    String value(num number, {int decimals = 0}) => empty
+        ? '-'
+        : decimals == 0
+        ? number.toInt().toString()
+        : number.toStringAsFixed(decimals);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: <Widget>[
+          SizedBox(
+            width: 92,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+          SizedBox(
+            width: 76,
+            child: Text('AVG ${value(stats.average, decimals: 1)}'),
+          ),
+          SizedBox(width: 54, child: Text('H ${value(stats.highScore)}')),
+          SizedBox(width: 54, child: Text('L ${value(stats.lowScore)}')),
+          SizedBox(width: 52, child: Text('${stats.gameCount}G')),
+          SizedBox(width: 70, child: Text('편차 ${value(stats.roundSpread)}')),
         ],
       ),
     );
@@ -150,6 +284,7 @@ class _RecordsFilters extends StatelessWidget {
             Expanded(
               child: DropdownButtonFormField<int?>(
                 key: const Key('records-year-filter'),
+                isExpanded: true,
                 initialValue: filter.year,
                 decoration: const InputDecoration(
                   labelText: '연도',

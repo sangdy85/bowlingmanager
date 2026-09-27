@@ -84,6 +84,7 @@ export async function createSeasonLegacyImport(
             const context = await getImportContext(tx, actorUserId, teamId, seasonId, parsed.rows);
             validateRowsAgainstSeason(parsed.rows, context.season);
             await assertNoMixedLegacySources(tx, seasonId, parsed.mode, parsed.rows.map((row) => row.memberId));
+            await assertNoManualCompetitionOverlap(tx, seasonId, parsed.rows);
             const duplicate = await tx.seasonLegacyImportBatch.findUnique({
                 where: { seasonId_importHash: { seasonId, importHash } }, select: { id: true },
             });
@@ -107,6 +108,34 @@ export async function createSeasonLegacyImport(
             throw new UnifiedSeasonError("IMPORT_ALREADY_EXISTS", "이미 등록된 데이터입니다.", 409);
         }
         throw error;
+    }
+}
+
+async function assertNoManualCompetitionOverlap(
+    db: Pick<Prisma.TransactionClient, "seasonManualCompetitionResult">,
+    seasonId: string,
+    rows: readonly ParsedRow[],
+) {
+    const detailedRows = rows.filter((row) => row.eventDate && row.competitionType);
+    if (detailedRows.length === 0) return;
+    const manualRows = await db.seasonManualCompetitionResult.findMany({
+        where: { competition: { seasonId } },
+        select: {
+            memberId: true,
+            competition: { select: { eventDate: true, competitionType: true } },
+        },
+    });
+    const manualKeys = new Set(manualRows.map((row) =>
+        `${row.memberId}|${row.competition.eventDate.getTime()}|${row.competition.competitionType}`,
+    ));
+    if (detailedRows.some((row) =>
+        manualKeys.has(`${row.memberId}|${row.eventDate!.getTime()}|${row.competitionType}`),
+    )) {
+        throw new UnifiedSeasonError(
+            "LEGACY_MANUAL_DUPLICATE",
+            "같은 회원·날짜·유형의 수동 대회와 Legacy 기록을 중복 등록할 수 없습니다.",
+            409,
+        );
     }
 }
 
@@ -213,7 +242,7 @@ async function getImportContext(
         select: {
             ownerId: true, bowlerHiddenEnabled: true,
             User: { where: { id: actorUserId }, select: { id: true } },
-            seasons: { where: { id: seasonId }, take: 1, select: { id: true, startDate: true, endDate: true } },
+            seasons: { where: { id: seasonId }, take: 1, select: { id: true, startDate: true, endDate: true, rankingMode: true } },
             members: {
                 where: memberIds.length ? { id: { in: memberIds } } : undefined,
                 select: { id: true, alias: true, user: { select: { name: true } } },
@@ -227,6 +256,9 @@ async function getImportContext(
     }
     const season = team.seasons[0];
     if (!season) throw new UnifiedSeasonError("SEASON_NOT_FOUND", "시즌을 찾을 수 없습니다.", 404);
+    if (season.rankingMode === "IMAGE") {
+        throw new UnifiedSeasonError("SEASON_RANKING_MODE_MISMATCH", "이미지 관리 시즌에는 기존 시즌 데이터를 입력할 수 없습니다.", 409);
+    }
     const members = new Map(team.members.map((member) => [member.id, member.alias || member.user.name]));
     if (memberIds.some((id) => !members.has(id))) {
         throw new UnifiedSeasonError("MEMBER_NOT_FOUND", "이관 대상은 현재 동호회 회원이어야 합니다.", 404);
@@ -261,7 +293,7 @@ async function assertNoMixedLegacySources(
 
 async function currentMemberTotals(db: Prisma.TransactionClient | typeof prisma, seasonId: string, memberIds: string[]) {
     const ids = [...new Set(memberIds)];
-    const [automatic, adjustments, legacy] = await Promise.all([
+    const [automatic, adjustments, legacy, manualCompetitions] = await Promise.all([
         db.seasonPointEntry.groupBy({
             by: ["memberId"], where: { seasonId, memberId: { in: ids }, publication: { revokedAt: null } }, _sum: { points: true },
         }),
@@ -269,11 +301,15 @@ async function currentMemberTotals(db: Prisma.TransactionClient | typeof prisma,
         db.seasonLegacyPointEntry.groupBy({
             by: ["memberId"], where: { seasonId, memberId: { in: ids }, batch: { reversedAt: null } }, _sum: { points: true },
         }),
+        db.seasonManualCompetitionResult.groupBy({
+            by: ["memberId"], where: { memberId: { in: ids }, competition: { seasonId } }, _sum: { points: true },
+        }),
     ]);
     const totals = new Map(ids.map((id) => [id, 0]));
     for (const row of automatic) totals.set(row.memberId, (totals.get(row.memberId) ?? 0) + (row._sum.points ?? 0));
     for (const row of adjustments) totals.set(row.memberId, (totals.get(row.memberId) ?? 0) + (row._sum.delta ?? 0));
     for (const row of legacy) totals.set(row.memberId, (totals.get(row.memberId) ?? 0) + (row._sum.points ?? 0));
+    for (const row of manualCompetitions) totals.set(row.memberId, (totals.get(row.memberId) ?? 0) + (row._sum.points ?? 0));
     return totals;
 }
 

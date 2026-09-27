@@ -455,6 +455,7 @@ test('season ranking reads active publication ledger in one batch and supports f
     },
     seasonPointAdjustment: { findMany: async () => [] },
     seasonLegacyPointEntry: { findMany: async () => [] },
+    seasonManualCompetition: { findMany: async () => [] },
     teamEvent: {
       findMany: async args => {
         eventWhere = args.where;
@@ -526,6 +527,7 @@ test('Hidden OFF uses the general season ranking and rejects Hidden competition 
     seasonPointEntry: { findMany: async () => { pointEntryCalls += 1; return []; } },
     seasonPointAdjustment: { findMany: async () => [] },
     seasonLegacyPointEntry: { findMany: async () => [] },
+    seasonManualCompetition: { findMany: async () => [] },
   };
   const isolated = loadTs('src/lib/mobile-api/club-expansion.ts', {
     '@/lib/prisma': fakePrisma,

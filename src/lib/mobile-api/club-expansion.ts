@@ -380,6 +380,7 @@ export async function updateMobileTeamProfile(actorUserId: string, teamId: strin
     const season = body.season;
     let parsedSeason: {
         id: string | null; name: string; start: Date; end: Date; mode: SeasonScoringMode;
+        rankingMode: "DATA" | "IMAGE" | null;
         individualPoints: { rank: number; points: number }[];
         teamPoints: { rank: number; points: number }[];
         eventPoints: { rank: number; points: number }[];
@@ -392,6 +393,9 @@ export async function updateMobileTeamProfile(actorUserId: string, teamId: strin
         const end = parseKstSeasonDate(value.endDate, true);
         const mode = team.bowlerHiddenEnabled ? "FULL_RANK" : value.scoringMode;
         const id = typeof value.id === "string" && value.id ? value.id : null;
+        const rankingMode = id === null
+            ? (team.bowlerHiddenEnabled && value.rankingMode === "IMAGE" ? "IMAGE" : "DATA")
+            : null;
         const tables = value.pointTables && typeof value.pointTables === "object" && !Array.isArray(value.pointTables)
             ? value.pointTables as Record<string, unknown> : null;
         const legacy = value.points;
@@ -416,7 +420,7 @@ export async function updateMobileTeamProfile(actorUserId: string, teamId: strin
             || (mode !== "FULL_RANK" && mode !== "PODIUM") || individualPoints.length < 1 || teamPoints.length < 1 || eventPoints.length < 1) {
             throw new ClubExpansionError("INVALID_SETTINGS", "시즌 설정을 확인해주세요.", 400);
         }
-        parsedSeason = { id, name, start, end, mode, individualPoints, teamPoints, eventPoints };
+        parsedSeason = { id, name, start, end, mode, rankingMode, individualPoints, teamPoints, eventPoints };
     }
     await prisma.$transaction(async (tx) => {
         await tx.team.update({ where: { id: teamId }, data: { description: description || null, notice: notice || null, seasonRankingEnabled: seasonEnabled } });
@@ -429,6 +433,7 @@ export async function updateMobileTeamProfile(actorUserId: string, teamId: strin
                 individualPointsConfig: serializeSeasonPointTable(parsedSeason.individualPoints),
                 teamPointsConfig: serializeSeasonPointTable(parsedSeason.teamPoints),
                 eventPointsConfig: serializeSeasonPointTable(parsedSeason.eventPoints),
+                ...(parsedSeason.rankingMode ? { rankingMode: parsedSeason.rankingMode } : {}),
             };
             await tx.teamSeason.updateMany({ where: { teamId, status: "ACTIVE", ...(parsedSeason.id ? { id: { not: parsedSeason.id } } : {}) }, data: { enabled: false, status: "COMPLETED" } });
             if (parsedSeason.id) {
@@ -505,13 +510,24 @@ export async function getMobileSeasonRanking(
             const result = await getUnifiedSeasonRanking(actorUserId, teamId, options);
             const memberId = team.members.find((member) => member.userId === actorUserId)?.id;
             const mine = result.rankings.find((row) => row.id === memberId);
-            const myCompetitionHistory = memberId && result.season
+            const automaticEntries = mine?.entries.flatMap((entry) =>
+                entry.sourceType === "AUTOMATIC" && entry.competitionDate !== null && entry.month !== null
+                    ? [{ ...entry, competitionDate: entry.competitionDate, month: entry.month }]
+                    : [],
+            ) ?? [];
+            const automaticHistory = memberId && result.season && result.season.rankingMode !== "IMAGE"
                 ? await listMyOfficialCompetitionHistory(
                     memberId,
                     result.season.id,
-                    mine?.entries.filter((entry) => entry.sourceType === "AUTOMATIC") ?? [],
+                    automaticEntries,
                 )
                 : [];
+            const supplementalHistory = mine?.entries.filter((entry) =>
+                (entry.sourceType === "MANUAL" || entry.sourceType === "LEGACY_IMPORT")
+                && entry.competitionDate != null && entry.month != null,
+            ).map((entry) => ({ ...entry, participationStatus: "PARTICIPATED" as const })) ?? [];
+            const myCompetitionHistory = [...automaticHistory, ...supplementalHistory].sort((left, right) =>
+                (left.competitionDate ?? "").localeCompare(right.competitionDate ?? "") || left.id.localeCompare(right.id));
             return {
                 ...result,
                 bowlerHiddenEnabled: true,
@@ -580,7 +596,8 @@ async function listMyOfficialCompetitionHistory(
         },
     });
     const participatedEventIds = new Set(entries.flatMap((entry) => entry.eventId ? [entry.eventId] : []));
-    const history = entries.map((entry) => ({ ...entry, participationStatus: "PARTICIPATED" as const }));
+    const history: Array<(typeof entries)[number] & { participationStatus: "PARTICIPATED" | "ABSENT" }> =
+        entries.map((entry) => ({ ...entry, participationStatus: "PARTICIPATED" }));
     for (const event of events) {
         if (participatedEventIds.has(event.id) || event.attendances[0]?.status !== "NOT_ATTENDING" ||
             !["INDIVIDUAL", "TEAM", "EVENT"].includes(event.competitionType ?? "")) continue;

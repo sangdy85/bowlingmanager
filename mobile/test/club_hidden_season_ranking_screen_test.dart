@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
@@ -9,6 +11,64 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/auth_fakes.dart';
 
 void main() {
+  testWidgets('IMAGE season renders only authenticated ranking images', (
+    tester,
+  ) async {
+    final auth = FakeAuthRepository()..bootstrapResult = testUser;
+    final ranking = ClubSeasonRanking.fromJson(<String, dynamic>{
+      'enabled': true,
+      'bowlerHiddenEnabled': true,
+      'competitionType': 'ALL',
+      'rankingMode': 'IMAGE',
+      'season': <String, dynamic>{
+        'id': 'season-image',
+        'name': '2025 시즌',
+        'status': 'COMPLETED',
+        'rankingMode': 'IMAGE',
+        'startDate': '2025-01-01',
+        'endDate': '2025-12-31',
+        'scoringMode': 'FULL_RANK',
+        'points': <int>[50, 30, 20],
+      },
+      'seasons': <Object>[],
+      'rankings': <Object>[],
+      'competitionColumns': <Object>[],
+      'rankingImages': <Object>[
+        <String, Object>{'id': 'image-1', 'size': 1024, 'displayOrder': 0},
+      ],
+    });
+    final bytes = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(auth),
+          clubSeasonRankingProvider.overrideWith(
+            (ref, request) async => ranking,
+          ),
+          clubRankingImageProvider.overrideWith((ref, request) async => bytes),
+        ],
+        child: const MaterialApp(
+          home: ClubSeasonRankingScreen(teamId: 'team-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('2025 시즌 순위표'), findsOneWidget);
+    expect(
+      find.byKey(const Key('season-ranking-image-image-1')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('hidden-competition-filter')), findsNothing);
+    expect(find.text('순위  이름  총P'), findsNothing);
+    expect(find.text('나의 대회 성적'), findsNothing);
+    await tester.tap(find.byKey(const Key('season-ranking-image-image-1')));
+    await tester.pumpAndSettle();
+    expect(find.byType(InteractiveViewer), findsOneWidget);
+  });
+
   testWidgets(
     'Hidden ranking prioritizes total and scrollable monthly points at 360px',
     (tester) async {

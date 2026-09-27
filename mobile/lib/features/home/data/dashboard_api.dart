@@ -12,9 +12,17 @@ class MobileDashboardApi implements DashboardApi {
   final Dio _dio;
 
   @override
-  Future<Dashboard> fetchDashboard() async {
+  Future<Dashboard> fetchDashboard() => _fetchDashboard();
+
+  Future<Dashboard> fetchDashboardForYear(int year) =>
+      _fetchDashboard(year: year);
+
+  Future<Dashboard> _fetchDashboard({int? year}) async {
     try {
-      final Response<dynamic> response = await _dio.get<dynamic>('/dashboard');
+      final Response<dynamic> response = await _dio.get<dynamic>(
+        '/dashboard',
+        queryParameters: year == null ? null : <String, Object>{'year': year},
+      );
       final Object? body = response.data;
       if (body is! Map || body['success'] != true || body['data'] is! Map) {
         throw const FormatException('Invalid API response envelope.');

@@ -30,11 +30,12 @@ function adjustmentPrisma({ role = 'OWNER', automatic = 50, memberExists = true,
     team: { findFirst: async () => teamVisible ? {
       ownerId: role === 'OWNER' ? 'actor' : 'owner', bowlerHiddenEnabled: true,
       User: role === 'MANAGER' ? [{ id: 'actor' }] : [],
-      seasons: [{ id: 'season-a' }],
+      seasons: [{ id: 'season-a', rankingMode: 'DATA' }],
       members: memberExists ? [{ id: 'member-a', alias: '회원 A', user: { name: '비공개 이름' } }] : [],
     } : null },
     seasonPointEntry: { aggregate: async () => ({ _sum: { points: automatic } }) },
     seasonLegacyPointEntry: { aggregate: async () => ({ _sum: { points: 0 } }) },
+    seasonManualCompetitionResult: { aggregate: async () => ({ _sum: { points: 0 } }) },
     seasonPointAdjustment: {
       aggregate: async () => ({ _sum: { delta: adjustments.reduce((sum, row) => sum + row.delta, 0) } }),
       create: async ({ data }) => {

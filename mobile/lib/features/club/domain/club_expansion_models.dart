@@ -143,6 +143,7 @@ class ClubSeason {
     required this.scoringMode,
     required this.points,
     this.status = 'ACTIVE',
+    this.rankingMode = 'DATA',
     this.individualPoints = const <ClubSeasonRankPoint>[],
     this.teamPoints = const <ClubSeasonRankPoint>[],
     this.eventPoints = const <ClubSeasonRankPoint>[],
@@ -154,6 +155,7 @@ class ClubSeason {
   final String scoringMode;
   final List<int> points;
   final String status;
+  final String rankingMode;
   final List<ClubSeasonRankPoint> individualPoints;
   final List<ClubSeasonRankPoint> teamPoints;
   final List<ClubSeasonRankPoint> eventPoints;
@@ -162,6 +164,7 @@ class ClubSeason {
     final end = DateTime.tryParse(json['endDate'] as String? ?? '');
     final points = json['points'];
     final status = json['status'] ?? 'ACTIVE';
+    final rankingMode = json['rankingMode'] ?? 'DATA';
     final tables = json['pointTables'];
     if (json['id'] is! String ||
         json['name'] is! String ||
@@ -173,6 +176,7 @@ class ClubSeason {
         points.any((value) => value is! int) ||
         status is! String ||
         !const <String>{'DRAFT', 'ACTIVE', 'COMPLETED'}.contains(status) ||
+        !const <String>{'DATA', 'IMAGE'}.contains(rankingMode) ||
         (tables != null && tables is! Map)) {
       throw const FormatException('Invalid season.');
     }
@@ -207,6 +211,7 @@ class ClubSeason {
       scoringMode: json['scoringMode'] as String,
       points: List<int>.unmodifiable(points.cast<int>()),
       status: status,
+      rankingMode: rankingMode as String,
       individualPoints: table('individual'),
       teamPoints: table('team'),
       eventPoints: table('event'),
@@ -246,6 +251,7 @@ class ClubSeasonPointEntry {
     this.participationStatus = 'PARTICIPATED',
     this.sourceType = 'AUTOMATIC',
     this.reason,
+    this.columnId,
   });
   final String id;
   final String? eventId;
@@ -258,6 +264,7 @@ class ClubSeasonPointEntry {
   final String participationStatus;
   final String sourceType;
   final String? reason;
+  final String? columnId;
 
   factory ClubSeasonPointEntry.fromJson(Map<String, dynamic> json) {
     final date = json['competitionDate'] == null
@@ -289,8 +296,10 @@ class ClubSeasonPointEntry {
           'MANUAL_ADJUSTMENT',
           'LEGACY_IMPORT',
           'LEGACY_OPENING_BALANCE',
+          'MANUAL',
         }.contains(json['sourceType'] ?? 'AUTOMATIC') ||
-        (json['reason'] != null && json['reason'] is! String)) {
+        (json['reason'] != null && json['reason'] is! String) ||
+        (json['columnId'] != null && json['columnId'] is! String)) {
       throw const FormatException('Invalid season point entry.');
     }
     return ClubSeasonPointEntry(
@@ -306,6 +315,7 @@ class ClubSeasonPointEntry {
           (json['participationStatus'] ?? 'PARTICIPATED') as String,
       sourceType: (json['sourceType'] ?? 'AUTOMATIC') as String,
       reason: json['reason'] as String?,
+      columnId: json['columnId'] as String?,
     );
   }
 }
@@ -486,6 +496,9 @@ class ClubSeasonRanking {
     this.seasons = const <ClubSeason>[],
     this.competitionType = 'ALL',
     this.myCompetitionHistory = const <ClubSeasonPointEntry>[],
+    this.rankingMode = 'DATA',
+    this.competitionColumns = const <ClubSeasonCompetitionColumn>[],
+    this.rankingImages = const <ClubSeasonRankingImage>[],
   });
   final bool enabled;
   final ClubSeason? season;
@@ -494,16 +507,29 @@ class ClubSeasonRanking {
   final List<ClubSeason> seasons;
   final String competitionType;
   final List<ClubSeasonPointEntry> myCompetitionHistory;
+  final String rankingMode;
+  final List<ClubSeasonCompetitionColumn> competitionColumns;
+  final List<ClubSeasonRankingImage> rankingImages;
   factory ClubSeasonRanking.fromJson(Map<String, dynamic> json) {
     final rows = json['rankings'];
     final seasons = json['seasons'] ?? const <Object>[];
     final competitionType = json['competitionType'] ?? 'ALL';
     final history = json['myCompetitionHistory'] ?? const <Object>[];
+    final Object? rankingMode =
+        json['rankingMode'] ??
+        (json['season'] is Map
+            ? (json['season'] as Map)['rankingMode'] ?? 'DATA'
+            : 'DATA');
+    final columns = json['competitionColumns'] ?? const <Object>[];
+    final images = json['rankingImages'] ?? const <Object>[];
     if (json['enabled'] is! bool ||
         json['bowlerHiddenEnabled'] is! bool ||
         rows is! List ||
         seasons is! List ||
         history is! List ||
+        !const <String>{'DATA', 'IMAGE'}.contains(rankingMode) ||
+        columns is! List ||
+        images is! List ||
         !const <String>{
           'ALL',
           'INDIVIDUAL',
@@ -537,6 +563,158 @@ class ClubSeasonRanking {
           ),
         ),
       ),
+      rankingMode: rankingMode as String,
+      competitionColumns: List<ClubSeasonCompetitionColumn>.unmodifiable(
+        columns.map(
+          (value) => ClubSeasonCompetitionColumn.fromJson(
+            _map(value, 'Invalid competition column.'),
+          ),
+        ),
+      ),
+      rankingImages: List<ClubSeasonRankingImage>.unmodifiable(
+        images.map(
+          (value) => ClubSeasonRankingImage.fromJson(
+            _map(value, 'Invalid ranking image.'),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ClubSeasonCompetitionColumn {
+  const ClubSeasonCompetitionColumn({
+    required this.id,
+    required this.eventId,
+    required this.eventDate,
+    required this.month,
+    required this.competitionType,
+    required this.displayName,
+    required this.source,
+  });
+  final String id;
+  final String? eventId;
+  final DateTime eventDate;
+  final int month;
+  final String competitionType;
+  final String displayName;
+  final String source;
+
+  factory ClubSeasonCompetitionColumn.fromJson(Map<String, dynamic> json) {
+    final date = DateTime.tryParse(json['eventDate'] as String? ?? '');
+    if (json['id'] is! String ||
+        (json['eventId'] != null && json['eventId'] is! String) ||
+        date == null ||
+        json['month'] is! int ||
+        json['competitionType'] is! String ||
+        json['displayName'] is! String ||
+        json['source'] is! String) {
+      throw const FormatException('Invalid competition column.');
+    }
+    return ClubSeasonCompetitionColumn(
+      id: json['id'] as String,
+      eventId: json['eventId'] as String?,
+      eventDate: date,
+      month: json['month'] as int,
+      competitionType: json['competitionType'] as String,
+      displayName: json['displayName'] as String,
+      source: json['source'] as String,
+    );
+  }
+}
+
+class ClubSeasonRankingImage {
+  const ClubSeasonRankingImage({
+    required this.id,
+    required this.size,
+    required this.displayOrder,
+  });
+  final String id;
+  final int size;
+  final int displayOrder;
+
+  factory ClubSeasonRankingImage.fromJson(Map<String, dynamic> json) {
+    if (json['id'] is! String ||
+        json['size'] is! int ||
+        json['displayOrder'] is! int) {
+      throw const FormatException('Invalid ranking image.');
+    }
+    return ClubSeasonRankingImage(
+      id: json['id'] as String,
+      size: json['size'] as int,
+      displayOrder: json['displayOrder'] as int,
+    );
+  }
+}
+
+class ClubSeasonManualCompetition {
+  const ClubSeasonManualCompetition({
+    required this.id,
+    required this.name,
+    required this.eventDate,
+    required this.competitionType,
+    required this.results,
+  });
+  final String id;
+  final String name;
+  final DateTime eventDate;
+  final String competitionType;
+  final List<ClubSeasonManualResult> results;
+
+  factory ClubSeasonManualCompetition.fromJson(Map<String, dynamic> json) {
+    final date = DateTime.tryParse(json['eventDate'] as String? ?? '');
+    final results = json['results'];
+    if (json['id'] is! String ||
+        json['name'] is! String ||
+        date == null ||
+        !const <String>{
+          'INDIVIDUAL',
+          'TEAM',
+          'EVENT',
+        }.contains(json['competitionType']) ||
+        results is! List) {
+      throw const FormatException('Invalid manual competition.');
+    }
+    return ClubSeasonManualCompetition(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      eventDate: date,
+      competitionType: json['competitionType'] as String,
+      results: List<ClubSeasonManualResult>.unmodifiable(
+        results.map(
+          (value) => ClubSeasonManualResult.fromJson(
+            _map(value, 'Invalid manual competition result.'),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ClubSeasonManualResult {
+  const ClubSeasonManualResult({
+    required this.memberId,
+    required this.memberDisplayName,
+    required this.finalRank,
+    required this.points,
+  });
+  final String memberId;
+  final String memberDisplayName;
+  final int? finalRank;
+  final int points;
+
+  factory ClubSeasonManualResult.fromJson(Map<String, dynamic> json) {
+    if (json['memberId'] is! String ||
+        json['memberDisplayName'] is! String ||
+        (json['finalRank'] != null && json['finalRank'] is! int) ||
+        json['points'] is! int) {
+      throw const FormatException('Invalid manual competition result.');
+    }
+    return ClubSeasonManualResult(
+      memberId: json['memberId'] as String,
+      memberDisplayName: json['memberDisplayName'] as String,
+      finalRank: json['finalRank'] as int?,
+      points: json['points'] as int,
     );
   }
 }

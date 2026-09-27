@@ -115,11 +115,11 @@ class _DashboardContent extends StatelessWidget {
           const SizedBox(height: 28),
           const _SectionTitle(title: '나의 기록실'),
           const SizedBox(height: 12),
-          _RadarCard(radar: dashboard.profileRadar),
+          DashboardRadarCard(radar: dashboard.profileRadar),
           const SizedBox(height: 28),
           const _SectionTitle(title: '나의 입상'),
           const SizedBox(height: 12),
-          _MedalsCard(medals: dashboard.medals),
+          DashboardMedalsCard(medals: dashboard.medals),
           const SizedBox(height: 28),
           const _SectionTitle(title: '개인 상세 통계'),
           const SizedBox(height: 12),
@@ -621,8 +621,8 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) => Text(title, style: AppTextStyles.title);
 }
 
-class _RadarCard extends StatelessWidget {
-  const _RadarCard({required this.radar});
+class DashboardRadarCard extends StatelessWidget {
+  const DashboardRadarCard({required this.radar, super.key});
   final DashboardRadar radar;
 
   @override
@@ -806,8 +806,8 @@ class _RadarPainter extends CustomPainter {
       oldDelegate.radar != radar;
 }
 
-class _MedalsCard extends StatelessWidget {
-  const _MedalsCard({required this.medals});
+class DashboardMedalsCard extends StatelessWidget {
+  const DashboardMedalsCard({required this.medals, super.key});
   final DashboardMedals medals;
 
   @override

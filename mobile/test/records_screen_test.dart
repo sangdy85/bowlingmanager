@@ -4,6 +4,7 @@ import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
+import 'package:bowlingmanager_mobile/features/home/domain/dashboard.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +17,84 @@ import 'support/dashboard_fakes.dart';
 import 'support/records_fakes.dart';
 
 void main() {
+  testWidgets(
+    'Records renders the selected-year personal dashboard before filters at 360px',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(360, 720);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      const dashboard = Dashboard(
+        year: 2026,
+        average: 190.5,
+        highScore: 245,
+        gameCount: 4,
+        recentScores: <DashboardScore>[],
+        recentSessions: <GameSession>[],
+        recentAverage: 190.5,
+        personalStats: DashboardPersonalStats(
+          regular: DashboardCategoryStats(
+            average: 180,
+            highScore: 210,
+            lowScore: 150,
+            gameCount: 2,
+            roundSpread: 60,
+          ),
+          official: DashboardCategoryStats(
+            average: 201,
+            highScore: 245,
+            lowScore: 170,
+            gameCount: 2,
+            roundSpread: 75,
+          ),
+        ),
+        medals: DashboardMedals(goldCount: 2, silverCount: 1, bronzeCount: 3),
+        recordCategories: <DashboardRecordCategory>[
+          DashboardRecordCategory(
+            key: 'ALL',
+            label: '통합 종합',
+            gameCount: 4,
+            total: 762,
+            highScore: 245,
+            lowScore: 150,
+            average: 190.5,
+          ),
+          DashboardRecordCategory(
+            key: 'MEETUP',
+            label: '벙개',
+            gameCount: 0,
+            total: 0,
+            highScore: 0,
+            lowScore: 0,
+            average: 0,
+          ),
+        ],
+      );
+      await _openRecords(
+        tester,
+        FakeScoresRepository(),
+        dashboard: dashboard,
+        scrollToRecords: false,
+      );
+
+      expect(find.text('2026 PLAYER PROFILE'), findsOneWidget);
+      expect(find.text('총평균 190.5'), findsOneWidget);
+      expect(find.textContaining('편차 60'), findsOneWidget);
+      expect(find.text('입상 기록'), findsOneWidget);
+      expect(find.text('개인 통계'), findsOneWidget);
+      expect(find.text('통합 종합'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.drag(
+        find.byKey(const Key('records-list')),
+        const Offset(0, -900),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('경기 기록'), findsOneWidget);
+    },
+  );
+
   testWidgets('Records shows loading and then real score fields', (
     WidgetTester tester,
   ) async {
@@ -27,6 +106,11 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
     pending.complete(testScoresPage);
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('records-list')),
+      const Offset(0, -900),
+    );
     await tester.pumpAndSettle();
 
     expect(find.textContaining('2026.09.15'), findsOneWidget);
@@ -64,6 +148,16 @@ void main() {
 
       expect(find.byKey(const Key('records-year-2026')), findsOneWidget);
       expect(find.byKey(const Key('records-year-2025')), findsOneWidget);
+      await tester.drag(
+        find.byKey(const Key('records-list')),
+        const Offset(0, 2000),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byKey(const Key('records-list')),
+        const Offset(0, -650),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('records-category-OFFICIAL')));
       await tester.pumpAndSettle();
 
@@ -273,6 +367,11 @@ void main() {
     repository.errors.remove(1);
     await tester.tap(find.text('다시 시도'));
     await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('records-list')),
+      const Offset(0, -900),
+    );
+    await tester.pumpAndSettle();
 
     expect(find.text('215'), findsOneWidget);
     expect(repository.requestedPages, <int>[1, 1]);
@@ -371,6 +470,8 @@ Future<void> _openRecords(
   FakeScoresRepository scoresRepository, {
   bool settleRecords = true,
   FakeClubRepository? clubRepository,
+  Dashboard? dashboard,
+  bool scrollToRecords = true,
 }) async {
   final FakeAuthRepository authRepository = FakeAuthRepository()
     ..bootstrapResult = testUser;
@@ -380,6 +481,9 @@ Future<void> _openRecords(
       overrides: [
         authRepositoryProvider.overrideWithValue(authRepository),
         dashboardRepositoryProvider.overrideWithValue(dashboardRepository),
+        recordsDashboardLoaderProvider.overrideWithValue(
+          (int year) async => dashboard ?? testDashboard,
+        ),
         scoresRepositoryProvider.overrideWithValue(scoresRepository),
         clubRepositoryProvider.overrideWithValue(
           clubRepository ?? FakeClubRepository(),
@@ -392,6 +496,14 @@ Future<void> _openRecords(
   await tester.tap(find.text('기록'));
   if (settleRecords) {
     await tester.pumpAndSettle();
+    if (scrollToRecords &&
+        find.byKey(const Key('records-list')).evaluate().isNotEmpty) {
+      await tester.drag(
+        find.byKey(const Key('records-list')),
+        const Offset(0, -900),
+      );
+      await tester.pumpAndSettle();
+    }
   } else {
     await tester.pump();
   }

@@ -164,6 +164,7 @@ test('ranking batches mixed ledgers, multiple monthly events and zero points wit
       }];
     } },
     seasonLegacyPointEntry: { findMany: async () => [] },
+    seasonManualCompetition: { findMany: async () => [] },
   };
   const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': fakePrisma });
   const result = await service.getUnifiedSeasonRanking('viewer', 'team-a');
@@ -228,6 +229,7 @@ test('exact unified season fixture totals 50 + 20 + 30 while MINI contributes no
       seasonPointEntry: { findMany: async () => officialEntries },
       seasonPointAdjustment: { findMany: async () => [] },
       seasonLegacyPointEntry: { findMany: async () => [] },
+      seasonManualCompetition: { findMany: async () => [] },
     },
   });
   const result = await rankingService.getUnifiedSeasonRanking('viewer', 'team-a');
@@ -242,6 +244,67 @@ test('exact unified season fixture totals 50 + 20 + 30 while MINI contributes no
   assert.equal(new Set(officialEntries.map(item => item.id)).size, officialEntries.length);
 });
 
+test('DATA mode total is automatic plus manual competition plus legacy plus adjustment exactly once', async () => {
+  const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': {
+    team: { findFirst: async () => ({
+      id: 'team-a', bowlerHiddenEnabled: true, seasonRankingEnabled: true,
+      members: [member('member-a', 'A')],
+    }) },
+    teamSeason: { findMany: async () => [{ ...season, rankingMode: 'DATA' }] },
+    seasonPointEntry: { findMany: async () => [
+      entry('auto-1', 'member-a', 'TEAM', '2026-01-10T03:00:00.000Z', 2, 20),
+    ] },
+    seasonPointAdjustment: { findMany: async () => [{
+      id: 'adjustment-1', memberId: 'member-a', delta: 5, reason: '보정',
+      createdAt: new Date('2026-04-10T03:00:00.000Z'),
+    }] },
+    seasonLegacyPointEntry: { findMany: async () => [{
+      id: 'legacy-1', memberId: 'member-a', eventDate: new Date('2026-02-10T03:00:00.000Z'),
+      competitionType: 'INDIVIDUAL', placement: 3, points: 30, note: '과거 개인전',
+      createdAt: new Date('2026-09-01T00:00:00.000Z'), batch: { id: 'batch-1', mode: 'DETAILED' },
+    }] },
+    seasonManualCompetition: { findMany: async () => [{
+      id: 'manual-1', name: '3월 이벤트전', eventDate: new Date('2026-03-10T03:00:00.000Z'),
+      competitionType: 'EVENT', createdAt: new Date('2026-03-10T04:00:00.000Z'),
+      results: [{
+        id: 'manual-result-1', memberId: 'member-a', memberDisplayName: 'A', finalRank: 1,
+        points: 50, createdAt: new Date('2026-03-10T04:00:00.000Z'),
+      }],
+    }] },
+  } });
+  const result = await service.getUnifiedSeasonRanking('viewer', 'team-a');
+  const row = result.rankings[0];
+  assert.equal(row.totalPoints, 105);
+  assert.equal(row.entries.reduce((sum, item) => sum + item.points, 0), 105);
+  assert.deepEqual(row.entries.map(item => item.sourceType), [
+    'AUTOMATIC', 'MANUAL', 'MANUAL_ADJUSTMENT', 'LEGACY_IMPORT',
+  ]);
+  assert.equal(result.competitionColumns.length, 3);
+  assert.deepEqual(result.competitionColumns.map(item => item.source), ['AUTO', 'LEGACY', 'MANUAL']);
+});
+
+test('IMAGE mode returns images only and hides structured ranking data', async () => {
+  const imageSeason = { ...season, rankingMode: 'IMAGE' };
+  let structuredCalls = 0;
+  const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': {
+    team: { findFirst: async () => ({
+      id: 'team-a', bowlerHiddenEnabled: true, seasonRankingEnabled: true,
+      members: [member('member-a', 'A')],
+    }) },
+    teamSeason: { findMany: async () => [imageSeason] },
+    seasonRankingImage: { findMany: async () => [{
+      id: 'image-1', size: 1024, displayOrder: 0, createdAt: new Date('2026-01-01T00:00:00Z'),
+    }] },
+    seasonPointEntry: { findMany: async () => { structuredCalls += 1; return []; } },
+  } });
+  const result = await service.getUnifiedSeasonRanking('viewer', 'team-a');
+  assert.equal(result.rankingMode, 'IMAGE');
+  assert.deepEqual(result.rankings, []);
+  assert.deepEqual(result.competitionColumns, []);
+  assert.deepEqual(result.rankingImages.map(item => item.id), ['image-1']);
+  assert.equal(structuredCalls, 0);
+});
+
 test('legacy Jan through Mar and October automatic points produce exact 130 total and monthly history', async () => {
   const legacy = [
     { id: 'legacy-jan', memberId: 'member-a', eventDate: new Date('2025-12-31T15:00:00.000Z'), competitionType: 'TEAM', placement: 3, points: 10, note: null, createdAt: new Date('2026-09-01T00:00:00.000Z'), batch: { id: 'batch-1', mode: 'DETAILED' } },
@@ -254,6 +317,7 @@ test('legacy Jan through Mar and October automatic points produce exact 130 tota
     seasonPointEntry: { findMany: async () => [entry('oct-auto', 'member-a', 'INDIVIDUAL', '2026-10-10T03:00:00.000Z', 2, 40)] },
     seasonPointAdjustment: { findMany: async () => [] },
     seasonLegacyPointEntry: { findMany: async () => legacy },
+    seasonManualCompetition: { findMany: async () => [] },
   } });
   const row = (await service.getUnifiedSeasonRanking('viewer', 'team-a')).rankings[0];
   assert.equal(row.totalPoints, 130);
@@ -275,6 +339,7 @@ test('opening balance changes only total and never creates monthly competition h
       placement: null, points: 218, note: null, createdAt: new Date('2026-10-01T00:00:00.000Z'),
       batch: { id: 'opening-batch', mode: 'OPENING_BALANCE' },
     }] },
+    seasonManualCompetition: { findMany: async () => [] },
   } });
   const row = (await service.getUnifiedSeasonRanking('viewer', 'team-a')).rankings[0];
   assert.equal(row.totalPoints, 218);
@@ -298,6 +363,7 @@ test('competition type and season filters remain isolated', async () => {
     seasonPointEntry: { findMany: async args => { where = args.where; return []; } },
     seasonPointAdjustment: { findMany: async () => [] },
     seasonLegacyPointEntry: { findMany: async () => [] },
+    seasonManualCompetition: { findMany: async () => [] },
   };
   const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': fakePrisma });
   await service.getUnifiedSeasonRanking('viewer', 'team-a', {

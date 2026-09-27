@@ -71,6 +71,9 @@ void main() {
             clubTeamProfileProvider.overrideWith(
               (ref, request) async => _profileWithHidden(hidden),
             ),
+            clubSeasonManualCompetitionsProvider.overrideWith(
+              (ref, request) async => const <ClubSeasonManualCompetition>[],
+            ),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -109,6 +112,70 @@ void main() {
       find.byKey(const Key('season-point-management-link')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('IMAGE season hides every structured ranking management action', (
+    WidgetTester tester,
+  ) async {
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    final imageSeason = ClubSeason(
+      id: _season.id,
+      name: _season.name,
+      startDate: _season.startDate,
+      endDate: _season.endDate,
+      scoringMode: _season.scoringMode,
+      points: _season.points,
+      individualPoints: _season.individualPoints,
+      teamPoints: _season.teamPoints,
+      eventPoints: _season.eventPoints,
+      rankingMode: 'IMAGE',
+    );
+    final imageProfile = ClubTeamProfile(
+      id: _profile.id,
+      name: _profile.name,
+      description: _profile.description,
+      notice: _profile.notice,
+      myRole: ClubRole.owner,
+      seasonRankingEnabled: true,
+      bowlerHiddenEnabled: true,
+      activeSeason: imageSeason,
+    );
+    final imageRanking = ClubSeasonRanking(
+      enabled: true,
+      season: imageSeason,
+      rows: const <ClubSeasonRankingRow>[],
+      bowlerHiddenEnabled: true,
+      rankingMode: 'IMAGE',
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubTeamProfileProvider.overrideWith(
+            (ref, request) async => imageProfile,
+          ),
+          clubSeasonRankingProvider.overrideWith(
+            (ref, request) async => imageRanking,
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: ClubTeamSettingsScreen(teamId: 'team-1')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('ranking-mode-image')), findsOneWidget);
+    expect(find.byKey(const Key('season-individual-points')), findsNothing);
+    expect(find.byKey(const Key('season-point-management-link')), findsNothing);
+    expect(find.byKey(const Key('season-legacy-import-link')), findsNothing);
+    expect(
+      find.byKey(const Key('season-manual-competition-add')),
+      findsNothing,
+    );
+    await tester.drag(find.byType(ListView), const Offset(0, -800));
+    await tester.pumpAndSettle();
+    expect(find.text('시즌 순위표 이미지'), findsOneWidget);
   });
 
   testWidgets(
@@ -333,6 +400,9 @@ void main() {
             if (requests == 1) throw error;
             return _profile;
           }),
+          clubSeasonManualCompetitionsProvider.overrideWith(
+            (ref, request) async => const <ClubSeasonManualCompetition>[],
+          ),
         ],
         child: const MaterialApp(
           home: Scaffold(body: ClubTeamSettingsScreen(teamId: 'team-1')),
@@ -351,9 +421,9 @@ void main() {
   });
 
   testWidgets(
-    'legacy direct input validates, previews and commits from bottom CTA',
+    'legacy structured editor adds a competition, edits a cell and saves an adjustment',
     (WidgetTester tester) async {
-      await tester.binding.setSurfaceSize(const Size(600, 1000));
+      await tester.binding.setSurfaceSize(const Size(360, 720));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
       final api = _LegacyImportApi();
@@ -375,35 +445,149 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(find.byKey(const Key('legacy-csv-import')), findsOneWidget);
       await tester.tap(find.byKey(const Key('legacy-direct-import')));
       await tester.pumpAndSettle();
 
-      expect(
-        find.byKey(const Key('legacy-import-preview-cta')),
-        findsOneWidget,
+      expect(find.byKey(const Key('legacy-structured-table')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('legacy-competition-add')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('legacy-competition-name')),
+        '1월 팀전',
       );
-      await tester.tap(find.byKey(const Key('legacy-import-preview-cta')));
+      await tester.enterText(
+        find.byKey(const Key('legacy-competition-date')),
+        '2026-01-05',
+      );
+      await tester.tap(find.byKey(const Key('confirm-legacy-competition-add')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('legacy-competition-add')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('legacy-competition-name')),
+        '1월 개인전',
+      );
+      await tester.enterText(
+        find.byKey(const Key('legacy-competition-date')),
+        '2026-01-19',
+      );
+      await tester.tap(find.byKey(const Key('legacy-competition-type')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('개인전').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-legacy-competition-add')));
+      await tester.pumpAndSettle();
+
+      final competitionCell = find.byKey(
+        const Key('legacy-cell-member-1-draft-0'),
+      );
+      await tester.ensureVisible(competitionCell);
+      await tester.tap(competitionCell);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('legacy-cell-rank')), '1');
+      await tester.enterText(find.byKey(const Key('legacy-cell-points')), '10');
+      await tester.tap(find.byKey(const Key('confirm-legacy-cell')));
+      await tester.pumpAndSettle();
+
+      final secondCompetitionCell = find.byKey(
+        const Key('legacy-cell-member-1-draft-1'),
+      );
+      await tester.ensureVisible(secondCompetitionCell);
+      await tester.tap(secondCompetitionCell);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('legacy-cell-rank')), '3');
+      await tester.enterText(find.byKey(const Key('legacy-cell-points')), '4');
+      await tester.tap(find.byKey(const Key('confirm-legacy-cell')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('legacy-total-member-1')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('legacy-target-total')),
+        '20',
+      );
+      await tester.tap(find.byKey(const Key('confirm-legacy-target-total')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('legacy-structured-preview-cta')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('대회 2개 · 회원 1명'), findsOneWidget);
+      expect(find.textContaining('보정 +1P · 최종 20P'), findsOneWidget);
+      api.structuredSaveCompleter = Completer<void>();
+      await tester.tap(find.byKey(const Key('confirm-legacy-structured-save')));
       await tester.pump();
-      expect(find.text('회원을 직접 선택해주세요.'), findsOneWidget);
-
-      await tester.tap(find.byKey(const Key('legacy-member-0')));
+      expect(api.structuredSaveCalls, 1);
+      final savingButton = tester.widget<FilledButton>(
+        find.byKey(const Key('legacy-structured-preview-cta')),
+      );
+      expect(savingButton.onPressed, isNull);
+      api.structuredSaveCompleter!.complete();
       await tester.pumpAndSettle();
-      await tester.tap(find.text('팀장').last);
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const Key('legacy-date-0')), '2026-01');
-      await tester.enterText(find.byKey(const Key('legacy-placement-0')), '1');
-      await tester.enterText(find.byKey(const Key('legacy-points-0')), '120');
-      await tester.tap(find.byKey(const Key('legacy-import-preview-cta')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('이관 미리보기'), findsOneWidget);
-      expect(api.previewCalls, 1);
-      await tester.tap(find.byKey(const Key('confirm-legacy-import')));
-      await tester.pumpAndSettle();
-      expect(api.commitCalls, 1);
-      expect(find.text('기존 시즌 데이터를 등록했습니다.'), findsOneWidget);
+      expect(api.structuredSaveCalls, 1);
+      expect(api.savedCompetitions.map((row) => row['name']), <String>[
+        '1월 팀전',
+        '1월 개인전',
+      ]);
+      expect(api.savedTargets.single['targetTotal'], 20);
+      expect(find.text('기존 시즌 구조화 데이터를 저장했습니다.'), findsOneWidget);
     },
   );
+
+  testWidgets('legacy structured editor is unavailable for an IMAGE season', (
+    WidgetTester tester,
+  ) async {
+    final imageSeason = ClubSeason(
+      id: _season.id,
+      name: _season.name,
+      startDate: _season.startDate,
+      endDate: _season.endDate,
+      scoringMode: _season.scoringMode,
+      points: _season.points,
+      rankingMode: 'IMAGE',
+      individualPoints: _season.individualPoints,
+      teamPoints: _season.teamPoints,
+      eventPoints: _season.eventPoints,
+    );
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubExpansionApiProvider.overrideWithValue(_LegacyImportApi()),
+          clubTeamProfileProvider.overrideWith(
+            (ref, request) async => ClubTeamProfile(
+              id: _profile.id,
+              name: _profile.name,
+              description: _profile.description,
+              notice: _profile.notice,
+              myRole: ClubRole.owner,
+              seasonRankingEnabled: true,
+              bowlerHiddenEnabled: true,
+              activeSeason: imageSeason,
+            ),
+          ),
+          clubSeasonRankingProvider.overrideWith(
+            (ref, request) async => ClubSeasonRanking(
+              enabled: true,
+              season: imageSeason,
+              rows: const <ClubSeasonRankingRow>[],
+              bowlerHiddenEnabled: true,
+              rankingMode: 'IMAGE',
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          home: ClubLegacyImportScreen(teamId: 'team-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('legacy-direct-import')), findsNothing);
+    expect(find.textContaining('데이터 관리 방식의 시즌'), findsOneWidget);
+  });
 
   testWidgets('post edit form shows a safe error and retries', (
     WidgetTester tester,
@@ -1510,6 +1694,29 @@ class _LegacyImportApi extends ClubExpansionApi {
 
   int previewCalls = 0;
   int commitCalls = 0;
+  int structuredSaveCalls = 0;
+  Completer<void>? structuredSaveCompleter;
+  List<Map<String, Object?>> savedCompetitions = <Map<String, Object?>>[];
+  List<Map<String, Object>> savedTargets = <Map<String, Object>>[];
+
+  @override
+  Future<List<ClubSeasonManualCompetition>> fetchManualCompetitions(
+    String teamId,
+    String seasonId,
+  ) async => const <ClubSeasonManualCompetition>[];
+
+  @override
+  Future<void> saveStructuredSeasonRanking(
+    String teamId,
+    String seasonId, {
+    required List<Map<String, Object?>> competitions,
+    required List<Map<String, Object>> targetTotals,
+  }) async {
+    structuredSaveCalls += 1;
+    savedCompetitions = competitions;
+    savedTargets = targetTotals;
+    await structuredSaveCompleter?.future;
+  }
 
   @override
   Future<List<ClubLegacyImportBatch>> fetchSeasonLegacyImports(

@@ -126,6 +126,40 @@ void main() {
     );
   });
 
+  test(
+    'season management models preserve DATA/IMAGE mode and manual results',
+    () {
+      final dataSeason = ClubSeason.fromJson(_seasonJson());
+      expect(dataSeason.rankingMode, 'DATA');
+      final imageSeason = ClubSeason.fromJson(
+        _seasonJson()..['rankingMode'] = 'IMAGE',
+      );
+      expect(imageSeason.rankingMode, 'IMAGE');
+      expect(
+        () => ClubSeason.fromJson(_seasonJson()..['rankingMode'] = 'MIXED'),
+        throwsFormatException,
+      );
+
+      final competition = ClubSeasonManualCompetition.fromJson(
+        <String, dynamic>{
+          'id': 'manual-1',
+          'name': '1월 팀전',
+          'eventDate': '2026-01-10T00:00:00.000Z',
+          'competitionType': 'TEAM',
+          'results': <Object>[
+            <String, Object?>{
+              'memberId': 'member-1',
+              'memberDisplayName': '회원',
+              'finalRank': 2,
+              'points': 20,
+            },
+          ],
+        },
+      );
+      expect(competition.results.single.points, 20);
+    },
+  );
+
   test('board models parse list pagination and author edit permission', () {
     final page = ClubPostsPage.fromJson(<String, dynamic>{
       'items': <Object>[

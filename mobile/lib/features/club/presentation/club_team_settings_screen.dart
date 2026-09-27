@@ -31,6 +31,7 @@ class _ClubTeamSettingsScreenState
   bool _ranking = false;
   bool _saving = false;
   String _mode = 'PODIUM';
+  String _rankingMode = 'DATA';
   @override
   void dispose() {
     for (final c in <TextEditingController>[
@@ -74,6 +75,7 @@ class _ClubTeamSettingsScreenState
                 _start.text = _date(season.startDate);
                 _end.text = _date(season.endDate);
                 _mode = season.scoringMode;
+                _rankingMode = season.rankingMode;
                 _individualPoints = profile.bowlerHiddenEnabled
                     ? _formatPoints(season.individualPoints)
                     : <int>[...season.points];
@@ -146,6 +148,37 @@ class _ClubTeamSettingsScreenState
                         ),
                       ],
                     ),
+                    if (profile.bowlerHiddenEnabled) ...<Widget>[
+                      const SizedBox(height: 12),
+                      Text(
+                        '순위 관리 방식',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      RadioGroup<String>(
+                        groupValue: _rankingMode,
+                        onChanged: (value) {
+                          if (value != null) {
+                            _changeRankingMode(profile, request, value);
+                          }
+                        },
+                        child: const Column(
+                          children: <Widget>[
+                            RadioListTile<String>(
+                              key: Key('ranking-mode-data'),
+                              value: 'DATA',
+                              title: Text('데이터로 관리'),
+                              subtitle: Text('자동 경기 + 수동 입력을 함께 사용할 수 있습니다.'),
+                            ),
+                            RadioListTile<String>(
+                              key: Key('ranking-mode-image'),
+                              value: 'IMAGE',
+                              title: Text('순위표 이미지로 관리'),
+                              subtitle: Text('업로드한 순위표 이미지만 표시합니다.'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     if (!profile.bowlerHiddenEnabled)
                       DropdownButtonFormField<String>(
                         key: const Key('season-scoring-mode'),
@@ -165,20 +198,22 @@ class _ClubTeamSettingsScreenState
                         },
                         decoration: const InputDecoration(labelText: '점수 방식'),
                       ),
-                    _SeasonPointTableEditor(
-                      key: Key(
-                        profile.bowlerHiddenEnabled
-                            ? 'season-individual-points'
-                            : 'season-general-points',
+                    if (!profile.bowlerHiddenEnabled || _rankingMode == 'DATA')
+                      _SeasonPointTableEditor(
+                        key: Key(
+                          profile.bowlerHiddenEnabled
+                              ? 'season-individual-points'
+                              : 'season-general-points',
+                        ),
+                        title: profile.bowlerHiddenEnabled
+                            ? '개인전 시즌 순위 포인트'
+                            : '시즌 순위 포인트',
+                        points: _individualPoints,
+                        onChanged: (value) =>
+                            setState(() => _individualPoints = value),
                       ),
-                      title: profile.bowlerHiddenEnabled
-                          ? '개인전 시즌 순위 포인트'
-                          : '시즌 순위 포인트',
-                      points: _individualPoints,
-                      onChanged: (value) =>
-                          setState(() => _individualPoints = value),
-                    ),
-                    if (profile.bowlerHiddenEnabled) ...<Widget>[
+                    if (profile.bowlerHiddenEnabled &&
+                        _rankingMode == 'DATA') ...<Widget>[
                       _SeasonPointTableEditor(
                         key: const Key('season-team-points'),
                         title: '팀전 시즌 순위 포인트',
@@ -214,6 +249,36 @@ class _ClubTeamSettingsScreenState
                         icon: const Icon(Icons.upload_file),
                         label: const Text('기존 시즌 데이터 가져오기'),
                       ),
+                      OutlinedButton.icon(
+                        key: const Key('season-manual-competition-add'),
+                        onPressed: profile.activeSeason == null
+                            ? null
+                            : () => _addManualCompetition(profile, request),
+                        icon: const Icon(Icons.add_chart),
+                        label: const Text('수동 대회 추가'),
+                      ),
+                      if (profile.activeSeason != null)
+                        _ManualCompetitionList(
+                          request: (
+                            userId: request.userId,
+                            teamId: request.teamId,
+                            seasonId: profile.activeSeason!.id,
+                          ),
+                          onEdit: (competition) => _editManualCompetition(
+                            profile,
+                            request,
+                            competition,
+                          ),
+                        ),
+                    ],
+                    if (profile.bowlerHiddenEnabled &&
+                        _rankingMode == 'IMAGE') ...<Widget>[
+                      const SizedBox(height: 8),
+                      _RankingImageManager(
+                        teamId: widget.teamId,
+                        season: profile.activeSeason,
+                        request: request,
+                      ),
                     ],
                   ],
                 ],
@@ -227,6 +292,152 @@ class _ClubTeamSettingsScreenState
             );
           },
         );
+  }
+
+  Future<void> _changeRankingMode(
+    ClubTeamProfile profile,
+    ClubExpansionRequest request,
+    String next,
+  ) async {
+    if (next == _rankingMode) return;
+    final season = profile.activeSeason;
+    if (season == null) {
+      setState(() => _rankingMode = next);
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('순위 관리 방식 변경'),
+        content: Text(
+          next == 'IMAGE'
+              ? '현재 시즌에는 자동/수동 순위 데이터가 있을 수 있습니다. 이미지 관리 방식으로 변경하면 기존 데이터는 삭제되지 않지만 종합순위에서는 표시되지 않습니다.'
+              : '현재 시즌에 등록된 순위표 이미지는 삭제되지 않습니다. 데이터 관리 방식으로 변경하면 종합순위에는 구조화된 데이터만 표시됩니다.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const Key('ranking-mode-confirm'),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(next == 'IMAGE' ? '이미지 방식으로 변경' : '데이터 방식으로 변경'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref
+          .read(clubExpansionApiProvider)
+          .updateSeasonRankingMode(
+            widget.teamId,
+            season.id,
+            next,
+            confirmed: true,
+          );
+      if (!mounted) return;
+      setState(() => _rankingMode = next);
+      ref.invalidate(clubTeamProfileProvider(request));
+      ref.invalidate(clubSeasonRankingProvider);
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(clubErrorMessage(error))));
+      }
+    }
+  }
+
+  Future<void> _addManualCompetition(
+    ClubTeamProfile profile,
+    ClubExpansionRequest request,
+  ) async {
+    final season = profile.activeSeason;
+    if (season == null) return;
+    try {
+      final ranking = await ref.read(
+        clubSeasonRankingProvider((
+          userId: request.userId,
+          teamId: request.teamId,
+          seasonId: season.id,
+          year: null,
+          competitionType: 'ALL',
+        )).future,
+      );
+      if (!mounted) return;
+      final body = await showModalBottomSheet<Map<String, Object>>(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) =>
+            _ManualCompetitionEditor(members: ranking.rows, season: season),
+      );
+      if (body == null) return;
+      await ref
+          .read(clubExpansionApiProvider)
+          .createManualCompetition(widget.teamId, season.id, body);
+      ref.invalidate(clubSeasonRankingProvider);
+      ref.invalidate(clubSeasonManualCompetitionsProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('수동 대회를 저장했습니다.')));
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(clubErrorMessage(error))));
+      }
+    }
+  }
+
+  Future<void> _editManualCompetition(
+    ClubTeamProfile profile,
+    ClubExpansionRequest request,
+    ClubSeasonManualCompetition competition,
+  ) async {
+    final season = profile.activeSeason;
+    if (season == null) return;
+    try {
+      final ranking = await ref.read(
+        clubSeasonRankingProvider((
+          userId: request.userId,
+          teamId: request.teamId,
+          seasonId: season.id,
+          year: null,
+          competitionType: 'ALL',
+        )).future,
+      );
+      if (!mounted) return;
+      final body = await showModalBottomSheet<Map<String, Object>>(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => _ManualCompetitionEditor(
+          members: ranking.rows,
+          season: season,
+          initial: competition,
+        ),
+      );
+      if (body == null) return;
+      await ref
+          .read(clubExpansionApiProvider)
+          .updateManualCompetition(
+            widget.teamId,
+            season.id,
+            competition.id,
+            body,
+          );
+      ref.invalidate(clubSeasonRankingProvider);
+      ref.invalidate(clubSeasonManualCompetitionsProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('수동 대회를 수정했습니다.')));
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(clubErrorMessage(error))));
+      }
+    }
   }
 
   Future<void> _save(
@@ -251,6 +462,7 @@ class _ClubTeamSettingsScreenState
             'startDate': _start.text.trim(),
             'endDate': _end.text.trim(),
             'scoringMode': _mode,
+            'rankingMode': _rankingMode,
             if (profile.bowlerHiddenEnabled)
               'pointTables': <String, Object>{
                 'individual': _pointRows(_individualPoints),
@@ -293,6 +505,57 @@ List<Map<String, int>> _pointRows(List<int> points) =>
       points.length,
       (int index) => <String, int>{'rank': index + 1, 'points': points[index]},
     );
+
+class _ManualCompetitionList extends ConsumerWidget {
+  const _ManualCompetitionList({required this.request, required this.onEdit});
+  final ClubSeasonManagementRequest request;
+  final ValueChanged<ClubSeasonManualCompetition> onEdit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => ref
+      .watch(clubSeasonManualCompetitionsProvider(request))
+      .when(
+        loading: () => const Padding(
+          padding: EdgeInsets.all(12),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (error, _) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(clubErrorMessage(error)),
+        ),
+        data: (competitions) {
+          if (competitions.isEmpty) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('등록된 수동 대회가 없습니다.'),
+            );
+          }
+          return Card(
+            child: Column(
+              children: competitions
+                  .map(
+                    (competition) => ListTile(
+                      key: Key('manual-competition-${competition.id}'),
+                      title: Text(competition.name),
+                      subtitle: Text(
+                        '${_date(competition.eventDate)} · ${_competitionTypeLabel(competition.competitionType)} · ${competition.results.length}명',
+                      ),
+                      trailing: const Icon(Icons.edit_outlined),
+                      onTap: () => onEdit(competition),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          );
+        },
+      );
+}
+
+String _competitionTypeLabel(String value) => switch (value) {
+  'TEAM' => '팀전',
+  'EVENT' => '이벤트전',
+  _ => '개인전',
+};
 
 class _SeasonPointTableEditor extends StatelessWidget {
   const _SeasonPointTableEditor({
@@ -355,4 +618,387 @@ class _SeasonPointTableEditor extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _ManualCompetitionEditor extends StatefulWidget {
+  const _ManualCompetitionEditor({
+    required this.members,
+    required this.season,
+    this.initial,
+  });
+  final List<ClubSeasonRankingRow> members;
+  final ClubSeason season;
+  final ClubSeasonManualCompetition? initial;
+
+  @override
+  State<_ManualCompetitionEditor> createState() =>
+      _ManualCompetitionEditorState();
+}
+
+class _ManualCompetitionEditorState extends State<_ManualCompetitionEditor> {
+  final _name = TextEditingController();
+  final _date = TextEditingController();
+  final Map<String, TextEditingController> _ranks =
+      <String, TextEditingController>{};
+  final Map<String, TextEditingController> _points =
+      <String, TextEditingController>{};
+  String _type = 'INDIVIDUAL';
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial;
+    if (initial != null) {
+      _name.text = initial.name;
+      _date.text =
+          '${initial.eventDate.year}-${initial.eventDate.month.toString().padLeft(2, '0')}-${initial.eventDate.day.toString().padLeft(2, '0')}';
+      _type = initial.competitionType;
+    }
+    for (final member in widget.members) {
+      ClubSeasonManualResult? result;
+      for (final item in initial?.results ?? const <ClubSeasonManualResult>[]) {
+        if (item.memberId == member.id) {
+          result = item;
+          break;
+        }
+      }
+      _ranks[member.id] = TextEditingController(
+        text: result?.finalRank?.toString() ?? '',
+      );
+      _points[member.id] = TextEditingController(
+        text: result?.points.toString() ?? '',
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _date.dispose();
+    for (final controller in <TextEditingController>[
+      ..._ranks.values,
+      ..._points.values,
+    ]) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        20,
+        20,
+        20 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * .78,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(
+              widget.initial == null ? '수동 대회 추가' : '수동 대회 수정',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('manual-competition-name'),
+              controller: _name,
+              maxLength: 100,
+              decoration: const InputDecoration(labelText: '대회명'),
+            ),
+            TextField(
+              key: const Key('manual-competition-date'),
+              controller: _date,
+              decoration: const InputDecoration(labelText: '날짜 YYYY-MM-DD'),
+            ),
+            DropdownButtonFormField<String>(
+              key: const Key('manual-competition-type'),
+              initialValue: _type,
+              items: const <DropdownMenuItem<String>>[
+                DropdownMenuItem(value: 'INDIVIDUAL', child: Text('개인전')),
+                DropdownMenuItem(value: 'TEAM', child: Text('팀전')),
+                DropdownMenuItem(value: 'EVENT', child: Text('이벤트전')),
+              ],
+              onChanged: (value) => setState(() => _type = value ?? _type),
+              decoration: const InputDecoration(labelText: '대회 유형'),
+            ),
+            const SizedBox(height: 12),
+            const Text('회원 결과', style: TextStyle(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView(
+                children: widget.members
+                    .map(
+                      (member) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          children: <Widget>[
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                member.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                key: Key('manual-rank-${member.id}'),
+                                controller: _ranks[member.id],
+                                keyboardType: TextInputType.number,
+                                inputFormatters: <TextInputFormatter>[
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                decoration: const InputDecoration(
+                                  labelText: '순위',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                key: Key('manual-points-${member.id}'),
+                                controller: _points[member.id],
+                                keyboardType: TextInputType.number,
+                                inputFormatters: <TextInputFormatter>[
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                decoration: const InputDecoration(
+                                  labelText: 'P',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+            ),
+            if (_error != null)
+              Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+            const SizedBox(height: 8),
+            FilledButton(
+              key: const Key('manual-competition-save'),
+              onPressed: _submit,
+              child: const Text('저장'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  void _submit() {
+    final date = DateTime.tryParse(_date.text.trim());
+    final results = <Map<String, Object?>>[];
+    for (final member in widget.members) {
+      final rankText = _ranks[member.id]!.text.trim();
+      final pointsText = _points[member.id]!.text.trim();
+      if (rankText.isEmpty && pointsText.isEmpty) continue;
+      final rank = rankText.isEmpty ? null : int.tryParse(rankText);
+      final points = int.tryParse(pointsText);
+      if ((rankText.isNotEmpty && rank == null) || points == null) {
+        setState(() => _error = '입력한 순위와 포인트를 확인해주세요.');
+        return;
+      }
+      results.add(<String, Object?>{
+        'memberId': member.id,
+        'finalRank': rank,
+        'points': points,
+      });
+    }
+    if (_name.text.trim().isEmpty ||
+        date == null ||
+        date.isBefore(widget.season.startDate) ||
+        date.isAfter(widget.season.endDate) ||
+        results.isEmpty) {
+      setState(() => _error = '대회명, 시즌 내 날짜와 한 명 이상의 결과를 입력해주세요.');
+      return;
+    }
+    Navigator.pop(context, <String, Object>{
+      'name': _name.text.trim(),
+      'eventDate': _date.text.trim(),
+      'competitionType': _type,
+      'results': results,
+    });
+  }
+}
+
+class _RankingImageManager extends ConsumerStatefulWidget {
+  const _RankingImageManager({
+    required this.teamId,
+    required this.season,
+    required this.request,
+  });
+  final String teamId;
+  final ClubSeason? season;
+  final ClubExpansionRequest request;
+
+  @override
+  ConsumerState<_RankingImageManager> createState() =>
+      _RankingImageManagerState();
+}
+
+class _RankingImageManagerState extends ConsumerState<_RankingImageManager> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final season = widget.season;
+    if (season == null) return const Text('시즌을 먼저 저장해주세요.');
+    final rankingRequest = (
+      userId: widget.request.userId,
+      teamId: widget.teamId,
+      seasonId: season.id,
+      year: null as int?,
+      competitionType: 'ALL',
+    );
+    final ranking = ref.watch(clubSeasonRankingProvider(rankingRequest));
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const Text(
+              '시즌 순위표 이미지',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            ranking.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Text(clubErrorMessage(error)),
+              data: (data) => Column(
+                children: data.rankingImages
+                    .map(
+                      (image) => ListTile(
+                        key: Key('ranking-image-${image.id}'),
+                        title: Text('순위표 ${image.displayOrder + 1}'),
+                        subtitle: Text('${(image.size / 1024).ceil()}KB'),
+                        onTap: () => _showImage(season.id, image.id),
+                        trailing: IconButton(
+                          tooltip: '삭제',
+                          onPressed: _busy
+                              ? null
+                              : () => _delete(
+                                  rankingRequest,
+                                  season.id,
+                                  image.id,
+                                ),
+                          icon: const Icon(Icons.delete_outline),
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: const Key('ranking-image-upload'),
+              onPressed: _busy
+                  ? null
+                  : () => _upload(rankingRequest, season.id),
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              label: Text(_busy ? '처리 중...' : '순위표 이미지 추가'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _upload(
+    ClubSeasonRankingRequest request,
+    String seasonId,
+  ) async {
+    final images = await ref.read(clubPostImagePickerProvider).pickImages();
+    if (images.isEmpty || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      for (final image in images) {
+        await ref
+            .read(clubExpansionApiProvider)
+            .uploadRankingImage(widget.teamId, seasonId, image);
+      }
+      ref.invalidate(clubSeasonRankingProvider(request));
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(clubErrorMessage(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _delete(
+    ClubSeasonRankingRequest request,
+    String seasonId,
+    String imageId,
+  ) async {
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(clubExpansionApiProvider)
+          .deleteRankingImage(widget.teamId, seasonId, imageId);
+      ref.invalidate(clubSeasonRankingProvider(request));
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(clubErrorMessage(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _showImage(String seasonId, String imageId) async {
+    try {
+      final bytes = await ref.read(
+        clubRankingImageProvider((
+          userId: widget.request.userId,
+          teamId: widget.teamId,
+          seasonId: seasonId,
+          imageId: imageId,
+        )).future,
+      );
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (context) => Dialog.fullscreen(
+          child: Stack(
+            children: <Widget>[
+              Positioned.fill(
+                child: InteractiveViewer(
+                  minScale: .5,
+                  maxScale: 5,
+                  child: Center(
+                    child: Image.memory(bytes, fit: BoxFit.contain),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 12,
+                right: 12,
+                child: IconButton.filled(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(clubErrorMessage(error))));
+      }
+    }
+  }
 }

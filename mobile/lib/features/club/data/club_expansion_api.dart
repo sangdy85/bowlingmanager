@@ -76,6 +76,115 @@ class ClubExpansionApi {
     );
     return ClubTeamProfile.fromJson(_map(_data(response.data)['profile']));
   });
+  Future<void> updateSeasonRankingMode(
+    String teamId,
+    String seasonId,
+    String rankingMode, {
+    bool confirmed = false,
+  }) async => _guard(() async {
+    await _dio.patch<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/ranking-mode',
+      data: <String, Object>{
+        'rankingMode': rankingMode,
+        'confirmed': confirmed,
+      },
+    );
+  });
+
+  Future<void> createManualCompetition(
+    String teamId,
+    String seasonId,
+    Map<String, Object> body,
+  ) async => _guard(() async {
+    await _dio.post<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/manual-competitions',
+      data: body,
+    );
+  });
+
+  Future<List<ClubSeasonManualCompetition>> fetchManualCompetitions(
+    String teamId,
+    String seasonId,
+  ) async => _guard(() async {
+    final response = await _dio.get<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/manual-competitions',
+    );
+    final value = _data(response.data)['competitions'];
+    if (value is! List) throw const FormatException('Invalid competitions.');
+    return List<ClubSeasonManualCompetition>.unmodifiable(
+      value.map((item) => ClubSeasonManualCompetition.fromJson(_map(item))),
+    );
+  });
+
+  Future<void> updateManualCompetition(
+    String teamId,
+    String seasonId,
+    String competitionId,
+    Map<String, Object> body,
+  ) async => _guard(() async {
+    await _dio.patch<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/manual-competitions/${Uri.encodeComponent(competitionId)}',
+      data: body,
+    );
+  });
+
+  Future<void> saveStructuredSeasonRanking(
+    String teamId,
+    String seasonId, {
+    required List<Map<String, Object?>> competitions,
+    required List<Map<String, Object>> targetTotals,
+  }) async => _guard(() async {
+    await _dio.post<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/structured-ranking',
+      data: <String, Object>{
+        'competitions': competitions,
+        'targetTotals': targetTotals,
+      },
+    );
+  });
+
+  Future<Uint8List> fetchRankingImage(
+    String teamId,
+    String seasonId,
+    String imageId,
+  ) async => _guard(() async {
+    final response = await _dio.get<List<int>>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/ranking-images/${Uri.encodeComponent(imageId)}',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    final bytes = response.data;
+    if (bytes == null || bytes.isEmpty) {
+      throw const FormatException('Invalid ranking image.');
+    }
+    return Uint8List.fromList(bytes);
+  });
+
+  Future<void> uploadRankingImage(
+    String teamId,
+    String seasonId,
+    CaptureImageData image,
+  ) async => _guard(() async {
+    await _dio.post<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/ranking-images',
+      data: FormData.fromMap(<String, dynamic>{
+        'image': MultipartFile.fromBytes(
+          image.bytes,
+          filename: image.fileName,
+          contentType: DioMediaType.parse(image.mimeType),
+        ),
+      }),
+    );
+  });
+
+  Future<void> deleteRankingImage(
+    String teamId,
+    String seasonId,
+    String imageId,
+  ) async => _guard(() async {
+    await _dio.delete<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/ranking-images/${Uri.encodeComponent(imageId)}',
+    );
+  });
   Future<ClubSeasonRanking> fetchSeasonRanking(
     String teamId, {
     String? seasonId,

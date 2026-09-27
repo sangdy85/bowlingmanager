@@ -5,6 +5,8 @@ import 'package:bowlingmanager_mobile/features/records/application/records_state
 import 'package:bowlingmanager_mobile/features/records/data/scores_api.dart';
 import 'package:bowlingmanager_mobile/features/records/data/scores_repository.dart';
 import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart';
+import 'package:bowlingmanager_mobile/features/home/data/dashboard_api.dart';
+import 'package:bowlingmanager_mobile/features/home/domain/dashboard.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const int recordsPageLimit = 20;
@@ -16,6 +18,13 @@ final Provider<ScoresApi> scoresApiProvider = Provider<ScoresApi>(
 final Provider<ScoresRepository> scoresRepositoryProvider =
     Provider<ScoresRepository>((Ref ref) {
       return MobileScoresRepository(ref.watch(scoresApiProvider));
+    });
+final Provider<Future<Dashboard> Function(int)> recordsDashboardLoaderProvider =
+    Provider<Future<Dashboard> Function(int)>((Ref ref) {
+      final MobileDashboardApi api = MobileDashboardApi(
+        ref.watch(apiClientProvider).dio,
+      );
+      return api.fetchDashboardForYear;
     });
 
 final recordsControllerProvider = AsyncNotifierProvider.autoDispose
@@ -29,23 +38,30 @@ class RecordsController extends AsyncNotifier<RecordsState> {
 
   final String userId;
   late ScoresRepository _repository;
+  late Future<Dashboard> Function(int year) _loadDashboard;
   RecordsFilter _filter = const RecordsFilter();
 
   @override
   Future<RecordsState> build() {
     _repository = ref.watch(scoresRepositoryProvider);
+    _loadDashboard = ref.watch(recordsDashboardLoaderProvider);
     return _fetchFirstPage();
   }
 
   Future<RecordsState> _fetchFirstPage() async {
-    final ScoresPage page = await _repository.fetchScores(
-      page: 1,
-      limit: recordsPageLimit,
-      filter: _filter,
-    );
+    final results = await Future.wait<Object>(<Future<Object>>[
+      _repository.fetchScores(
+        page: 1,
+        limit: recordsPageLimit,
+        filter: _filter,
+      ),
+      _loadDashboard(_filter.year ?? DateTime.now().year),
+    ]);
+    final ScoresPage page = results[0] as ScoresPage;
     return RecordsState(
       items: page.items,
       pagination: page.pagination,
+      dashboard: results[1] as Dashboard,
       filter: _filter,
       availableYears: page.availableYears,
     );
@@ -131,6 +147,7 @@ class RecordsController extends AsyncNotifier<RecordsState> {
             ...uniqueItems,
           ]),
           pagination: nextPage.pagination,
+          dashboard: current.dashboard,
           filter: _filter,
           availableYears: nextPage.availableYears.isEmpty
               ? current.availableYears

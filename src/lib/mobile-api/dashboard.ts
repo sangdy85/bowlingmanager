@@ -277,6 +277,7 @@ export async function getMobileDashboard(
     const summary = summarizeIntegratedRecords(personal.integratedRecords, year);
     return {
         ...summary,
+        recordCategories: createRecordCategories(allRecords, personal.officialRecords),
         recentSessions: summary.recentSessions.map((session) => {
             const filter = session.source === "PERSONAL" && session.team
                 ? teamRecordFilterForGameType(session.gameType)
@@ -296,6 +297,26 @@ export async function getMobileDashboard(
         nextEvent,
         ...createDashboardExtensions(user, personal.integratedRecords, personal.officialRecords, scoreRows, memberRows),
     };
+}
+
+function createRecordCategories(allRecords: IntegratedRecord[], officialRecords: IntegratedRecord[]) {
+    const category = (key: string, label: string, records: IntegratedRecord[]) => {
+        const total = records.reduce((sum, record) => sum + record.score, 0);
+        return {
+            key, label, gameCount: records.length, total,
+            highScore: records.length ? Math.max(...records.map((record) => record.score)) : 0,
+            lowScore: records.length ? Math.min(...records.map((record) => record.score)) : 0,
+            average: records.length ? Number((total / records.length).toFixed(1)) : 0,
+        };
+    };
+    const personal = allRecords.filter((record) => record.source === "PERSONAL");
+    return [
+        category("ALL", "통합 종합", allRecords),
+        category("OFFICIAL", "볼링장 공식", officialRecords),
+        category("PERSONAL", "개인 기록", personal),
+        category("REGULAR", "정기전", personal.filter((record) => record.gameType === "정기전")),
+        category("MEETUP", "벙개", personal.filter((record) => record.gameType === "벙개")),
+    ];
 }
 
 export function createDashboardExtensions(

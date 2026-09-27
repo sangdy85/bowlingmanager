@@ -18,6 +18,7 @@ class Dashboard {
     this.teamSummaries = const <DashboardTeamSummary>[],
     this.clubAchievements = const <DashboardClubAchievement>[],
     this.nextEvent,
+    this.recordCategories = const <DashboardRecordCategory>[],
   }) : totalGameCount = totalGameCount ?? gameCount;
 
   final int year;
@@ -36,6 +37,7 @@ class Dashboard {
   final List<DashboardTeamSummary> teamSummaries;
   final List<DashboardClubAchievement> clubAchievements;
   final DashboardNextEvent? nextEvent;
+  final List<DashboardRecordCategory> recordCategories;
 
   factory Dashboard.fromJson(Map<String, dynamic> json) {
     final Object? year = json['year'];
@@ -129,6 +131,10 @@ class Dashboard {
           : DashboardNextEvent.fromJson(
               Map<String, dynamic>.from(nextEvent as Map),
             ),
+      recordCategories: _optionalList(
+        json['recordCategories'],
+        DashboardRecordCategory.fromJson,
+      ),
     );
   }
 
@@ -166,6 +172,46 @@ class Dashboard {
     } on FormatException {
       return <T>[];
     }
+  }
+}
+
+class DashboardRecordCategory {
+  const DashboardRecordCategory({
+    required this.key,
+    required this.label,
+    required this.gameCount,
+    required this.total,
+    required this.highScore,
+    required this.lowScore,
+    required this.average,
+  });
+  final String key;
+  final String label;
+  final int gameCount;
+  final int total;
+  final int highScore;
+  final int lowScore;
+  final double average;
+
+  factory DashboardRecordCategory.fromJson(Map<String, dynamic> json) {
+    if (json['key'] is! String ||
+        json['label'] is! String ||
+        json['gameCount'] is! int ||
+        json['total'] is! int ||
+        json['highScore'] is! int ||
+        json['lowScore'] is! int ||
+        json['average'] is! num) {
+      throw const FormatException('Invalid record category.');
+    }
+    return DashboardRecordCategory(
+      key: json['key'] as String,
+      label: json['label'] as String,
+      gameCount: json['gameCount'] as int,
+      total: json['total'] as int,
+      highScore: json['highScore'] as int,
+      lowScore: json['lowScore'] as int,
+      average: (json['average'] as num).toDouble(),
+    );
   }
 }
 
@@ -440,6 +486,7 @@ class DashboardCategoryStats {
     required this.highScore,
     required this.lowScore,
     required this.gameCount,
+    this.roundSpread = 0,
   });
   static const DashboardCategoryStats empty = DashboardCategoryStats(
     average: 0,
@@ -451,18 +498,22 @@ class DashboardCategoryStats {
   final int highScore;
   final int lowScore;
   final int gameCount;
+  final int roundSpread;
 
   factory DashboardCategoryStats.fromJson(Map<String, dynamic> json) {
     final Object? average = json['average'];
     final Object? highScore = json['highScore'];
     final Object? lowScore = json['lowScore'];
     final Object? gameCount = json['gameCount'];
+    final Object? roundSpread = json['roundSpread'] ?? 0;
     if (average is! num ||
         !average.isFinite ||
         highScore is! int ||
         lowScore is! int ||
         gameCount is! int ||
-        gameCount < 0) {
+        gameCount < 0 ||
+        roundSpread is! int ||
+        roundSpread < 0) {
       throw const FormatException('Invalid category statistics response.');
     }
     return DashboardCategoryStats(
@@ -470,6 +521,7 @@ class DashboardCategoryStats {
       highScore: highScore,
       lowScore: lowScore,
       gameCount: gameCount,
+      roundSpread: roundSpread,
     );
   }
 }

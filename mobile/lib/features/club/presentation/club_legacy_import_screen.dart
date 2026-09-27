@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/data/club_expansion_api.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_legacy_csv.dart';
@@ -64,8 +65,13 @@ class _ClubLegacyImportScreenState
                     error: (error, _) =>
                         Center(child: Text(clubErrorMessage(error))),
                     data: (ranking) {
+                      if (ranking.rankingMode != 'DATA') {
+                        return const Center(
+                          child: Text('데이터 관리 방식의 시즌에서만 사용할 수 있습니다.'),
+                        );
+                      }
                       _ensureBatches(season.id);
-                      return _content(season, ranking.rows, request);
+                      return _content(season, ranking, request);
                     },
                   );
             },
@@ -75,7 +81,7 @@ class _ClubLegacyImportScreenState
 
   Widget _content(
     ClubSeason season,
-    List<ClubSeasonRankingRow> members,
+    ClubSeasonRanking ranking,
     ClubSeasonRankingRequest rankingRequest,
   ) => ListView(
     padding: const EdgeInsets.all(16),
@@ -90,19 +96,14 @@ class _ClubLegacyImportScreenState
         children: <Widget>[
           FilledButton.icon(
             key: const Key('legacy-direct-import'),
-            onPressed: () => _openEditor(
-              season,
-              members,
-              rankingRequest,
-              'DETAILED',
-              <_ImportDraft>[_ImportDraft.detailed()],
-            ),
+            onPressed: () =>
+                _openStructuredEditor(season, ranking.rows, rankingRequest),
             icon: const Icon(Icons.edit_note),
             label: const Text('직접 입력'),
           ),
           OutlinedButton.icon(
             key: const Key('legacy-csv-import'),
-            onPressed: () => _pickCsv(season, members, rankingRequest),
+            onPressed: () => _pickCsv(season, ranking.rows, rankingRequest),
             icon: const Icon(Icons.upload_file),
             label: const Text('CSV 가져오기'),
           ),
@@ -110,10 +111,12 @@ class _ClubLegacyImportScreenState
             key: const Key('legacy-opening-import'),
             onPressed: () => _openEditor(
               season,
-              members,
+              ranking.rows,
               rankingRequest,
               'OPENING_BALANCE',
-              members.map((member) => _ImportDraft.opening(member.id)).toList(),
+              ranking.rows
+                  .map((member) => _ImportDraft.opening(member.id))
+                  .toList(),
             ),
             icon: const Icon(Icons.account_balance_wallet_outlined),
             label: const Text('현재 포인트만 입력'),
@@ -213,6 +216,51 @@ class _ClubLegacyImportScreenState
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
+
+  Future<void> _openStructuredEditor(
+    ClubSeason season,
+    List<ClubSeasonRankingRow> members,
+    ClubSeasonRankingRequest request,
+  ) async {
+    try {
+      final api = ref.read(clubExpansionApiProvider);
+      final competitions = await api.fetchManualCompetitions(
+        widget.teamId,
+        season.id,
+      );
+      if (!mounted) return;
+      final saved = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => _LegacyStructuredEditor(
+            teamId: widget.teamId,
+            season: season,
+            members: members,
+            initialCompetitions: competitions,
+            api: api,
+          ),
+        ),
+      );
+      if (saved != true || !mounted) return;
+      ref.invalidate(clubSeasonRankingProvider(request));
+      ref.invalidate(
+        clubSeasonManualCompetitionsProvider((
+          userId: request.userId,
+          teamId: widget.teamId,
+          seasonId: season.id,
+        )),
+      );
+      ref.invalidate(clubSeasonMemberProvider);
+      _reloadBatches(season.id);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('기존 시즌 구조화 데이터를 저장했습니다.')));
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(clubErrorMessage(error))));
       }
     }
   }
@@ -341,6 +389,620 @@ class _ClubLegacyImportScreenState
     }
   }
 }
+
+class _LegacyStructuredEditor extends StatefulWidget {
+  const _LegacyStructuredEditor({
+    required this.teamId,
+    required this.season,
+    required this.members,
+    required this.initialCompetitions,
+    required this.api,
+  });
+
+  final String teamId;
+  final ClubSeason season;
+  final List<ClubSeasonRankingRow> members;
+  final List<ClubSeasonManualCompetition> initialCompetitions;
+  final ClubExpansionApi api;
+
+  @override
+  State<_LegacyStructuredEditor> createState() =>
+      _LegacyStructuredEditorState();
+}
+
+class _LegacyStructuredEditorState extends State<_LegacyStructuredEditor> {
+  late final List<_StructuredCompetitionDraft> _competitions =
+      widget.initialCompetitions
+          .map(_StructuredCompetitionDraft.fromModel)
+          .toList()
+        ..sort(_compareCompetitionDrafts);
+  late final Map<String, int> _initialManualPoints = <String, int>{
+    for (final member in widget.members)
+      member.id: widget.initialCompetitions.fold<int>(
+        0,
+        (sum, competition) =>
+            sum +
+            competition.results
+                .where((result) => result.memberId == member.id)
+                .fold<int>(0, (value, result) => value + result.points),
+      ),
+  };
+  final Map<String, int> _targetTotals = <String, int>{};
+  int _draftSequence = 0;
+  bool _saving = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final views = _memberViews();
+    return Scaffold(
+      appBar: AppBar(title: const Text('기존 시즌 순위표 직접 입력')),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  widget.season.name,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                const Text('순위는 최종 포인트로 자동 계산됩니다. 셀을 눌러 순위와 포인트를 입력하세요.'),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  key: const Key('legacy-competition-add'),
+                  onPressed: _saving ? null : _addCompetition,
+                  icon: const Icon(Icons.add),
+                  label: const Text('대회 추가'),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  key: const Key('legacy-structured-table'),
+                  headingRowHeight: 64,
+                  dataRowMinHeight: 64,
+                  dataRowMaxHeight: 76,
+                  columns: <DataColumn>[
+                    const DataColumn(label: Text('순위')),
+                    const DataColumn(label: Text('이름')),
+                    const DataColumn(label: Text('총P')),
+                    for (final competition in _competitions)
+                      DataColumn(
+                        label: SizedBox(
+                          width: 92,
+                          child: Tooltip(
+                            message: '${competition.date} ${competition.name}',
+                            child: Text(
+                              '${_monthLabel(competition.date)}\n${competition.name}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                  rows: views
+                      .map(
+                        (view) => DataRow(
+                          key: ValueKey<String>('legacy-row-${view.member.id}'),
+                          cells: <DataCell>[
+                            DataCell(Text('${view.rank}')),
+                            DataCell(
+                              Tooltip(
+                                message: view.member.name,
+                                child: SizedBox(
+                                  width: 92,
+                                  child: Text(
+                                    view.member.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              InkWell(
+                                key: Key('legacy-total-${view.member.id}'),
+                                onTap: _saving
+                                    ? null
+                                    : () => _editTargetTotal(view.member),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  child: Text(
+                                    '${view.total}P${view.adjustment == 0 ? '' : '\n(${_signed(view.adjustment)})'}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            for (final competition in _competitions)
+                              DataCell(
+                                InkWell(
+                                  key: Key(
+                                    'legacy-cell-${view.member.id}-${competition.localId}',
+                                  ),
+                                  onTap: _saving
+                                      ? null
+                                      : () =>
+                                            _editCell(competition, view.member),
+                                  child: SizedBox(
+                                    width: 92,
+                                    child: Center(
+                                      child: Text(
+                                        _cellLabel(
+                                          competition.results[view.member.id],
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: FilledButton.icon(
+          key: const Key('legacy-structured-preview-cta'),
+          onPressed: _saving ? null : _previewAndSave,
+          icon: _saving
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.fact_check_outlined),
+          label: Text(_saving ? '저장 중...' : '입력 내용 확인'),
+        ),
+      ),
+    );
+  }
+
+  List<_StructuredMemberView> _memberViews() {
+    final views =
+        widget.members.map((member) {
+          final draftManual = _competitions.fold<int>(
+            0,
+            (sum, competition) =>
+                sum + (competition.results[member.id]?.points ?? 0),
+          );
+          final projected =
+              member.points -
+              (_initialManualPoints[member.id] ?? 0) +
+              draftManual;
+          final total = _targetTotals[member.id] ?? projected;
+          return _StructuredMemberView(
+            member: member,
+            total: total,
+            adjustment: total - projected,
+          );
+        }).toList()..sort(
+          (left, right) => right.total.compareTo(left.total) != 0
+              ? right.total.compareTo(left.total)
+              : left.member.name.compareTo(right.member.name),
+        );
+    int previousTotal = -1;
+    int previousRank = 0;
+    for (var index = 0; index < views.length; index += 1) {
+      final rank = views[index].total == previousTotal
+          ? previousRank
+          : index + 1;
+      views[index] = views[index].copyWith(rank: rank);
+      previousTotal = views[index].total;
+      previousRank = rank;
+    }
+    return views;
+  }
+
+  Future<void> _addCompetition() async {
+    final name = TextEditingController();
+    final date = TextEditingController();
+    var type = 'INDIVIDUAL';
+    final result = await showDialog<_StructuredCompetitionDraft>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('과거 대회 추가'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextField(
+                key: const Key('legacy-competition-name'),
+                controller: name,
+                maxLength: 100,
+                decoration: const InputDecoration(labelText: '대회명'),
+              ),
+              TextField(
+                key: const Key('legacy-competition-date'),
+                controller: date,
+                decoration: const InputDecoration(
+                  labelText: '날짜',
+                  hintText: '2026-01-05',
+                ),
+              ),
+              DropdownButtonFormField<String>(
+                key: const Key('legacy-competition-type'),
+                initialValue: type,
+                decoration: const InputDecoration(labelText: '유형'),
+                items: const <DropdownMenuItem<String>>[
+                  DropdownMenuItem(value: 'INDIVIDUAL', child: Text('개인전')),
+                  DropdownMenuItem(value: 'TEAM', child: Text('팀전')),
+                  DropdownMenuItem(value: 'EVENT', child: Text('이벤트전')),
+                ],
+                onChanged: (value) => setDialogState(() => type = value!),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              key: const Key('confirm-legacy-competition-add'),
+              onPressed: () {
+                final parsedDate = DateTime.tryParse(date.text.trim());
+                if (name.text.trim().isEmpty ||
+                    parsedDate == null ||
+                    parsedDate.isBefore(widget.season.startDate) ||
+                    parsedDate.isAfter(widget.season.endDate)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('시즌 기간 안의 대회명과 날짜를 확인해주세요.')),
+                  );
+                  return;
+                }
+                Navigator.pop(
+                  context,
+                  _StructuredCompetitionDraft(
+                    localId: 'draft-${_draftSequence++}',
+                    name: name.text.trim(),
+                    date: date.text.trim(),
+                    competitionType: type,
+                  ),
+                );
+              },
+              child: const Text('추가'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _competitions.add(result);
+      _competitions.sort(_compareCompetitionDrafts);
+    });
+  }
+
+  Future<void> _editCell(
+    _StructuredCompetitionDraft competition,
+    ClubSeasonRankingRow member,
+  ) async {
+    final current = competition.results[member.id];
+    final rank = TextEditingController(text: current?.rank?.toString() ?? '');
+    final points = TextEditingController(
+      text: current?.points.toString() ?? '0',
+    );
+    final result = await showDialog<_StructuredResultDraft>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${member.name} · ${competition.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            TextField(
+              key: const Key('legacy-cell-rank'),
+              controller: rank,
+              keyboardType: TextInputType.number,
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.digitsOnly,
+              ],
+              decoration: const InputDecoration(labelText: '순위'),
+            ),
+            TextField(
+              key: const Key('legacy-cell-points'),
+              controller: points,
+              keyboardType: TextInputType.number,
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.digitsOnly,
+              ],
+              decoration: const InputDecoration(labelText: '포인트'),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const Key('confirm-legacy-cell'),
+            onPressed: () {
+              final parsedRank = rank.text.trim().isEmpty
+                  ? null
+                  : int.tryParse(rank.text.trim());
+              final parsedPoints = int.tryParse(points.text.trim());
+              if ((parsedRank != null &&
+                      (parsedRank < 1 || parsedRank > 1000)) ||
+                  parsedPoints == null ||
+                  parsedPoints < 0 ||
+                  parsedPoints > 100000) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('순위와 포인트를 확인해주세요.')),
+                );
+                return;
+              }
+              Navigator.pop(
+                context,
+                _StructuredResultDraft(rank: parsedRank, points: parsedPoints),
+              );
+            },
+            child: const Text('적용'),
+          ),
+        ],
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() => competition.results[member.id] = result);
+  }
+
+  Future<void> _editTargetTotal(ClubSeasonRankingRow member) async {
+    final current = _memberViews().firstWhere(
+      (view) => view.member.id == member.id,
+    );
+    final controller = TextEditingController(text: current.total.toString());
+    final target = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${member.name} 총점 보정'),
+        content: TextField(
+          key: const Key('legacy-target-total'),
+          controller: controller,
+          keyboardType: TextInputType.number,
+          inputFormatters: <TextInputFormatter>[
+            FilteringTextInputFormatter.digitsOnly,
+          ],
+          decoration: const InputDecoration(labelText: '실제 기존 총점'),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const Key('confirm-legacy-target-total'),
+            onPressed: () {
+              final value = int.tryParse(controller.text.trim());
+              if (value != null && value >= 0 && value <= 1000000) {
+                Navigator.pop(context, value);
+              }
+            },
+            child: const Text('적용'),
+          ),
+        ],
+      ),
+    );
+    if (target == null || !mounted) return;
+    setState(() => _targetTotals[member.id] = target);
+  }
+
+  Future<void> _previewAndSave() async {
+    if (_competitions.isEmpty && _targetTotals.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('대회 또는 총점 보정을 입력해주세요.')));
+      return;
+    }
+    if (_competitions.any(
+      (competition) => competition.results.values.every(
+        (result) => result.rank == null && result.points == 0,
+      ),
+    )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('각 대회에 한 명 이상의 순위 또는 포인트를 입력해주세요.')),
+      );
+      return;
+    }
+    final views = _memberViews();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${widget.season.name} 기존 데이터'),
+        content: SizedBox(
+          width: 420,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '대회 ${_competitions.length}개 · 회원 ${widget.members.length}명',
+                ),
+                const SizedBox(height: 12),
+                for (final view in views)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      '${view.member.name}\n대회 포인트 ${_manualPoints(view.member.id)}P · '
+                      '보정 ${_signed(view.adjustment)}P · 최종 ${view.total}P',
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const Key('confirm-legacy-structured-save'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('저장'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      await widget.api.saveStructuredSeasonRanking(
+        widget.teamId,
+        widget.season.id,
+        competitions: _competitions
+            .map((competition) {
+              return <String, Object?>{
+                'id': competition.id,
+                'name': competition.name,
+                'eventDate': competition.date,
+                'competitionType': competition.competitionType,
+                'results': competition.results.entries
+                    .where(
+                      (entry) =>
+                          entry.value.rank != null || entry.value.points > 0,
+                    )
+                    .map((entry) {
+                      final result = entry.value;
+                      return <String, Object?>{
+                        'memberId': entry.key,
+                        'finalRank': result.rank,
+                        'points': result.points,
+                      };
+                    })
+                    .toList(growable: false),
+              };
+            })
+            .toList(growable: false),
+        targetTotals: _targetTotals.entries
+            .map(
+              (entry) => <String, Object>{
+                'memberId': entry.key,
+                'targetTotal': entry.value,
+              },
+            )
+            .toList(growable: false),
+      );
+      if (mounted) Navigator.pop(context, true);
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(clubErrorMessage(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  int _manualPoints(String memberId) => _competitions.fold<int>(
+    0,
+    (sum, competition) => sum + (competition.results[memberId]?.points ?? 0),
+  );
+}
+
+class _StructuredCompetitionDraft {
+  _StructuredCompetitionDraft({
+    this.id,
+    required this.localId,
+    required this.name,
+    required this.date,
+    required this.competitionType,
+    Map<String, _StructuredResultDraft>? results,
+  }) : results = results ?? <String, _StructuredResultDraft>{};
+
+  factory _StructuredCompetitionDraft.fromModel(
+    ClubSeasonManualCompetition competition,
+  ) => _StructuredCompetitionDraft(
+    id: competition.id,
+    localId: competition.id,
+    name: competition.name,
+    date: _dateOnlyKst(competition.eventDate),
+    competitionType: competition.competitionType,
+    results: <String, _StructuredResultDraft>{
+      for (final result in competition.results)
+        result.memberId: _StructuredResultDraft(
+          rank: result.finalRank,
+          points: result.points,
+        ),
+    },
+  );
+
+  final String? id;
+  final String localId;
+  String name;
+  String date;
+  String competitionType;
+  final Map<String, _StructuredResultDraft> results;
+}
+
+class _StructuredResultDraft {
+  const _StructuredResultDraft({required this.rank, required this.points});
+  final int? rank;
+  final int points;
+}
+
+class _StructuredMemberView {
+  const _StructuredMemberView({
+    required this.member,
+    required this.total,
+    required this.adjustment,
+    this.rank = 0,
+  });
+  final ClubSeasonRankingRow member;
+  final int total;
+  final int adjustment;
+  final int rank;
+
+  _StructuredMemberView copyWith({required int rank}) => _StructuredMemberView(
+    member: member,
+    total: total,
+    adjustment: adjustment,
+    rank: rank,
+  );
+}
+
+int _compareCompetitionDrafts(
+  _StructuredCompetitionDraft left,
+  _StructuredCompetitionDraft right,
+) {
+  final date = left.date.compareTo(right.date);
+  if (date != 0) return date;
+  final name = left.name.compareTo(right.name);
+  return name != 0 ? name : left.localId.compareTo(right.localId);
+}
+
+String _dateOnlyKst(DateTime value) {
+  final kst = value.toUtc().add(const Duration(hours: 9));
+  return '${kst.year.toString().padLeft(4, '0')}-${kst.month.toString().padLeft(2, '0')}-${kst.day.toString().padLeft(2, '0')}';
+}
+
+String _monthLabel(String date) {
+  final parsed = DateTime.tryParse(date);
+  return parsed == null ? date : '${parsed.month}월';
+}
+
+String _cellLabel(_StructuredResultDraft? result) {
+  if (result == null || (result.rank == null && result.points == 0)) return '-';
+  return '${result.rank == null ? '-' : '${result.rank}위'}\n${result.points}P';
+}
+
+String _signed(int value) => value > 0 ? '+$value' : '$value';
 
 class _ImportDraft {
   _ImportDraft({

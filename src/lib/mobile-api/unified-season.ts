@@ -23,7 +23,7 @@ const MAX_ADJUSTMENT_REASON_LENGTH = 500;
 
 type SeasonDb = Pick<Prisma.TransactionClient, "teamSeason" | "teamEvent" | "seasonPointPublication" | "seasonPointEntry">;
 
-type PublicationEvent = { teamId: string; eventDate: Date; seasonId: string | null; competitionType: string | null; competitionMode: string | null };
+type PublicationEvent = { id?: string; teamId: string; eventDate: Date; seasonId: string | null; competitionType: string | null; competitionMode: string | null };
 
 export async function getPublicationPointTable(db: SeasonDb, event: PublicationEvent) {
     if (event.competitionMode === "MINI") return [];
@@ -86,6 +86,9 @@ export async function getSeasonPointPreview(
             orderBy: [{ startDate: "desc" }, { id: "asc" }],
         });
     if (!season || season.status !== "ACTIVE" || event.eventDate < season.startDate || event.eventDate > season.endDate) return [];
+    if (season.rankingMode === "IMAGE") {
+        throw new UnifiedSeasonError("SEASON_RANKING_MODE_MISMATCH", "이미지 관리 시즌에는 경기 포인트를 미리 볼 수 없습니다.", 409);
+    }
     const config = event.competitionType === "INDIVIDUAL" ? season.individualPointsConfig
         : event.competitionType === "TEAM" ? season.teamPointsConfig : season.eventPointsConfig;
     return readSeasonPointTable(config);
@@ -93,7 +96,7 @@ export async function getSeasonPointPreview(
 
 export async function resolvePublicationSeason(
     db: SeasonDb,
-    event: { id: string; teamId: string; eventDate: Date; seasonId: string | null; competitionType: string | null },
+    event: { id?: string; teamId: string; eventDate: Date; seasonId: string | null; competitionType: string | null },
 ) {
     if (!SEASON_COMPETITION_TYPES.includes(event.competitionType as SeasonCompetitionType)) {
         throw new UnifiedSeasonError("INVALID_COMPETITION_TYPE", "시즌에 반영할 대회 유형을 확인해주세요.", 409);
@@ -105,11 +108,14 @@ export async function resolvePublicationSeason(
             orderBy: [{ startDate: "desc" }, { id: "asc" }],
         });
     if (!season) throw new UnifiedSeasonError("SEASON_REQUIRED", "대회 날짜에 활성화된 시즌이 없습니다.", 409);
+    if (season.rankingMode === "IMAGE") {
+        throw new UnifiedSeasonError("SEASON_RANKING_MODE_MISMATCH", "이미지 관리 시즌에는 경기 포인트를 발표할 수 없습니다.", 409);
+    }
     if (season.status !== "ACTIVE") throw new UnifiedSeasonError("SEASON_NOT_ACTIVE", "활성 시즌의 대회만 발표할 수 있습니다.", 409);
     if (event.eventDate < season.startDate || event.eventDate > season.endDate) {
         throw new UnifiedSeasonError("EVENT_OUTSIDE_SEASON", "대회 날짜가 시즌 기간에 포함되지 않습니다.", 409);
     }
-    if (!event.seasonId) await db.teamEvent.update({ where: { id: event.id }, data: { seasonId: season.id } });
+    if (!event.seasonId && event.id) await db.teamEvent.update({ where: { id: event.id }, data: { seasonId: season.id } });
     const config = event.competitionType === "INDIVIDUAL" ? season.individualPointsConfig
         : event.competitionType === "TEAM" ? season.teamPointsConfig : season.eventPointsConfig;
     return { season, competitionType: event.competitionType as SeasonCompetitionType, pointTable: readSeasonPointTable(config) };
@@ -185,7 +191,7 @@ export async function createSeasonPointAdjustment(
                     select: {
                         ownerId: true, bowlerHiddenEnabled: true,
                         User: { where: { id: actorUserId }, select: { id: true } },
-                        seasons: { where: { id: seasonId }, take: 1, select: { id: true } },
+                        seasons: { where: { id: seasonId }, take: 1, select: { id: true, rankingMode: true } },
                         members: {
                             where: { id: parsed.memberId }, take: 1,
                             select: { id: true, alias: true, user: { select: { name: true } } },
@@ -200,10 +206,13 @@ export async function createSeasonPointAdjustment(
                     throw new UnifiedSeasonError("FORBIDDEN", "시즌 포인트를 조정할 권한이 없습니다.", 403);
                 }
                 if (team.seasons.length !== 1) throw new UnifiedSeasonError("SEASON_NOT_FOUND", "시즌을 찾을 수 없습니다.", 404);
+                if (team.seasons[0].rankingMode === "IMAGE") {
+                    throw new UnifiedSeasonError("SEASON_RANKING_MODE_MISMATCH", "이미지 관리 시즌에는 포인트를 조정할 수 없습니다.", 409);
+                }
                 const member = team.members[0];
                 if (!member) throw new UnifiedSeasonError("MEMBER_NOT_FOUND", "조정할 팀 회원을 찾을 수 없습니다.", 404);
 
-                const [automatic, manual, legacy] = await Promise.all([
+                const [automatic, manual, legacy, manualCompetitions] = await Promise.all([
                     tx.seasonPointEntry.aggregate({
                         where: { seasonId, memberId: member.id, publication: { revokedAt: null } },
                         _sum: { points: true },
@@ -216,8 +225,13 @@ export async function createSeasonPointAdjustment(
                         where: { seasonId, memberId: member.id, batch: { reversedAt: null } },
                         _sum: { points: true },
                     }),
+                    tx.seasonManualCompetitionResult.aggregate({
+                        where: { memberId: member.id, competition: { seasonId } },
+                        _sum: { points: true },
+                    }),
                 ]);
-                const currentTotal = (automatic._sum.points ?? 0) + (manual._sum.delta ?? 0) + (legacy._sum.points ?? 0);
+                const currentTotal = (automatic._sum.points ?? 0) + (manual._sum.delta ?? 0)
+                    + (legacy._sum.points ?? 0) + (manualCompetitions._sum.points ?? 0);
                 const newTotal = currentTotal + parsed.delta;
                 if (newTotal < 0) {
                     throw new UnifiedSeasonError(
@@ -293,7 +307,25 @@ export async function getUnifiedSeasonRanking(
         throw new UnifiedSeasonError("INVALID_COMPETITION_TYPE", "대회 유형을 확인해주세요.", 400);
     }
     if (!season) return { enabled: true, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType, rankings: [] };
-    const [entries, adjustments, legacyEntries] = await Promise.all([
+    if (season.rankingMode === "IMAGE") {
+        const rankingImages = await prisma.seasonRankingImage.findMany({
+            where: { seasonId: season.id },
+            orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+            select: { id: true, size: true, displayOrder: true, createdAt: true },
+        });
+        return {
+            enabled: true,
+            season: serializeSeasonSummary(season),
+            seasons: seasons.map(serializeSeasonSummary),
+            competitionType,
+            rankingMode: "IMAGE" as const,
+            rankingStyle: "HIDDEN_IMAGE",
+            rankings: [],
+            competitionColumns: [],
+            rankingImages: rankingImages.map((image) => ({ ...image, createdAt: image.createdAt.toISOString() })),
+        };
+    }
+    const [entries, adjustments, legacyEntries, manualCompetitions] = await Promise.all([
         prisma.seasonPointEntry.findMany({
             where: {
                 seasonId: season.id, publication: { revokedAt: null },
@@ -324,6 +356,19 @@ export async function getUnifiedSeasonRanking(
                 batch: { select: { id: true, mode: true } },
             },
         }),
+        prisma.seasonManualCompetition.findMany({
+            where: {
+                seasonId: season.id,
+                ...(competitionType === "ALL" ? {} : { competitionType }),
+            },
+            orderBy: [{ eventDate: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+            select: {
+                id: true, name: true, eventDate: true, competitionType: true, createdAt: true,
+                results: { select: {
+                    id: true, memberId: true, memberDisplayName: true, finalRank: true, points: true, createdAt: true,
+                } },
+            },
+        }),
     ]);
     const rows = new Map<string, {
         id: string; name: string; totalPoints: number; individualPoints: number; teamPoints: number; eventPoints: number; adjustmentPoints: number; legacyPoints: number; openingBalancePoints: number;
@@ -344,6 +389,7 @@ export async function getUnifiedSeasonRanking(
             competitionDate: entry.competitionDate.toISOString(), competitionTitle: entry.competitionTitle,
             finalRank: entry.finalRank, points: entry.points, month: kstMonth(entry.competitionDate),
             sourceType: "AUTOMATIC", reason: null, createdAt: entry.createdAt.toISOString(),
+            columnId: `AUTO:${entry.publicationId}`,
         });
     }
     for (const adjustment of adjustments) {
@@ -382,7 +428,26 @@ export async function getUnifiedSeasonRanking(
             month: entry.eventDate ? kstMonth(entry.eventDate) : null,
             sourceType: opening ? "LEGACY_OPENING_BALANCE" : "LEGACY_IMPORT",
             reason: entry.note, createdAt: entry.createdAt.toISOString(), batchId: entry.batch.id,
+            columnId: opening ? undefined : `LEGACY:${entry.batch.id}:${entry.eventDate?.toISOString() ?? ""}:${entry.competitionType ?? ""}`,
         });
+    }
+    for (const competition of manualCompetitions) {
+        for (const result of competition.results) {
+            const row = rows.get(result.memberId) ?? emptyRankingRow(result.memberId, result.memberDisplayName);
+            rows.set(result.memberId, row);
+            row.totalPoints += result.points;
+            if (competition.competitionType === "INDIVIDUAL") { row.individualPoints += result.points; if (result.finalRank === 1) row.individualWins += 1; }
+            if (competition.competitionType === "TEAM") { row.teamPoints += result.points; if (result.finalRank === 1) row.teamWins += 1; }
+            if (competition.competitionType === "EVENT") { row.eventPoints += result.points; if (result.finalRank === 1) row.eventWins += 1; }
+            row.competitionsPlayed += 1;
+            row.entries.push({
+                id: result.id, eventId: null, competitionType: competition.competitionType,
+                competitionDate: competition.eventDate.toISOString(), competitionTitle: competition.name,
+                finalRank: result.finalRank, points: result.points, month: kstMonth(competition.eventDate),
+                sourceType: "MANUAL", reason: null, createdAt: result.createdAt.toISOString(),
+                columnId: `MANUAL:${competition.id}`,
+            });
+        }
     }
     for (const row of rows.values()) {
         row.entries.sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
@@ -390,9 +455,13 @@ export async function getUnifiedSeasonRanking(
     const ranked = jointCompetitionRanks([...rows.values()].sort((left, right) =>
         right.totalPoints - left.totalPoints || left.name.localeCompare(right.name, "ko") || left.id.localeCompare(right.id),
     ));
+    const competitionColumns = buildCompetitionColumns([...rows.values()].flatMap((row) => row.entries));
     return {
         enabled: true, season: serializeSeasonSummary(season), seasons: seasons.map(serializeSeasonSummary),
-        competitionType, rankingStyle: "HIDDEN_POINTS", rankings: ranked.map((row) => ({
+        competitionType, rankingMode: "DATA" as const, rankingStyle: "HIDDEN_POINTS",
+        competitionColumns,
+        rankingImages: [],
+        rankings: ranked.map((row) => ({
             ...row,
             points: row.totalPoints,
             attended: row.competitionsPlayed,
@@ -406,6 +475,10 @@ export async function getUnifiedSeasonRanking(
                 .filter((entry) => entry.month != null && (entry.sourceType === "AUTOMATIC" || entry.sourceType === "LEGACY_IMPORT"))
                 .reduce((sum, entry) => sum + entry.points, 0),
             monthlyHistory: Array.from({ length: 12 }, (_, index) => row.entries.filter((entry) => entry.month === index + 1)),
+            competitionCells: Object.fromEntries(competitionColumns.map((column) => {
+                const entry = row.entries.find((item) => item.columnId === column.id);
+                return [column.id, entry ? { rank: entry.finalRank, points: entry.points, source: entry.sourceType } : null];
+            })),
         })),
     };
 }
@@ -439,11 +512,34 @@ type SeasonLedgerEntry = {
     finalRank: number | null;
     points: number;
     month: number | null;
-    sourceType: "AUTOMATIC" | "MANUAL_ADJUSTMENT" | "LEGACY_IMPORT" | "LEGACY_OPENING_BALANCE";
+    sourceType: "AUTOMATIC" | "MANUAL" | "MANUAL_ADJUSTMENT" | "LEGACY_IMPORT" | "LEGACY_OPENING_BALANCE";
     reason: string | null;
     createdAt: string;
     batchId?: string;
+    columnId?: string;
 };
+
+function buildCompetitionColumns(entries: SeasonLedgerEntry[]) {
+    const columns = new Map<string, {
+        id: string; eventId: string | null; eventDate: string; month: number;
+        competitionType: string; displayName: string; source: string;
+    }>();
+    for (const entry of entries) {
+        if (!entry.columnId || !entry.competitionDate || entry.month === null || columns.has(entry.columnId)) continue;
+        columns.set(entry.columnId, {
+            id: entry.columnId,
+            eventId: entry.eventId,
+            eventDate: entry.competitionDate,
+            month: entry.month,
+            competitionType: entry.competitionType,
+            displayName: entry.competitionTitle,
+            source: entry.sourceType === "AUTOMATIC" ? "AUTO"
+                : entry.sourceType === "LEGACY_IMPORT" ? "LEGACY" : "MANUAL",
+        });
+    }
+    return [...columns.values()].sort((left, right) =>
+        left.eventDate.localeCompare(right.eventDate) || left.displayName.localeCompare(right.displayName, "ko") || left.id.localeCompare(right.id));
+}
 
 function parseSeasonPointAdjustment(value: unknown) {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -465,7 +561,7 @@ function parseSeasonPointAdjustment(value: unknown) {
 export function serializeSeasonSummary(season: {
     id: string; name: string; startDate: Date; endDate: Date; enabled: boolean; status: string;
     individualPointsConfig: string; teamPointsConfig: string; eventPointsConfig: string;
-    scoringMode?: string; pointsConfig?: string;
+    scoringMode?: string; pointsConfig?: string; rankingMode?: string;
 }) {
     const individual = readSeasonPointTable(season.individualPointsConfig);
     return {
@@ -473,6 +569,7 @@ export function serializeSeasonSummary(season: {
         startDate: season.startDate.toISOString().slice(0, 10),
         endDate: season.endDate.toISOString().slice(0, 10),
         enabled: season.enabled, status: season.status,
+        rankingMode: season.rankingMode === "IMAGE" ? "IMAGE" : "DATA",
         scoringMode: season.scoringMode === "PODIUM" ? "PODIUM" : "FULL_RANK",
         points: individual.map((item) => item.points),
         pointTables: {

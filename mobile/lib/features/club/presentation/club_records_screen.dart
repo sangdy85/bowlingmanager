@@ -338,11 +338,19 @@ class _OverviewBody extends ConsumerWidget {
               style: const TextStyle(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 12),
-            if (team.bowlerHiddenEnabled)
+            if (team.bowlerHiddenEnabled && season.rankingMode == 'IMAGE')
+              ClubRankingImageGallery(
+                userId: request.userId,
+                teamId: request.teamId,
+                season: season.season!,
+                images: season.rankingImages,
+              )
+            else if (team.bowlerHiddenEnabled)
               KeyedSubtree(
                 key: const Key('hidden-overall-ranking-main'),
                 child: ClubSeasonRankingGrid(
                   rows: season.rows,
+                  competitionColumns: season.competitionColumns,
                   hidden: true,
                   onMember: null,
                 ),
@@ -398,16 +406,21 @@ class _OverviewBody extends ConsumerWidget {
               icon: const Icon(Icons.leaderboard_rounded),
               label: const Text('전체 순위'),
             ),
-            if (!team.bowlerHiddenEnabled &&
+            if (season.rankingMode == 'DATA' &&
+                !team.bowlerHiddenEnabled &&
                 season.rows.isNotEmpty) ...<Widget>[
               const SizedBox(height: 14),
               _MedalLeaders(rows: season.rows),
             ],
-            const SizedBox(height: 22),
-            const Text('나의 대회 성적', style: AppTextStyles.title),
-            const SizedBox(height: 10),
-            _MyCompetitionHistory(items: season.myCompetitionHistory),
-            if (team.bowlerHiddenEnabled && season.rows.isNotEmpty) ...<Widget>[
+            if (season.rankingMode == 'DATA') ...<Widget>[
+              const SizedBox(height: 22),
+              const Text('나의 대회 성적', style: AppTextStyles.title),
+              const SizedBox(height: 10),
+              _MyCompetitionHistory(items: season.myCompetitionHistory),
+            ],
+            if (season.rankingMode == 'DATA' &&
+                team.bowlerHiddenEnabled &&
+                season.rows.isNotEmpty) ...<Widget>[
               const SizedBox(height: 22),
               const Text(
                 '입상 기록',

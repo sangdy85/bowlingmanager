@@ -34,6 +34,9 @@ model User {
   enteredSeasonPointAdjustments SeasonPointAdjustment[]        @relation("SeasonPointAdjustmentEnteredBy")
   enteredSeasonLegacyImports    SeasonLegacyImportBatch[]      @relation("SeasonLegacyImportEnteredBy")
   reversedSeasonLegacyImports   SeasonLegacyImportBatch[]      @relation("SeasonLegacyImportReversedBy")
+  createdSeasonManualCompetitions SeasonManualCompetition[]    @relation("SeasonManualCompetitionCreatedBy")
+  revisedSeasonManualCompetitions SeasonManualCompetitionRevision[] @relation("SeasonManualCompetitionRevisedBy")
+  createdSeasonRankingImages    SeasonRankingImage[]           @relation("SeasonRankingImageCreatedBy")
   mobilePushDevices             MobilePushDevice[]
   mobileNotifications           MobileNotification[]
 }
@@ -174,6 +177,7 @@ model TeamSeason {
   individualPointsConfig String                    @default("{}")
   teamPointsConfig       String                    @default("{}")
   eventPointsConfig      String                    @default("{}")
+  rankingMode            String                    @default("DATA")
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime                  @updatedAt
   team                   Team                      @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -183,6 +187,8 @@ model TeamSeason {
   pointAdjustments       SeasonPointAdjustment[]
   legacyImportBatches    SeasonLegacyImportBatch[]
   legacyPointEntries     SeasonLegacyPointEntry[]
+  manualCompetitions     SeasonManualCompetition[]
+  rankingImages          SeasonRankingImage[]
   finals                 SeasonFinalTournament[]
 
   @@index([teamId, enabled])
@@ -207,6 +213,7 @@ model TeamMember {
   seasonFinalParticipants      SeasonFinalParticipant[]
   seasonPointAdjustments       SeasonPointAdjustment[]
   seasonLegacyPointEntries     SeasonLegacyPointEntry[]
+  seasonManualResults          SeasonManualCompetitionResult[]
 
   @@unique([userId, teamId])
 }
@@ -533,6 +540,68 @@ model SeasonLegacyPointEntry {
 
   @@index([seasonId, memberId, eventDate])
   @@index([batchId, memberId])
+}
+
+model SeasonManualCompetition {
+  id              String                          @id @default(cuid())
+  seasonId        String
+  name            String
+  eventDate       DateTime
+  competitionType String
+  createdByUserId String
+  createdAt       DateTime                        @default(now())
+  updatedAt       DateTime                        @updatedAt
+  season          TeamSeason                      @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  createdBy       User                            @relation("SeasonManualCompetitionCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  results         SeasonManualCompetitionResult[]
+  revisions       SeasonManualCompetitionRevision[]
+
+  @@index([seasonId, eventDate])
+  @@index([createdByUserId, createdAt])
+  @@unique([seasonId, eventDate, competitionType, name])
+}
+
+model SeasonManualCompetitionRevision {
+  id              String                  @id @default(cuid())
+  competitionId   String
+  snapshot        String
+  revisedByUserId String
+  createdAt       DateTime                @default(now())
+  competition     SeasonManualCompetition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  revisedBy       User                    @relation("SeasonManualCompetitionRevisedBy", fields: [revisedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([competitionId, createdAt])
+  @@index([revisedByUserId, createdAt])
+}
+
+model SeasonManualCompetitionResult {
+  id                String                  @id @default(cuid())
+  competitionId     String
+  memberId          String
+  memberDisplayName String
+  finalRank         Int?
+  points            Int
+  createdAt         DateTime                @default(now())
+  competition       SeasonManualCompetition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  member            TeamMember              @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@unique([competitionId, memberId])
+  @@index([memberId, createdAt])
+}
+
+model SeasonRankingImage {
+  id              String     @id @default(cuid())
+  seasonId        String
+  url             String
+  size            Int
+  displayOrder    Int        @default(0)
+  createdByUserId String
+  createdAt       DateTime   @default(now())
+  season          TeamSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  createdBy       User       @relation("SeasonRankingImageCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([seasonId, displayOrder])
+  @@index([createdByUserId, createdAt])
 }
 
 model TeamCompetitionTeam {
