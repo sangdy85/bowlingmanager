@@ -59,6 +59,35 @@ export function luckyDrawWins(consecutiveMisses: number, teamCount: number, pick
 export function allocateTeamLaneBlocks(teams: readonly LaneTeam[], slots: readonly LaneSlot[]) {
     const orderedTeams = [...teams].sort((a, b) => a.lanePriority - b.lanePriority || a.id.localeCompare(b.id));
     const orderedSlots = [...slots].sort((a, b) => a.laneNumber - b.laneNumber || a.position - b.position || a.id.localeCompare(b.id));
+    const slotsByLane = new Map<number, LaneSlot[]>();
+    for (const slot of orderedSlots) {
+        const laneSlots = slotsByLane.get(slot.laneNumber) ?? [];
+        laneSlots.push(slot);
+        slotsByLane.set(slot.laneNumber, laneSlots);
+    }
+    const configuredLanePool = [...slotsByLane.entries()]
+        .sort(([left], [right]) => left - right)
+        .filter(([, laneSlots]) => laneSlots.length === 6 && laneSlots.every((slot, index) => slot.position === index + 1));
+    if (configuredLanePool.length === slotsByLane.size && configuredLanePool.length > 0) {
+        if (configuredLanePool.length !== orderedTeams.length) {
+            throw new TeamCompetitionError(
+                "TEAM_LANE_POOL_MISMATCH",
+                `팀(${orderedTeams.length}개) 수와 사용 레인(${configuredLanePool.length}개) 수가 같아야 합니다.`,
+                409,
+            );
+        }
+        return orderedTeams.map((team, index) => {
+            const laneSlots = configuredLanePool[index][1];
+            if (team.memberIds.length > laneSlots.length) {
+                throw new TeamCompetitionError("TEAM_LANE_CAPACITY_EXCEEDED", `${team.memberIds.length}명인 팀은 한 레인에 배정할 수 없습니다.`, 409);
+            }
+            return {
+                competitionTeamId: team.id,
+                lanePriority: team.lanePriority,
+                assignments: team.memberIds.map((memberId, memberIndex) => ({ memberId, slot: laneSlots[memberIndex] })),
+            };
+        });
+    }
     const memberCount = orderedTeams.reduce((sum, team) => sum + team.memberIds.length, 0);
     if (memberCount !== orderedSlots.length) {
         throw new TeamCompetitionError("PARTICIPANT_SLOT_MISMATCH", `참가자(${memberCount}명)와 좌석(${orderedSlots.length}개) 수가 같아야 합니다.`, 409);
@@ -119,6 +148,7 @@ export async function getTeamCompetitionState(actorUserId: string, teamId: strin
             captainName: displayName(currentTeam.captain),
         } : null,
         plan,
+        laneNumbers: [...new Set(event.laneSlots.map((slot) => slot.laneNumber))].sort((a, b) => a - b),
         teams: teams.map((team) => serializeTeam(team, event)),
         remainingParticipants: availableParticipants,
         history: history.map((item) => ({

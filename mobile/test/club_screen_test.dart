@@ -13,9 +13,11 @@ import 'package:bowlingmanager_mobile/features/club/data/club_post_image_picker.
 import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_management_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_legacy_import_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_post_form_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_post_detail_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_legacy_import_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_season_ranking_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_season_points_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_team_settings_screen.dart';
@@ -347,6 +349,61 @@ void main() {
     expect(find.byKey(const Key('club-team-settings')), findsOneWidget);
     expect(requests, 2);
   });
+
+  testWidgets(
+    'legacy direct input validates, previews and commits from bottom CTA',
+    (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(600, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+      final api = _LegacyImportApi();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authRepositoryProvider.overrideWithValue(authRepository),
+            clubExpansionApiProvider.overrideWithValue(api),
+            clubTeamProfileProvider.overrideWith(
+              (ref, request) async => _profile,
+            ),
+            clubSeasonRankingProvider.overrideWith(
+              (ref, request) async => _ranking,
+            ),
+          ],
+          child: const MaterialApp(
+            home: ClubLegacyImportScreen(teamId: 'team-1'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('legacy-direct-import')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('legacy-import-preview-cta')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('legacy-import-preview-cta')));
+      await tester.pump();
+      expect(find.text('회원을 직접 선택해주세요.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('legacy-member-0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('팀장').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('legacy-date-0')), '2026-01');
+      await tester.enterText(find.byKey(const Key('legacy-placement-0')), '1');
+      await tester.enterText(find.byKey(const Key('legacy-points-0')), '120');
+      await tester.tap(find.byKey(const Key('legacy-import-preview-cta')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('이관 미리보기'), findsOneWidget);
+      expect(api.previewCalls, 1);
+      await tester.tap(find.byKey(const Key('confirm-legacy-import')));
+      await tester.pumpAndSettle();
+      expect(api.commitCalls, 1);
+      expect(find.text('기존 시즌 데이터를 등록했습니다.'), findsOneWidget);
+    },
+  );
 
   testWidgets('post edit form shows a safe error and retries', (
     WidgetTester tester,
@@ -841,6 +898,24 @@ void main() {
       await tester.tap(find.byKey(const Key('club-records-link')));
       await tester.pumpAndSettle();
 
+      final hiddenRanking = find.byKey(
+        const Key('hidden-overall-ranking-main'),
+      );
+      final myHistory = find.text('나의 대회 성적');
+      final medalReference = find.byKey(const Key('hidden-medal-reference'));
+      expect(hiddenRanking, findsOneWidget);
+      expect(
+        find.descendant(of: hiddenRanking, matching: find.text('🥇')),
+        findsNothing,
+      );
+      expect(
+        tester.getTopLeft(hiddenRanking).dy,
+        lessThan(tester.getTopLeft(myHistory).dy),
+      );
+      expect(
+        tester.getTopLeft(myHistory).dy,
+        lessThan(tester.getTopLeft(medalReference).dy),
+      );
       expect(find.text('나의 대회 성적'), findsOneWidget);
       expect(find.text('2월 팀전'), findsOneWidget);
       expect(find.text('불참'), findsOneWidget);
@@ -1428,6 +1503,57 @@ class _TestPostImagePicker implements ClubPostImagePicker {
       mimeType: 'image/png',
     ),
   ];
+}
+
+class _LegacyImportApi extends ClubExpansionApi {
+  _LegacyImportApi() : super(Dio());
+
+  int previewCalls = 0;
+  int commitCalls = 0;
+
+  @override
+  Future<List<ClubLegacyImportBatch>> fetchSeasonLegacyImports(
+    String teamId,
+    String seasonId,
+  ) async => const <ClubLegacyImportBatch>[];
+
+  @override
+  Future<ClubLegacyImportPreview> previewSeasonLegacyImport(
+    String teamId,
+    String seasonId, {
+    required String mode,
+    required List<ClubLegacyImportRow> rows,
+  }) async {
+    previewCalls += 1;
+    return ClubLegacyImportPreview(
+      mode: mode,
+      importHash: List<String>.filled(64, 'a').join(),
+      totalRows: rows.length,
+      totalPoints: rows.fold<int>(0, (sum, row) => sum + row.points),
+      memberChanges: rows
+          .map(
+            (row) => ClubLegacyMemberChange(
+              memberId: row.memberId,
+              memberName: '팀장',
+              previousPoints: 0,
+              importedPoints: row.points,
+              totalPoints: row.points,
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  @override
+  Future<void> createSeasonLegacyImport(
+    String teamId,
+    String seasonId, {
+    required String mode,
+    required List<ClubLegacyImportRow> rows,
+    required String importHash,
+  }) async {
+    commitCalls += 1;
+  }
 }
 
 class _FailingPostUploadApi extends ClubExpansionApi {

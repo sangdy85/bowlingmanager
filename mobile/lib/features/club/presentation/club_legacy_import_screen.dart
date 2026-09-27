@@ -384,12 +384,7 @@ class _LegacyImportEditorState extends State<_LegacyImportEditor> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: Text(_detailed ? '기존 경기 직접 입력' : '현재 포인트 입력'),
-      actions: <Widget>[
-        TextButton(onPressed: _submit, child: const Text('미리보기')),
-      ],
-    ),
+    appBar: AppBar(title: Text(_detailed ? '기존 경기 직접 입력' : '현재 포인트 입력')),
     floatingActionButton: _detailed
         ? FloatingActionButton.small(
             onPressed: () => setState(() => _rows.add(_ImportDraft.detailed())),
@@ -402,6 +397,15 @@ class _LegacyImportEditorState extends State<_LegacyImportEditor> {
         padding: const EdgeInsets.all(12),
         itemCount: _rows.length,
         itemBuilder: (context, index) => _row(index, _rows[index]),
+      ),
+    ),
+    bottomNavigationBar: SafeArea(
+      minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: FilledButton.icon(
+        key: const Key('legacy-import-preview-cta'),
+        onPressed: _submit,
+        icon: const Icon(Icons.fact_check_outlined),
+        label: const Text('입력 내용 확인'),
       ),
     ),
   );
@@ -433,6 +437,7 @@ class _LegacyImportEditorState extends State<_LegacyImportEditor> {
           ),
           if (_detailed) ...<Widget>[
             TextFormField(
+              key: Key('legacy-date-$index'),
               initialValue: row.eventDate,
               decoration: const InputDecoration(
                 labelText: '날짜 또는 월',
@@ -455,6 +460,7 @@ class _LegacyImportEditorState extends State<_LegacyImportEditor> {
               onChanged: (value) => row.competitionType = value!,
             ),
             TextFormField(
+              key: Key('legacy-placement-$index'),
               initialValue: row.placement,
               decoration: const InputDecoration(labelText: '순위'),
               keyboardType: TextInputType.number,
@@ -468,6 +474,7 @@ class _LegacyImportEditorState extends State<_LegacyImportEditor> {
             ),
           ],
           TextFormField(
+            key: Key('legacy-points-$index'),
             initialValue: row.points,
             decoration: InputDecoration(
               labelText: _detailed ? '획득 포인트' : '기존 누적 포인트',

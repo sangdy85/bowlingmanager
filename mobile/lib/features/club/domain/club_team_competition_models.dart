@@ -344,6 +344,7 @@ class ClubTeamCompetitionState {
     required this.canManage,
     required this.isCurrentCaptain,
     required this.currentTurn,
+    required this.laneNumbers,
     required this.teams,
     required this.remainingParticipants,
     required this.history,
@@ -355,6 +356,7 @@ class ClubTeamCompetitionState {
   final bool canManage;
   final bool isCurrentCaptain;
   final ClubDraftTurn? currentTurn;
+  final List<int> laneNumbers;
   final List<ClubCompetitionTeam> teams;
   final List<ClubTeamCompetitionParticipant> remainingParticipants;
   final List<ClubDraftHistoryItem> history;
@@ -364,6 +366,7 @@ class ClubTeamCompetitionState {
   bool get polling => status == 'DRAFT_IN_PROGRESS' || status == 'LUCKY_DRAW';
 
   factory ClubTeamCompetitionState.fromJson(Map<String, dynamic> json) {
+    final Object? rawLaneNumbers = json['laneNumbers'] ?? const <Object>[];
     const Set<String> statuses = <String>{
       'ATTENDANCE_OPEN',
       'ATTENDANCE_LOCKED',
@@ -379,6 +382,9 @@ class ClubTeamCompetitionState {
         !statuses.contains(json['status']) ||
         json['canManage'] is! bool ||
         json['isCurrentCaptain'] is! bool ||
+        rawLaneNumbers is! List ||
+        rawLaneNumbers.any((lane) => lane is! int || lane < 1 || lane > 24) ||
+        rawLaneNumbers.toSet().length != rawLaneNumbers.length ||
         (json['myTeam'] != null && json['myTeam'] is! String)) {
       throw const FormatException('Invalid team competition state.');
     }
@@ -390,6 +396,7 @@ class ClubTeamCompetitionState {
       currentTurn: json['currentTurn'] == null
           ? null
           : ClubDraftTurn.fromJson(_map(json['currentTurn'])),
+      laneNumbers: List<int>.unmodifiable(rawLaneNumbers.cast<int>()),
       teams: _list(json['teams'], ClubCompetitionTeam.fromJson),
       remainingParticipants: _list(
         json['remainingParticipants'],

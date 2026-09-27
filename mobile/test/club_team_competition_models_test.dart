@@ -9,6 +9,7 @@ void main() {
     expect(state.polling, isTrue);
     expect(state.isCurrentCaptain, isTrue);
     expect(state.currentTurn?.roundNumber, 2);
+    expect(state.laneNumbers, <int>[3, 4]);
     expect(state.teams.single.members.single.laneSlot, isNull);
     expect(state.history.single.automatic, isFalse);
     expect(state.results.teams.single.totalPoints, 5);
@@ -127,6 +128,7 @@ Map<String, dynamic> teamCompetitionJson() => <String, dynamic>{
     'draftTotal': 2,
     'remainder': 1,
   },
+  'laneNumbers': <int>[3, 4],
   'teams': <Object>[
     <String, Object?>{
       'id': 'team-a',

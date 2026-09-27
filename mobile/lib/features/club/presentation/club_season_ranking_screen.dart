@@ -126,7 +126,7 @@ class _ClubSeasonRankingScreenState
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 10),
-            _RankingGrid(
+            ClubSeasonRankingGrid(
               rows: ranking.rows,
               hidden: ranking.bowlerHiddenEnabled,
               onMember: ranking.bowlerHiddenEnabled
@@ -158,11 +158,12 @@ class _ClubSeasonRankingScreenState
   );
 }
 
-class _RankingGrid extends StatelessWidget {
-  const _RankingGrid({
+class ClubSeasonRankingGrid extends StatelessWidget {
+  const ClubSeasonRankingGrid({
     required this.rows,
     required this.onMember,
     required this.hidden,
+    super.key,
   });
   final List<ClubSeasonRankingRow> rows;
   final ValueChanged<ClubSeasonRankingRow>? onMember;

@@ -243,6 +243,26 @@ test('official lane example allocates non-interleaved contiguous team blocks', (
   );
 });
 
+test('configured team lane pool assigns one ordered lane per team and rejects shortages', () => {
+  const service = loadTs('src/lib/mobile-api/team-competition.ts', {
+    '@/lib/prisma': {}, '@/lib/mobile-api/bowler-hidden': { readRankPoints: () => [] },
+  });
+  const teams = [4, 5, 4, 5].map((size, index) => ({
+    id: `team-${index + 1}`, lanePriority: index + 1,
+    memberIds: Array.from({ length: size }, (_, memberIndex) => `m-${index + 1}-${memberIndex + 1}`),
+  }));
+  const slots = [3, 4, 5, 6].flatMap(lane => Array.from({ length: 6 }, (_, index) => ({
+    id: `${lane}-${index + 1}`, laneNumber: lane, position: index + 1,
+  })));
+  const blocks = service.allocateTeamLaneBlocks(teams, slots);
+  assert.deepEqual(blocks.map(block => [...new Set(block.assignments.map(item => item.slot.laneNumber))]), [[3], [4], [5], [6]]);
+  assert.deepEqual(blocks.map(block => block.assignments.length), [4, 5, 4, 5]);
+  assert.throws(
+    () => service.allocateTeamLaneBlocks(teams, slots.filter(slot => slot.laneNumber !== 6)),
+    error => error.code === 'TEAM_LANE_POOL_MISMATCH' && /팀\(4개\).*사용 레인\(3개\)/.test(error.message),
+  );
+});
+
 test('team results drop each larger team game lowest score and are recalculated from source rows', async () => {
   const fixture = eventFixture();
   let scoreQueries = 0;
