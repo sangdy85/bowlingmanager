@@ -120,6 +120,29 @@ void main() {
     expect(result.matches.keys, containsAll(<String>['member:2', 'guest:1']));
     expect(result.matches, isNot(contains('member:1')));
     expect(result.unmatchedNames, <String>['동명이인', '게임수 오류']);
+    expect(result.partialNames, isEmpty);
+  });
+
+  test('projects extra OCR games and preserves partial score rows', () {
+    final entry = _entry(<ClubCompetitionScoreParticipant>[
+      _participant('member:1', '회원1', memberId: 'm1'),
+      _participant('member:2', '회원2', memberId: 'm2'),
+    ]);
+    final result = matchCompetitionOcrPlayers(entry, const <OcrPlayer>[
+      OcrPlayer(
+        name: '회원1',
+        scores: <int>[101, 102, 103, 104, 105],
+        matchedMemberId: 'm1',
+      ),
+      OcrPlayer(
+        name: '회원2',
+        scores: <int>[201, 202, 203],
+        matchedMemberId: 'm2',
+      ),
+    ], gameCount: 4);
+    expect(result.matches['member:1'], <int>[101, 102, 103, 104]);
+    expect(result.matches['member:2'], <int>[201, 202, 203]);
+    expect(result.partialNames, <String>['회원2 (4게임 중 3게임 인식됨)']);
   });
 }
 

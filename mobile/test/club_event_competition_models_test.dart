@@ -7,6 +7,7 @@ void main() {
       'status': 'VOTING_OPEN',
       'canManage': false,
       'isParticipant': true,
+      'canVote': true,
       'myParticipantId': 'participant-1',
       'voteOpenAt': '2026-09-22T10:00:00.000Z',
       'voteCloseAt': '2026-09-22T10:30:00.000Z',
@@ -42,6 +43,7 @@ void main() {
       'finalPreview': null,
     });
     expect(state.status, 'VOTING_OPEN');
+    expect(state.canVote, isTrue);
     expect(state.polling, isTrue);
     expect(state.voting!.mySelections, <String>['participant-2']);
     expect(state.voting!.submittedParticipantIds, <String>['participant-1']);
@@ -60,6 +62,22 @@ void main() {
       'canManage': false,
       'isParticipant': true,
       'myParticipantId': 'participant-1',
+      'ballotDetails': <Object>[
+        <String, Object>{
+          'voterParticipantId': 'participant-1',
+          'voterName': '회원1',
+          'proxy': true,
+          'choices': <Object>[
+            <String, Object>{
+              'participantId': 'participant-2',
+              'name': '회원2',
+              'selectionOrder': 1,
+            },
+          ],
+        },
+      ],
+      'participantSummary': <Object>[_result()],
+      'finalRanking': <Object>[_result()],
       'ranking': <Object>[_result()],
       'myResult': <String, dynamic>{
         ..._result(),
@@ -78,6 +96,9 @@ void main() {
       closeTo(152.83333333333334, 0.000001),
     );
     expect(state.polling, isFalse);
+    expect(state.ballotDetails!.single.voterName, '회원1');
+    expect(state.ballotDetails!.single.proxy, isTrue);
+    expect(state.participantSummary!.single.name, '회원1');
   });
 
   test('rejects malformed score types', () {

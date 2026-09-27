@@ -6,6 +6,7 @@ The Android client uses Firebase Cloud Messaging for competition-operation push 
 
 - Backend: set `FIREBASE_SERVICE_ACCOUNT_JSON` to the complete service-account JSON through the deployment secret store. Never add it to Git or a Flutter build.
 - Backend worker: set a high-entropy `MOBILE_PUSH_WORKER_SECRET`. A trusted scheduler calls `POST /api/internal/mobile-notifications/deliver` with `Authorization: Bearer <secret>` at least once per minute.
+- Scheduled EVENT reminder generation is separate from delivery. The same trusted scheduler should first call `POST /api/internal/mobile-notifications/generate-event-vote-reminders` with the worker bearer secret, then call the delivery endpoint. The generator only creates deduplicated outbox rows for confirmed, unvoted member participants from the scheduled start until the voting deadline; guests are excluded. Apply this timer change during a later Production deployment, not from a development checkout.
 - Android: add the real Firebase Android app configuration as `mobile/android/app/google-services.json` through the protected release pipeline, apply the Google Services Gradle plugin required by FlutterFire, and build with `--dart-define=FCM_ENABLED=true`.
 - The repository intentionally contains no Firebase project identifier, API key, service-account key, or placeholder credential. Without release configuration, the app reports that Firebase configuration is required and all existing app features remain available.
 

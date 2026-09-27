@@ -185,6 +185,8 @@ export async function getEventCompetitionState(actorUserId: string, teamId: stri
         myParticipantId: actorParticipant?.id ?? null,
         voteOpenAt: event.competitionStartAt?.toISOString() ?? null,
         voteCloseAt: phase?.closeAt.toISOString() ?? null,
+        voteDeadline: phase?.closeAt.toISOString() ?? null,
+        canVote: event.competitionStatus === "EVENT_READY" && phase?.open === true && actorParticipant != null && myBallot == null,
         serverNow: now.toISOString(), gameCount: event.competitionGameCount,
         participants: event.eventCompetitionParticipants.map((item) => serializeEventParticipant(item)),
         voting: {
@@ -202,7 +204,7 @@ export async function getEventCompetitionState(actorUserId: string, teamId: stri
             votePrivacy: "BALLOTS_PRIVATE_BEFORE_REVEAL",
         },
     };
-    if (role === "MEMBER") return { ...base, reveal: { revealedCount: event.eventRevealIndex, totalCount: event.eventCompetitionParticipants.length }, finalPreview: null };
+    if (role === "MEMBER") return { ...base, reveal: { revealedCount: event.eventRevealIndex, totalCount: event.eventCompetitionParticipants.length }, ballotDetails: null, finalPreview: null };
     const calculation = await calculateForEvent(event, prisma, await getSeasonPointPreview(prisma, event));
     const revealedIds = new Set(event.eventCompetitionParticipants.filter((item) => item.revealedAt).map((item) => item.id));
     const participantById = new Map(event.eventCompetitionParticipants.map((item) => [item.id, item]));
@@ -223,6 +225,9 @@ export async function getEventCompetitionState(actorUserId: string, teamId: stri
                 : null,
             revealed,
         },
+        ballotDetails: event.competitionStatus === "REVEALING" || event.competitionStatus === "FINAL_READY"
+            ? serializeBallotDetails(event)
+            : null,
         finalPreview: event.competitionStatus === "FINAL_READY" ? publicRanking(calculation.rows, true) : null,
     };
 }
@@ -464,15 +469,32 @@ function uniqueGuestIdsByName(guests: readonly { id: string; name: string }[]) {
     return new Map([...grouped].flatMap(([name, ids]) => ids.length === 1 ? [[name, ids[0]] as const] : []));
 }
 
-function publicRanking(rows: ReturnType<typeof calculateEventResults>, manager: boolean) {
+export function publicRanking(rows: ReturnType<typeof calculateEventResults>, manager: boolean) {
     return rows.map((row) => ({
         rank: row.rank, participantId: row.participantId, memberId: row.memberId, guestId: row.guestId ?? null, name: row.name,
         actualScore: row.actualScore, voteCount: row.voteCount, shareScore: row.shareScore,
-        voteBonus: row.voteBonus, finalScore: row.finalScore, seasonPoint: row.seasonPoint,
+        voteBonus: row.voteBonus, finalScore: row.finalScore, seasonPoint: row.memberId ? row.seasonPoint : 0,
         ...(manager ? { selections: row.selections.map((selection) => ({
             ...selection, name: rows.find((candidate) => candidate.participantId === selection.participantId)?.name ?? "",
         })) } : {}),
     }));
+}
+export function serializeBallotDetails(event: EventCompetition) {
+    const participantById = new Map(event.eventCompetitionParticipants.map((item) => [item.id, item]));
+    return event.eventCompetitionBallots.map((ballot) => ({
+        voterParticipantId: ballot.voterParticipantId,
+        voterName: participantById.has(ballot.voterParticipantId)
+            ? participantName(participantById.get(ballot.voterParticipantId)!)
+            : "참가자",
+        proxy: ballot.enteredByUserId != null,
+        choices: ballot.selections.map((selection) => ({
+            participantId: selection.selectedParticipantId,
+            name: participantById.has(selection.selectedParticipantId)
+                ? participantName(participantById.get(selection.selectedParticipantId)!)
+                : "참가자",
+            selectionOrder: selection.selectionOrder,
+        })),
+    })).sort((left, right) => left.voterName.localeCompare(right.voterName, "ko") || left.voterParticipantId.localeCompare(right.voterParticipantId));
 }
 function publishedState(event: EventCompetition, role: Role, actorParticipantId: string | null) {
     let snapshot: { version: number; publishedAt: string; rows: ReturnType<typeof calculateEventResults> };
@@ -480,11 +502,14 @@ function publishedState(event: EventCompetition, role: Role, actorParticipantId:
     catch { throw new EventCompetitionError("INVALID_RESULT_SNAPSHOT", "발표 결과를 불러올 수 없습니다.", 500); }
     if (snapshot.version !== 1 || !Array.isArray(snapshot.rows)) throw new EventCompetitionError("INVALID_RESULT_SNAPSHOT", "발표 결과를 불러올 수 없습니다.", 500);
     const my = actorParticipantId ? snapshot.rows.find((row) => row.participantId === actorParticipantId) ?? null : null;
+    const ranking = publicRanking(snapshot.rows, false);
+    const participantSummary = [...ranking].sort((left, right) => left.name.localeCompare(right.name, "ko") || left.participantId.localeCompare(right.participantId));
     return {
         eventId: event.id, status: "PUBLISHED", competitionMode: event.competitionMode, canManage: role !== "MEMBER", isParticipant: actorParticipantId != null,
         myParticipantId: actorParticipantId,
-        publishedAt: snapshot.publishedAt, ranking: publicRanking(snapshot.rows, false),
+        publishedAt: snapshot.publishedAt, ranking, finalRanking: ranking, participantSummary,
         myResult: my ? { ...publicRanking(snapshot.rows, true).find((row) => row.participantId === my.participantId)! } : null,
+        ballotDetails: serializeBallotDetails(event),
         policies: { guests: "INCLUDED_BY_EVENT_GUEST_ID", nonVoterPolicy: event.eventNonVoterPolicy, tieBreakPolicy: event.eventTieBreakPolicy },
     };
 }

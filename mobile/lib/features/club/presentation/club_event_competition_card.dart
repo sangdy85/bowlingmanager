@@ -148,9 +148,7 @@ class _ClubEventCompetitionCardState
             '${state.voting!.submittedCount + state.voting!.pendingCount}',
           ),
         ],
-        if (state.status == 'VOTING_OPEN' &&
-            state.isParticipant &&
-            (state.voting?.mySelections.isEmpty ?? true)) ...<Widget>[
+        if (state.canVote) ...<Widget>[
           const Divider(height: 28),
           SizedBox(
             width: double.infinity,
@@ -171,7 +169,7 @@ class _ClubEventCompetitionCardState
             ),
             const SizedBox(height: 6),
             Text(
-              '남은 시간 ${_remaining(state.voteCloseAt)}',
+              '남은 시간 ${_remaining(state.voteCloseAt, state.serverNow)}',
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             const Text('다른 참가자 정확히 3명을 선택하세요.'),
@@ -241,6 +239,28 @@ class _ClubEventCompetitionCardState
             ),
           ],
         ],
+        if (state.ballotDetails
+            case final List<ClubEventBallotDetail> ballots) ...<Widget>[
+          if (ballots.isNotEmpty) ...<Widget>[
+            const Divider(height: 28),
+            const Text(
+              '투표 공개',
+              key: Key('event-ballot-details'),
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            for (final ballot in ballots)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  '${ballot.voterName}${ballot.proxy ? ' · 관리자 대리 입력' : ''}',
+                ),
+                subtitle: Text(
+                  '→ ${ballot.choices.map((choice) => choice.name).join('\n→ ')}',
+                ),
+              ),
+          ],
+        ],
         if (state.finalPreview != null) ...<Widget>[
           const Divider(height: 28),
           const Text(
@@ -256,17 +276,60 @@ class _ClubEventCompetitionCardState
             style: TextStyle(fontWeight: FontWeight.w800),
           ),
           if (state.myResult case final ClubEventResultRow mine) ...<Widget>[
-            Text(
-              '내 순위 ${mine.rank ?? '-'}위 · ${_score(mine.finalScore)}점 · '
-              '${widget.competitionMode == ClubCompetitionMode.mini ? '시즌 포인트 미지급' : '+${mine.seasonPoint}P'}',
+            Card(
+              key: const Key('event-my-result'),
+              color: Theme.of(context).colorScheme.primaryContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      '내 최종 순위 ${mine.rank ?? '-'}위',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '경기 ${mine.actualScore} · 투표 보너스 ${_score(mine.voteBonus)} · 최종 ${_score(mine.finalScore)}',
+                    ),
+                    Text(
+                      widget.competitionMode == ClubCompetitionMode.mini
+                          ? '시즌 포인트 미지급'
+                          : '획득 시즌 포인트 +${mine.seasonPoint}P',
+                    ),
+                    if (mine.selections.isNotEmpty)
+                      Text(
+                        '내 선택: ${mine.selections.map((item) => item.name ?? '-').join(' · ')}',
+                      ),
+                  ],
+                ),
+              ),
             ),
-            Text('본인 ${mine.actualScore} · 투표 보너스 ${_score(mine.voteBonus)}'),
-            if (mine.selections.isNotEmpty)
-              Text(
-                '내 선택: ${mine.selections.map((item) => '${item.name ?? '-'} +${_score(item.shareScore)}').join(' · ')}',
+          ],
+          if (state.participantSummary
+              case final List<ClubEventResultRow> summary) ...<Widget>[
+            const SizedBox(height: 16),
+            const Text(
+              '참가자 요약 · 가나다순',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+            for (final row in summary)
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text(row.name),
+                subtitle: Text(
+                  '경기 ${row.actualScore} · 득표 ${row.voteCount} · 투표 보너스 ${_score(row.voteBonus)}',
+                ),
               ),
           ],
-          if (state.ranking != null) ..._ranking(state.ranking!),
+          const SizedBox(height: 12),
+          const Text('최종 순위', style: TextStyle(fontWeight: FontWeight.w800)),
+          if (state.finalRanking != null)
+            ..._ranking(state.finalRanking!)
+          else if (state.ranking != null)
+            ..._ranking(state.ranking!),
         ],
       ],
     );
@@ -331,7 +394,7 @@ class _ClubEventCompetitionCardState
       leading: CircleAvatar(child: Text(row.rank?.toString() ?? '-')),
       title: Text(row.name),
       subtitle: Text(
-        '본인 ${row.actualScore} · 보너스 ${_score(row.voteBonus)} · 득표 ${row.voteCount}'
+        '경기 ${row.actualScore} · 투표 보너스 ${_score(row.voteBonus)} · 득표 ${row.voteCount}'
         '${row.selections.isEmpty ? '' : '\n선택 ${row.selections.map((item) => '${item.name ?? '-'} +${_score(item.shareScore)}').join(' · ')}'}',
       ),
       trailing: Text(
@@ -534,10 +597,10 @@ class _ClubEventCompetitionCardState
   }
 }
 
-String _remaining(DateTime? closeAt) {
+String _remaining(DateTime? closeAt, DateTime? serverNow) {
   if (closeAt == null) return '--:--';
   final seconds = closeAt
-      .difference(DateTime.now().toUtc())
+      .difference(serverNow ?? DateTime.now().toUtc())
       .inSeconds
       .clamp(0, 99 * 60 + 59);
   return '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}';

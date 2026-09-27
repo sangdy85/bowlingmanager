@@ -24,7 +24,7 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
   final _time = TextEditingController(text: '19:00');
   final _location = TextEditingController();
   String? _gameType;
-  final _gameCount = TextEditingController(text: '4');
+  final _gameCount = TextEditingController(text: '3');
   List<List<int>> _teamGamePoints = _defaultTeamGamePoints(4);
   bool _attendanceEnabled = true;
   bool _laneDrawEnabled = false;
@@ -223,6 +223,12 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
                       .toList(),
                   onChanged: (ClubCompetitionType? value) => setState(() {
                     _competitionType = value ?? _competitionType;
+                    if (widget.eventId == null) {
+                      _gameCount.text =
+                          _competitionType == ClubCompetitionType.individual
+                          ? '3'
+                          : '4';
+                    }
                     if (_competitionType == ClubCompetitionType.team) {
                       _laneDrawEnabled = true;
                       _syncTeamGameCount();
@@ -249,8 +255,7 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
                       : '경기 결과에 따라 시즌 포인트가 지급됩니다.',
                 ),
                 const SizedBox(height: 12),
-                if (_competitionType == ClubCompetitionType.event ||
-                    _competitionType == ClubCompetitionType.team) ...<Widget>[
+                ...<Widget>[
                   TextFormField(
                     controller: _gameCount,
                     keyboardType: TextInputType.number,
@@ -364,11 +369,7 @@ class _ClubEventFormScreenState extends ConsumerState<ClubEventFormScreen> {
               ),
             )
           : const <ClubTeamGamePointTable>[],
-      competitionGameCount:
-          bowlerHiddenEnabled &&
-              _competitionEnabled &&
-              (_competitionType == ClubCompetitionType.event ||
-                  _competitionType == ClubCompetitionType.team)
+      competitionGameCount: bowlerHiddenEnabled && _competitionEnabled
           ? int.parse(_gameCount.text)
           : null,
     );

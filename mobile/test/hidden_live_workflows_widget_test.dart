@@ -157,6 +157,41 @@ void main() {
     expect(find.text('투표 완료 (0 / 3)'), findsOneWidget);
     expect(find.text('대리 투표'), findsNothing);
   });
+
+  testWidgets(
+    'EVENT published result shows voter choices, large MY result and summaries',
+    (tester) async {
+      final state = ClubEventCompetitionState.fromJson(_publishedEventState());
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            clubEventCompetitionProvider.overrideWith(
+              (ref, request) async => state,
+            ),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: ClubEventCompetitionCard(
+                  userId: 'member-user',
+                  teamId: 'team-1',
+                  eventId: 'event-1',
+                  competitionMode: ClubCompetitionMode.official,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('event-my-result')), findsOneWidget);
+      expect(find.byKey(const Key('event-ballot-details')), findsOneWidget);
+      expect(find.textContaining('관리자 대리 입력'), findsOneWidget);
+      expect(find.text('참가자 요약 · 가나다순'), findsOneWidget);
+      expect(find.text('최종 순위'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 class _DialogHarness extends StatefulWidget {
@@ -293,3 +328,57 @@ Map<String, dynamic> _eventState() => <String, dynamic>{
   'reveal': <String, Object>{'revealedCount': 0, 'totalCount': 4},
   'finalPreview': null,
 };
+
+Map<String, dynamic> _publishedEventState() {
+  Map<String, dynamic> result(String id, String name, int rank, int actual) =>
+      <String, dynamic>{
+        'rank': rank,
+        'participantId': id,
+        'memberId': id == 'pg' ? null : 'm-$id',
+        'guestId': id == 'pg' ? 'g1' : null,
+        'name': name,
+        'actualScore': actual,
+        'voteCount': 2,
+        'shareScore': actual / 2,
+        'voteBonus': 300,
+        'finalScore': actual + 300,
+        'seasonPoint': id == 'pg' ? 0 : 20,
+      };
+  final ranking = <Object>[
+    result('p1', '가회원', 1, 900),
+    result('pg', '나게스트', 2, 850),
+  ];
+  return <String, dynamic>{
+    'status': 'PUBLISHED',
+    'canManage': false,
+    'isParticipant': true,
+    'myParticipantId': 'p1',
+    'ranking': ranking,
+    'finalRanking': ranking,
+    'participantSummary': ranking,
+    'myResult': <String, dynamic>{
+      ...result('p1', '가회원', 1, 900),
+      'selections': <Object>[
+        <String, Object>{
+          'participantId': 'pg',
+          'name': '나게스트',
+          'shareScore': 425.0,
+        },
+      ],
+    },
+    'ballotDetails': <Object>[
+      <String, Object>{
+        'voterParticipantId': 'p1',
+        'voterName': '가회원',
+        'proxy': true,
+        'choices': <Object>[
+          <String, Object>{
+            'participantId': 'pg',
+            'name': '나게스트',
+            'selectionOrder': 1,
+          },
+        ],
+      },
+    ],
+  };
+}

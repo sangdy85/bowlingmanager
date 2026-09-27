@@ -156,11 +156,53 @@ class ClubEventResultRow {
       );
 }
 
+class ClubEventBallotChoice {
+  const ClubEventBallotChoice({
+    required this.participantId,
+    required this.name,
+    required this.selectionOrder,
+  });
+  final String participantId;
+  final String name;
+  final int selectionOrder;
+  factory ClubEventBallotChoice.fromJson(Map<String, dynamic> json) =>
+      ClubEventBallotChoice(
+        participantId: _string(json['participantId']),
+        name: _string(json['name']),
+        selectionOrder: _positiveInt(json['selectionOrder']),
+      );
+}
+
+class ClubEventBallotDetail {
+  const ClubEventBallotDetail({
+    required this.voterParticipantId,
+    required this.voterName,
+    required this.proxy,
+    required this.choices,
+  });
+  final String voterParticipantId;
+  final String voterName;
+  final bool proxy;
+  final List<ClubEventBallotChoice> choices;
+  factory ClubEventBallotDetail.fromJson(Map<String, dynamic> json) {
+    if (json['proxy'] is! bool) {
+      throw const FormatException('Invalid ballot detail.');
+    }
+    return ClubEventBallotDetail(
+      voterParticipantId: _string(json['voterParticipantId']),
+      voterName: _string(json['voterName']),
+      proxy: json['proxy'] as bool,
+      choices: _list(json['choices'], ClubEventBallotChoice.fromJson),
+    );
+  }
+}
+
 class ClubEventCompetitionState {
   const ClubEventCompetitionState({
     required this.status,
     required this.canManage,
     required this.isParticipant,
+    required this.canVote,
     required this.myParticipantId,
     required this.voteOpenAt,
     required this.voteCloseAt,
@@ -173,10 +215,14 @@ class ClubEventCompetitionState {
     required this.finalPreview,
     required this.ranking,
     required this.myResult,
+    required this.ballotDetails,
+    required this.participantSummary,
+    required this.finalRanking,
   });
   final String status;
   final bool canManage;
   final bool isParticipant;
+  final bool canVote;
   final String? myParticipantId;
   final DateTime? voteOpenAt;
   final DateTime? voteCloseAt;
@@ -189,6 +235,9 @@ class ClubEventCompetitionState {
   final List<ClubEventResultRow>? finalPreview;
   final List<ClubEventResultRow>? ranking;
   final ClubEventResultRow? myResult;
+  final List<ClubEventBallotDetail>? ballotDetails;
+  final List<ClubEventResultRow>? participantSummary;
+  final List<ClubEventResultRow>? finalRanking;
 
   bool get polling => const <String>{
     'VOTING_OPEN',
@@ -210,15 +259,25 @@ class ClubEventCompetitionState {
     if (!statuses.contains(json['status']) ||
         json['canManage'] is! bool ||
         json['isParticipant'] is! bool ||
+        (json['canVote'] != null && json['canVote'] is! bool) ||
         (json['myParticipantId'] != null &&
             json['myParticipantId'] is! String) ||
         (json['scoreComplete'] != null && json['scoreComplete'] is! bool)) {
       throw const FormatException('Invalid event competition state.');
     }
+    final voting = json['voting'] == null
+        ? null
+        : ClubEventVotingState.fromJson(_map(json['voting']));
+    final canVote =
+        json['canVote'] as bool? ??
+        (json['status'] == 'VOTING_OPEN' &&
+            json['isParticipant'] == true &&
+            (voting?.mySelections.isEmpty ?? true));
     return ClubEventCompetitionState(
       status: json['status'] as String,
       canManage: json['canManage'] as bool,
       isParticipant: json['isParticipant'] as bool,
+      canVote: canVote,
       myParticipantId: json['myParticipantId'] as String?,
       voteOpenAt: _date(json['voteOpenAt']),
       voteCloseAt: _date(json['voteCloseAt']),
@@ -230,9 +289,7 @@ class ClubEventCompetitionState {
         json['participants'] ?? const <Object>[],
         ClubEventCompetitionParticipant.fromJson,
       ),
-      voting: json['voting'] == null
-          ? null
-          : ClubEventVotingState.fromJson(_map(json['voting'])),
+      voting: voting,
       scoreComplete: json['scoreComplete'] as bool?,
       reveal: json['reveal'] == null
           ? null
@@ -246,6 +303,15 @@ class ClubEventCompetitionState {
       myResult: json['myResult'] == null
           ? null
           : ClubEventResultRow.fromJson(_map(json['myResult'])),
+      ballotDetails: json['ballotDetails'] == null
+          ? null
+          : _list(json['ballotDetails'], ClubEventBallotDetail.fromJson),
+      participantSummary: json['participantSummary'] == null
+          ? null
+          : _list(json['participantSummary'], ClubEventResultRow.fromJson),
+      finalRanking: json['finalRanking'] == null
+          ? null
+          : _list(json['finalRanking'], ClubEventResultRow.fromJson),
     );
   }
 }

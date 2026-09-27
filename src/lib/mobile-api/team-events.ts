@@ -99,8 +99,10 @@ export function parseTeamEventInput(value: unknown, bowlerHiddenEnabled = false)
     if (competitionEnabled && requestedType === "TEAM" && laneDrawEnabled !== true) {
         throw new TeamEventError("LANE_CONFIG_REQUIRED", "TEAM 대회는 레인 배정 설정이 필요합니다.", 400);
     }
-    const competitionGameCount = body.competitionGameCount;
-    if (competitionEnabled && (requestedType === "TEAM" || requestedType === "EVENT") &&
+    const competitionGameCount = competitionEnabled && requestedType === "INDIVIDUAL" && body.competitionGameCount == null
+        ? 3
+        : body.competitionGameCount;
+    if (competitionEnabled &&
         (!Number.isSafeInteger(competitionGameCount) || (competitionGameCount as number) < 1 || (competitionGameCount as number) > 12)) {
         throw new TeamEventError("INVALID_GAME_COUNT", "대회 게임 수는 1~12 사이여야 합니다.", 400);
     }
@@ -129,8 +131,7 @@ export function parseTeamEventInput(value: unknown, bowlerHiddenEnabled = false)
         laneDrawMode: laneDrawMode as DrawMode, competitionEnabled,
         competitionType: competitionEnabled ? requestedType as "INDIVIDUAL" | "TEAM" | "EVENT" : null,
         competitionMode: competitionEnabled ? requestedMode as "OFFICIAL" | "MINI" : null,
-        competitionGameCount: competitionEnabled && (requestedType === "TEAM" || requestedType === "EVENT")
-            ? competitionGameCount as number : null,
+        competitionGameCount: competitionEnabled ? competitionGameCount as number : null,
         rankPoints, teamGamePointTables,
     };
 }
@@ -515,7 +516,9 @@ function serializeEvent(event: EventWithRelations, access: Awaited<ReturnType<ty
     const competitionVisible = access.bowlerHiddenEnabled && event.competitionEnabled;
     const competitionGameCount = event.competitionType === "TEAM"
         ? event.competitionGameCount ?? 4
-        : event.competitionGameCount;
+        : event.competitionType === "INDIVIDUAL"
+            ? event.competitionGameCount ?? 3
+            : event.competitionGameCount;
     const attendanceByMember = new Map(event.attendances.map((item) => [item.memberId, item]));
     const myAttendance = attendanceByMember.get(access.member.id)?.status ?? "UNANSWERED";
     const assignments = event.laneAssignments.map(serializeAssignment).sort((a, b) => a.laneNumber - b.laneNumber || a.position - b.position);

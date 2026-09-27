@@ -144,6 +144,44 @@ test('service keeps ballot detail private before reveal and persists publication
   assert.match(source, /updateMany\(\{ where: \{ id: eventId, competitionStatus: "FINAL_READY"/);
 });
 
+test('revealed ballot details are voter-oriented and preserve proxy participant identity', () => {
+  const event = {
+    eventCompetitionParticipants: [
+      { id: 'p1', memberId: 'm1', guestId: null, member: { alias: null, user: { name: '가 voter' } }, guest: null },
+      { id: 'p2', memberId: 'm2', guestId: null, member: { alias: null, user: { name: '나 choice' } }, guest: null },
+      { id: 'p3', memberId: null, guestId: 'g3', member: null, guest: { name: '다 guest' } },
+      { id: 'p4', memberId: 'm4', guestId: null, member: { alias: null, user: { name: '라 choice' } }, guest: null },
+    ],
+    eventCompetitionBallots: [{
+      voterParticipantId: 'p1', enteredByUserId: 'manager-user',
+      selections: [
+        { selectedParticipantId: 'p2', selectionOrder: 1 },
+        { selectedParticipantId: 'p3', selectionOrder: 2 },
+        { selectedParticipantId: 'p4', selectionOrder: 3 },
+      ],
+    }],
+  };
+  const detail = service.serializeBallotDetails(event)[0];
+  assert.equal(detail.voterParticipantId, 'p1');
+  assert.equal(detail.voterName, '가 voter');
+  assert.equal(detail.proxy, true);
+  assert.deepEqual(detail.choices.map(choice => choice.name), ['나 choice', '다 guest', '라 choice']);
+  assert.equal(Object.hasOwn(detail, 'enteredByUserId'), false);
+});
+
+test('guest remains in EVENT ranking but receives no season point', () => {
+  const rows = service.calculateEventResults([
+    { participantId: 'guest', memberId: null, guestId: 'g1', name: '게스트', scores: [300] },
+    { participantId: 'm1', memberId: 'm1', name: '회원1', scores: [200] },
+    { participantId: 'm2', memberId: 'm2', name: '회원2', scores: [190] },
+    { participantId: 'm3', memberId: 'm3', name: '회원3', scores: [180] },
+  ], [], [{ rank: 1, points: 50 }, { rank: 2, points: 30 }], 'INCLUDE_ACTUAL_ONLY', 'ACTUAL_SCORE_THEN_ID');
+  const ranking = service.publicRanking(rows, false);
+  assert.equal(ranking[0].name, '게스트');
+  assert.equal(ranking[0].rank, 1);
+  assert.equal(ranking[0].seasonPoint, 0);
+});
+
 test('score completion and sequential reveal reject incomplete or duplicate progress', () => {
   assert.equal(service.eventScoresComplete(participants, 4), true);
   assert.equal(service.eventScoresComplete(participants.map((item, index) => index === 0 ? { ...item, scores: item.scores.slice(0, 3) } : item), 4), false);

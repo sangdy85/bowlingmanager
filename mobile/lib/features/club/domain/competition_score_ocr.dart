@@ -5,18 +5,23 @@ class CompetitionOcrMatchResult {
   const CompetitionOcrMatchResult({
     required this.matches,
     required this.unmatchedNames,
+    required this.partialNames,
   });
 
   final Map<String, List<int>> matches;
   final List<String> unmatchedNames;
+  final List<String> partialNames;
 }
 
 CompetitionOcrMatchResult matchCompetitionOcrPlayers(
   ClubCompetitionScoreEntry entry,
-  List<OcrPlayer> players,
-) {
+  List<OcrPlayer> players, {
+  int? gameCount,
+}) {
+  final targetGameCount = gameCount ?? entry.gameCount;
   final matches = <String, List<int>>{};
   final unmatched = <String>[];
+  final partial = <String>[];
   for (final player in players) {
     final candidates = player.matchedMemberId != null
         ? entry.participants
@@ -29,7 +34,7 @@ CompetitionOcrMatchResult matchCompetitionOcrPlayers(
                 (participant) => participant.name.trim() == player.name.trim(),
               )
               .toList();
-    if (candidates.length != 1 || player.scores.length != entry.gameCount) {
+    if (candidates.length != 1 || player.scores.isEmpty) {
       unmatched.add(player.name);
       continue;
     }
@@ -38,10 +43,19 @@ CompetitionOcrMatchResult matchCompetitionOcrPlayers(
       unmatched.add(player.name);
       continue;
     }
-    matches[participantId] = List<int>.unmodifiable(player.scores);
+    final projected = player.scores
+        .take(targetGameCount)
+        .toList(growable: false);
+    matches[participantId] = List<int>.unmodifiable(projected);
+    if (projected.length < targetGameCount) {
+      partial.add(
+        '${player.name} ($targetGameCount게임 중 ${projected.length}게임 인식됨)',
+      );
+    }
   }
   return CompetitionOcrMatchResult(
     matches: Map<String, List<int>>.unmodifiable(matches),
     unmatchedNames: List<String>.unmodifiable(unmatched),
+    partialNames: List<String>.unmodifiable(partial),
   );
 }

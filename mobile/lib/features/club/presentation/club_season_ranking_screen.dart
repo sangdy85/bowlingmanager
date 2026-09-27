@@ -128,6 +128,7 @@ class _ClubSeasonRankingScreenState
             const SizedBox(height: 10),
             _RankingGrid(
               rows: ranking.rows,
+              hidden: ranking.bowlerHiddenEnabled,
               onMember: ranking.bowlerHiddenEnabled
                   ? (row) => _showMember(userId, ranking, row)
                   : null,
@@ -158,9 +159,14 @@ class _ClubSeasonRankingScreenState
 }
 
 class _RankingGrid extends StatelessWidget {
-  const _RankingGrid({required this.rows, required this.onMember});
+  const _RankingGrid({
+    required this.rows,
+    required this.onMember,
+    required this.hidden,
+  });
   final List<ClubSeasonRankingRow> rows;
   final ValueChanged<ClubSeasonRankingRow>? onMember;
+  final bool hidden;
 
   @override
   Widget build(BuildContext context) {
@@ -174,7 +180,10 @@ class _RankingGrid extends StatelessWidget {
             width: 176,
             child: Column(
               children: <Widget>[
-                const _GridCell(height: 46, child: Text('순위  이름  포인트')),
+                _GridCell(
+                  height: 46,
+                  child: Text(hidden ? '순위  이름  총P' : '순위  이름  포인트'),
+                ),
                 for (final row in rows)
                   InkWell(
                     onTap: onMember == null ? null : () => onMember!(row),
@@ -204,7 +213,7 @@ class _RankingGrid extends StatelessWidget {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: SizedBox(
-                width: 12 * 112 + 20,
+                width: hidden ? 12 * 64 + 176 : 12 * 112 + 20,
                 child: Column(
                   children: <Widget>[
                     _GridCell(
@@ -212,7 +221,14 @@ class _RankingGrid extends StatelessWidget {
                       child: Row(
                         children: <Widget>[
                           for (int month = 1; month <= 12; month++)
-                            SizedBox(width: 112, child: Text('$month월')),
+                            SizedBox(
+                              width: hidden ? 64 : 112,
+                              child: Text('$month월'),
+                            ),
+                          if (hidden) ...<Widget>[
+                            const SizedBox(width: 76, child: Text('기초P')),
+                            const SizedBox(width: 76, child: Text('조정P')),
+                          ],
                         ],
                       ),
                     ),
@@ -221,18 +237,41 @@ class _RankingGrid extends StatelessWidget {
                         height: rowHeight,
                         child: Row(
                           children: <Widget>[
-                            for (final entries in row.monthlyHistory)
+                            if (hidden)
+                              for (final points in row.monthlyPoints)
+                                SizedBox(
+                                  width: 64,
+                                  child: Text(
+                                    points == 0 ? '-' : _signedPoints(points),
+                                  ),
+                                )
+                            else
+                              for (final entries in row.monthlyHistory)
+                                SizedBox(
+                                  width: 112,
+                                  child: Text(
+                                    entries.isEmpty
+                                        ? '-'
+                                        : entries.map(_entryLabel).join('\n'),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                ),
+                            if (hidden) ...<Widget>[
                               SizedBox(
-                                width: 112,
+                                width: 76,
                                 child: Text(
-                                  entries.isEmpty
-                                      ? '-'
-                                      : entries.map(_entryLabel).join('\n'),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 11),
+                                  _signedPoints(row.openingBalancePoints),
                                 ),
                               ),
+                              SizedBox(
+                                width: 76,
+                                child: Text(
+                                  _signedPoints(row.adjustmentPoints),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

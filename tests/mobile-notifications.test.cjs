@@ -78,6 +78,25 @@ function createDeviceStore() {
   return { state, prisma: { ...tx, $transaction: async callback => callback(tx) }, tx };
 }
 
+test('EVENT reminder targets only unvoted members in the start-to-deadline window and excludes guests', () => {
+  const service = loadService({});
+  const event = {
+    id: 'event-1', teamId: 'team-1', draftGeneration: 2,
+    competitionStartAt: new Date('2026-09-27T10:00:00Z'), votingDurationMinutes: 30,
+    eventCompetitionParticipants: [
+      { member: { userId: 'unvoted' }, ballot: null },
+      { member: { userId: 'voted' }, ballot: { id: 'ballot-1' } },
+      { member: null, ballot: null },
+    ],
+  };
+  assert.deepEqual(service.eventVoteReminderInputs([event], new Date('2026-09-27T09:59:59Z')), []);
+  const inputs = service.eventVoteReminderInputs([event], new Date('2026-09-27T10:00:00Z'));
+  assert.equal(inputs.length, 1);
+  assert.equal(inputs[0].userId, 'unvoted');
+  assert.equal(inputs[0].dedupeKey, 'event-vote-reminder:event-1:2:unvoted');
+  assert.deepEqual(service.eventVoteReminderInputs([event], new Date('2026-09-27T10:30:00Z')), []);
+});
+
 test('new device registration trusts only the authenticated user', async () => {
   const store = createDeviceStore();
   const service = loadService(store.prisma);

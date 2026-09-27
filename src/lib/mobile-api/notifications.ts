@@ -12,6 +12,7 @@ export const MOBILE_NOTIFICATION_TYPES = {
     teamDraftTurn: "TEAM_DRAFT_TURN",
     teamMemberSelected: "TEAM_MEMBER_SELECTED",
     eventVotingOpened: "EVENT_VOTING_OPENED",
+    eventVoteReminder: "EVENT_VOTE_REMINDER",
 } as const;
 
 export type MobileNotificationType = typeof MOBILE_NOTIFICATION_TYPES[keyof typeof MOBILE_NOTIFICATION_TYPES];
@@ -169,6 +170,68 @@ export async function enqueueMobileNotifications(tx: DbClient, inputs: Notificat
             }
         }
     }
+}
+
+type EventVoteReminderEvent = {
+    id: string;
+    teamId: string;
+    draftGeneration: number;
+    competitionStartAt: Date | null;
+    votingDurationMinutes: number;
+    eventCompetitionParticipants: Array<{
+        member: { userId: string } | null;
+        ballot: { id: string } | null;
+    }>;
+};
+
+export function eventVoteReminderInputs(events: readonly EventVoteReminderEvent[], now = new Date()): NotificationInput[] {
+    return events.flatMap((event) => {
+        if (!event.competitionStartAt) return [];
+        const deadline = new Date(event.competitionStartAt.getTime() + event.votingDurationMinutes * 60_000);
+        if (now < event.competitionStartAt || now >= deadline) return [];
+        return event.eventCompetitionParticipants.flatMap((participant) => participant.member && !participant.ballot ? [{
+            userId: participant.member.userId,
+            dedupeKey: `event-vote-reminder:${event.id}:${event.draftGeneration}:${participant.member.userId}`,
+            type: MOBILE_NOTIFICATION_TYPES.eventVoteReminder,
+            title: "투표 종료까지 30분 남았습니다",
+            body: "이벤트전 투표할 3명을 선택해 주세요.",
+            teamId: event.teamId,
+            eventId: event.id,
+            target: "EVENT_VOTING" as const,
+        }] : []);
+    });
+}
+
+/** Generates scheduled EVENT vote reminders; FCM delivery remains a separate worker responsibility. */
+export async function generateEventVoteReminderNotifications(now = new Date()) {
+    const events = await prisma.teamEvent.findMany({
+        where: {
+            competitionEnabled: true,
+            competitionType: "EVENT",
+            competitionStatus: "EVENT_READY",
+            competitionStartAt: { lte: now },
+        },
+        orderBy: { competitionStartAt: "asc" },
+        take: 200,
+        select: {
+            id: true,
+            teamId: true,
+            draftGeneration: true,
+            competitionStartAt: true,
+            votingDurationMinutes: true,
+            eventCompetitionParticipants: {
+                select: {
+                    member: { select: { userId: true } },
+                    ballot: { select: { id: true } },
+                },
+            },
+        },
+    });
+    const inputs = eventVoteReminderInputs(events, now);
+    if (inputs.length > 0) {
+        await prisma.$transaction(async (tx) => enqueueMobileNotifications(tx, inputs));
+    }
+    return { scannedEvents: events.length, eligibleMembers: inputs.length };
 }
 
 type MessageSender = (message: {

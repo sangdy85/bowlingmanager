@@ -377,6 +377,8 @@ class ClubSeasonRankingRow {
     this.eventWins = 0,
     this.entries = const <ClubSeasonPointEntry>[],
     this.monthlyHistory = const <List<ClubSeasonPointEntry>>[],
+    this.monthlyPoints = const <int>[],
+    this.nonMonthlyPoints = 0,
   });
   final int rank;
   final String id;
@@ -400,10 +402,13 @@ class ClubSeasonRankingRow {
   final int eventWins;
   final List<ClubSeasonPointEntry> entries;
   final List<List<ClubSeasonPointEntry>> monthlyHistory;
+  final List<int> monthlyPoints;
+  final int nonMonthlyPoints;
   factory ClubSeasonRankingRow.fromJson(Map<String, dynamic> json) {
     final entries = json['entries'] ?? const <Object>[];
     final monthly =
         json['monthlyHistory'] ?? List<Object>.filled(12, const <Object>[]);
+    final monthlyPoints = json['monthlyPoints'] ?? List<Object>.filled(12, 0);
     if (json['rank'] is! int ||
         json['id'] is! String ||
         json['name'] is! String ||
@@ -427,7 +432,11 @@ class ClubSeasonRankingRow {
         entries is! List ||
         monthly is! List ||
         monthly.length != 12 ||
-        monthly.any((value) => value is! List)) {
+        monthly.any((value) => value is! List) ||
+        monthlyPoints is! List ||
+        monthlyPoints.length != 12 ||
+        monthlyPoints.any((value) => value is! int) ||
+        (json['nonMonthlyPoints'] ?? 0) is! int) {
       throw const FormatException('Invalid season row.');
     }
     ClubSeasonPointEntry parseEntry(Object? value) =>
@@ -462,6 +471,8 @@ class ClubSeasonRankingRow {
           ),
         ),
       ),
+      monthlyPoints: List<int>.unmodifiable(monthlyPoints.cast<int>()),
+      nonMonthlyPoints: (json['nonMonthlyPoints'] ?? 0) as int,
     );
   }
 }

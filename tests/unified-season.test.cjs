@@ -177,6 +177,8 @@ test('ranking batches mixed ledgers, multiple monthly events and zero points wit
   );
   assert.equal(b.totalPoints, 120);
   assert.equal(b.adjustmentPoints, 70);
+  assert.equal(b.monthlyPoints[2], 50);
+  assert.equal(b.monthlyPoints.reduce((sum, points) => sum + points, 0) + b.nonMonthlyPoints, b.totalPoints);
   assert.equal(b.monthlyHistory[2].length, 3);
   assert.equal(b.entries.at(-1).sourceType, 'MANUAL_ADJUSTMENT');
   assert.equal(b.entries.at(-1).reason, '운영 보정');
@@ -257,6 +259,8 @@ test('legacy Jan through Mar and October automatic points produce exact 130 tota
   assert.equal(row.totalPoints, 130);
   assert.equal(row.legacyPoints, 90);
   assert.deepEqual([0, 1, 2, 9].map(index => row.monthlyHistory[index].reduce((sum, item) => sum + item.points, 0)), [10, 30, 50, 40]);
+  assert.deepEqual([0, 1, 2, 9].map(index => row.monthlyPoints[index]), [10, 30, 50, 40]);
+  assert.equal(row.monthlyPoints.reduce((sum, points) => sum + points, 0) + row.nonMonthlyPoints, row.totalPoints);
   assert.deepEqual(row.entries.map(item => item.sourceType), ['LEGACY_IMPORT', 'LEGACY_IMPORT', 'LEGACY_IMPORT', 'AUTOMATIC']);
 });
 
@@ -275,6 +279,8 @@ test('opening balance changes only total and never creates monthly competition h
   const row = (await service.getUnifiedSeasonRanking('viewer', 'team-a')).rankings[0];
   assert.equal(row.totalPoints, 218);
   assert.equal(row.openingBalancePoints, 218);
+  assert.equal(row.nonMonthlyPoints, 218);
+  assert.equal(row.monthlyPoints.reduce((sum, points) => sum + points, 0) + row.nonMonthlyPoints, row.totalPoints);
   assert.equal(row.competitionsPlayed, 0);
   assert.equal(row.monthlyHistory.flat().length, 0);
   assert.equal(row.entries[0].sourceType, 'LEGACY_OPENING_BALANCE');

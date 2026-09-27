@@ -392,13 +392,19 @@ export async function getUnifiedSeasonRanking(
     ));
     return {
         enabled: true, season: serializeSeasonSummary(season), seasons: seasons.map(serializeSeasonSummary),
-        competitionType, rankings: ranked.map((row) => ({
+        competitionType, rankingStyle: "HIDDEN_POINTS", rankings: ranked.map((row) => ({
             ...row,
             points: row.totalPoints,
             attended: row.competitionsPlayed,
             games: 0, average: 0,
             gold: row.individualWins + row.teamWins + row.eventWins,
             silver: 0, bronze: 0,
+            monthlyPoints: Array.from({ length: 12 }, (_, index) => row.entries
+                .filter((entry) => entry.month === index + 1 && (entry.sourceType === "AUTOMATIC" || entry.sourceType === "LEGACY_IMPORT"))
+                .reduce((sum, entry) => sum + entry.points, 0)),
+            nonMonthlyPoints: row.totalPoints - row.entries
+                .filter((entry) => entry.month != null && (entry.sourceType === "AUTOMATIC" || entry.sourceType === "LEGACY_IMPORT"))
+                .reduce((sum, entry) => sum + entry.points, 0),
             monthlyHistory: Array.from({ length: 12 }, (_, index) => row.entries.filter((entry) => entry.month === index + 1)),
         })),
     };

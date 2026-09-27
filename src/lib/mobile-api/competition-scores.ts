@@ -126,7 +126,11 @@ export async function saveCompetitionScores(actorUserId: string, teamId: string,
         }
         const currentScores = scoresByParticipant(event, participants);
         const existingGameCount = Math.max(0, ...participants.map((item) => currentScores.get(item.participantId)?.length ?? 0));
-        const expectedGameCount = event.competitionGameCount ?? (existingGameCount || 3);
+        const requestedGameCount = input.gameCount;
+        if (requestedGameCount != null && event.competitionType !== "INDIVIDUAL") {
+            throw new CompetitionScoreError("INVALID_GAME_COUNT", "경기 수 변경은 개인전에서만 가능합니다.", 400);
+        }
+        const expectedGameCount = requestedGameCount ?? event.competitionGameCount ?? (existingGameCount || 3);
         if (!expectedGameCount || expectedGameCount < 1 || expectedGameCount > 12 ||
             input.participants.some((item) => item.scores.length !== expectedGameCount)) {
             throw new CompetitionScoreError("INVALID_GAME_COUNT", "모든 참가자의 경기 수를 동일하게 입력해주세요.", 400);
@@ -152,15 +156,24 @@ export async function saveCompetitionScores(actorUserId: string, teamId: string,
         });
         await tx.score.deleteMany({ where: { teamEventId: event.id } });
         await tx.score.createMany({ data: rows });
+        if (event.competitionType === "INDIVIDUAL" && event.competitionGameCount !== expectedGameCount) {
+            await tx.teamEvent.update({ where: { id: event.id }, data: { competitionGameCount: expectedGameCount } });
+        }
         return { eventId: event.id, participantCount: participants.length, gameCount: expectedGameCount, savedCount: rows.length };
     }, { timeout: 60_000 });
 }
 
 function parseInput(value: unknown) {
     if (!value || typeof value !== "object" || Array.isArray(value)) invalidRequest();
-    const participants = (value as Record<string, unknown>).participants;
+    const body = value as Record<string, unknown>;
+    const participants = body.participants;
+    const gameCount = body.gameCount;
+    if (gameCount != null && (!Number.isSafeInteger(gameCount) || Number(gameCount) < 1 || Number(gameCount) > 12)) {
+        throw new CompetitionScoreError("INVALID_GAME_COUNT", "경기 수는 1~12 사이여야 합니다.", 400);
+    }
     if (!Array.isArray(participants) || participants.length === 0) invalidRequest();
     return {
+        gameCount: gameCount == null ? null : Number(gameCount),
         participants: participants.map((item) => {
             if (!item || typeof item !== "object" || Array.isArray(item)) invalidRequest();
             const participantId = (item as Record<string, unknown>).participantId;
