@@ -97,6 +97,8 @@ void main() {
     expect(find.text('2026 시즌'), findsOneWidget);
     expect(find.text('2위'), findsOneWidget);
     expect(find.text('20 P'), findsOneWidget);
+    expect(find.text('시즌 포인트'), findsOneWidget);
+    expect(find.text('입상 1/0/0'), findsNothing);
     await tester.scrollUntilVisible(
       find.text('최근 경기'),
       500,
@@ -366,6 +368,7 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('아주 긴 이름을 가진 테스트 동호회입니다'), findsWidgets);
+      expect(find.text('입상 1/1/0'), findsNothing);
       await tester.tap(find.byKey(const Key('club-achievement-team-1')));
       await tester.pumpAndSettle();
       expect(find.text('동호회 상세'), findsOneWidget);

@@ -297,8 +297,8 @@ class _ClubTeamSettingsScreenState
                             : () => context.push(
                                 '/club/${Uri.encodeComponent(widget.teamId)}/manage/team/season-import?seasonId=${Uri.encodeQueryComponent(managedSeason.id)}',
                               ),
-                        icon: const Icon(Icons.upload_file),
-                        label: const Text('기존 시즌 데이터 가져오기'),
+                        icon: const Icon(Icons.format_list_numbered),
+                        label: const Text('회원별 시즌 순위 직접 입력'),
                       ),
                       OutlinedButton.icon(
                         key: const Key('season-manual-competition-add'),
@@ -329,8 +329,8 @@ class _ClubTeamSettingsScreenState
                           onPressed: () => context.push(
                             '/club/${Uri.encodeComponent(widget.teamId)}/records/season?seasonId=${Uri.encodeQueryComponent(managedSeason.id)}',
                           ),
-                          icon: const Icon(Icons.leaderboard_outlined),
-                          label: const Text('현재 종합순위 및 최종순위 관리'),
+                          icon: const Icon(Icons.verified_outlined),
+                          label: const Text('최종 순위 직접 입력'),
                         ),
                       ],
                     ],

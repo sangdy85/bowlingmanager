@@ -163,7 +163,7 @@ class _PersonalRecordsDashboard extends StatelessWidget {
         DashboardMedalsCard(medals: dashboard.medals),
         if (dashboard.seasonSummaries.isNotEmpty) ...<Widget>[
           const SizedBox(height: 16),
-          const Text('Bowler Hidden 시즌 순위', style: AppTextStyles.title),
+          const Text('이전 시즌 순위', style: AppTextStyles.title),
           const SizedBox(height: 8),
           for (final DashboardSeasonSummary season
               in dashboard.seasonSummaries) ...<Widget>[

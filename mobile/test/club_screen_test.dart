@@ -112,6 +112,18 @@ void main() {
       find.byKey(const Key('season-point-management-link')),
       findsOneWidget,
     );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('season-legacy-import-link')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('회원별 시즌 순위 직접 입력'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('managed-season-ranking-link')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('최종 순위 직접 입력'), findsOneWidget);
   });
 
   testWidgets('IMAGE season hides every structured ranking management action', (
@@ -509,10 +521,12 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('legacy-csv-import')), findsOneWidget);
+      expect(find.text('회원별 순위·포인트 입력'), findsOneWidget);
       await tester.tap(find.byKey(const Key('legacy-direct-import')));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('legacy-structured-table')), findsOneWidget);
+      expect(find.text('회원별 시즌 순위 직접 입력'), findsOneWidget);
       await tester.tap(find.byKey(const Key('legacy-competition-add')));
       await tester.pumpAndSettle();
       await tester.enterText(

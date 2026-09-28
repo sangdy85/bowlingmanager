@@ -99,7 +99,7 @@ void main() {
       expect(find.text('총평균 190.5'), findsOneWidget);
       expect(find.textContaining('편차 60'), findsOneWidget);
       expect(find.text('입상 기록'), findsOneWidget);
-      expect(find.text('Bowler Hidden 시즌 순위'), findsOneWidget);
+      expect(find.text('이전 시즌 순위'), findsOneWidget);
       expect(find.text('시즌 순위  3위 / 183P'), findsOneWidget);
       expect(find.text('최종 순위  시즌 진행 중'), findsOneWidget);
       expect(find.text('개인 통계'), findsOneWidget);

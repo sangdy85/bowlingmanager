@@ -38,7 +38,7 @@ class _ClubLegacyImportScreenState
     if (user == null) return const Scaffold(body: SizedBox.shrink());
     final profileRequest = (userId: user.id, teamId: widget.teamId);
     return Scaffold(
-      appBar: AppBar(title: const Text('기존 시즌 데이터 가져오기')),
+      appBar: AppBar(title: const Text('회원별 시즌 순위 입력')),
       body: ref
           .watch(clubTeamProfileProvider(profileRequest))
           .when(
@@ -111,7 +111,7 @@ class _ClubLegacyImportScreenState
     children: <Widget>[
       Text(season.name, style: Theme.of(context).textTheme.titleLarge),
       const SizedBox(height: 4),
-      const Text('월별 기록이 있으면 상세 이관을 권장합니다. 이름만으로 회원을 자동 확정하지 않습니다.'),
+      const Text('회원별 대회 성적과 정확한 총 포인트를 입력하면 시즌 순위가 자동 계산됩니다.'),
       const SizedBox(height: 16),
       Wrap(
         spacing: 8,
@@ -122,7 +122,7 @@ class _ClubLegacyImportScreenState
             onPressed: () =>
                 _openStructuredEditor(season, ranking.rows, rankingRequest),
             icon: const Icon(Icons.edit_note),
-            label: const Text('직접 입력'),
+            label: const Text('회원별 순위·포인트 입력'),
           ),
           OutlinedButton.icon(
             key: const Key('legacy-csv-import'),
@@ -458,7 +458,7 @@ class _LegacyStructuredEditorState extends State<_LegacyStructuredEditor> {
   Widget build(BuildContext context) {
     final views = _memberViews();
     return Scaffold(
-      appBar: AppBar(title: const Text('기존 시즌 순위표 직접 입력')),
+      appBar: AppBar(title: const Text('회원별 시즌 순위 직접 입력')),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
@@ -472,7 +472,9 @@ class _LegacyStructuredEditorState extends State<_LegacyStructuredEditor> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 4),
-                const Text('순위는 최종 포인트로 자동 계산됩니다. 셀을 눌러 순위와 포인트를 입력하세요.'),
+                const Text(
+                  '회원별 총 포인트를 입력하면 시즌 순위가 자동 계산됩니다. 대회별 순위와 포인트도 함께 기록할 수 있습니다.',
+                ),
                 const SizedBox(height: 10),
                 OutlinedButton.icon(
                   key: const Key('legacy-competition-add'),

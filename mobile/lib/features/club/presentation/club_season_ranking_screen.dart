@@ -258,7 +258,7 @@ class _ClubSeasonRankingScreenState
                     _finalizeSeason(request, profileRequest, ranking),
                 icon: const Icon(Icons.verified_outlined),
                 label: Text(
-                  ranking.finalRanking == null ? '최종 순위 확정' : '최종 순위 재확정',
+                  ranking.finalRanking == null ? '최종 순위 직접 입력' : '최종 순위 다시 입력',
                 ),
               ),
               const SizedBox(height: 8),
@@ -578,26 +578,35 @@ class _ClubSeasonRankingScreenState
         context: context,
         builder: (context) => StatefulBuilder(
           builder: (context, setDialogState) => AlertDialog(
-            title: const Text('최종 순위 확정'),
+            title: const Text('최종 순위 직접 입력'),
             content: SizedBox(
               width: 420,
               height: 420,
-              child: ReorderableListView.builder(
-                itemCount: rows.length,
-                onReorderItem: (oldIndex, newIndex) => setDialogState(() {
-                  final row = rows.removeAt(oldIndex);
-                  rows.insert(newIndex, row);
-                }),
-                itemBuilder: (context, index) {
-                  final row = rows[index];
-                  return ListTile(
-                    key: ValueKey(row.id),
-                    leading: Text('${index + 1}위'),
-                    title: Text(row.name),
-                    subtitle: Text('계산 ${row.rank}위 → 최종 ${index + 1}위'),
-                    trailing: Text('${row.points}P'),
-                  );
-                },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Text('회원 목록을 끌어 최종 순위를 직접 지정하세요.'),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: ReorderableListView.builder(
+                      itemCount: rows.length,
+                      onReorderItem: (oldIndex, newIndex) => setDialogState(() {
+                        final row = rows.removeAt(oldIndex);
+                        rows.insert(newIndex, row);
+                      }),
+                      itemBuilder: (context, index) {
+                        final row = rows[index];
+                        return ListTile(
+                          key: ValueKey(row.id),
+                          leading: Text('${index + 1}위'),
+                          title: Text(row.name),
+                          subtitle: Text('시즌 ${row.rank}위 → 최종 ${index + 1}위'),
+                          trailing: Text('${row.points}P'),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
             actions: <Widget>[

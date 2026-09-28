@@ -550,12 +550,14 @@ class _ClubAchievementCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       achievement.teamName,
-                      maxLines: 1,
+                      key: const Key('home-club-team-name'),
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 19,
+                        height: 1.2,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
@@ -572,11 +574,38 @@ class _ClubAchievementCard extends StatelessWidget {
                   style: TextStyle(color: AppColors.textSecondary),
                 )
               else ...<Widget>[
-                Text(
-                  achievement.seasonName!,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w700,
+                Container(
+                  key: const Key('home-club-season-name'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const Icon(
+                        Icons.calendar_month_outlined,
+                        size: 17,
+                        color: AppColors.primaryBright,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          achievement.seasonName!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -608,25 +637,31 @@ class _ClubAchievementCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    Text(
-                      '${achievement.points} P',
-                      key: const Key('home-club-points'),
-                      style: const TextStyle(
-                        color: AppColors.primaryBright,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const Text(
+                          '시즌 포인트',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          '${achievement.points} P',
+                          key: const Key('home-club-points'),
+                          style: const TextStyle(
+                            color: AppColors.primaryBright,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                if (achievement.gold + achievement.silver + achievement.bronze >
-                    0) ...<Widget>[
-                  const SizedBox(height: 6),
-                  Text(
-                    '입상 ${achievement.gold}/${achievement.silver}/${achievement.bronze}',
-                    style: const TextStyle(color: AppColors.textSecondary),
-                  ),
-                ],
                 if (achievement.bowlerHiddenEnabled) ...<Widget>[
                   const SizedBox(height: 6),
                   Text(
