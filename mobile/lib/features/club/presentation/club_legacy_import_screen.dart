@@ -14,8 +14,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ClubLegacyImportScreen extends ConsumerStatefulWidget {
-  const ClubLegacyImportScreen({super.key, required this.teamId});
+  const ClubLegacyImportScreen({
+    super.key,
+    required this.teamId,
+    this.seasonId,
+  });
   final String teamId;
+  final String? seasonId;
 
   @override
   ConsumerState<ClubLegacyImportScreen> createState() =>
@@ -43,7 +48,25 @@ class _ClubLegacyImportScreenState
               final canManage =
                   profile.myRole == ClubRole.owner ||
                   profile.myRole == ClubRole.manager;
-              final season = profile.activeSeason;
+              final selectedRequest = (
+                userId: user.id,
+                teamId: widget.teamId,
+                seasonId: widget.seasonId,
+                year: null as int?,
+                competitionType: 'ALL',
+              );
+              final selected = widget.seasonId == null
+                  ? null
+                  : ref.watch(clubSeasonRankingProvider(selectedRequest));
+              if (selected?.isLoading == true) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (selected?.hasError == true) {
+                return Center(child: Text(clubErrorMessage(selected!.error!)));
+              }
+              final season = widget.seasonId == null
+                  ? profile.activeSeason
+                  : selected?.value?.season;
               if (!profile.bowlerHiddenEnabled || !canManage) {
                 return const Center(child: Text('기존 시즌 데이터를 관리할 권한이 없습니다.'));
               }

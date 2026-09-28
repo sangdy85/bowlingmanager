@@ -13,8 +13,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class ClubTeamSettingsScreen extends ConsumerStatefulWidget {
-  const ClubTeamSettingsScreen({required this.teamId, super.key});
+  const ClubTeamSettingsScreen({
+    required this.teamId,
+    this.seasonId,
+    super.key,
+  });
   final String teamId;
+  final String? seasonId;
   @override
   ConsumerState<ClubTeamSettingsScreen> createState() =>
       _ClubTeamSettingsScreenState();
@@ -62,17 +67,48 @@ class _ClubTeamSettingsScreenState
           error: (error, _) => Center(
             child: ClubErrorCard(
               message: clubErrorMessage(error),
-              onRetry: () => ref.refresh(provider.future),
+              onRetry: () async {
+                ref.invalidate(provider);
+              },
             ),
           ),
           data: (ClubTeamProfile profile) {
+            final selectedRequest = (
+              userId: user.id,
+              teamId: widget.teamId,
+              seasonId: widget.seasonId,
+              year: null as int?,
+              competitionType: 'ALL',
+            );
+            final selectedValue = widget.seasonId == null
+                ? null
+                : ref.watch(clubSeasonRankingProvider(selectedRequest));
+            if (selectedValue?.isLoading == true) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (selectedValue?.hasError == true) {
+              return Center(
+                child: ClubErrorCard(
+                  message: clubErrorMessage(selectedValue!.error!),
+                  onRetry: () async {
+                    ref.invalidate(clubSeasonRankingProvider(selectedRequest));
+                  },
+                ),
+              );
+            }
+            final managedSeason = widget.seasonId == null
+                ? profile.activeSeason
+                : selectedValue?.value?.season;
+            if (widget.seasonId != null && managedSeason == null) {
+              return const Center(child: Text('선택한 시즌을 찾을 수 없습니다.'));
+            }
             if (!_initialized) {
               _description.text = profile.description ?? '';
               _notice.text = profile.notice ?? '';
               _ranking = profile.bowlerHiddenEnabled
                   ? true
                   : profile.seasonRankingEnabled;
-              final season = profile.activeSeason;
+              final season = managedSeason;
               if (season != null) {
                 _seasonName.text = season.name;
                 _start.text = _date(season.startDate);
@@ -100,7 +136,7 @@ class _ClubTeamSettingsScreenState
                       onPressed: context.pop,
                       icon: const Icon(Icons.arrow_back_rounded),
                     ),
-                    const Text('팀 관리'),
+                    Text(widget.seasonId == null ? '팀 관리' : '시즌 관리'),
                   ],
                 ),
                 const SizedBox(height: 18),
@@ -126,6 +162,15 @@ class _ClubTeamSettingsScreenState
                       onChanged: (value) => setState(() => _ranking = value),
                     ),
                   if (_ranking) ...<Widget>[
+                    Text(
+                      '기본 정보',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    if (managedSeason != null)
+                      Text(
+                        '${managedSeason.name} · ${_seasonLifecycleLabel(managedSeason.lifecycleStatus)}',
+                      ),
+                    const SizedBox(height: 8),
                     TextField(
                       controller: _seasonName,
                       decoration: const InputDecoration(labelText: '시즌 이름'),
@@ -159,7 +204,7 @@ class _ClubTeamSettingsScreenState
                         groupValue: _rankingMode,
                         onChanged: (value) {
                           if (value != null) {
-                            _changeRankingMode(profile, request, value);
+                            _changeRankingMode(managedSeason, request, value);
                           }
                         },
                         child: const Column(
@@ -215,6 +260,11 @@ class _ClubTeamSettingsScreenState
                       ),
                     if (profile.bowlerHiddenEnabled &&
                         _rankingMode == 'DATA') ...<Widget>[
+                      const SizedBox(height: 16),
+                      Text(
+                        '시즌 데이터',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       _SeasonPointTableEditor(
                         key: const Key('season-team-points'),
                         title: '팀전 시즌 순위 포인트',
@@ -232,52 +282,64 @@ class _ClubTeamSettingsScreenState
                       const SizedBox(height: 8),
                       OutlinedButton.icon(
                         key: const Key('season-point-management-link'),
-                        onPressed: profile.activeSeason == null
+                        onPressed: managedSeason == null
                             ? null
                             : () => context.push(
-                                '/club/${Uri.encodeComponent(widget.teamId)}/manage/team/season-points',
+                                '/club/${Uri.encodeComponent(widget.teamId)}/manage/team/season-points?seasonId=${Uri.encodeQueryComponent(managedSeason.id)}',
                               ),
                         icon: const Icon(Icons.tune),
                         label: const Text('포인트 관리'),
                       ),
                       OutlinedButton.icon(
                         key: const Key('season-legacy-import-link'),
-                        onPressed: profile.activeSeason == null
+                        onPressed: managedSeason == null
                             ? null
                             : () => context.push(
-                                '/club/${Uri.encodeComponent(widget.teamId)}/manage/team/season-import',
+                                '/club/${Uri.encodeComponent(widget.teamId)}/manage/team/season-import?seasonId=${Uri.encodeQueryComponent(managedSeason.id)}',
                               ),
                         icon: const Icon(Icons.upload_file),
                         label: const Text('기존 시즌 데이터 가져오기'),
                       ),
                       OutlinedButton.icon(
                         key: const Key('season-manual-competition-add'),
-                        onPressed: profile.activeSeason == null
+                        onPressed: managedSeason == null
                             ? null
-                            : () => _addManualCompetition(profile, request),
+                            : () =>
+                                  _addManualCompetition(managedSeason, request),
                         icon: const Icon(Icons.add_chart),
                         label: const Text('수동 대회 추가'),
                       ),
-                      if (profile.activeSeason != null)
+                      if (managedSeason != null)
                         _ManualCompetitionList(
                           request: (
                             userId: request.userId,
                             teamId: request.teamId,
-                            seasonId: profile.activeSeason!.id,
+                            seasonId: managedSeason.id,
                           ),
                           onEdit: (competition) => _editManualCompetition(
-                            profile,
+                            managedSeason,
                             request,
                             competition,
                           ),
                         ),
+                      if (managedSeason != null) ...<Widget>[
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          key: const Key('managed-season-ranking-link'),
+                          onPressed: () => context.push(
+                            '/club/${Uri.encodeComponent(widget.teamId)}/records/season?seasonId=${Uri.encodeQueryComponent(managedSeason.id)}',
+                          ),
+                          icon: const Icon(Icons.leaderboard_outlined),
+                          label: const Text('현재 종합순위 및 최종순위 관리'),
+                        ),
+                      ],
                     ],
                     if (profile.bowlerHiddenEnabled &&
                         _rankingMode == 'IMAGE') ...<Widget>[
                       const SizedBox(height: 8),
                       _RankingImageManager(
                         teamId: widget.teamId,
-                        season: profile.activeSeason,
+                        season: managedSeason,
                         request: request,
                       ),
                     ],
@@ -286,7 +348,9 @@ class _ClubTeamSettingsScreenState
                 const SizedBox(height: 18),
                 FilledButton(
                   key: const Key('team-settings-save'),
-                  onPressed: _saving ? null : () => _save(profile, request),
+                  onPressed: _saving
+                      ? null
+                      : () => _save(profile, managedSeason, request),
                   child: Text(_saving ? '저장 중...' : '저장'),
                 ),
               ],
@@ -296,12 +360,11 @@ class _ClubTeamSettingsScreenState
   }
 
   Future<void> _changeRankingMode(
-    ClubTeamProfile profile,
+    ClubSeason? season,
     ClubExpansionRequest request,
     String next,
   ) async {
     if (next == _rankingMode) return;
-    final season = profile.activeSeason;
     if (season == null) {
       setState(() => _rankingMode = next);
       return;
@@ -351,11 +414,9 @@ class _ClubTeamSettingsScreenState
   }
 
   Future<void> _addManualCompetition(
-    ClubTeamProfile profile,
+    ClubSeason season,
     ClubExpansionRequest request,
   ) async {
-    final season = profile.activeSeason;
-    if (season == null) return;
     try {
       final ranking = await ref.read(
         clubSeasonRankingProvider((
@@ -392,12 +453,10 @@ class _ClubTeamSettingsScreenState
   }
 
   Future<void> _editManualCompetition(
-    ClubTeamProfile profile,
+    ClubSeason season,
     ClubExpansionRequest request,
     ClubSeasonManualCompetition competition,
   ) async {
-    final season = profile.activeSeason;
-    if (season == null) return;
     try {
       final ranking = await ref.read(
         clubSeasonRankingProvider((
@@ -443,6 +502,7 @@ class _ClubTeamSettingsScreenState
 
   Future<void> _save(
     ClubTeamProfile profile,
+    ClubSeason? managedSeason,
     ClubExpansionRequest request,
   ) async {
     setState(() => _saving = true);
@@ -458,7 +518,7 @@ class _ClubTeamSettingsScreenState
             : _ranking;
         if (_ranking) {
           body['season'] = <String, dynamic>{
-            if (profile.activeSeason != null) 'id': profile.activeSeason!.id,
+            if (managedSeason != null) 'id': managedSeason.id,
             'name': _seasonName.text.trim(),
             'startDate': _start.text.trim(),
             'endDate': _end.text.trim(),
@@ -499,6 +559,12 @@ class _ClubTeamSettingsScreenState
 }
 
 String _date(DateTime value) => formatClubDate(value);
+
+String _seasonLifecycleLabel(String value) => switch (value) {
+  'UPCOMING' => '예정',
+  'ENDED' => '종료',
+  _ => '진행 중',
+};
 
 List<int> _formatPoints(List<ClubSeasonRankPoint> points) =>
     points.map((item) => item.points).toList();
@@ -881,6 +947,14 @@ class _RankingImageManagerState extends ConsumerState<_RankingImageManager> {
                     .map(
                       (image) => ListTile(
                         key: Key('ranking-image-${image.id}'),
+                        leading: _RankingImageThumbnail(
+                          request: (
+                            userId: widget.request.userId,
+                            teamId: widget.teamId,
+                            seasonId: season.id,
+                            imageId: image.id,
+                          ),
+                        ),
                         title: Text('순위표 ${image.displayOrder + 1}'),
                         subtitle: Text('${(image.size / 1024).ceil()}KB'),
                         onTap: () => _showImage(season.id, image.id),
@@ -921,6 +995,12 @@ class _RankingImageManagerState extends ConsumerState<_RankingImageManager> {
   ) async {
     final images = await ref.read(clubPostImagePickerProvider).pickImages();
     if (images.isEmpty || !mounted) return;
+    if (images.any((image) => image.bytes.lengthInBytes > 5 * 1024 * 1024)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('순위표 이미지는 파일당 5MB 이하여야 합니다.')),
+      );
+      return;
+    }
     setState(() => _busy = true);
     try {
       for (final image in images) {
@@ -929,6 +1009,10 @@ class _RankingImageManagerState extends ConsumerState<_RankingImageManager> {
             .uploadRankingImage(widget.teamId, seasonId, image);
       }
       ref.invalidate(clubSeasonRankingProvider(request));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('순위표 이미지를 등록했습니다.')));
+      }
     } on Object catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -1003,5 +1087,34 @@ class _RankingImageManagerState extends ConsumerState<_RankingImageManager> {
             .showSnackBar(SnackBar(content: Text(clubErrorMessage(error))));
       }
     }
+  }
+}
+
+class _RankingImageThumbnail extends ConsumerWidget {
+  const _RankingImageThumbnail({required this.request});
+
+  final ClubRankingImageRequest request;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final image = ref.watch(clubRankingImageProvider(request));
+    return SizedBox(
+      width: 52,
+      height: 52,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: image.when(
+          loading: () => const ColoredBox(
+            color: Color(0x11000000),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          error: (_, _) => const ColoredBox(
+            color: Color(0x11000000),
+            child: Icon(Icons.broken_image_outlined),
+          ),
+          data: (bytes) => Image.memory(bytes, fit: BoxFit.cover),
+        ),
+      ),
+    );
   }
 }

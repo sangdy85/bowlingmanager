@@ -90,6 +90,11 @@ void main() {
 
     expect(repository.loginCount, 1);
     expect(find.text('안녕하세요,\n테스트 볼러님 👋'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('에버 정보'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('정기전 AVG'), findsOneWidget);
     expect(find.text('촬영'), findsOneWidget);
   });

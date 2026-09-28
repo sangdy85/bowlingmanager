@@ -116,7 +116,7 @@ test('season creation validates calendar dates and creates an independent upcomi
     findFirst: async args => args.where?.startDate ? null : season({ name: '2026 시즌' }),
     create: async args => {
       createdRows.push(args.data);
-      return season({ id: 'season-2027', ...args.data });
+      return season({ id: `season-${createdRows.length}`, ...args.data });
     },
   };
   const fake = {
@@ -133,18 +133,32 @@ test('season creation validates calendar dates and creates an independent upcomi
   });
   await assert.rejects(
     api.createTeamSeason('owner', 'team-a', { name: '잘못된 날짜', startDate: '2027-02-30', endDate: '2027-12-31' }),
-    error => error.code === 'INVALID_SEASON',
+    error => error.code === 'INVALID_SEASON_DATE',
   );
-  const result = await api.createTeamSeason(
+  await assert.rejects(
+    api.createTeamSeason('owner', 'team-a', { name: '잘못된 범위', startDate: '2027-12-31', endDate: '2027-01-01' }),
+    error => error.code === 'INVALID_SEASON_RANGE',
+  );
+  const upcoming = await api.createTeamSeason(
     'owner', 'team-a',
     { name: '2027 시즌', startDate: '2027-01-01', endDate: '2027-12-31', rankingMode: 'DATA' },
     new Date('2026-09-28T00:00:00Z'),
   );
-  assert.equal(result.id, 'season-2027');
-  assert.equal(result.lifecycleStatus, 'UPCOMING');
-  assert.equal(createdRows.length, 1);
-  assert.equal(createdRows[0].status, 'DRAFT');
-  assert.equal(createdRows[0].teamId, 'team-a');
+  const active = await api.createTeamSeason(
+    'owner', 'team-a',
+    { name: '2026 하반기', startDate: '2026-07-01', endDate: '2026-12-31', rankingMode: 'DATA' },
+    new Date('2026-09-28T00:00:00Z'),
+  );
+  const ended = await api.createTeamSeason(
+    'owner', 'team-a',
+    { name: '2025 시즌', startDate: '2025-01-01', endDate: '2025-12-31', rankingMode: 'DATA' },
+    new Date('2026-09-28T00:00:00Z'),
+  );
+  assert.equal(upcoming.lifecycleStatus, 'UPCOMING');
+  assert.equal(active.lifecycleStatus, 'ACTIVE');
+  assert.equal(ended.lifecycleStatus, 'ENDED');
+  assert.deepEqual(createdRows.map(row => row.status), ['DRAFT', 'ACTIVE', 'COMPLETED']);
+  assert.equal(createdRows.every(row => row.teamId === 'team-a'), true);
 });
 
 test('DATA finalization supports rank override, immutable points and revision history', async () => {
@@ -152,7 +166,7 @@ test('DATA finalization supports rank override, immutable points and revision hi
   const snapshots = [];
   const fake = {
     team: { findFirst: async () => ({ id: 'team-a', ownerId: 'owner', bowlerHiddenEnabled: true, seasonRankingEnabled: true, User: [] }) },
-    teamSeason: { findFirst: async () => season() },
+    teamSeason: { findFirst: async () => season({ status: 'COMPLETED', enabled: false }) },
     $transaction: async callback => callback({
       seasonFinalRanking: {
         findFirst: async () => revision === 0 ? null : { revision },
@@ -188,7 +202,7 @@ test('DATA finalization supports rank override, immutable points and revision hi
 test('members cannot create or finalize seasons and IMAGE needs an official image', async () => {
   const fake = {
     team: { findFirst: async () => ({ id: 'team-a', ownerId: 'owner', bowlerHiddenEnabled: true, seasonRankingEnabled: true, User: [] }) },
-    teamSeason: { findFirst: async () => season({ rankingMode: 'IMAGE' }) },
+    teamSeason: { findFirst: async () => season({ rankingMode: 'IMAGE', status: 'COMPLETED', enabled: false }) },
     seasonRankingImage: { count: async () => 0 },
   };
   const api = loadTs('src/lib/mobile-api/season-history.ts', {
@@ -198,6 +212,22 @@ test('members cannot create or finalize seasons and IMAGE needs an official imag
   });
   await assert.rejects(api.createTeamSeason('member', 'team-a', {}), error => error.code === 'FORBIDDEN');
   await assert.rejects(api.finalizeTeamSeason('owner', 'team-a', 'season-a', {}), error => error.code === 'RANKING_IMAGE_REQUIRED');
+});
+
+test('active season final ranking is blocked until the season ends', async () => {
+  const fake = {
+    team: { findFirst: async () => ({ id: 'team-a', ownerId: 'owner', bowlerHiddenEnabled: true, seasonRankingEnabled: true, User: [] }) },
+    teamSeason: { findFirst: async () => season({ status: 'ACTIVE' }) },
+  };
+  const api = loadTs('src/lib/mobile-api/season-history.ts', {
+    '@/lib/prisma': fake,
+    '@/lib/mobile-api/club-expansion': { getMobileSeasonRanking: async () => ({ rankings: [] }) },
+    '@/lib/mobile-api/unified-season': { serializeSeasonPointTable: () => '{}', serializeSeasonSummary: value => value },
+  });
+  await assert.rejects(
+    api.finalizeTeamSeason('owner', 'team-a', 'season-a', {}),
+    error => error.code === 'SEASON_NOT_ENDED' && error.status === 409,
+  );
 });
 
 test('season history returns one current season plus independent past seasons and preserved final names', async () => {

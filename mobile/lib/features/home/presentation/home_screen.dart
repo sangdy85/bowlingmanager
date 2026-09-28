@@ -77,6 +77,23 @@ class _DashboardContent extends StatelessWidget {
           const SizedBox(height: 18),
           _NextEventCard(event: dashboard.nextEvent, userId: userId),
           const SizedBox(height: 26),
+          const _SectionTitle(title: '나의 동호회 순위'),
+          const SizedBox(height: 12),
+          if (dashboard.clubAchievements.isEmpty)
+            const _EmptyAchievementCard()
+          else
+            for (final DashboardClubAchievement achievement
+                in dashboard.clubAchievements) ...<Widget>[
+              _ClubAchievementCard(achievement: achievement),
+              const SizedBox(height: 10),
+            ],
+          const SizedBox(height: 28),
+          const _SectionTitle(title: '나의 기록실'),
+          const SizedBox(height: 12),
+          DashboardRadarCard(radar: dashboard.profileRadar),
+          const SizedBox(height: 28),
+          const _SectionTitle(title: '에버 정보'),
+          const SizedBox(height: 12),
           Row(
             children: <Widget>[
               Expanded(
@@ -101,21 +118,6 @@ class _DashboardContent extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 28),
-          const _SectionTitle(title: '나의 동호회 순위'),
-          const SizedBox(height: 12),
-          if (dashboard.clubAchievements.isEmpty)
-            const _EmptyAchievementCard()
-          else
-            for (final DashboardClubAchievement achievement
-                in dashboard.clubAchievements) ...<Widget>[
-              _ClubAchievementCard(achievement: achievement),
-              const SizedBox(height: 10),
-            ],
-          const SizedBox(height: 28),
-          const _SectionTitle(title: '나의 기록실'),
-          const SizedBox(height: 12),
-          DashboardRadarCard(radar: dashboard.profileRadar),
           const SizedBox(height: 28),
           const _SectionTitle(title: '나의 입상'),
           const SizedBox(height: 12),

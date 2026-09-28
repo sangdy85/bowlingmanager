@@ -93,9 +93,17 @@ export async function createTeamSeason(actorUserId: string, teamId: string, inpu
     const startDate = dateKey(body.startDate, false);
     const endDate = dateKey(body.endDate, true);
     const rankingMode = body.rankingMode === "IMAGE" && access.team.bowlerHiddenEnabled ? "IMAGE" : "DATA";
-    if (!name || name.length > 80 || !startDate || !endDate || startDate >= endDate ||
-        (body.rankingMode !== undefined && body.rankingMode !== "DATA" && body.rankingMode !== "IMAGE")) {
-        throw new SeasonHistoryError("INVALID_SEASON", "시즌 이름과 시작일·종료일을 확인해주세요.", 400);
+    if (!name || name.length > 80) {
+        throw new SeasonHistoryError("INVALID_SEASON", "시즌 이름을 확인해주세요.", 400);
+    }
+    if (!startDate || !endDate) {
+        throw new SeasonHistoryError("INVALID_SEASON_DATE", "시작일과 종료일을 확인해주세요.", 400);
+    }
+    if (startDate >= endDate) {
+        throw new SeasonHistoryError("INVALID_SEASON_RANGE", "종료일은 시작일보다 이후여야 합니다.", 400);
+    }
+    if (body.rankingMode !== undefined && body.rankingMode !== "DATA" && body.rankingMode !== "IMAGE") {
+        throw new SeasonHistoryError("SEASON_MODE_CONFLICT", "시즌 순위 관리 방식을 확인해주세요.", 400);
     }
     if (body.rankingMode === "IMAGE" && !access.team.bowlerHiddenEnabled) {
         throw new SeasonHistoryError("FEATURE_DISABLED", "Bowler Hidden 팀에서만 이미지 순위 방식을 사용할 수 있습니다.", 403);
@@ -161,6 +169,9 @@ export async function finalizeTeamSeason(actorUserId: string, teamId: string, se
     const access = await loadTeamAccess(actorUserId, teamId); requireManager(access);
     const season = await prisma.teamSeason.findFirst({ where: { id: seasonId, teamId } });
     if (!season) throw new SeasonHistoryError("SEASON_NOT_FOUND", "시즌을 찾을 수 없습니다.", 404);
+    if (seasonLifecycleStatus(season) !== "ENDED") {
+        throw new SeasonHistoryError("SEASON_NOT_ENDED", "시즌 기간이 끝난 후 최종 순위를 확정할 수 있습니다.", 409);
+    }
     const body = input && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
     let entries: { memberId: string; displayName: string; totalPoints: number }[] = [];
     if (season.rankingMode === "IMAGE") {

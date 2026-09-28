@@ -245,6 +245,7 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                         builder: (BuildContext context, GoRouterState state) =>
                             ClubTeamSettingsScreen(
                               teamId: state.pathParameters['teamId']!,
+                              seasonId: state.uri.queryParameters['seasonId'],
                             ),
                         routes: <RouteBase>[
                           GoRoute(
@@ -253,6 +254,8 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                                 (BuildContext context, GoRouterState state) =>
                                     ClubSeasonPointsScreen(
                                       teamId: state.pathParameters['teamId']!,
+                                      seasonId:
+                                          state.uri.queryParameters['seasonId'],
                                     ),
                           ),
                           GoRoute(
@@ -261,6 +264,8 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                                 (BuildContext context, GoRouterState state) =>
                                     ClubLegacyImportScreen(
                                       teamId: state.pathParameters['teamId']!,
+                                      seasonId:
+                                          state.uri.queryParameters['seasonId'],
                                     ),
                           ),
                         ],
@@ -299,6 +304,8 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                         builder: (BuildContext context, GoRouterState state) =>
                             ClubSeasonRankingScreen(
                               teamId: state.pathParameters['teamId']!,
+                              initialSeasonId:
+                                  state.uri.queryParameters['seasonId'],
                             ),
                       ),
                       GoRoute(

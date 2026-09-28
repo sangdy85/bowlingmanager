@@ -418,18 +418,6 @@ class _OverviewBody extends ConsumerWidget {
               const SizedBox(height: 10),
               _MyCompetitionHistory(items: season.myCompetitionHistory),
             ],
-            if (season.rankingMode == 'DATA' &&
-                team.bowlerHiddenEnabled &&
-                season.rows.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 22),
-              const Text(
-                '입상 기록',
-                key: Key('hidden-medal-reference'),
-                style: AppTextStyles.title,
-              ),
-              const SizedBox(height: 10),
-              _MedalLeaders(rows: season.rows),
-            ],
           ],
         ],
       ),
@@ -447,41 +435,32 @@ class _MyCompetitionHistory extends StatelessWidget {
     if (items.isEmpty) {
       return const _EmptyCard(message: '공식 대회 기록이 없습니다.');
     }
-    final Map<int, List<ClubSeasonPointEntry>> byMonth =
-        <int, List<ClubSeasonPointEntry>>{};
-    for (final ClubSeasonPointEntry item in items) {
-      final month = item.month;
-      if (month != null) {
-        byMonth.putIfAbsent(month, () => <ClubSeasonPointEntry>[]).add(item);
-      }
-    }
+    final ordered = List<ClubSeasonPointEntry>.from(items)
+      ..sort((left, right) {
+        final date = (left.competitionDate ?? DateTime(0)).compareTo(
+          right.competitionDate ?? DateTime(0),
+        );
+        return date != 0 ? date : left.id.compareTo(right.id);
+      });
     return Column(
       children: <Widget>[
-        for (final int month in byMonth.keys.toList()..sort())
+        for (final item in ordered)
           Card(
-            child: ExpansionTile(
-              initiallyExpanded:
-                  month == byMonth.keys.reduce((a, b) => a > b ? a : b),
-              title: Text('$month월'),
-              children: byMonth[month]!
-                  .map(
-                    (ClubSeasonPointEntry item) => ListTile(
-                      dense: true,
-                      title: Text(item.competitionTitle),
-                      subtitle: Text(
-                        _competitionTypeLabel(item.competitionType),
-                      ),
-                      trailing: Text(
-                        item.participationStatus == 'ABSENT'
-                            ? '불참'
-                            : item.finalRank == null
-                            ? '${item.points}P'
-                            : '${item.finalRank}위 · ${item.points}P',
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                  )
-                  .toList(),
+            child: ListTile(
+              key: Key('my-competition-${item.id}'),
+              dense: true,
+              title: Text(item.competitionTitle),
+              subtitle: Text(
+                '${item.competitionDate == null ? '' : '${_date(item.competitionDate!)} · '}${_competitionTypeLabel(item.competitionType)}',
+              ),
+              trailing: Text(
+                item.participationStatus == 'ABSENT'
+                    ? '불참'
+                    : item.finalRank == null
+                    ? '${item.points}P'
+                    : '${item.finalRank}위 · ${item.points >= 0 ? '+' : ''}${item.points}P',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
             ),
           ),
       ],

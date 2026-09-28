@@ -357,6 +357,22 @@ class ClubActivityFeedController extends AsyncNotifier<ClubActivityFeedState> {
 }
 
 String clubErrorMessage(Object error) {
-  if (error is ApiException) return error.userMessage;
+  if (error is ApiException) {
+    return switch (error.code) {
+      'SEASON_DATE_OVERLAP' => '기존 시즌과 기간이 겹칩니다.',
+      'SEASON_CREATE_CONFLICT' => '시즌이 동시에 변경되었습니다. 다시 시도해주세요.',
+      'INVALID_SEASON' => '시즌 이름을 확인해주세요.',
+      'INVALID_SEASON_DATE' => '시작일과 종료일을 확인해주세요.',
+      'INVALID_SEASON_RANGE' => '종료일은 시작일보다 이후여야 합니다.',
+      'SEASON_NOT_FOUND' => '시즌을 찾을 수 없습니다.',
+      'SEASON_RANKING_MODE_MISMATCH' ||
+      'SEASON_MODE_CONFLICT' => '현재 시즌의 순위 관리 방식과 맞지 않는 기능입니다.',
+      'RANKING_IMAGE_REQUIRED' || 'IMAGE_REQUIRED' => '순위표 이미지를 먼저 등록해주세요.',
+      'SEASON_NOT_ENDED' => '시즌 기간이 끝난 후 최종 순위를 확정할 수 있습니다.',
+      'FEATURE_DISABLED' => 'Bowler Hidden 팀에서만 사용할 수 있는 기능입니다.',
+      'FORBIDDEN' => '시즌을 관리할 권한이 없습니다.',
+      _ => error.userMessage,
+    };
+  }
   return '동호회 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.';
 }

@@ -183,6 +183,11 @@ void main() {
     pending.complete(testDashboard);
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('에버 정보'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('187.4'), findsOneWidget);
   });
 
@@ -195,10 +200,15 @@ void main() {
     await _pumpAuthenticatedApp(tester, dashboardRepository);
     await tester.pumpAndSettle();
 
+    expect(find.text('예정된 일정이 없습니다.'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('에버 정보'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('정기전 AVG'), findsOneWidget);
     expect(find.text('공식전 AVG'), findsOneWidget);
     expect(find.text('게임 수'), findsOneWidget);
-    expect(find.text('예정된 일정이 없습니다.'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('최근 경기'),
       500,
@@ -301,6 +311,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(dashboardRepository.callCount, 2);
+    await tester.scrollUntilVisible(
+      find.text('에버 정보'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('187.4'), findsOneWidget);
   });
 
@@ -322,6 +337,7 @@ void main() {
       for (final String section in <String>[
         '나의 동호회 순위',
         '나의 기록실',
+        '에버 정보',
         '나의 입상',
         '개인 상세 통계',
         '최근 경기 AVG',
@@ -355,6 +371,46 @@ void main() {
       expect(find.text('동호회 상세'), findsOneWidget);
     },
   );
+
+  testWidgets('Home keeps the requested section order at 412px and scale 1.2', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    tester.platformDispatcher.textScaleFactorTestValue = 1.2;
+    addTearDown(() {
+      tester.binding.setSurfaceSize(null);
+      tester.platformDispatcher.clearTextScaleFactorTestValue();
+    });
+    final repository = FakeDashboardRepository()..result = _expandedDashboard();
+    await _pumpAuthenticatedApp(tester, repository);
+    await tester.pumpAndSettle();
+
+    final offsets = <double>[];
+    for (final section in <String>[
+      '예정된 일정이 없습니다.',
+      '나의 동호회 순위',
+      '나의 기록실',
+      '에버 정보',
+      '나의 입상',
+    ]) {
+      await tester.scrollUntilVisible(
+        find.text(section),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pump();
+      offsets.add(
+        tester
+            .state<ScrollableState>(find.byType(Scrollable).first)
+            .position
+            .pixels,
+      );
+      expect(tester.takeException(), isNull);
+    }
+    for (var index = 1; index < offsets.length; index++) {
+      expect(offsets[index], greaterThanOrEqualTo(offsets[index - 1]));
+    }
+  });
 
   testWidgets('Home pull-to-refresh reloads the dashboard', (
     WidgetTester tester,

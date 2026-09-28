@@ -178,6 +178,69 @@ void main() {
     expect(find.text('시즌 순위표 이미지'), findsOneWidget);
   });
 
+  testWidgets('past IMAGE season opens its own editable management data', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(600, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    final pastSeason = ClubSeason(
+      id: 'season-past-image',
+      name: '2025 이미지 시즌',
+      startDate: DateTime(2025),
+      endDate: DateTime(2025, 12, 31),
+      scoringMode: 'FULL_RANK',
+      points: const <int>[5, 3, 1],
+      rankingMode: 'IMAGE',
+      status: 'COMPLETED',
+      lifecycleStatus: 'ENDED',
+    );
+    final ranking = ClubSeasonRanking(
+      enabled: true,
+      season: pastSeason,
+      seasons: <ClubSeason>[pastSeason, _season],
+      rows: const <ClubSeasonRankingRow>[],
+      bowlerHiddenEnabled: true,
+      rankingMode: 'IMAGE',
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubTeamProfileProvider.overrideWith(
+            (ref, request) async => _profile,
+          ),
+          clubSeasonRankingProvider.overrideWith(
+            (ref, request) async => ranking,
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: ClubTeamSettingsScreen(
+              teamId: 'team-1',
+              seasonId: 'season-past-image',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('시즌 관리'), findsOneWidget);
+    expect(find.text('2025 이미지 시즌'), findsOneWidget);
+    expect(find.byKey(const Key('ranking-mode-image')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('시즌 순위표 이미지'),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('시즌 순위표 이미지'), findsOneWidget);
+    expect(
+      find.byKey(const Key('season-manual-competition-add')),
+      findsNothing,
+    );
+  });
+
   testWidgets(
     'Hidden season point management is limited to OWNER and MANAGER',
     (WidgetTester tester) async {
@@ -1086,7 +1149,6 @@ void main() {
         const Key('hidden-overall-ranking-main'),
       );
       final myHistory = find.text('나의 대회 성적');
-      final medalReference = find.byKey(const Key('hidden-medal-reference'));
       expect(hiddenRanking, findsOneWidget);
       expect(
         find.descendant(of: hiddenRanking, matching: find.text('🥇')),
@@ -1096,11 +1158,13 @@ void main() {
         tester.getTopLeft(hiddenRanking).dy,
         lessThan(tester.getTopLeft(myHistory).dy),
       );
-      expect(
-        tester.getTopLeft(myHistory).dy,
-        lessThan(tester.getTopLeft(medalReference).dy),
-      );
+      expect(find.byKey(const Key('hidden-medal-reference')), findsNothing);
       expect(find.text('나의 대회 성적'), findsOneWidget);
+      expect(find.byKey(const Key('my-competition-entry-1')), findsOneWidget);
+      expect(
+        find.byKey(const Key('my-competition-absent:event-2')),
+        findsOneWidget,
+      );
       expect(find.text('2월 팀전'), findsOneWidget);
       expect(find.text('불참'), findsOneWidget);
       await tester.tap(find.text('종합 기록'));

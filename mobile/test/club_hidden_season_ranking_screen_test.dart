@@ -217,4 +217,70 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('year selector lists every overlapping season as cards', (
+    tester,
+  ) async {
+    final auth = FakeAuthRepository()..bootstrapResult = testUser;
+    Map<String, Object> season(
+      String id,
+      String name,
+      String start,
+      String end,
+    ) => <String, Object>{
+      'id': id,
+      'name': name,
+      'status': 'COMPLETED',
+      'lifecycleStatus': 'ENDED',
+      'rankingMode': 'DATA',
+      'startDate': start,
+      'endDate': end,
+      'scoringMode': 'FULL_RANK',
+      'points': <int>[50, 30, 20],
+    };
+
+    final seasons = <Map<String, Object>>[
+      season('season-a', '2025 1차 시즌', '2025-01-01', '2025-04-30'),
+      season('season-b', '2025 2차 시즌', '2025-05-01', '2025-08-31'),
+      season('season-c', '2025 3차 시즌', '2025-09-01', '2025-12-31'),
+      season('season-d', '24-25 시즌', '2024-09-01', '2025-08-31'),
+      season('season-old', '2024 시즌', '2024-01-01', '2024-08-31'),
+    ];
+    final ranking = ClubSeasonRanking.fromJson(<String, dynamic>{
+      'enabled': true,
+      'bowlerHiddenEnabled': true,
+      'competitionType': 'ALL',
+      'rankingMode': 'DATA',
+      'season': null,
+      'seasons': seasons,
+      'rankings': <Object>[],
+      'competitionColumns': <Object>[],
+    });
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(auth),
+          clubSeasonRankingProvider.overrideWith(
+            (ref, request) async => ranking,
+          ),
+        ],
+        child: const MaterialApp(
+          home: ClubSeasonRankingScreen(teamId: 'team-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('season-history-year')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2025년과 겹치는 시즌').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('2025년 시즌'), findsOneWidget);
+    for (final id in <String>['season-a', 'season-b', 'season-c', 'season-d']) {
+      expect(find.byKey(Key('history-season-$id')), findsOneWidget);
+    }
+    expect(find.byKey(const Key('history-season-season-old')), findsNothing);
+    expect(find.text('조회 기간'), findsNothing);
+  });
 }

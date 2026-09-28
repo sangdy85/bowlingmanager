@@ -9,9 +9,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ClubSeasonPointsScreen extends ConsumerWidget {
-  const ClubSeasonPointsScreen({required this.teamId, super.key});
+  const ClubSeasonPointsScreen({
+    required this.teamId,
+    this.seasonId,
+    super.key,
+  });
 
   final String teamId;
+  final String? seasonId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -49,7 +54,25 @@ class ClubSeasonPointsScreen extends ConsumerWidget {
     if (!profile.bowlerHiddenEnabled || !canManage) {
       return const Center(child: Text('시즌 포인트를 관리할 권한이 없습니다.'));
     }
-    final season = profile.activeSeason;
+    final selectedRequest = (
+      userId: userId,
+      teamId: teamId,
+      seasonId: seasonId,
+      year: null as int?,
+      competitionType: 'ALL',
+    );
+    final selected = seasonId == null
+        ? null
+        : ref.watch(clubSeasonRankingProvider(selectedRequest));
+    if (selected?.isLoading == true) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (selected?.hasError == true) {
+      return Center(child: Text(clubErrorMessage(selected!.error!)));
+    }
+    final season = seasonId == null
+        ? profile.activeSeason
+        : selected?.value?.season;
     if (season == null) {
       return const Center(child: Text('활성 시즌이 없습니다.'));
     }
