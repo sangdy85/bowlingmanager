@@ -515,6 +515,7 @@ class ClubSeasonRanking {
     this.competitionColumns = const <ClubSeasonCompetitionColumn>[],
     this.rankingImages = const <ClubSeasonRankingImage>[],
     this.finalRanking,
+    this.myMemberId,
   });
   final bool enabled;
   final ClubSeason? season;
@@ -527,6 +528,7 @@ class ClubSeasonRanking {
   final List<ClubSeasonCompetitionColumn> competitionColumns;
   final List<ClubSeasonRankingImage> rankingImages;
   final ClubSeasonFinalRanking? finalRanking;
+  final String? myMemberId;
   factory ClubSeasonRanking.fromJson(Map<String, dynamic> json) {
     final rows = json['rankings'];
     final seasons = json['seasons'] ?? const <Object>[];
@@ -549,6 +551,7 @@ class ClubSeasonRanking {
         columns is! List ||
         images is! List ||
         (finalRanking != null && finalRanking is! Map) ||
+        (json['myMemberId'] != null && json['myMemberId'] is! String) ||
         !const <String>{
           'ALL',
           'INDIVIDUAL',
@@ -602,6 +605,7 @@ class ClubSeasonRanking {
           : ClubSeasonFinalRanking.fromJson(
               _map(finalRanking, 'Invalid final ranking.'),
             ),
+      myMemberId: json['myMemberId'] as String?,
     );
   }
 }

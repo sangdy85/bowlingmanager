@@ -125,11 +125,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('순위  이름  총P'), findsOneWidget);
+      expect(find.text('순위'), findsOneWidget);
+      expect(find.text('이름'), findsOneWidget);
+      expect(find.text('총P'), findsOneWidget);
       expect(find.text('120P'), findsOneWidget);
       expect(find.text('기초P'), findsOneWidget);
       expect(find.text('조정P'), findsOneWidget);
       expect(find.byType(SingleChildScrollView), findsWidgets);
+      expect(find.byType(Scrollbar), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

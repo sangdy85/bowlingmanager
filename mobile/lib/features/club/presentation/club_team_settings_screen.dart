@@ -4,6 +4,9 @@ import 'package:bowlingmanager_mobile/features/club/application/club_providers.d
 import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_season_date_field.dart';
+import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
+import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -130,20 +133,18 @@ class _ClubTeamSettingsScreenState
                     Row(
                       children: <Widget>[
                         Expanded(
-                          child: TextField(
+                          child: ClubSeasonDateField(
+                            key: const Key('season-start-date'),
                             controller: _start,
-                            decoration: const InputDecoration(
-                              labelText: '시작일 YYYY-MM-DD',
-                            ),
+                            label: '시작일',
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: TextField(
+                          child: ClubSeasonDateField(
+                            key: const Key('season-end-date'),
                             controller: _end,
-                            decoration: const InputDecoration(
-                              labelText: '종료일 YYYY-MM-DD',
-                            ),
+                            label: '종료일',
                           ),
                         ),
                       ],
@@ -478,24 +479,26 @@ class _ClubTeamSettingsScreenState
           .read(clubExpansionApiProvider)
           .updateProfile(widget.teamId, body);
       ref.invalidate(clubTeamProfileProvider(request));
-      ref.invalidate(
-        clubSeasonRankingProvider((
-          userId: request.userId,
-          teamId: request.teamId,
-          seasonId: null,
-          year: null,
-          competitionType: 'ALL',
-        )),
-      );
-      if (mounted) context.pop();
+      ref.invalidate(clubSeasonRankingProvider);
+      ref.invalidate(dashboardProvider(request.userId));
+      ref.invalidate(recordsControllerProvider(request.userId));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('팀과 시즌 설정을 저장했습니다.')));
+        context.pop();
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(clubErrorMessage(error))));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 }
 
-String _date(DateTime value) =>
-    '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+String _date(DateTime value) => formatClubDate(value);
 
 List<int> _formatPoints(List<ClubSeasonRankPoint> points) =>
     points.map((item) => item.points).toList();

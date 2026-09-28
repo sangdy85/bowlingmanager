@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { getMobileSeasonRanking } from "@/lib/mobile-api/club-expansion";
 import { serializeSeasonPointTable, serializeSeasonSummary } from "@/lib/mobile-api/unified-season";
-import { seasonLifecycleStatus } from "@/lib/mobile-api/season-lifecycle";
+import { seasonLifecycleStatus, seasonYearRange } from "@/lib/mobile-api/season-lifecycle";
 
 export class SeasonHistoryError extends Error {
     constructor(public readonly code: string, message: string, public readonly status: number) { super(message); }
@@ -58,10 +58,15 @@ function serializeFinalRanking(value: {
     };
 }
 
-export async function listTeamSeasons(actorUserId: string, teamId: string, now = new Date()) {
+export async function listTeamSeasons(actorUserId: string, teamId: string, now = new Date(), year?: number) {
     const access = await loadTeamAccess(actorUserId, teamId);
+    const range = year === undefined ? null : seasonYearRange(year);
     const seasons = await prisma.teamSeason.findMany({
-        where: { teamId }, orderBy: [{ startDate: "desc" }, { id: "asc" }],
+        where: {
+            teamId,
+            ...(range ? { startDate: { lte: range.end }, endDate: { gte: range.start } } : {}),
+        },
+        orderBy: [{ startDate: "desc" }, { id: "asc" }],
         include: { finalRankings: { orderBy: [{ revision: "desc" }], take: 1, select: finalRankingSelect } },
     });
     const serialized = seasons.map((season) => ({

@@ -389,6 +389,7 @@ test('board list, detail and create reuse Post data without exposing author ids'
 test('team profile lets managers configure type-specific season points and rejects invalid dates', async () => {
   let actorRole = 'manager';
   let transactions = 0;
+  let updatedSeason = null;
   const fakePrisma = {
     team: {
       findFirst: async () => fakeTeam(actorRole === 'owner' ? 'owner' : 'different-owner'),
@@ -400,7 +401,7 @@ test('team profile lets managers configure type-specific season points and rejec
         team: { update: async () => ({}) },
         teamSeason: {
           findFirst: async () => null,
-          updateMany: async () => ({ count: 0 }),
+          updateMany: async args => { updatedSeason = args.data; return { count: 1 }; },
           create: async () => ({}),
         },
       });
@@ -410,13 +411,16 @@ test('team profile lets managers configure type-specific season points and rejec
     '@/lib/prisma': fakePrisma,
   });
   const season = {
-    name: '2026 시즌', startDate: '2026-02-01', endDate: '2026-12-31',
+    id: 'season-1', name: '2026 시즌', startDate: '2026-02-01', endDate: '2026-12-31',
     scoringMode: 'PODIUM', points: [5, 3, 1],
   };
   await isolated.updateMobileTeamProfile('manager', 'team-1', {
     seasonRankingEnabled: true,
     season: { ...season, pointTables: { individual: [50, 40], team: [35, 20], event: [50, 40] } },
   });
+  assert.equal(updatedSeason.name, '2026 시즌');
+  assert.equal(updatedSeason.startDate.toISOString(), '2026-01-31T15:00:00.000Z');
+  assert.equal(updatedSeason.endDate.toISOString(), '2026-12-31T14:59:59.999Z');
   actorRole = 'owner';
   await assert.rejects(
     isolated.updateMobileTeamProfile('owner', 'team-1', {

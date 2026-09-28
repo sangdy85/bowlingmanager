@@ -39,6 +39,42 @@ test('season lifecycle distinguishes upcoming, active, ended and uses date overl
   assert.equal(api.seasonOverlapsYear(season({ startDate: new Date('2026-09-30T15:00:00Z'), endDate: new Date('2027-03-31T14:59:59Z') }), 2027), true);
 });
 
+test('inclusive year overlap includes every boundary-spanning season and excludes adjacent years', () => {
+  const api = loadTs('src/lib/mobile-api/season-lifecycle.ts');
+  const date = value => new Date(`${value}T00:00:00+09:00`);
+  const fixtures = [
+    ['A', '2025-01-01', '2025-04-30', true],
+    ['B', '2025-05-01', '2025-08-31', true],
+    ['C', '2025-09-01', '2025-12-31', true],
+    ['D', '2024-09-01', '2025-08-31', true],
+    ['E', '2024-01-01', '2024-12-31', false],
+    ['F', '2026-01-01', '2026-12-31', false],
+    ['G', '2025-12-31', '2026-06-30', true],
+    ['H', '2024-06-01', '2025-01-01', true],
+  ];
+  assert.deepEqual(
+    fixtures.filter(([, start, end]) => api.seasonOverlapsYear({ startDate: date(start), endDate: date(end) }, 2025)).map(([id]) => id),
+    ['A', 'B', 'C', 'D', 'G', 'H'],
+  );
+});
+
+test('season history applies the shared inclusive year filter to Prisma', async () => {
+  let receivedWhere = null;
+  const fake = {
+    team: { findFirst: async () => ({ id: 'team-a', ownerId: 'owner', bowlerHiddenEnabled: true, seasonRankingEnabled: true, User: [] }) },
+    teamSeason: { findMany: async args => { receivedWhere = args.where; return []; } },
+  };
+  const api = loadTs('src/lib/mobile-api/season-history.ts', {
+    '@/lib/prisma': fake,
+    '@/lib/mobile-api/club-expansion': { getMobileSeasonRanking: async () => ({ rankings: [] }) },
+    '@/lib/mobile-api/unified-season': { serializeSeasonPointTable: () => '{}', serializeSeasonSummary: value => value },
+  });
+  await api.listTeamSeasons('owner', 'team-a', new Date(), 2025);
+  assert.equal(receivedWhere.teamId, 'team-a');
+  assert.equal(receivedWhere.startDate.lte.toISOString(), '2025-12-31T14:59:59.999Z');
+  assert.equal(receivedWhere.endDate.gte.toISOString(), '2024-12-31T15:00:00.000Z');
+});
+
 test('final ranking migration is additive and preserves snapshot identity', () => {
   const sql = fs.readFileSync(path.resolve(__dirname, '../prisma/migrations/20260928120000_add_multi_season_final_rankings/migration.sql'), 'utf8');
   assert.match(sql, /CREATE TABLE "SeasonFinalRanking"/);

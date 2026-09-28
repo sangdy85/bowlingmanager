@@ -155,6 +155,7 @@ void main() {
     await api.fetchSeasonRanking(
       'team-1',
       seasonId: 'season-1',
+      year: 2025,
       competitionType: 'TEAM',
     );
     await api.fetchSeasonMember(
@@ -217,6 +218,7 @@ void main() {
       expect(request.queryParameters['seasonId'], 'season-1');
       expect(request.queryParameters['type'], 'TEAM');
     }
+    expect(rankingRequests.first.queryParameters['year'], 2025);
   });
 
   test('maps malformed expansion envelopes to the shared API error', () async {

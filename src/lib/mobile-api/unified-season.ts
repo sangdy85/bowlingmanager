@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { isCurrentSeason, seasonOverlapsYear } from "@/lib/mobile-api/season-lifecycle";
+import { teamActivityDateKey } from "@/lib/team-records";
 
 export const SEASON_STATUSES = ["DRAFT", "ACTIVE", "COMPLETED"] as const;
 export const SEASON_COMPETITION_TYPES = ["INDIVIDUAL", "TEAM", "EVENT"] as const;
@@ -567,8 +568,8 @@ export function serializeSeasonSummary(season: {
     const individual = readSeasonPointTable(season.individualPointsConfig);
     return {
         id: season.id, name: season.name,
-        startDate: season.startDate.toISOString().slice(0, 10),
-        endDate: season.endDate.toISOString().slice(0, 10),
+        startDate: teamActivityDateKey(season.startDate),
+        endDate: teamActivityDateKey(season.endDate),
         enabled: season.enabled, status: season.status,
         rankingMode: season.rankingMode === "IMAGE" ? "IMAGE" : "DATA",
         scoringMode: season.scoringMode === "PODIUM" ? "PODIUM" : "FULL_RANK",

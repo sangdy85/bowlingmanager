@@ -9,7 +9,7 @@ import { calculatePersonalProfile, PERSONAL_RADAR_AXES } from "@/lib/personal-pr
 import { getMobileSeasonRanking } from "@/lib/mobile-api/club-expansion";
 import { getBowlerHiddenCompetition } from "@/lib/mobile-api/bowler-hidden";
 import { kstDateKey } from "@/lib/mobile-api/team-events";
-import { seasonLifecycleStatus } from "@/lib/mobile-api/season-lifecycle";
+import { seasonLifecycleStatus, seasonYearRange } from "@/lib/mobile-api/season-lifecycle";
 import { groupScores } from "@/lib/score-groups";
 import {
     calculateTeamStatistics,
@@ -171,8 +171,7 @@ const defaultDependencies: MobileDashboardDependencies = {
     async listSeasonSummaries(user, year) {
         const hiddenMemberships = user.teamMemberships.filter((membership) => membership.team.bowlerHiddenEnabled);
         if (hiddenMemberships.length === 0) return [];
-        const start = new Date(`${year}-01-01T00:00:00.000+09:00`);
-        const end = new Date(`${year}-12-31T23:59:59.999+09:00`);
+        const { start, end } = seasonYearRange(year);
         const seasons = await prisma.teamSeason.findMany({
             where: { teamId: { in: hiddenMemberships.map((item) => item.teamId) }, startDate: { lte: end }, endDate: { gte: start } },
             orderBy: [{ startDate: "asc" }, { id: "asc" }],

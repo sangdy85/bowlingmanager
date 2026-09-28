@@ -3,6 +3,9 @@ import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.d
 import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_season_date_field.dart';
+import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
+import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +22,8 @@ class ClubSeasonRankingScreen extends ConsumerStatefulWidget {
 class _ClubSeasonRankingScreenState
     extends ConsumerState<ClubSeasonRankingScreen> {
   String? _seasonId;
+  int? _historyYear;
+  final Set<int> _knownYears = <int>{};
   String _competitionType = 'ALL';
 
   @override
@@ -29,7 +34,7 @@ class _ClubSeasonRankingScreenState
       userId: user.id,
       teamId: widget.teamId,
       seasonId: _seasonId,
-      year: null as int?,
+      year: _historyYear,
       competitionType: _competitionType,
     );
     final value = ref.watch(clubSeasonRankingProvider(request));
@@ -104,12 +109,46 @@ class _ClubSeasonRankingScreenState
     if (!ranking.enabled) {
       return const Center(child: Text('시즌 순위표가 비활성화되어 있습니다.'));
     }
+    for (final season in ranking.seasons) {
+      for (
+        int year = season.startDate.year;
+        year <= season.endDate.year;
+        year++
+      ) {
+        _knownYears.add(year);
+      }
+    }
+    final List<int> historyYears = _knownYears.toList()
+      ..sort((left, right) => right.compareTo(left));
     return RefreshIndicator(
       onRefresh: () => ref.refresh(clubSeasonRankingProvider(request).future),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: <Widget>[
+          DropdownButtonFormField<String>(
+            key: const Key('season-history-year'),
+            initialValue: _historyYear?.toString() ?? 'CURRENT',
+            decoration: const InputDecoration(labelText: '조회 기간'),
+            items: <DropdownMenuItem<String>>[
+              const DropdownMenuItem<String>(
+                value: 'CURRENT',
+                child: Text('현재 진행 시즌'),
+              ),
+              ...historyYears.map(
+                (year) => DropdownMenuItem<String>(
+                  value: '$year',
+                  child: Text('$year년과 겹치는 시즌'),
+                ),
+              ),
+            ],
+            onChanged: (value) => setState(() {
+              _historyYear = value == 'CURRENT' ? null : int.parse(value!);
+              _seasonId = null;
+              _competitionType = 'ALL';
+            }),
+          ),
+          const SizedBox(height: 12),
           DropdownButtonFormField<String?>(
             key: ValueKey<String?>(ranking.season?.id),
             initialValue: ranking.season?.id,
@@ -187,6 +226,7 @@ class _ClubSeasonRankingScreenState
               rows: ranking.rows,
               competitionColumns: ranking.competitionColumns,
               hidden: ranking.bowlerHiddenEnabled,
+              currentMemberId: ranking.myMemberId,
               onMember: ranking.bowlerHiddenEnabled
                   ? (row) => _showMember(userId, ranking, row)
                   : null,
@@ -268,19 +308,15 @@ class _ClubSeasonRankingScreenState
                   controller: name,
                   decoration: const InputDecoration(labelText: '시즌 이름'),
                 ),
-                TextField(
+                ClubSeasonDateField(
                   key: const Key('new-season-start'),
                   controller: start,
-                  decoration: const InputDecoration(
-                    labelText: '시작일 (YYYY-MM-DD)',
-                  ),
+                  label: '시작일',
                 ),
-                TextField(
+                ClubSeasonDateField(
                   key: const Key('new-season-end'),
                   controller: end,
-                  decoration: const InputDecoration(
-                    labelText: '종료일 (YYYY-MM-DD)',
-                  ),
+                  label: '종료일',
                 ),
                 if (profile.bowlerHiddenEnabled) ...<Widget>[
                   const SizedBox(height: 12),
@@ -335,6 +371,8 @@ class _ClubSeasonRankingScreenState
       setState(() => _seasonId = season.id);
       ref.invalidate(clubSeasonRankingProvider);
       ref.invalidate(clubTeamProfileProvider(request));
+      ref.invalidate(dashboardProvider(request.userId));
+      ref.invalidate(recordsControllerProvider(request.userId));
     } on Object catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -507,52 +545,115 @@ class _FinalRankingCard extends StatelessWidget {
   );
 }
 
-class ClubSeasonRankingGrid extends StatelessWidget {
+class ClubSeasonRankingGrid extends StatefulWidget {
   const ClubSeasonRankingGrid({
     required this.rows,
     required this.onMember,
     required this.hidden,
     this.competitionColumns = const <ClubSeasonCompetitionColumn>[],
+    this.currentMemberId,
     super.key,
   });
   final List<ClubSeasonRankingRow> rows;
   final ValueChanged<ClubSeasonRankingRow>? onMember;
   final bool hidden;
   final List<ClubSeasonCompetitionColumn> competitionColumns;
+  final String? currentMemberId;
+
+  @override
+  State<ClubSeasonRankingGrid> createState() => _ClubSeasonRankingGridState();
+}
+
+class _ClubSeasonRankingGridState extends State<ClubSeasonRankingGrid> {
+  static const double _rankWidth = 44;
+  static const double _nameWidth = 82;
+  static const double _pointsWidth = 56;
+  static const double _competitionWidth = 88;
+  static const double _supplementWidth = 72;
+  static const double _headerHeight = 58;
+  static const double _rowHeight = 64;
+  final ScrollController _horizontalController = ScrollController();
+
+  @override
+  void dispose() {
+    _horizontalController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    const rowHeight = 58.0;
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final double rightWidth =
+        widget.hidden && widget.competitionColumns.isNotEmpty
+        ? widget.competitionColumns.length * _competitionWidth +
+              2 * _supplementWidth
+        : widget.hidden
+        ? 12 * 64 + 2 * _supplementWidth
+        : 12 * 112;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           SizedBox(
-            width: 176,
+            width: _rankWidth + _nameWidth + _pointsWidth,
             child: Column(
               children: <Widget>[
                 _GridCell(
-                  height: 46,
-                  child: Text(hidden ? '순위  이름  총P' : '순위  이름  포인트'),
+                  height: _headerHeight,
+                  color: colors.surfaceContainerHighest,
+                  padding: EdgeInsets.zero,
+                  child: const Row(
+                    children: <Widget>[
+                      _RankingColumnHeader(width: _rankWidth, label: '순위'),
+                      _RankingColumnHeader(width: _nameWidth, label: '이름'),
+                      _RankingColumnHeader(width: _pointsWidth, label: '총P'),
+                    ],
+                  ),
                 ),
-                for (final row in rows)
+                for (final row in widget.rows)
                   InkWell(
-                    onTap: onMember == null ? null : () => onMember!(row),
+                    onTap: widget.onMember == null
+                        ? null
+                        : () => widget.onMember!(row),
                     child: _GridCell(
-                      height: rowHeight,
+                      height: _rowHeight,
+                      color: row.id == widget.currentMemberId
+                          ? colors.primaryContainer.withValues(alpha: .42)
+                          : null,
+                      padding: EdgeInsets.zero,
                       child: Row(
                         children: <Widget>[
-                          SizedBox(width: 32, child: Text('${row.rank}')),
-                          Expanded(
+                          SizedBox(
+                            width: _rankWidth,
+                            child: Text(
+                              '${row.rank}위',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontWeight: row.rank <= 3
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                                color: row.rank <= 3 ? colors.primary : null,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: _nameWidth,
                             child: Text(
                               row.name,
+                              textAlign: TextAlign.center,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Text(
-                            '${row.points}P',
-                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          SizedBox(
+                            width: _pointsWidth,
+                            child: Text(
+                              '${row.points}P',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -562,97 +663,126 @@ class ClubSeasonRankingGrid extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: hidden && competitionColumns.isNotEmpty
-                    ? competitionColumns.length * 112 + 152
-                    : hidden
-                    ? 12 * 64 + 176
-                    : 12 * 112 + 20,
-                child: Column(
-                  children: <Widget>[
-                    _GridCell(
-                      height: 46,
-                      child: Row(
-                        children: <Widget>[
-                          if (hidden && competitionColumns.isNotEmpty)
-                            for (final column in competitionColumns)
-                              SizedBox(
-                                width: 112,
-                                child: Text(
-                                  '${column.month}월 ${_type(column.competitionType)}\n${column.displayName}',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                              )
-                          else
-                            for (int month = 1; month <= 12; month++)
-                              SizedBox(
-                                width: hidden ? 64 : 112,
-                                child: Text('$month월'),
-                              ),
-                          if (hidden) ...<Widget>[
-                            const SizedBox(width: 76, child: Text('기초P')),
-                            const SizedBox(width: 76, child: Text('조정P')),
-                          ],
-                        ],
-                      ),
-                    ),
-                    for (final row in rows)
+            child: Scrollbar(
+              controller: _horizontalController,
+              thumbVisibility: true,
+              scrollbarOrientation: ScrollbarOrientation.bottom,
+              child: SingleChildScrollView(
+                controller: _horizontalController,
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: rightWidth,
+                  child: Column(
+                    children: <Widget>[
                       _GridCell(
-                        height: rowHeight,
+                        height: _headerHeight,
+                        color: colors.surfaceContainerHighest,
+                        padding: EdgeInsets.zero,
                         child: Row(
                           children: <Widget>[
-                            if (hidden && competitionColumns.isNotEmpty)
-                              for (final column in competitionColumns)
+                            if (widget.hidden &&
+                                widget.competitionColumns.isNotEmpty)
+                              for (final column in widget.competitionColumns)
                                 SizedBox(
-                                  width: 112,
+                                  width: _competitionWidth,
                                   child: Text(
-                                    _competitionCell(row, column.id),
-                                    style: const TextStyle(fontSize: 11),
-                                  ),
-                                )
-                            else if (hidden)
-                              for (final points in row.monthlyPoints)
-                                SizedBox(
-                                  width: 64,
-                                  child: Text(
-                                    points == 0 ? '-' : _signedPoints(points),
+                                    '${column.month}월 · ${_type(column.competitionType)}\n${column.displayName}',
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 )
                             else
-                              for (final entries in row.monthlyHistory)
+                              for (int month = 1; month <= 12; month++)
                                 SizedBox(
-                                  width: 112,
+                                  width: widget.hidden ? 64 : 112,
                                   child: Text(
-                                    entries.isEmpty
-                                        ? '-'
-                                        : entries.map(_entryLabel).join('\n'),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 11),
+                                    '$month월',
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
-                            if (hidden) ...<Widget>[
-                              SizedBox(
-                                width: 76,
-                                child: Text(
-                                  _signedPoints(row.openingBalancePoints),
-                                ),
+                            if (widget.hidden) ...<Widget>[
+                              const _RankingColumnHeader(
+                                width: _supplementWidth,
+                                label: '기초P',
                               ),
-                              SizedBox(
-                                width: 76,
-                                child: Text(
-                                  _signedPoints(row.adjustmentPoints),
-                                ),
+                              const _RankingColumnHeader(
+                                width: _supplementWidth,
+                                label: '조정P',
                               ),
                             ],
                           ],
                         ),
                       ),
-                  ],
+                      for (final row in widget.rows)
+                        _GridCell(
+                          height: _rowHeight,
+                          color: row.id == widget.currentMemberId
+                              ? colors.primaryContainer.withValues(alpha: .42)
+                              : null,
+                          padding: EdgeInsets.zero,
+                          child: Row(
+                            children: <Widget>[
+                              if (widget.hidden &&
+                                  widget.competitionColumns.isNotEmpty)
+                                for (final column in widget.competitionColumns)
+                                  SizedBox(
+                                    width: _competitionWidth,
+                                    child: Text(
+                                      _competitionCell(row, column.id),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      style: const TextStyle(fontSize: 11),
+                                    ),
+                                  )
+                              else if (widget.hidden)
+                                for (final points in row.monthlyPoints)
+                                  SizedBox(
+                                    width: 64,
+                                    child: Text(
+                                      points == 0 ? '-' : _signedPoints(points),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  )
+                              else
+                                for (final entries in row.monthlyHistory)
+                                  SizedBox(
+                                    width: 112,
+                                    child: Text(
+                                      entries.isEmpty
+                                          ? '-'
+                                          : entries.map(_entryLabel).join('\n'),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 11),
+                                    ),
+                                  ),
+                              if (widget.hidden) ...<Widget>[
+                                SizedBox(
+                                  width: _supplementWidth,
+                                  child: Text(
+                                    _signedPoints(row.openingBalancePoints),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: _supplementWidth,
+                                  child: Text(
+                                    _signedPoints(row.adjustmentPoints),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -661,6 +791,22 @@ class ClubSeasonRankingGrid extends StatelessWidget {
       ),
     );
   }
+}
+
+class _RankingColumnHeader extends StatelessWidget {
+  const _RankingColumnHeader({required this.width, required this.label});
+  final double width;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: width,
+    child: Text(
+      label,
+      textAlign: TextAlign.center,
+      style: const TextStyle(fontWeight: FontWeight.w800),
+    ),
+  );
 }
 
 String _competitionCell(ClubSeasonRankingRow row, String columnId) {
@@ -778,14 +924,22 @@ class _RankingImageTile extends ConsumerWidget {
 }
 
 class _GridCell extends StatelessWidget {
-  const _GridCell({required this.height, required this.child});
+  const _GridCell({
+    required this.height,
+    required this.child,
+    this.color,
+    this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+  });
   final double height;
   final Widget child;
+  final Color? color;
+  final EdgeInsetsGeometry padding;
   @override
   Widget build(BuildContext context) => Container(
     height: height,
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    padding: padding,
     decoration: BoxDecoration(
+      color: color,
       border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
     ),
     alignment: Alignment.centerLeft,

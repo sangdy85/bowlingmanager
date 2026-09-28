@@ -541,6 +541,7 @@ export async function getMobileSeasonRanking(
             return {
                 ...result,
                 bowlerHiddenEnabled: true,
+                myMemberId: memberId ?? null,
                 myCompetitionHistory,
             };
         } catch (error) {
@@ -553,7 +554,7 @@ export async function getMobileSeasonRanking(
     }
     const seasons = await prisma.teamSeason.findMany({ where: { teamId }, orderBy: [{ startDate: "desc" }, { id: "asc" }] });
     if (!team.seasonRankingEnabled) {
-        return { enabled: false, bowlerHiddenEnabled: false, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [], myCompetitionHistory: [] };
+        return { enabled: false, bowlerHiddenEnabled: false, myMemberId: null, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [], myCompetitionHistory: [] };
     }
     const season = options.seasonId
         ? seasons.find((item) => item.id === options.seasonId) ?? null
@@ -561,7 +562,8 @@ export async function getMobileSeasonRanking(
         ? seasons.find((item) => seasonOverlapsYear(item, options.year!)) ?? null
         : seasons.find((item) => isCurrentSeason(item)) ?? null;
     if (options.seasonId && !season) throw new ClubExpansionError("SEASON_NOT_FOUND", "시즌을 찾을 수 없습니다.", 404);
-    if (!season) return { enabled: true, bowlerHiddenEnabled: false, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [], myCompetitionHistory: [] };
+    const memberId = team.members.find((member) => member.userId === actorUserId)?.id ?? null;
+    if (!season) return { enabled: true, bowlerHiddenEnabled: false, myMemberId: memberId, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [], myCompetitionHistory: [] };
     const scores = mappedScores(await listTeamScores(teamId, season.startDate, season.endDate));
     const pointTable = readSeasonPointTable(season.individualPointsConfig);
     const rankings = calculateSeasonRanking(
@@ -572,7 +574,7 @@ export async function getMobileSeasonRanking(
         pointTable.map((item) => item.points),
     );
     return {
-        enabled: true, bowlerHiddenEnabled: false, season: serializeSeasonSummary(season),
+        enabled: true, bowlerHiddenEnabled: false, myMemberId: memberId, season: serializeSeasonSummary(season),
         seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings, myCompetitionHistory: [],
     };
 }

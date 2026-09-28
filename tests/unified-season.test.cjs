@@ -33,6 +33,13 @@ const season = {
   eventPointsConfig: '{"1":50,"2":40,"3":30}',
 };
 
+test('season summary serializes KST calendar dates without UTC day shift', () => {
+  const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': {} });
+  const result = service.serializeSeasonSummary(season);
+  assert.equal(result.startDate, '2026-01-01');
+  assert.equal(result.endDate, '2026-12-31');
+});
+
 test('season point tables are independent, validated and preserve legacy arrays', () => {
   const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': {} });
   assert.deepEqual(service.readSeasonPointTable('[5,3,1]'), [

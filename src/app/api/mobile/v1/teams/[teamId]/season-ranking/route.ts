@@ -29,7 +29,7 @@ export async function GET(request: Request, context: RouteContext) {
         const ranking = await getMobileSeasonRanking(userId, teamId, {
             seasonId, year, competitionType: rawType as "ALL" | "INDIVIDUAL" | "TEAM" | "EVENT",
         });
-        const history = await listTeamSeasons(userId, teamId);
+        const history = await listTeamSeasons(userId, teamId, new Date(), year);
         const selectedSeason = ranking.season
             ? history.seasons.find((item) => item.id === ranking.season!.id) ?? ranking.season
             : null;
