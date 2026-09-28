@@ -9,6 +9,7 @@ import { calculatePersonalProfile, PERSONAL_RADAR_AXES } from "@/lib/personal-pr
 import { getMobileSeasonRanking } from "@/lib/mobile-api/club-expansion";
 import { getBowlerHiddenCompetition } from "@/lib/mobile-api/bowler-hidden";
 import { kstDateKey } from "@/lib/mobile-api/team-events";
+import { seasonLifecycleStatus } from "@/lib/mobile-api/season-lifecycle";
 import { groupScores } from "@/lib/score-groups";
 import {
     calculateTeamStatistics,
@@ -42,6 +43,12 @@ type DashboardClubAchievement = {
     gold: number; silver: number; bronze: number;
     individualPoints: number | null; teamPoints: number | null; eventPoints: number | null;
 };
+type DashboardSeasonSummary = {
+    teamId: string; teamName: string; seasonId: string; seasonName: string;
+    startDate: string; endDate: string; lifecycleStatus: "UPCOMING" | "ACTIVE" | "ENDED";
+    rankingMode: "DATA" | "IMAGE"; rank: number | null; points: number | null;
+    finalRank: number | null; finalizedAt: string | null;
+};
 
 export type MobileDashboardDependencies = {
     findUser(userId: string): Promise<DashboardUser | null>;
@@ -50,6 +57,7 @@ export type MobileDashboardDependencies = {
     listTeamMembers(teamIds: string[]): Promise<DashboardMemberRow[]>;
     countAllGames?(user: DashboardUser): Promise<number>;
     listClubAchievements?(user: DashboardUser): Promise<DashboardClubAchievement[]>;
+    listSeasonSummaries?(user: DashboardUser, year: number): Promise<DashboardSeasonSummary[]>;
     loadNextEvent?(user: DashboardUser, now: Date): Promise<MobileNextEvent | null>;
 };
 
@@ -160,6 +168,39 @@ const defaultDependencies: MobileDashboardDependencies = {
             };
         }));
     },
+    async listSeasonSummaries(user, year) {
+        const hiddenMemberships = user.teamMemberships.filter((membership) => membership.team.bowlerHiddenEnabled);
+        if (hiddenMemberships.length === 0) return [];
+        const start = new Date(`${year}-01-01T00:00:00.000+09:00`);
+        const end = new Date(`${year}-12-31T23:59:59.999+09:00`);
+        const seasons = await prisma.teamSeason.findMany({
+            where: { teamId: { in: hiddenMemberships.map((item) => item.teamId) }, startDate: { lte: end }, endDate: { gte: start } },
+            orderBy: [{ startDate: "asc" }, { id: "asc" }],
+            include: {
+                finalRankings: {
+                    orderBy: [{ revision: "desc" }], take: 1,
+                    select: { finalizedAt: true, entries: { select: { memberId: true, rank: true } } },
+                },
+            },
+        });
+        const membershipByTeam = new Map(hiddenMemberships.map((item) => [item.teamId, item]));
+        return Promise.all(seasons.map(async (season) => {
+            const membership = membershipByTeam.get(season.teamId)!;
+            const ranking = season.rankingMode === "IMAGE" ? null
+                : await getMobileSeasonRanking(user.id, season.teamId, { seasonId: season.id, competitionType: "ALL" });
+            const mine = ranking?.rankings.find((row) => row.id === membership.id);
+            const final = season.finalRankings[0] ?? null;
+            return {
+                teamId: season.teamId, teamName: membership.team.name,
+                seasonId: season.id, seasonName: season.name,
+                startDate: season.startDate.toISOString().slice(0, 10), endDate: season.endDate.toISOString().slice(0, 10),
+                lifecycleStatus: seasonLifecycleStatus(season), rankingMode: season.rankingMode === "IMAGE" ? "IMAGE" as const : "DATA" as const,
+                rank: mine?.rank ?? null, points: mine?.points ?? null,
+                finalRank: final?.entries.find((entry) => entry.memberId === membership.id)?.rank ?? null,
+                finalizedAt: final?.finalizedAt.toISOString() ?? null,
+            };
+        }));
+    },
     async loadNextEvent(user, now) {
         const memberIds = user.teamMemberships.map((membership) => membership.id);
         const teamIds = user.teamMemberships.map((membership) => membership.teamId);
@@ -257,11 +298,12 @@ export async function getMobileDashboard(
     const start = new Date(`${year}-01-01T00:00:00.000Z`);
     const end = new Date(`${year}-12-31T23:59:59.999Z`);
     const teamIds = user.teamMemberships.map((membership) => membership.teamId);
-    const [personal, scoreRows, memberRows, clubAchievements, nextEvent] = await Promise.all([
+    const [personal, scoreRows, memberRows, clubAchievements, seasonSummaries, nextEvent] = await Promise.all([
         dependencies.loadPersonal(user, year),
         dependencies.listTeamScores(teamIds, start, end),
         dependencies.listTeamMembers(teamIds),
         dependencies.listClubAchievements ? dependencies.listClubAchievements(user) : Promise.resolve([]),
+        dependencies.listSeasonSummaries ? dependencies.listSeasonSummaries(user, year) : Promise.resolve([]),
         dependencies.loadNextEvent ? dependencies.loadNextEvent(user, new Date()) : Promise.resolve(null),
     ]);
     const compatiblePersonal = personal as DashboardPersonalData & {
@@ -294,6 +336,7 @@ export async function getMobileDashboard(
             record.source === "PERSONAL" && record.gameType === "정기전")),
         officialAverage: categoryAverage(personal.officialRecords),
         clubAchievements,
+        seasonSummaries,
         nextEvent,
         ...createDashboardExtensions(user, personal.integratedRecords, personal.officialRecords, scoreRows, memberRows),
     };
@@ -444,6 +487,7 @@ function emptyDashboardExtensions() {
         regularAverage: 0,
         officialAverage: 0,
         clubAchievements: [],
+        seasonSummaries: [],
         nextEvent: null,
     };
 }

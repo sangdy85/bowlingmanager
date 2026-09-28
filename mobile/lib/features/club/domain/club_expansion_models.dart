@@ -143,6 +143,7 @@ class ClubSeason {
     required this.scoringMode,
     required this.points,
     this.status = 'ACTIVE',
+    this.lifecycleStatus = 'ACTIVE',
     this.rankingMode = 'DATA',
     this.individualPoints = const <ClubSeasonRankPoint>[],
     this.teamPoints = const <ClubSeasonRankPoint>[],
@@ -155,6 +156,7 @@ class ClubSeason {
   final String scoringMode;
   final List<int> points;
   final String status;
+  final String lifecycleStatus;
   final String rankingMode;
   final List<ClubSeasonRankPoint> individualPoints;
   final List<ClubSeasonRankPoint> teamPoints;
@@ -164,6 +166,13 @@ class ClubSeason {
     final end = DateTime.tryParse(json['endDate'] as String? ?? '');
     final points = json['points'];
     final status = json['status'] ?? 'ACTIVE';
+    final lifecycleStatus =
+        json['lifecycleStatus'] ??
+        (status == 'DRAFT'
+            ? 'UPCOMING'
+            : status == 'COMPLETED'
+            ? 'ENDED'
+            : 'ACTIVE');
     final rankingMode = json['rankingMode'] ?? 'DATA';
     final tables = json['pointTables'];
     if (json['id'] is! String ||
@@ -176,6 +185,11 @@ class ClubSeason {
         points.any((value) => value is! int) ||
         status is! String ||
         !const <String>{'DRAFT', 'ACTIVE', 'COMPLETED'}.contains(status) ||
+        !const <String>{
+          'UPCOMING',
+          'ACTIVE',
+          'ENDED',
+        }.contains(lifecycleStatus) ||
         !const <String>{'DATA', 'IMAGE'}.contains(rankingMode) ||
         (tables != null && tables is! Map)) {
       throw const FormatException('Invalid season.');
@@ -211,6 +225,7 @@ class ClubSeason {
       scoringMode: json['scoringMode'] as String,
       points: List<int>.unmodifiable(points.cast<int>()),
       status: status,
+      lifecycleStatus: lifecycleStatus as String,
       rankingMode: rankingMode as String,
       individualPoints: table('individual'),
       teamPoints: table('team'),
@@ -499,6 +514,7 @@ class ClubSeasonRanking {
     this.rankingMode = 'DATA',
     this.competitionColumns = const <ClubSeasonCompetitionColumn>[],
     this.rankingImages = const <ClubSeasonRankingImage>[],
+    this.finalRanking,
   });
   final bool enabled;
   final ClubSeason? season;
@@ -510,6 +526,7 @@ class ClubSeasonRanking {
   final String rankingMode;
   final List<ClubSeasonCompetitionColumn> competitionColumns;
   final List<ClubSeasonRankingImage> rankingImages;
+  final ClubSeasonFinalRanking? finalRanking;
   factory ClubSeasonRanking.fromJson(Map<String, dynamic> json) {
     final rows = json['rankings'];
     final seasons = json['seasons'] ?? const <Object>[];
@@ -522,6 +539,7 @@ class ClubSeasonRanking {
             : 'DATA');
     final columns = json['competitionColumns'] ?? const <Object>[];
     final images = json['rankingImages'] ?? const <Object>[];
+    final finalRanking = json['finalRanking'];
     if (json['enabled'] is! bool ||
         json['bowlerHiddenEnabled'] is! bool ||
         rows is! List ||
@@ -530,6 +548,7 @@ class ClubSeasonRanking {
         !const <String>{'DATA', 'IMAGE'}.contains(rankingMode) ||
         columns is! List ||
         images is! List ||
+        (finalRanking != null && finalRanking is! Map) ||
         !const <String>{
           'ALL',
           'INDIVIDUAL',
@@ -578,6 +597,92 @@ class ClubSeasonRanking {
           ),
         ),
       ),
+      finalRanking: finalRanking == null
+          ? null
+          : ClubSeasonFinalRanking.fromJson(
+              _map(finalRanking, 'Invalid final ranking.'),
+            ),
+    );
+  }
+}
+
+class ClubSeasonFinalRanking {
+  const ClubSeasonFinalRanking({
+    required this.id,
+    required this.revision,
+    required this.rankingMode,
+    required this.finalizedAt,
+    required this.finalizedByName,
+    required this.entries,
+  });
+
+  final String id;
+  final int revision;
+  final String rankingMode;
+  final DateTime finalizedAt;
+  final String finalizedByName;
+  final List<ClubSeasonFinalRankingEntry> entries;
+
+  factory ClubSeasonFinalRanking.fromJson(Map<String, dynamic> json) {
+    final finalizedAt = DateTime.tryParse(json['finalizedAt'] as String? ?? '');
+    final finalizedBy = json['finalizedBy'];
+    final entries = json['entries'];
+    if (json['id'] is! String ||
+        json['revision'] is! int ||
+        !const <String>{'DATA', 'IMAGE'}.contains(json['rankingMode']) ||
+        finalizedAt == null ||
+        finalizedBy is! Map ||
+        finalizedBy['name'] is! String ||
+        entries is! List) {
+      throw const FormatException('Invalid final ranking.');
+    }
+    return ClubSeasonFinalRanking(
+      id: json['id'] as String,
+      revision: json['revision'] as int,
+      rankingMode: json['rankingMode'] as String,
+      finalizedAt: finalizedAt,
+      finalizedByName: finalizedBy['name'] as String,
+      entries: List<ClubSeasonFinalRankingEntry>.unmodifiable(
+        entries.map(
+          (value) => ClubSeasonFinalRankingEntry.fromJson(
+            _map(value, 'Invalid final ranking entry.'),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ClubSeasonFinalRankingEntry {
+  const ClubSeasonFinalRankingEntry({
+    required this.id,
+    required this.memberId,
+    required this.displayName,
+    required this.rank,
+    required this.totalPoints,
+  });
+
+  final String id;
+  final String? memberId;
+  final String displayName;
+  final int rank;
+  final int totalPoints;
+
+  factory ClubSeasonFinalRankingEntry.fromJson(Map<String, dynamic> json) {
+    if (json['id'] is! String ||
+        (json['memberId'] != null && json['memberId'] is! String) ||
+        json['displayName'] is! String ||
+        json['rank'] is! int ||
+        (json['rank'] as int) < 1 ||
+        json['totalPoints'] is! int) {
+      throw const FormatException('Invalid final ranking entry.');
+    }
+    return ClubSeasonFinalRankingEntry(
+      id: json['id'] as String,
+      memberId: json['memberId'] as String?,
+      displayName: json['displayName'] as String,
+      rank: json['rank'] as int,
+      totalPoints: json['totalPoints'] as int,
     );
   }
 }

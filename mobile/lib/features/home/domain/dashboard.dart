@@ -17,6 +17,7 @@ class Dashboard {
     this.personalStats = DashboardPersonalStats.empty,
     this.teamSummaries = const <DashboardTeamSummary>[],
     this.clubAchievements = const <DashboardClubAchievement>[],
+    this.seasonSummaries = const <DashboardSeasonSummary>[],
     this.nextEvent,
     this.recordCategories = const <DashboardRecordCategory>[],
   }) : totalGameCount = totalGameCount ?? gameCount;
@@ -36,6 +37,7 @@ class Dashboard {
   final DashboardPersonalStats personalStats;
   final List<DashboardTeamSummary> teamSummaries;
   final List<DashboardClubAchievement> clubAchievements;
+  final List<DashboardSeasonSummary> seasonSummaries;
   final DashboardNextEvent? nextEvent;
   final List<DashboardRecordCategory> recordCategories;
 
@@ -125,6 +127,10 @@ class Dashboard {
       clubAchievements: _optionalList(
         json['clubAchievements'],
         DashboardClubAchievement.fromJson,
+      ),
+      seasonSummaries: _optionalList(
+        json['seasonSummaries'],
+        DashboardSeasonSummary.fromJson,
       ),
       nextEvent: nextEvent == null
           ? null
@@ -603,6 +609,76 @@ class DashboardClubAchievement {
       individualPoints: optional[0] as int?,
       teamPoints: optional[1] as int?,
       eventPoints: optional[2] as int?,
+    );
+  }
+}
+
+class DashboardSeasonSummary {
+  const DashboardSeasonSummary({
+    required this.teamId,
+    required this.teamName,
+    required this.seasonId,
+    required this.seasonName,
+    required this.startDate,
+    required this.endDate,
+    required this.lifecycleStatus,
+    required this.rankingMode,
+    required this.rank,
+    required this.points,
+    required this.finalRank,
+    required this.finalizedAt,
+  });
+
+  final String teamId;
+  final String teamName;
+  final String seasonId;
+  final String seasonName;
+  final DateTime startDate;
+  final DateTime endDate;
+  final String lifecycleStatus;
+  final String rankingMode;
+  final int? rank;
+  final int? points;
+  final int? finalRank;
+  final DateTime? finalizedAt;
+
+  factory DashboardSeasonSummary.fromJson(Map<String, dynamic> json) {
+    final startDate = DateTime.tryParse(json['startDate'] as String? ?? '');
+    final endDate = DateTime.tryParse(json['endDate'] as String? ?? '');
+    final finalizedAt = json['finalizedAt'] == null
+        ? null
+        : DateTime.tryParse(json['finalizedAt'] as String? ?? '');
+    if (json['teamId'] is! String ||
+        json['teamName'] is! String ||
+        json['seasonId'] is! String ||
+        json['seasonName'] is! String ||
+        startDate == null ||
+        endDate == null ||
+        !const <String>{
+          'UPCOMING',
+          'ACTIVE',
+          'ENDED',
+        }.contains(json['lifecycleStatus']) ||
+        !const <String>{'DATA', 'IMAGE'}.contains(json['rankingMode']) ||
+        (json['rank'] != null && json['rank'] is! int) ||
+        (json['points'] != null && json['points'] is! int) ||
+        (json['finalRank'] != null && json['finalRank'] is! int) ||
+        (json['finalizedAt'] != null && finalizedAt == null)) {
+      throw const FormatException('Invalid season summary response.');
+    }
+    return DashboardSeasonSummary(
+      teamId: json['teamId'] as String,
+      teamName: json['teamName'] as String,
+      seasonId: json['seasonId'] as String,
+      seasonName: json['seasonName'] as String,
+      startDate: startDate,
+      endDate: endDate,
+      lifecycleStatus: json['lifecycleStatus'] as String,
+      rankingMode: json['rankingMode'] as String,
+      rank: json['rank'] as int?,
+      points: json['points'] as int?,
+      finalRank: json['finalRank'] as int?,
+      finalizedAt: finalizedAt,
     );
   }
 }

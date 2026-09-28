@@ -133,4 +133,85 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'past DATA season shows point ranking and final snapshot at 412px',
+    (tester) async {
+      tester.view.physicalSize = const Size(412, 915);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final auth = FakeAuthRepository()..bootstrapResult = testUser;
+      final ranking = ClubSeasonRanking.fromJson(<String, dynamic>{
+        'enabled': true,
+        'bowlerHiddenEnabled': true,
+        'competitionType': 'ALL',
+        'rankingMode': 'DATA',
+        'season': <String, Object>{
+          'id': 'season-2025',
+          'name': '2025 시즌',
+          'status': 'COMPLETED',
+          'lifecycleStatus': 'ENDED',
+          'rankingMode': 'DATA',
+          'startDate': '2025-01-01',
+          'endDate': '2025-12-31',
+          'scoringMode': 'FULL_RANK',
+          'points': <int>[50, 30, 20],
+        },
+        'seasons': <Object>[],
+        'rankings': <Object>[
+          <String, Object>{
+            'rank': 2,
+            'id': 'member-1',
+            'name': '회원1',
+            'points': 178,
+            'attended': 2,
+            'games': 0,
+            'average': 0,
+            'gold': 0,
+            'silver': 0,
+            'bronze': 0,
+          },
+        ],
+        'finalRanking': <String, Object>{
+          'id': 'final-1',
+          'revision': 1,
+          'rankingMode': 'DATA',
+          'finalizedAt': '2026-01-02T00:00:00Z',
+          'finalizedBy': <String, String>{'id': 'manager', 'name': '관리자'},
+          'entries': <Object>[
+            <String, Object>{
+              'id': 'entry-1',
+              'memberId': 'member-1',
+              'displayName': '회원1',
+              'rank': 1,
+              'totalPoints': 178,
+            },
+          ],
+        },
+      });
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authRepositoryProvider.overrideWithValue(auth),
+            clubSeasonRankingProvider.overrideWith(
+              (ref, request) async => ranking,
+            ),
+          ],
+          child: const MaterialApp(
+            home: ClubSeasonRankingScreen(teamId: 'team-1'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('최종 확정 순위 · 1차'), findsOneWidget);
+      expect(find.text('1위'), findsOneWidget);
+      expect(find.text('178P'), findsWidgets);
+      expect(find.text('종료'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

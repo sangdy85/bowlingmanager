@@ -224,10 +224,15 @@ export async function createTeamEvent(actorUserId: string, teamId: string, value
     const access = await getAccess(actorUserId, teamId);
     requireManager(access.role);
     const input = parseTeamEventInput(value, access.bowlerHiddenEnabled);
+    const eventDate = dateKeyToDate(input.date);
+    const season = await prisma.teamSeason.findFirst({
+        where: { teamId, status: { not: "COMPLETED" }, startDate: { lte: eventDate }, endDate: { gte: eventDate } },
+        orderBy: [{ startDate: "desc" }, { id: "asc" }], select: { id: true },
+    });
     const event = await prisma.teamEvent.create({
         data: {
             teamId, createdById: actorUserId, title: input.title,
-            eventDate: dateKeyToDate(input.date), eventTime: input.time, location: input.location,
+            eventDate, eventTime: input.time, location: input.location, seasonId: season?.id ?? null,
             gameType: input.gameType, attendanceEnabled: input.attendanceEnabled,
             laneDrawEnabled: input.laneDrawEnabled, laneDrawMode: input.laneDrawMode,
             competitionEnabled: input.competitionEnabled, competitionType: input.competitionType,
@@ -270,10 +275,15 @@ export async function updateTeamEvent(actorUserId: string, teamId: string, event
         input.attendanceEnabled !== current.attendanceEnabled || input.laneDrawEnabled !== current.laneDrawEnabled ||
         input.laneDrawMode !== current.laneDrawMode
     )) throw new TeamEventError("EVENT_LOCKED", "추첨 시작 후에는 날짜와 추첨 설정을 변경할 수 없습니다.", 409);
+    const eventDate = dateKeyToDate(input.date);
+    const season = await prisma.teamSeason.findFirst({
+        where: { teamId, status: { not: "COMPLETED" }, startDate: { lte: eventDate }, endDate: { gte: eventDate } },
+        orderBy: [{ startDate: "desc" }, { id: "asc" }], select: { id: true },
+    });
     const event = await prisma.teamEvent.update({
         where: { id: current.id },
         data: {
-            title: input.title, eventDate: dateKeyToDate(input.date), eventTime: input.time,
+            title: input.title, eventDate, eventTime: input.time, seasonId: season?.id ?? null,
             location: input.location, gameType: input.gameType,
             attendanceEnabled: input.attendanceEnabled, laneDrawEnabled: input.laneDrawEnabled,
             laneDrawMode: input.laneDrawMode,

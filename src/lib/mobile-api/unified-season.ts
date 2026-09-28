@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
+import { isCurrentSeason, seasonOverlapsYear } from "@/lib/mobile-api/season-lifecycle";
 
 export const SEASON_STATUSES = ["DRAFT", "ACTIVE", "COMPLETED"] as const;
 export const SEASON_COMPETITION_TYPES = ["INDIVIDUAL", "TEAM", "EVENT"] as const;
@@ -82,10 +83,10 @@ export async function getSeasonPointPreview(
     const season = event.seasonId
         ? await db.teamSeason.findFirst({ where: { id: event.seasonId, teamId: event.teamId } })
         : await db.teamSeason.findFirst({
-            where: { teamId: event.teamId, status: "ACTIVE", startDate: { lte: event.eventDate }, endDate: { gte: event.eventDate } },
+            where: { teamId: event.teamId, status: { not: "COMPLETED" }, startDate: { lte: event.eventDate }, endDate: { gte: event.eventDate } },
             orderBy: [{ startDate: "desc" }, { id: "asc" }],
         });
-    if (!season || season.status !== "ACTIVE" || event.eventDate < season.startDate || event.eventDate > season.endDate) return [];
+    if (!season || !isCurrentSeason(season) || event.eventDate < season.startDate || event.eventDate > season.endDate) return [];
     if (season.rankingMode === "IMAGE") {
         throw new UnifiedSeasonError("SEASON_RANKING_MODE_MISMATCH", "이미지 관리 시즌에는 경기 포인트를 미리 볼 수 없습니다.", 409);
     }
@@ -104,14 +105,14 @@ export async function resolvePublicationSeason(
     const season = event.seasonId
         ? await db.teamSeason.findFirst({ where: { id: event.seasonId, teamId: event.teamId } })
         : await db.teamSeason.findFirst({
-            where: { teamId: event.teamId, status: "ACTIVE", startDate: { lte: event.eventDate }, endDate: { gte: event.eventDate } },
+            where: { teamId: event.teamId, status: { not: "COMPLETED" }, startDate: { lte: event.eventDate }, endDate: { gte: event.eventDate } },
             orderBy: [{ startDate: "desc" }, { id: "asc" }],
         });
     if (!season) throw new UnifiedSeasonError("SEASON_REQUIRED", "대회 날짜에 활성화된 시즌이 없습니다.", 409);
     if (season.rankingMode === "IMAGE") {
         throw new UnifiedSeasonError("SEASON_RANKING_MODE_MISMATCH", "이미지 관리 시즌에는 경기 포인트를 발표할 수 없습니다.", 409);
     }
-    if (season.status !== "ACTIVE") throw new UnifiedSeasonError("SEASON_NOT_ACTIVE", "활성 시즌의 대회만 발표할 수 있습니다.", 409);
+    if (!isCurrentSeason(season)) throw new UnifiedSeasonError("SEASON_NOT_ACTIVE", "활성 시즌의 대회만 발표할 수 있습니다.", 409);
     if (event.eventDate < season.startDate || event.eventDate > season.endDate) {
         throw new UnifiedSeasonError("EVENT_OUTSIDE_SEASON", "대회 날짜가 시즌 기간에 포함되지 않습니다.", 409);
     }
@@ -299,8 +300,8 @@ export async function getUnifiedSeasonRanking(
     const season = options.seasonId
         ? seasons.find((item) => item.id === options.seasonId) ?? null
         : options.year
-        ? seasons.find((item) => kstYear(item.startDate) <= options.year! && options.year! <= kstYear(item.endDate)) ?? null
-        : seasons.find((item) => item.status === "ACTIVE") ?? null;
+        ? seasons.find((item) => seasonOverlapsYear(item, options.year!)) ?? null
+        : seasons.find((item) => isCurrentSeason(item)) ?? null;
     if (options.seasonId && !season) throw new UnifiedSeasonError("SEASON_NOT_FOUND", "시즌을 찾을 수 없습니다.", 404);
     const competitionType = options.competitionType ?? "ALL";
     if (competitionType !== "ALL" && !SEASON_COMPETITION_TYPES.includes(competitionType)) {
@@ -581,7 +582,6 @@ export function serializeSeasonSummary(season: {
 }
 
 function kstMonth(value: Date) { return new Date(value.getTime() + 9 * 60 * 60 * 1000).getUTCMonth() + 1; }
-function kstYear(value: Date) { return new Date(value.getTime() + 9 * 60 * 60 * 1000).getUTCFullYear(); }
 
 function validatePointTable(value: unknown): SeasonRankPoint[] {
     if (!Array.isArray(value) || value.length > 100) throw new UnifiedSeasonError("INVALID_POINT_TABLE", "시즌 포인트표를 확인해주세요.", 400);

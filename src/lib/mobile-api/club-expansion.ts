@@ -14,6 +14,7 @@ import {
     serializeSeasonSummary,
     UnifiedSeasonError,
 } from "@/lib/mobile-api/unified-season";
+import { isCurrentSeason, seasonOverlapsYear } from "@/lib/mobile-api/season-lifecycle";
 import {
     PostImageStorageError,
     readStoredPostImage,
@@ -345,9 +346,9 @@ export async function deleteMobileTeamPost(actorUserId: string, teamId: string, 
 
 export async function getMobileTeamProfile(actorUserId: string, teamId: string) {
     const team = await requireTeam(actorUserId, teamId);
-    const activeSeason = await prisma.teamSeason.findFirst({
-        where: { teamId, status: "ACTIVE" }, orderBy: [{ startDate: "desc" }, { id: "asc" }],
-    });
+    const activeSeason = (await prisma.teamSeason.findMany({
+        where: { teamId, status: { not: "COMPLETED" } }, orderBy: [{ startDate: "desc" }, { id: "asc" }],
+    })).find((season) => isCurrentSeason(season)) ?? null;
     return {
         id: team.id, name: team.name, description: team.description, notice: team.notice,
         myRole: roleOf(team, actorUserId), seasonRankingEnabled: team.seasonRankingEnabled || team.bowlerHiddenEnabled,
@@ -425,9 +426,19 @@ export async function updateMobileTeamProfile(actorUserId: string, teamId: strin
     await prisma.$transaction(async (tx) => {
         await tx.team.update({ where: { id: teamId }, data: { description: description || null, notice: notice || null, seasonRankingEnabled: seasonEnabled } });
         if (parsedSeason) {
+            const overlap = await tx.teamSeason.findFirst({
+                where: {
+                    teamId,
+                    ...(parsedSeason.id ? { id: { not: parsedSeason.id } } : {}),
+                    startDate: { lte: parsedSeason.end }, endDate: { gte: parsedSeason.start },
+                },
+                select: { name: true },
+            });
+            if (overlap) throw new ClubExpansionError("SEASON_DATE_OVERLAP", `${overlap.name}과 시즌 기간이 겹칩니다.`, 409);
             const data = {
                 name: parsedSeason.name, startDate: parsedSeason.start, endDate: parsedSeason.end,
-                enabled: true, status: "ACTIVE",
+                enabled: parsedSeason.end >= new Date(),
+                status: parsedSeason.start > new Date() ? "DRAFT" : parsedSeason.end < new Date() ? "COMPLETED" : "ACTIVE",
                 scoringMode: parsedSeason.mode,
                 pointsConfig: JSON.stringify(parsedSeason.individualPoints.map((item) => item.points)),
                 individualPointsConfig: serializeSeasonPointTable(parsedSeason.individualPoints),
@@ -435,7 +446,6 @@ export async function updateMobileTeamProfile(actorUserId: string, teamId: strin
                 eventPointsConfig: serializeSeasonPointTable(parsedSeason.eventPoints),
                 ...(parsedSeason.rankingMode ? { rankingMode: parsedSeason.rankingMode } : {}),
             };
-            await tx.teamSeason.updateMany({ where: { teamId, status: "ACTIVE", ...(parsedSeason.id ? { id: { not: parsedSeason.id } } : {}) }, data: { enabled: false, status: "COMPLETED" } });
             if (parsedSeason.id) {
                 const updated = await tx.teamSeason.updateMany({ where: { id: parsedSeason.id, teamId }, data });
                 if (updated.count !== 1) throw new ClubExpansionError("SEASON_NOT_FOUND", "수정할 시즌을 찾을 수 없습니다.", 404);
@@ -548,8 +558,8 @@ export async function getMobileSeasonRanking(
     const season = options.seasonId
         ? seasons.find((item) => item.id === options.seasonId) ?? null
         : options.year
-        ? seasons.find((item) => seasonIncludesYear(item, options.year!)) ?? null
-        : seasons.find((item) => item.status === "ACTIVE") ?? null;
+        ? seasons.find((item) => seasonOverlapsYear(item, options.year!)) ?? null
+        : seasons.find((item) => isCurrentSeason(item)) ?? null;
     if (options.seasonId && !season) throw new ClubExpansionError("SEASON_NOT_FOUND", "시즌을 찾을 수 없습니다.", 404);
     if (!season) return { enabled: true, bowlerHiddenEnabled: false, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [], myCompetitionHistory: [] };
     const scores = mappedScores(await listTeamScores(teamId, season.startDate, season.endDate));
@@ -615,12 +625,6 @@ async function listMyOfficialCompetitionHistory(
     }
     return history.sort((left, right) =>
         left.competitionDate.localeCompare(right.competitionDate) || left.id.localeCompare(right.id));
-}
-
-function seasonIncludesYear(season: { startDate: Date; endDate: Date }, year: number) {
-    const startYear = Number(teamActivityDateKey(season.startDate).slice(0, 4));
-    const endYear = Number(teamActivityDateKey(season.endDate).slice(0, 4));
-    return startYear <= year && year <= endYear;
 }
 
 function parsePointInput(value: unknown) {

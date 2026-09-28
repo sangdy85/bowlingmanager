@@ -26,7 +26,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      const dashboard = Dashboard(
+      final dashboard = Dashboard(
         year: 2026,
         average: 190.5,
         highScore: 245,
@@ -51,6 +51,22 @@ void main() {
           ),
         ),
         medals: DashboardMedals(goldCount: 2, silverCount: 1, bronzeCount: 3),
+        seasonSummaries: <DashboardSeasonSummary>[
+          DashboardSeasonSummary(
+            teamId: 'team-1',
+            teamName: '배볼러',
+            seasonId: 'season-current',
+            seasonName: '2026 시즌',
+            startDate: DateTime(2026),
+            endDate: DateTime(2026, 12, 31),
+            lifecycleStatus: 'ACTIVE',
+            rankingMode: 'DATA',
+            rank: 3,
+            points: 183,
+            finalRank: null,
+            finalizedAt: null,
+          ),
+        ],
         recordCategories: <DashboardRecordCategory>[
           DashboardRecordCategory(
             key: 'ALL',
@@ -83,6 +99,9 @@ void main() {
       expect(find.text('총평균 190.5'), findsOneWidget);
       expect(find.textContaining('편차 60'), findsOneWidget);
       expect(find.text('입상 기록'), findsOneWidget);
+      expect(find.text('Bowler Hidden 시즌 순위'), findsOneWidget);
+      expect(find.text('시즌 순위  3위 / 183P'), findsOneWidget);
+      expect(find.text('최종 순위  시즌 진행 중'), findsOneWidget);
       expect(find.text('개인 통계'), findsOneWidget);
       expect(find.text('통합 종합'), findsOneWidget);
       expect(tester.takeException(), isNull);

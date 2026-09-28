@@ -393,12 +393,16 @@ test('team profile lets managers configure type-specific season points and rejec
     team: {
       findFirst: async () => fakeTeam(actorRole === 'owner' ? 'owner' : 'different-owner'),
     },
-    teamSeason: { findFirst: async () => null },
+    teamSeason: { findFirst: async () => null, findMany: async () => [] },
     $transaction: async callback => {
       transactions += 1;
       return callback({
         team: { update: async () => ({}) },
-        teamSeason: { updateMany: async () => ({ count: 0 }), create: async () => ({}) },
+        teamSeason: {
+          findFirst: async () => null,
+          updateMany: async () => ({ count: 0 }),
+          create: async () => ({}),
+        },
       });
     },
   };
@@ -433,7 +437,7 @@ test('season ranking reads active publication ledger in one batch and supports f
   const season = {
     id: 'season-1', teamId: 'team-1', name: '반기', enabled: true, status: 'ACTIVE',
     startDate: new Date('2026-01-01T00:00:00+09:00'),
-    endDate: new Date('2026-06-30T23:59:59.999+09:00'),
+    endDate: new Date('2026-12-31T23:59:59.999+09:00'),
     scoringMode: 'PODIUM', pointsConfig: '[5,3,1]',
     individualPointsConfig: '{"1":50}', teamPointsConfig: '{"1":35}', eventPointsConfig: '{"1":50}',
   };
@@ -552,10 +556,11 @@ test('Hidden OFF profile accepts general points and rejects Hidden point tables'
         ...fakeTeam(), bowlerHiddenEnabled: false, seasonRankingEnabled: true,
       }),
     },
-    teamSeason: { findFirst: async () => null },
+    teamSeason: { findFirst: async () => null, findMany: async () => [] },
     $transaction: async callback => callback({
       team: { update: async () => ({}) },
       teamSeason: {
+        findFirst: async () => null,
         updateMany: async () => ({ count: 0 }),
         create: async args => { created = args.data; return {}; },
       },

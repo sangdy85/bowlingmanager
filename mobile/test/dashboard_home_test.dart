@@ -93,8 +93,10 @@ void main() {
     expect(find.text('36'), findsOneWidget);
     expect(find.text('201.7'), findsOneWidget);
     expect(find.text('안녕하세요,\n테스트 볼러님 👋'), findsOneWidget);
-    expect(find.text('나의 동호회 성과'), findsOneWidget);
-    expect(find.textContaining('2026 시즌 · 2위 · 20P'), findsOneWidget);
+    expect(find.text('나의 동호회 순위'), findsOneWidget);
+    expect(find.text('2026 시즌'), findsOneWidget);
+    expect(find.text('2위'), findsOneWidget);
+    expect(find.text('20 P'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('최근 경기'),
       500,
@@ -318,7 +320,7 @@ void main() {
       await tester.pumpAndSettle();
 
       for (final String section in <String>[
-        '나의 동호회 성과',
+        '나의 동호회 순위',
         '나의 기록실',
         '나의 입상',
         '개인 상세 통계',

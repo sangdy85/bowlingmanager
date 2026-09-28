@@ -7,7 +7,6 @@ import 'package:bowlingmanager_mobile/features/club/application/club_providers.d
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_team_competition_models.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ClubTeamCompetitionCard extends ConsumerStatefulWidget {
@@ -143,11 +142,6 @@ class _ClubTeamCompetitionCardState
               : '사용 레인: ${state.laneNumbers.join(', ')}',
           key: const Key('team-lane-pool-summary'),
         ),
-        if (state.laneNumbers.length != state.teams.length)
-          Text(
-            '팀 ${state.teams.length}개에 맞게 사용 레인 ${state.teams.length}개를 설정해주세요.',
-            style: const TextStyle(color: Colors.orangeAccent),
-          ),
       ],
       if (state.isCurrentCaptain &&
           state.remainingParticipants.isNotEmpty) ...<Widget>[
@@ -419,8 +413,7 @@ class _ClubTeamCompetitionCardState
         actions.add(
           FilledButton(
             key: const Key('assign-team-lanes'),
-            onPressed:
-                _working || state.laneNumbers.length != state.teams.length
+            onPressed: _working || state.laneNumbers.isEmpty
                 ? null
                 : () => _assignLanes(state),
             child: const Text('팀별 레인 배정'),
@@ -824,15 +817,7 @@ class _TeamLanePoolDialog extends StatefulWidget {
 }
 
 class _TeamLanePoolDialogState extends State<_TeamLanePoolDialog> {
-  final TextEditingController _controller = TextEditingController();
   late final Set<int> _lanes = widget.initialLanes.toSet();
-  String? _validationMessage;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) => AlertDialog(
@@ -844,56 +829,37 @@ class _TeamLanePoolDialogState extends State<_TeamLanePoolDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text('팀 ${widget.teamCount}개와 같은 수의 레인을 설정합니다.'),
+            Text('팀 ${widget.teamCount}개의 참가자를 배치할 레인을 1개 이상 선택하세요.'),
             const SizedBox(height: 12),
-            Row(
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 6,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
               children: <Widget>[
-                Expanded(
-                  child: TextField(
-                    key: const Key('team-lane-number-input'),
-                    controller: _controller,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: <TextInputFormatter>[
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    decoration: const InputDecoration(
-                      labelText: '레인 번호 (1~24)',
-                    ),
+                for (int lane = 1; lane <= 24; lane++)
+                  FilterChip(
+                    key: Key('team-lane-option-$lane'),
+                    label: Text('$lane'),
+                    selected: _lanes.contains(lane),
+                    showCheckmark: false,
+                    onSelected: (selected) => setState(() {
+                      if (selected) {
+                        _lanes.add(lane);
+                      } else {
+                        _lanes.remove(lane);
+                      }
+                    }),
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  key: const Key('add-team-lane'),
-                  tooltip: '레인 추가',
-                  onPressed: _addLane,
-                  icon: const Icon(Icons.add),
-                ),
               ],
             ),
-            if (_validationMessage != null) ...<Widget>[
-              const SizedBox(height: 6),
-              Text(
-                _validationMessage!,
-                key: const Key('team-lane-validation'),
-                style: const TextStyle(color: Colors.redAccent),
-              ),
-            ],
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: (_lanes.toList()..sort())
-                  .map(
-                    (lane) => InputChip(
-                      key: Key('team-lane-$lane'),
-                      label: Text('$lane번'),
-                      onDeleted: () => setState(() {
-                        _lanes.remove(lane);
-                        _validationMessage = null;
-                      }),
-                    ),
-                  )
-                  .toList(),
+            Text(
+              _lanes.isEmpty
+                  ? '선택된 레인이 없습니다.'
+                  : '선택: ${(_lanes.toList()..sort()).join(', ')}번',
+              key: const Key('team-lane-selection-summary'),
             ),
           ],
         ),
@@ -906,27 +872,13 @@ class _TeamLanePoolDialogState extends State<_TeamLanePoolDialog> {
       ),
       FilledButton(
         key: const Key('save-team-lanes'),
-        onPressed: _lanes.length == widget.teamCount
+        onPressed: _lanes.isNotEmpty
             ? () => Navigator.pop(context, Set<int>.from(_lanes))
             : null,
         child: const Text('저장'),
       ),
     ],
   );
-
-  void _addLane() {
-    final lane = int.tryParse(_controller.text);
-    setState(() {
-      if (lane == null || lane < 1 || lane > 24) {
-        _validationMessage = '레인 번호는 1~24 사이여야 합니다.';
-      } else if (!_lanes.add(lane)) {
-        _validationMessage = '이미 추가한 레인입니다.';
-      } else {
-        _validationMessage = null;
-        _controller.clear();
-      }
-    });
-  }
 }
 
 String _statusLabel(String status) => switch (status) {

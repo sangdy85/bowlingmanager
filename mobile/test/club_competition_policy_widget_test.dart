@@ -103,94 +103,82 @@ void main() {
     },
   );
 
-  testWidgets('TEAM lane pool supports add, duplicate guard, remove and save', (
-    WidgetTester tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(360, 720));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    final api = _LaneApi();
-    final state = ClubTeamCompetitionState.fromJson(<String, dynamic>{
-      'generation': 1,
-      'status': 'TEAMS_FINALIZED',
-      'canManage': true,
-      'isCurrentCaptain': false,
-      'currentTurn': null,
-      'laneNumbers': <int>[],
-      'teams': <Object>[
-        _team('team-a', 'TEAM A', 'member-1'),
-        _team('team-b', 'TEAM B', 'member-2'),
-      ],
-      'remainingParticipants': <Object>[],
-      'history': <Object>[],
-      'myTeam': 'team-a',
-      'results': <String, Object>{
-        'complete': false,
-        'requiresPinTieBreakPolicy': false,
-        'teams': <Object>[],
-      },
-    });
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          clubEventsApiProvider.overrideWithValue(api),
-          clubTeamCompetitionProvider.overrideWith(
-            (ref, request) async => state,
-          ),
+  testWidgets(
+    'TEAM lane pool supports 1-24 multi-select independent of team count',
+    (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 720));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final api = _LaneApi();
+      final state = ClubTeamCompetitionState.fromJson(<String, dynamic>{
+        'generation': 1,
+        'status': 'TEAMS_FINALIZED',
+        'canManage': true,
+        'isCurrentCaptain': false,
+        'currentTurn': null,
+        'laneNumbers': <int>[],
+        'teams': <Object>[
+          _team('team-a', 'TEAM A', 'member-1'),
+          _team('team-b', 'TEAM B', 'member-2'),
         ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: ClubTeamCompetitionCard(
-                userId: 'user-1',
-                teamId: 'team-1',
-                eventId: 'event-1',
-                competitionMode: ClubCompetitionMode.official,
+        'remainingParticipants': <Object>[],
+        'history': <Object>[],
+        'myTeam': 'team-a',
+        'results': <String, Object>{
+          'complete': false,
+          'requiresPinTieBreakPolicy': false,
+          'teams': <Object>[],
+        },
+      });
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            clubEventsApiProvider.overrideWithValue(api),
+            clubTeamCompetitionProvider.overrideWith(
+              (ref, request) async => state,
+            ),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: ClubTeamCompetitionCard(
+                  userId: 'user-1',
+                  teamId: 'team-1',
+                  eventId: 'event-1',
+                  competitionMode: ClubCompetitionMode.official,
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('assign-team-lanes')), findsOneWidget);
-    expect(
-      tester
-          .widget<FilledButton>(find.byKey(const Key('assign-team-lanes')))
-          .onPressed,
-      isNull,
-    );
-
-    await tester.tap(find.byKey(const Key('configure-team-lanes')));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const Key('team-lane-number-input')),
-      '3',
-    );
-    await tester.tap(find.byKey(const Key('add-team-lane')));
-    await tester.pump();
-    await tester.enterText(
-      find.byKey(const Key('team-lane-number-input')),
-      '3',
-    );
-    await tester.tap(find.byKey(const Key('add-team-lane')));
-    await tester.pump();
-    expect(find.text('이미 추가한 레인입니다.'), findsOneWidget);
-    tester.widget<InputChip>(find.byKey(const Key('team-lane-3'))).onDeleted!();
-    await tester.pump();
-    expect(find.byKey(const Key('team-lane-3')), findsNothing);
-    for (final lane in <String>['3', '4']) {
-      await tester.enterText(
-        find.byKey(const Key('team-lane-number-input')),
-        lane,
       );
-      await tester.tap(find.byKey(const Key('add-team-lane')));
-      await tester.pump();
-    }
-    await tester.tap(find.byKey(const Key('save-team-lanes')));
-    await tester.pumpAndSettle();
-    expect(api.savedSlots, hasLength(12));
-    expect(api.savedSlots.map((slot) => slot.laneNumber).toSet(), <int>{3, 4});
-  });
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('assign-team-lanes')), findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('assign-team-lanes')))
+            .onPressed,
+        isNull,
+      );
+
+      await tester.tap(find.byKey(const Key('configure-team-lanes')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('team-lane-option-1')), findsOneWidget);
+      expect(find.byKey(const Key('team-lane-option-24')), findsOneWidget);
+      for (final lane in <int>[3, 4, 5]) {
+        await tester.tap(find.byKey(Key('team-lane-option-$lane')));
+        await tester.pump();
+      }
+      expect(find.text('선택: 3, 4, 5번'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('save-team-lanes')));
+      await tester.pumpAndSettle();
+      expect(api.savedSlots, hasLength(18));
+      expect(api.savedSlots.map((slot) => slot.laneNumber).toSet(), <int>{
+        3,
+        4,
+        5,
+      });
+    },
+  );
 }
 
 Map<String, Object?> _team(String id, String name, String memberId) =>

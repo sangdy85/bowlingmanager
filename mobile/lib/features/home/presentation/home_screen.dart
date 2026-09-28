@@ -102,7 +102,7 @@ class _DashboardContent extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 28),
-          const _SectionTitle(title: '나의 동호회 성과'),
+          const _SectionTitle(title: '나의 동호회 순위'),
           const SizedBox(height: 12),
           if (dashboard.clubAchievements.isEmpty)
             const _EmptyAchievementCard()
@@ -528,8 +528,12 @@ class _ClubAchievementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Color? rankColor = achievement.rank == null
+        ? null
+        : bowlingMedalColor(achievement.rank!);
     return Card(
       key: Key('club-achievement-${achievement.teamId}'),
+      elevation: 2,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () =>
@@ -562,15 +566,56 @@ class _ClubAchievementCard extends StatelessWidget {
               const SizedBox(height: 8),
               if (!achievement.enabled || achievement.seasonName == null)
                 const Text(
-                  '진행 중인 시즌 성과가 없습니다.',
+                  '현재 진행 중인 시즌이 없습니다.',
                   style: TextStyle(color: AppColors.textSecondary),
                 )
               else ...<Widget>[
                 Text(
-                  '${achievement.seasonName} · '
-                  '${achievement.rank == null ? '순위 없음' : '${achievement.rank}위'} · '
-                  '${achievement.points}P',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  achievement.seasonName!,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 24,
+                  runSpacing: 12,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        if (rankColor != null) ...<Widget>[
+                          BowlingMedalIcon(
+                            position: achievement.rank!,
+                            size: 32,
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        Text(
+                          achievement.rank == null
+                              ? '순위 없음'
+                              : '${achievement.rank}위',
+                          key: const Key('home-club-rank'),
+                          style: TextStyle(
+                            color: rankColor ?? AppColors.primaryBright,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '${achievement.points} P',
+                      key: const Key('home-club-points'),
+                      style: const TextStyle(
+                        color: AppColors.primaryBright,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
                 ),
                 if (achievement.gold + achievement.silver + achievement.bronze >
                     0) ...<Widget>[
@@ -606,7 +651,7 @@ class _EmptyAchievementCard extends StatelessWidget {
     child: Padding(
       padding: EdgeInsets.all(20),
       child: Text(
-        '표시할 동호회 성과가 없습니다.',
+        '현재 진행 중인 시즌이 없습니다.',
         style: TextStyle(color: AppColors.textSecondary),
       ),
     ),

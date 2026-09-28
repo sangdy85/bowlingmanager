@@ -91,6 +91,37 @@ class ClubExpansionApi {
     );
   });
 
+  Future<ClubSeason> createSeason(
+    String teamId, {
+    required String name,
+    required String startDate,
+    required String endDate,
+    required String rankingMode,
+  }) async => _guard(() async {
+    final response = await _dio.post<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons',
+      data: <String, String>{
+        'name': name,
+        'startDate': startDate,
+        'endDate': endDate,
+        'rankingMode': rankingMode,
+      },
+    );
+    return ClubSeason.fromJson(_data(response.data));
+  });
+
+  Future<ClubSeasonFinalRanking> finalizeSeason(
+    String teamId,
+    String seasonId, {
+    List<String>? orderedMemberIds,
+  }) async => _guard(() async {
+    final response = await _dio.post<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/final-ranking',
+      data: <String, Object>{'orderedMemberIds': ?orderedMemberIds},
+    );
+    return ClubSeasonFinalRanking.fromJson(_data(response.data));
+  });
+
   Future<void> createManualCompetition(
     String teamId,
     String seasonId,

@@ -243,7 +243,7 @@ test('official lane example allocates non-interleaved contiguous team blocks', (
   );
 });
 
-test('configured team lane pool assigns one ordered lane per team and rejects shortages', () => {
+test('configured team lane pool distributes participants round-robin without changing team identity', () => {
   const service = loadTs('src/lib/mobile-api/team-competition.ts', {
     '@/lib/prisma': {}, '@/lib/mobile-api/bowler-hidden': { readRankPoints: () => [] },
   });
@@ -255,11 +255,17 @@ test('configured team lane pool assigns one ordered lane per team and rejects sh
     id: `${lane}-${index + 1}`, laneNumber: lane, position: index + 1,
   })));
   const blocks = service.allocateTeamLaneBlocks(teams, slots);
-  assert.deepEqual(blocks.map(block => [...new Set(block.assignments.map(item => item.slot.laneNumber))]), [[3], [4], [5], [6]]);
-  assert.deepEqual(blocks.map(block => block.assignments.length), [4, 5, 4, 5]);
+  assert.deepEqual(blocks.map(block => block.assignments.map(item => item.slot.id)), [
+    ['3-1', '4-1', '5-1', '6-1'],
+    ['3-2', '4-2', '5-2', '6-2', '3-3'],
+    ['4-3', '5-3', '6-3', '3-4'],
+    ['4-4', '5-4', '6-4', '3-5', '4-5'],
+  ]);
+  assert.deepEqual(blocks.map(block => block.competitionTeamId), ['team-1', 'team-2', 'team-3', 'team-4']);
+  assert.equal(new Set(blocks.flatMap(block => block.assignments.map(item => item.slot.id))).size, 18);
   assert.throws(
-    () => service.allocateTeamLaneBlocks(teams, slots.filter(slot => slot.laneNumber !== 6)),
-    error => error.code === 'TEAM_LANE_POOL_MISMATCH' && /팀\(4개\).*사용 레인\(3개\)/.test(error.message),
+    () => service.allocateTeamLaneBlocks(teams, slots.filter(slot => slot.laneNumber > 4)),
+    error => error.code === 'TEAM_LANE_CAPACITY_EXCEEDED',
   );
 });
 

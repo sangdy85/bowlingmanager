@@ -72,6 +72,8 @@ class _RecordsContent extends StatelessWidget {
         children: <Widget>[
           const _RecordsHeader(),
           const SizedBox(height: 18),
+          _RecordsYearSelector(state: state, onChanged: onFilter),
+          const SizedBox(height: 18),
           if (state.dashboard case final Dashboard dashboard) ...<Widget>[
             _PersonalRecordsDashboard(dashboard: dashboard),
             const SizedBox(height: 24),
@@ -159,6 +161,16 @@ class _PersonalRecordsDashboard extends StatelessWidget {
         const Text('입상 기록', style: AppTextStyles.title),
         const SizedBox(height: 8),
         DashboardMedalsCard(medals: dashboard.medals),
+        if (dashboard.seasonSummaries.isNotEmpty) ...<Widget>[
+          const SizedBox(height: 16),
+          const Text('Bowler Hidden 시즌 순위', style: AppTextStyles.title),
+          const SizedBox(height: 8),
+          for (final DashboardSeasonSummary season
+              in dashboard.seasonSummaries) ...<Widget>[
+            _SeasonSummaryCard(season: season),
+            const SizedBox(height: 8),
+          ],
+        ],
         const SizedBox(height: 16),
         const Text('개인 통계', style: AppTextStyles.title),
         const SizedBox(height: 8),
@@ -267,6 +279,89 @@ List<Widget> _recordSections(List<GameSession> sessions) {
   return widgets;
 }
 
+class _RecordsYearSelector extends StatelessWidget {
+  const _RecordsYearSelector({required this.state, required this.onChanged});
+
+  final RecordsState state;
+  final Future<void> Function(RecordsFilter filter) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final int selected = state.filter.year ?? DateTime.now().year;
+    return DropdownButtonFormField<int>(
+      key: const Key('records-year-filter'),
+      initialValue: selected,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: '조회 연도',
+        prefixIcon: Icon(Icons.calendar_month_outlined),
+      ),
+      items: state.availableYears
+          .map(
+            (year) => DropdownMenuItem<int>(value: year, child: Text('$year년')),
+          )
+          .toList(growable: false),
+      onChanged: (year) {
+        if (year != null && year != selected) {
+          onChanged(state.filter.copyWith(year: year));
+        }
+      },
+    );
+  }
+}
+
+class _SeasonSummaryCard extends StatelessWidget {
+  const _SeasonSummaryCard({required this.season});
+
+  final DashboardSeasonSummary season;
+
+  @override
+  Widget build(BuildContext context) {
+    final String seasonRank = season.rankingMode == 'IMAGE'
+        ? '이미지 순위표'
+        : season.rank == null || season.points == null
+        ? '순위 없음'
+        : '${season.rank}위 / ${season.points}P';
+    final String finalRank = season.lifecycleStatus == 'ACTIVE'
+        ? '시즌 진행 중'
+        : season.finalRank == null
+        ? '최종 순위 미확정'
+        : '${season.finalRank}위';
+    return Card(
+      key: Key('records-season-${season.seasonId}'),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              '${season.teamName} · ${season.seasonName}',
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              '${_formatSeasonDate(season.startDate)} ~ ${_formatSeasonDate(season.endDate)}',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 18,
+              runSpacing: 8,
+              children: <Widget>[
+                Text('시즌 순위  $seasonRank'),
+                Text('최종 순위  $finalRank'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _formatSeasonDate(DateTime date) =>
+    '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
+
 class _RecordsFilters extends StatelessWidget {
   const _RecordsFilters({required this.state, required this.onChanged});
 
@@ -279,48 +374,23 @@ class _RecordsFilters extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: DropdownButtonFormField<int?>(
-                key: const Key('records-year-filter'),
-                isExpanded: true,
-                initialValue: filter.year,
-                decoration: const InputDecoration(
-                  labelText: '연도',
-                  isDense: true,
-                ),
-                items: <DropdownMenuItem<int?>>[
-                  const DropdownMenuItem<int?>(value: null, child: Text('전체')),
-                  ...state.availableYears.map(
-                    (int year) => DropdownMenuItem<int?>(
-                      value: year,
-                      child: Text('$year년'),
-                    ),
-                  ),
-                ],
-                onChanged: (int? value) => onChanged(
-                  filter.copyWith(year: value, clearYear: value == null),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            OutlinedButton.icon(
-              key: const Key('records-average-filter'),
-              onPressed: () async {
-                final RecordsFilter? next =
-                    await showModalBottomSheet<RecordsFilter>(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (BuildContext context) =>
-                          _AverageFilterSheet(filter: filter),
-                    );
-                if (next != null) await onChanged(next);
-              },
-              icon: const Icon(Icons.tune_rounded),
-              label: Text(_averageFilterLabel(filter)),
-            ),
-          ],
+        Align(
+          alignment: Alignment.centerRight,
+          child: OutlinedButton.icon(
+            key: const Key('records-average-filter'),
+            onPressed: () async {
+              final RecordsFilter? next =
+                  await showModalBottomSheet<RecordsFilter>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (BuildContext context) =>
+                        _AverageFilterSheet(filter: filter),
+                  );
+              if (next != null) await onChanged(next);
+            },
+            icon: const Icon(Icons.tune_rounded),
+            label: Text(_averageFilterLabel(filter)),
+          ),
         ),
         const SizedBox(height: 12),
         Wrap(

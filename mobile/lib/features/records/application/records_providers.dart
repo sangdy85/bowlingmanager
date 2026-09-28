@@ -39,12 +39,13 @@ class RecordsController extends AsyncNotifier<RecordsState> {
   final String userId;
   late ScoresRepository _repository;
   late Future<Dashboard> Function(int year) _loadDashboard;
-  RecordsFilter _filter = const RecordsFilter();
+  late RecordsFilter _filter;
 
   @override
   Future<RecordsState> build() {
     _repository = ref.watch(scoresRepositoryProvider);
     _loadDashboard = ref.watch(recordsDashboardLoaderProvider);
+    _filter = RecordsFilter(year: DateTime.now().year);
     return _fetchFirstPage();
   }
 
@@ -63,7 +64,7 @@ class RecordsController extends AsyncNotifier<RecordsState> {
       pagination: page.pagination,
       dashboard: results[1] as Dashboard,
       filter: _filter,
-      availableYears: page.availableYears,
+      availableYears: _availableYears(page.availableYears),
     );
   }
 
@@ -165,6 +166,12 @@ class RecordsController extends AsyncNotifier<RecordsState> {
       );
     }
   }
+}
+
+List<int> _availableYears(List<int> source) {
+  final years = <int>{DateTime.now().year, ...source}.toList()
+    ..sort((left, right) => right.compareTo(left));
+  return List<int>.unmodifiable(years);
 }
 
 String recordsErrorMessage(Object error) {

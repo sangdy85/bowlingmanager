@@ -69,22 +69,26 @@ export function allocateTeamLaneBlocks(teams: readonly LaneTeam[], slots: readon
         .sort(([left], [right]) => left - right)
         .filter(([, laneSlots]) => laneSlots.length === 6 && laneSlots.every((slot, index) => slot.position === index + 1));
     if (configuredLanePool.length === slotsByLane.size && configuredLanePool.length > 0) {
-        if (configuredLanePool.length !== orderedTeams.length) {
+        const memberCount = orderedTeams.reduce((sum, team) => sum + team.memberIds.length, 0);
+        if (memberCount > configuredLanePool.length * 6) {
             throw new TeamCompetitionError(
-                "TEAM_LANE_POOL_MISMATCH",
-                `팀(${orderedTeams.length}개) 수와 사용 레인(${configuredLanePool.length}개) 수가 같아야 합니다.`,
+                "TEAM_LANE_CAPACITY_EXCEEDED",
+                `참가자 ${memberCount}명을 선택한 레인 ${configuredLanePool.length}개에 배정할 수 없습니다.`,
                 409,
             );
         }
-        return orderedTeams.map((team, index) => {
-            const laneSlots = configuredLanePool[index][1];
-            if (team.memberIds.length > laneSlots.length) {
-                throw new TeamCompetitionError("TEAM_LANE_CAPACITY_EXCEEDED", `${team.memberIds.length}명인 팀은 한 레인에 배정할 수 없습니다.`, 409);
-            }
+        let participantIndex = 0;
+        return orderedTeams.map((team) => {
+            const assignments = team.memberIds.map((memberId) => {
+                const laneIndex = participantIndex % configuredLanePool.length;
+                const lanePosition = Math.floor(participantIndex / configuredLanePool.length);
+                participantIndex += 1;
+                return { memberId, slot: configuredLanePool[laneIndex][1][lanePosition] };
+            });
             return {
                 competitionTeamId: team.id,
                 lanePriority: team.lanePriority,
-                assignments: team.memberIds.map((memberId, memberIndex) => ({ memberId, slot: laneSlots[memberIndex] })),
+                assignments,
             };
         });
     }
