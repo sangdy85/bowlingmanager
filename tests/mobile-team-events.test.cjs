@@ -95,6 +95,13 @@ test('attendance parser only permits an explicit attending decision', () => {
   }
 });
 
+test('managed attendance parser also permits clearing a response', () => {
+  for (const status of ['ATTENDING', 'NOT_ATTENDING', 'UNANSWERED']) {
+    assert.equal(service.parseManagedAttendanceStatus({ status }), status);
+  }
+  assert.throws(() => service.parseManagedAttendanceStatus({ status: 'MAYBE' }), error => error.code === 'INVALID_ATTENDANCE');
+});
+
 test('event list scope accepts upcoming and past while preserving legacy all', () => {
   assert.equal(service.parseTeamEventListScope(null), 'ALL');
   assert.equal(service.parseTeamEventListScope('UPCOMING'), 'UPCOMING');
@@ -270,4 +277,85 @@ test('attendance route passes only authenticated actor and path identities to se
     userId: 'member-1', teamId: 'team-1', eventId: 'event-1',
     payload: { status: 'ATTENDING', memberId: 'other-member' },
   });
+});
+
+test('managed attendance route uses authenticated actor and path member identity', async () => {
+  let call = null;
+  const route = loadTs('src/app/api/mobile/v1/teams/[teamId]/events/[eventId]/attendance/[memberId]/route.ts', {
+    '@/lib/mobile-api/auth': { getMobileApiUserId: async () => 'manager-user' },
+    '@/lib/mobile-api/team-events': {
+      updateMemberAttendance: async (userId, teamId, eventId, memberId, payload) => {
+        call = { userId, teamId, eventId, memberId, payload };
+        return { memberId, status: payload.status };
+      },
+      TeamEventError: service.TeamEventError,
+    },
+  });
+  const response = await route.PUT(new Request('https://example.test/attendance/member-target', {
+    method: 'PUT', body: JSON.stringify({ status: 'UNANSWERED', userId: 'payload-user' }),
+    headers: { 'content-type': 'application/json' },
+  }), { params: Promise.resolve({ teamId: 'team-1', eventId: 'event-1', memberId: 'member-target' }) });
+  assert.equal(response.status, 200);
+  assert.deepEqual(call, {
+    userId: 'manager-user', teamId: 'team-1', eventId: 'event-1', memberId: 'member-target',
+    payload: { status: 'UNANSWERED', userId: 'payload-user' },
+  });
+});
+
+test('owner and manager can change a team member attendance while member and cross-team target are rejected', async () => {
+  for (const role of ['OWNER', 'MANAGER']) {
+    const calls = [];
+    const actorId = `${role.toLowerCase()}-user`;
+    const prisma = {
+      team: { findFirst: async () => ({
+        ownerId: role === 'OWNER' ? actorId : 'owner-user', bowlerHiddenEnabled: false,
+        User: role === 'MANAGER' ? [{ id: actorId }] : [],
+        members: [{ id: 'actor-member', alias: null, user: { name: '관리자' } }],
+      }) },
+      teamEvent: { findFirst: async () => ({
+        id: 'event-1', teamId: 'team-1', attendanceEnabled: true,
+        competitionEnabled: false, competitionType: null, competitionStatus: 'ATTENDANCE_OPEN', laneDrawStatus: 'NOT_STARTED',
+        team: { members: [{ id: 'target-member', alias: '대상', user: { name: '대상 회원' } }] },
+      }) },
+      teamEventAttendance: { upsert: async input => { calls.push(input); return input; } },
+    };
+    const scoped = loadTs('src/lib/mobile-api/team-events.ts', { '@/lib/prisma': prisma }, new Map());
+    assert.deepEqual(await scoped.updateMemberAttendance(actorId, 'team-1', 'event-1', 'target-member', { status: 'ATTENDING' }), {
+      memberId: 'target-member', status: 'ATTENDING',
+    });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].create.memberDisplayName, '대상');
+  }
+
+  const memberPrisma = {
+    team: { findFirst: async () => ({
+      ownerId: 'owner-user', bowlerHiddenEnabled: false, User: [],
+      members: [{ id: 'actor-member', alias: null, user: { name: '회원' } }],
+    }) },
+  };
+  const memberService = loadTs('src/lib/mobile-api/team-events.ts', { '@/lib/prisma': memberPrisma }, new Map());
+  await assert.rejects(
+    memberService.updateMemberAttendance('member-user', 'team-1', 'event-1', 'target-member', { status: 'ATTENDING' }),
+    error => error.code === 'FORBIDDEN' && error.status === 403,
+  );
+
+  let writes = 0;
+  const crossTeamPrisma = {
+    team: { findFirst: async () => ({
+      ownerId: 'owner-user', bowlerHiddenEnabled: false, User: [],
+      members: [{ id: 'owner-member', alias: null, user: { name: '소유자' } }],
+    }) },
+    teamEvent: { findFirst: async () => ({
+      id: 'event-1', teamId: 'team-1', attendanceEnabled: true,
+      competitionEnabled: false, competitionType: null, competitionStatus: 'ATTENDANCE_OPEN', laneDrawStatus: 'NOT_STARTED',
+      team: { members: [{ id: 'same-team-member', alias: null, user: { name: '같은 팀' } }] },
+    }) },
+    teamEventAttendance: { upsert: async () => { writes += 1; } },
+  };
+  const crossTeamService = loadTs('src/lib/mobile-api/team-events.ts', { '@/lib/prisma': crossTeamPrisma }, new Map());
+  await assert.rejects(
+    crossTeamService.updateMemberAttendance('owner-user', 'team-1', 'event-1', 'other-team-member', { status: 'ATTENDING' }),
+    error => error.code === 'MEMBER_NOT_FOUND' && error.status === 404,
+  );
+  assert.equal(writes, 0);
 });

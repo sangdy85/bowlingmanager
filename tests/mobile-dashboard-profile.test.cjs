@@ -188,7 +188,7 @@ test('dashboard returns the additive next event without changing legacy metrics'
         eventId: 'event-1', teamId: 'one', teamName: 'one', title: '정기전',
         eventType: '정기전', competitionType: null,
         dateTime: '2026-09-30T10:00:00.000Z', location: '서울 볼링장',
-        attendanceStatus: 'UNANSWERED', laneMode: 'BULK', laneStatus: 'NOT_STARTED',
+        attendanceStatus: 'UNANSWERED', attendanceCount: 12, laneMode: 'BULK', laneStatus: 'NOT_STARTED',
         assignedLane: null, hiddenEnabled: false, competitionState: null,
         individualGroup: null, teamAssignment: null, eventVoteStatus: null,
     };
@@ -201,6 +201,20 @@ test('dashboard returns the additive next event without changing legacy metrics'
     });
     assert.deepEqual(result.nextEvent, nextEvent);
     assert.equal(result.gameCount, 0);
+});
+
+test('dashboard preserves calendar season dates and prioritizes explicit member ranking', () => {
+    assert.equal(dashboard.dashboardSeasonDateKey(new Date('2024-12-31T15:00:00.000Z')), '2025-01-01');
+    assert.equal(dashboard.dashboardSeasonDateKey(new Date('2025-12-30T15:00:00.000Z')), '2025-12-31');
+    assert.equal(dashboard.dashboardSeasonDateKey(new Date('2028-02-28T15:00:00.000Z')), '2028-02-29');
+    assert.equal(dashboard.dashboardSeasonRank(3, 8), 3);
+    assert.equal(dashboard.dashboardSeasonRank(null, 8), 8);
+    assert.equal(dashboard.dashboardSeasonRank(null, null), null);
+});
+
+test('dashboard attendance count follows attending member plus guest policy', () => {
+    assert.equal(dashboard.dashboardAttendanceCount(9, 3), 12);
+    assert.equal(dashboard.dashboardAttendanceCount(0, 0), 0);
 });
 
 test('dashboard adds regular official totals and multiple club achievements without replacing legacy fields', async () => {

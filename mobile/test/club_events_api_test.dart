@@ -61,6 +61,12 @@ void main() {
     );
     final ClubEvent detail = await api.fetchEvent('team-1', 'event-1');
     await api.setAttendance('team-1', 'event-1', ClubEventAttendance.attending);
+    await api.setMemberAttendance(
+      'team-1',
+      'event-1',
+      'member-2',
+      ClubEventAttendance.unanswered,
+    );
     await api.replaceLaneSlots(
       'team-1',
       'event-1',
@@ -77,10 +83,15 @@ void main() {
         'GET /teams/team-1/events',
         'GET /teams/team-1/events/event-1',
         'PUT /teams/team-1/events/event-1/attendance',
+        'PUT /teams/team-1/events/event-1/attendance/member-2',
         'PUT /teams/team-1/events/event-1/lane-config',
         'POST /teams/team-1/events/event-1/draw/mine',
       ]),
     );
+    final RequestOptions managedAttendance = requests.firstWhere(
+      (RequestOptions item) => item.path.endsWith('/attendance/member-2'),
+    );
+    expect((managedAttendance.data as Map)['status'], 'UNANSWERED');
   });
 
   test('maps API errors and malformed event envelopes', () async {

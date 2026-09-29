@@ -64,6 +64,12 @@ class ClubEventsRepository {
     String eventId,
     ClubEventAttendance status,
   ) => _api.setAttendance(teamId, eventId, status);
+  Future<void> setMemberAttendance(
+    String teamId,
+    String eventId,
+    String memberId,
+    ClubEventAttendance status,
+  ) => _api.setMemberAttendance(teamId, eventId, memberId, status);
   Future<void> addGuest(String teamId, String eventId, String name) =>
       _api.addGuest(teamId, eventId, name);
   Future<void> deleteGuest(String teamId, String eventId, String guestId) =>

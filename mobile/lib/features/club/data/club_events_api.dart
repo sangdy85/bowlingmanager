@@ -168,6 +168,20 @@ class ClubEventsApi {
     );
   });
 
+  Future<void> setMemberAttendance(
+    String teamId,
+    String eventId,
+    String memberId,
+    ClubEventAttendance status,
+  ) => _request(() async {
+    _data(
+      (await _dio.put<dynamic>(
+        '${_eventPath(teamId, eventId)}/attendance/${Uri.encodeComponent(memberId)}',
+        data: <String, dynamic>{'status': status.apiValue},
+      )).data,
+    );
+  });
+
   Future<void> addGuest(String teamId, String eventId, String name) =>
       _request(() async {
         _data(

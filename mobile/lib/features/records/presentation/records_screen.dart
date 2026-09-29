@@ -163,7 +163,7 @@ class _PersonalRecordsDashboard extends StatelessWidget {
         DashboardMedalsCard(medals: dashboard.medals),
         if (dashboard.seasonSummaries.isNotEmpty) ...<Widget>[
           const SizedBox(height: 16),
-          const Text('이전 시즌 순위', style: AppTextStyles.title),
+          const Text('시즌 순위', style: AppTextStyles.title),
           const SizedBox(height: 8),
           for (final DashboardSeasonSummary season
               in dashboard.seasonSummaries) ...<Widget>[
@@ -317,15 +317,17 @@ class _SeasonSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String seasonRank = season.rankingMode == 'IMAGE'
+    final String seasonRank = season.rank != null
+        ? season.points == null
+              ? '${season.rank}위'
+              : '${season.rank}위 · ${season.points}P'
+        : season.rankingMode == 'IMAGE'
         ? '이미지 순위표'
-        : season.rank == null || season.points == null
-        ? '순위 없음'
-        : '${season.rank}위 / ${season.points}P';
+        : '-';
     final String finalRank = season.lifecycleStatus == 'ACTIVE'
-        ? '시즌 진행 중'
+        ? '미확정'
         : season.finalRank == null
-        ? '최종 순위 미확정'
+        ? '미확정'
         : '${season.finalRank}위';
     return Card(
       key: Key('records-season-${season.seasonId}'),
@@ -344,12 +346,15 @@ class _SeasonSummaryCard extends StatelessWidget {
               style: const TextStyle(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 18,
-              runSpacing: 8,
+            Row(
               children: <Widget>[
-                Text('시즌 순위  $seasonRank'),
-                Text('최종 순위  $finalRank'),
+                Expanded(
+                  child: _SeasonRankMetric(label: '시즌 순위', value: seasonRank),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _SeasonRankMetric(label: '최종 순위', value: finalRank),
+                ),
               ],
             ),
           ],
@@ -708,18 +713,18 @@ class _RecordCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          '${_formatGameDate(session.gameDate)} · $gameType',
+                          _formatGameDate(session.gameDate),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 5),
                         Text(
-                          teamName,
+                          '$teamName · $gameType',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -775,16 +780,29 @@ class _RecordCard extends StatelessWidget {
               const SizedBox(height: 14),
               const Divider(height: 1),
               const SizedBox(height: 16),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
+              Row(
                 children: <Widget>[
-                  _SummaryBadge(
-                    label: 'AVG ${session.average.toStringAsFixed(1)}',
-                    emphasized: true,
+                  Expanded(
+                    child: _RecordMetric(
+                      label: '게임수',
+                      value: '${session.gameCount}',
+                    ),
                   ),
-                  _SummaryBadge(label: '총핀 ${session.total}', emphasized: true),
-                  _SummaryBadge(label: '${session.gameCount}게임'),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _RecordMetric(
+                      label: '총점',
+                      value: '${session.total}',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _RecordMetric(
+                      label: 'AVG',
+                      value: session.average.toStringAsFixed(1),
+                      emphasized: true,
+                    ),
+                  ),
                 ],
               ),
               if (memos.isNotEmpty) ...<Widget>[
@@ -868,10 +886,15 @@ class _RecordRankBadge extends StatelessWidget {
   }
 }
 
-class _SummaryBadge extends StatelessWidget {
-  const _SummaryBadge({required this.label, this.emphasized = false});
+class _RecordMetric extends StatelessWidget {
+  const _RecordMetric({
+    required this.label,
+    required this.value,
+    this.emphasized = false,
+  });
 
   final String label;
+  final String value;
   final bool emphasized;
 
   @override
@@ -882,16 +905,73 @@ class _SummaryBadge extends StatelessWidget {
         color: AppColors.surfaceElevated,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: emphasized ? AppColors.primaryBright : AppColors.textSecondary,
-          fontSize: emphasized ? 16 : 15,
-          fontWeight: emphasized ? FontWeight.w900 : FontWeight.w700,
-        ),
+      child: Column(
+        children: <Widget>[
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            value,
+            maxLines: 1,
+            style: TextStyle(
+              color: emphasized
+                  ? AppColors.primaryBright
+                  : AppColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
   }
+}
+
+class _SeasonRankMetric extends StatelessWidget {
+  const _SeasonRankMetric({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceElevated,
+      borderRadius: BorderRadius.circular(13),
+      border: Border.all(color: AppColors.divider),
+    ),
+    child: Column(
+      children: <Widget>[
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 7),
+        Text(
+          value,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppColors.primaryBright,
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 String _formatGameDate(DateTime date) {

@@ -71,6 +71,7 @@ type MobileNextEvent = {
     dateTime: string;
     location: string;
     attendanceStatus: string;
+    attendanceCount: number;
     attendanceEnabled: boolean;
     laneMode: string | null;
     laneStatus: string;
@@ -81,6 +82,18 @@ type MobileNextEvent = {
     teamAssignment: string | null;
     eventVoteStatus: string | null;
 };
+
+export function dashboardSeasonDateKey(value: Date): string {
+    return teamActivityDateKey(value);
+}
+
+export function dashboardSeasonRank(explicitRank: number | null | undefined, calculatedRank: number | null | undefined) {
+    return explicitRank ?? calculatedRank ?? null;
+}
+
+export function dashboardAttendanceCount(attendingMembers: number, guests: number) {
+    return attendingMembers + guests;
+}
 
 const defaultDependencies: MobileDashboardDependencies = {
     findUser(userId) {
@@ -204,9 +217,9 @@ const defaultDependencies: MobileDashboardDependencies = {
             return {
                 teamId: season.teamId, teamName: membership.team.name,
                 seasonId: season.id, seasonName: season.name,
-                startDate: season.startDate.toISOString().slice(0, 10), endDate: season.endDate.toISOString().slice(0, 10),
+                startDate: dashboardSeasonDateKey(season.startDate), endDate: dashboardSeasonDateKey(season.endDate),
                 lifecycleStatus: seasonLifecycleStatus(season), rankingMode: season.rankingMode === "IMAGE" ? "IMAGE" as const : "DATA" as const,
-                rank: mine?.rank ?? explicitMine?.rank ?? null, points: mine?.points ?? null,
+                rank: dashboardSeasonRank(explicitMine?.rank, mine?.rank), points: mine?.points ?? null,
                 finalRank: finalEntries.find((entry) => entry.memberId === membership.id)?.rank ?? null,
                 finalizedAt: final?.finalizedAt.toISOString() ?? null,
             };
@@ -243,6 +256,12 @@ const defaultDependencies: MobileDashboardDependencies = {
                     where: { memberId: { in: memberIds } }, take: 1,
                     select: { ballot: { select: { id: true } } },
                 },
+                _count: {
+                    select: {
+                        attendances: { where: { status: "ATTENDING", memberId: { not: null } } },
+                        guests: true,
+                    },
+                },
             },
         });
         const selected = candidates.find((event) => eventDateTime(event.eventDate, event.eventTime) >= now);
@@ -272,6 +291,7 @@ const defaultDependencies: MobileDashboardDependencies = {
             dateTime: eventDateTime(selected.eventDate, selected.eventTime).toISOString(),
             location: selected.location,
             attendanceStatus: attendance?.status ?? "UNANSWERED",
+            attendanceCount: dashboardAttendanceCount(selected._count.attendances, selected._count.guests),
             attendanceEnabled: selected.attendanceEnabled,
             laneMode: selected.laneDrawEnabled ? selected.laneDrawMode : null,
             laneStatus: selected.laneDrawStatus,

@@ -241,6 +241,7 @@ void main() {
           dateTime: DateTime.now().add(const Duration(days: 1)),
           location: '서울 볼링장',
           attendanceStatus: 'ATTENDING',
+          attendanceCount: 12,
           laneMode: 'BULK',
           laneStatus: 'COMPLETED',
           assignedLane: '12-2',
@@ -255,6 +256,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('NEXT EVENT'), findsOneWidget);
+    expect(find.text('참석 12명'), findsOneWidget);
     expect(find.text('9월 정기전'), findsOneWidget);
     expect(find.text('내 레인 12-2'), findsOneWidget);
     expect(find.text('개인전 · B조'), findsOneWidget);
@@ -289,6 +291,33 @@ void main() {
     await tester.tap(find.text('내 레인 추첨'));
     await tester.pumpAndSettle();
     expect(eventsApi.drawCount, 1);
+  });
+
+  testWidgets('NEXT EVENT fits long content and zero attendance at 360px', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 720));
+    tester.platformDispatcher.textScaleFactorTestValue = 1.2;
+    addTearDown(() {
+      tester.binding.setSurfaceSize(null);
+      tester.platformDispatcher.clearTextScaleFactorTestValue();
+    });
+    final FakeDashboardRepository repository = FakeDashboardRepository()
+      ..result = _dashboardWithEvent(
+        attendanceStatus: 'UNANSWERED',
+        laneMode: 'BULK',
+        laneStatus: 'NOT_STARTED',
+        attendanceCount: 0,
+        teamName: '아주 긴 이름을 가진 테스트 볼링 동호회',
+        title: '10월 정기 팀전 및 회원 친선 경기',
+        location: '서울특별시 아주 긴 이름의 테스트 볼링 경기장',
+      );
+    await _pumpAuthenticatedApp(tester, repository);
+    await tester.pumpAndSettle();
+
+    expect(find.text('참석 0명'), findsOneWidget);
+    expect(find.byKey(const Key('home-next-event')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Home shows an API error and retries the dashboard request', (
@@ -457,6 +486,10 @@ Dashboard _dashboardWithEvent({
   required String attendanceStatus,
   required String laneMode,
   required String laneStatus,
+  int attendanceCount = 0,
+  String teamName = '배볼러',
+  String title = '9월 정기전',
+  String location = '서울 볼링장',
 }) => Dashboard(
   year: 2026,
   average: 0,
@@ -468,13 +501,14 @@ Dashboard _dashboardWithEvent({
   nextEvent: DashboardNextEvent(
     eventId: 'event-1',
     teamId: 'team-1',
-    teamName: '배볼러',
-    title: '9월 정기전',
+    teamName: teamName,
+    title: title,
     eventType: '정기전',
     competitionType: null,
     dateTime: DateTime.now().add(const Duration(days: 1)),
-    location: '서울 볼링장',
+    location: location,
     attendanceStatus: attendanceStatus,
+    attendanceCount: attendanceCount,
     laneMode: laneMode,
     laneStatus: laneStatus,
     assignedLane: null,

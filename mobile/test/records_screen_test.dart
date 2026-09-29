@@ -66,6 +66,34 @@ void main() {
             finalRank: null,
             finalizedAt: null,
           ),
+          DashboardSeasonSummary(
+            teamId: 'team-1',
+            teamName: '배볼러',
+            seasonId: 'season-image-ranked',
+            seasonName: '2025 시즌',
+            startDate: DateTime(2025, 1, 1),
+            endDate: DateTime(2025, 12, 31),
+            lifecycleStatus: 'ENDED',
+            rankingMode: 'IMAGE',
+            rank: 7,
+            points: null,
+            finalRank: 9,
+            finalizedAt: DateTime.utc(2026),
+          ),
+          DashboardSeasonSummary(
+            teamId: 'team-1',
+            teamName: '배볼러',
+            seasonId: 'season-image-only',
+            seasonName: '2024 시즌',
+            startDate: DateTime(2024, 1, 1),
+            endDate: DateTime(2024, 12, 31),
+            lifecycleStatus: 'ENDED',
+            rankingMode: 'IMAGE',
+            rank: null,
+            points: null,
+            finalRank: null,
+            finalizedAt: null,
+          ),
         ],
         recordCategories: <DashboardRecordCategory>[
           DashboardRecordCategory(
@@ -99,15 +127,20 @@ void main() {
       expect(find.text('총평균 190.5'), findsOneWidget);
       expect(find.textContaining('편차 60'), findsOneWidget);
       expect(find.text('입상 기록'), findsOneWidget);
-      expect(find.text('이전 시즌 순위'), findsOneWidget);
-      expect(find.text('시즌 순위  3위 / 183P'), findsOneWidget);
-      expect(find.text('최종 순위  시즌 진행 중'), findsOneWidget);
+      expect(find.text('시즌 순위'), findsWidgets);
+      expect(find.text('3위 · 183P'), findsOneWidget);
+      expect(find.text('미확정'), findsNWidgets(2));
+      expect(find.text('2025.01.01 ~ 2025.12.31'), findsOneWidget);
+      expect(find.text('7위'), findsOneWidget);
+      expect(find.text('9위'), findsOneWidget);
+      expect(find.text('이미지 순위표'), findsOneWidget);
       expect(find.text('개인 통계'), findsOneWidget);
       expect(find.text('통합 종합'), findsOneWidget);
       expect(tester.takeException(), isNull);
-      await tester.drag(
-        find.byKey(const Key('records-list')),
-        const Offset(0, -900),
+      await tester.scrollUntilVisible(
+        find.text('경기 기록'),
+        400,
+        scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
       expect(find.text('경기 기록'), findsOneWidget);
@@ -133,9 +166,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('2026.09.15'), findsOneWidget);
-    expect(find.text('215'), findsOneWidget);
+    expect(find.text('215'), findsNWidgets(2));
     expect(find.textContaining('정기전'), findsWidgets);
-    expect(find.text('테스트 팀'), findsOneWidget);
+    expect(find.text('테스트 팀 · 정기전'), findsOneWidget);
     expect(find.text('synthetic memo'), findsOneWidget);
     expect(find.byType(RefreshIndicator), findsOneWidget);
   });
@@ -222,14 +255,17 @@ void main() {
     await _openRecords(tester, repository);
 
     expect(find.textContaining('정기전'), findsWidgets);
-    expect(find.text('배볼러'), findsOneWidget);
+    expect(find.text('배볼러 · 정기전'), findsOneWidget);
     expect(find.textContaining('2026.09.22'), findsOneWidget);
     for (final String score in <String>['202', '213', '208', '192']) {
       expect(find.text(score), findsOneWidget);
     }
-    expect(find.text('4게임'), findsOneWidget);
-    expect(find.text('총핀 815'), findsOneWidget);
-    expect(find.text('AVG 203.8'), findsOneWidget);
+    expect(find.text('게임수'), findsOneWidget);
+    expect(find.text('4'), findsOneWidget);
+    expect(find.text('총점'), findsWidgets);
+    expect(find.text('815'), findsOneWidget);
+    expect(find.text('AVG'), findsOneWidget);
+    expect(find.text('203.8'), findsOneWidget);
     expect(find.text('202 · 첫 메모'), findsOneWidget);
     expect(find.text('213 · 둘째 메모'), findsOneWidget);
     expect(find.byKey(const Key('record-rank-1')), findsNothing);
@@ -362,9 +398,12 @@ void main() {
       ..pages[1] = scoresPage(page: 1, total: 1, items: <GameSession>[session]);
     await _openRecords(tester, repository);
 
-    expect(find.text('12게임'), findsOneWidget);
-    expect(find.text('총핀 3600'), findsOneWidget);
-    expect(find.text('AVG 300.0'), findsOneWidget);
+    expect(find.text('게임수'), findsOneWidget);
+    expect(find.text('12'), findsOneWidget);
+    expect(find.text('총점'), findsWidgets);
+    expect(find.text('3600'), findsOneWidget);
+    expect(find.text('AVG'), findsOneWidget);
+    expect(find.text('300.0'), findsOneWidget);
     expect(find.text('300'), findsNWidgets(12));
     expect(find.byKey(const Key('record-scores-long-session')), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -392,7 +431,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('215'), findsOneWidget);
+    expect(find.text('215'), findsNWidgets(2));
     expect(repository.requestedPages, <int>[1, 1]);
   });
 
@@ -418,7 +457,7 @@ void main() {
     await tester.tap(find.byKey(const Key('records-load-more')));
     await tester.pump();
 
-    expect(find.text('201'), findsOneWidget);
+    expect(find.text('201'), findsNWidgets(2));
     expect(find.byKey(const Key('records-loading-more')), findsOneWidget);
     pending.complete(
       scoresPage(
@@ -429,8 +468,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('201'), findsOneWidget);
-    expect(find.text('202'), findsOneWidget);
+    expect(find.text('201'), findsNWidgets(2));
+    expect(find.text('202'), findsNWidgets(2));
     expect(find.byKey(const Key('records-load-more')), findsNothing);
   });
 
@@ -459,7 +498,7 @@ void main() {
     await tester.tap(find.byKey(const Key('records-load-more')));
     await tester.pumpAndSettle();
 
-    expect(find.text('201'), findsOneWidget);
+    expect(find.text('201'), findsNWidgets(2));
     expect(find.text(error.userMessage), findsOneWidget);
     expect(find.text('다시 시도'), findsOneWidget);
   });

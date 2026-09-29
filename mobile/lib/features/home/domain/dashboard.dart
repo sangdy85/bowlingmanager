@@ -232,6 +232,7 @@ class DashboardNextEvent {
     required this.dateTime,
     required this.location,
     required this.attendanceStatus,
+    required this.attendanceCount,
     this.attendanceEnabled = true,
     required this.laneMode,
     required this.laneStatus,
@@ -252,6 +253,7 @@ class DashboardNextEvent {
   final DateTime dateTime;
   final String location;
   final String attendanceStatus;
+  final int attendanceCount;
   final bool attendanceEnabled;
   final String? laneMode;
   final String laneStatus;
@@ -280,10 +282,13 @@ class DashboardNextEvent {
       json['attendanceStatus'],
     );
     final Object? attendanceEnabled = json['attendanceEnabled'] ?? true;
+    final Object? attendanceCount = json['attendanceCount'];
     final String laneStatus = _requiredDashboardString(json['laneStatus']);
     if (dateTime == null ||
         hiddenEnabled is! bool ||
         attendanceEnabled is! bool ||
+        attendanceCount is! int ||
+        attendanceCount < 0 ||
         !const <String>{
           'UNANSWERED',
           'ATTENDING',
@@ -301,6 +306,7 @@ class DashboardNextEvent {
       dateTime: dateTime,
       location: location,
       attendanceStatus: attendanceStatus,
+      attendanceCount: attendanceCount,
       attendanceEnabled: attendanceEnabled,
       laneMode: _nullableDashboardString(json['laneMode']),
       laneStatus: laneStatus,

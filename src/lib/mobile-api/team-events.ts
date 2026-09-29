@@ -144,6 +144,14 @@ export function parseAttendanceStatus(value: unknown): AttendanceStatus {
     return status as AttendanceStatus;
 }
 
+export function parseManagedAttendanceStatus(value: unknown): AttendanceStatus {
+    const status = asRecord(value).status;
+    if (!TEAM_EVENT_ATTENDANCE.includes(status as AttendanceStatus)) {
+        throw new TeamEventError("INVALID_ATTENDANCE", "참석 여부를 확인해주세요.", 400);
+    }
+    return status as AttendanceStatus;
+}
+
 export function parseLaneSlots(value: unknown): SlotInput[] {
     const slots = asRecord(value).slots;
     if (!Array.isArray(slots) || slots.length > 144) {
@@ -330,6 +338,31 @@ export async function updateMyAttendance(actorUserId: string, teamId: string, ev
         update: { memberDisplayName: displayName, status },
     });
     return { status };
+}
+
+export async function updateMemberAttendance(
+    actorUserId: string,
+    teamId: string,
+    eventId: string,
+    memberId: string,
+    value: unknown,
+) {
+    const access = await getAccess(actorUserId, teamId);
+    requireManager(access.role);
+    const event = await findEvent(teamId, eventId);
+    if (!event.attendanceEnabled) throw new TeamEventError("ATTENDANCE_DISABLED", "참석 조사를 사용하지 않는 일정입니다.", 409);
+    requireCompetitionAttendanceOpen(event);
+    requireNotStarted(event.laneDrawStatus, "추첨 시작 후에는 참석 여부를 변경할 수 없습니다.");
+    const member = event.team.members.find((item) => item.id === memberId);
+    if (!member) throw new TeamEventError("MEMBER_NOT_FOUND", "동호회 회원을 찾을 수 없습니다.", 404);
+    const status = parseManagedAttendanceStatus(value);
+    const displayName = member.alias?.trim() || member.user.name;
+    await prisma.teamEventAttendance.upsert({
+        where: { eventId_memberId: { eventId, memberId } },
+        create: { eventId, memberId, memberDisplayName: displayName, status },
+        update: { memberDisplayName: displayName, status },
+    });
+    return { memberId, status };
 }
 
 export async function addEventGuest(actorUserId: string, teamId: string, eventId: string, value: unknown) {

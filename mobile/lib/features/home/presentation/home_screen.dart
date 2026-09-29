@@ -201,20 +201,74 @@ class _NextEventCardState extends ConsumerState<_NextEventCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
-              'NEXT EVENT',
-              style: TextStyle(
-                color: AppColors.primaryBright,
-                fontWeight: FontWeight.w800,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const Expanded(
+                  child: Text(
+                    'NEXT EVENT',
+                    style: TextStyle(
+                      color: AppColors.primaryBright,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                Container(
+                  key: const Key('home-next-event-attendance-count'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const Icon(
+                        Icons.people_alt_outlined,
+                        size: 16,
+                        color: AppColors.primaryBright,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        '참석 ${event.attendanceCount}명',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              event.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 23,
+                height: 1.2,
+                fontWeight: FontWeight.w900,
               ),
             ),
             const SizedBox(height: 8),
-            Text(event.title, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 6),
-            Text('${event.teamName} · ${event.eventType ?? '기타'}'),
+            Text(
+              '${event.teamName} · ${event.eventType ?? '기타'}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 5),
             Text(
               '$date $time · ${event.location}',
-              style: const TextStyle(color: AppColors.textSecondary),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 15,
+                height: 1.35,
+              ),
             ),
             const SizedBox(height: 14),
             if (event.attendanceEnabled && event.isUnanswered)
@@ -555,7 +609,7 @@ class _ClubAchievementCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 19,
+                        fontSize: 21,
                         height: 1.2,
                         fontWeight: FontWeight.w900,
                       ),
@@ -600,7 +654,7 @@ class _ClubAchievementCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 15,
+                            fontSize: 16,
                             fontWeight: FontWeight.w800,
                           ),
                         ),

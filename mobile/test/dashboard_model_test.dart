@@ -132,6 +132,7 @@ void main() {
         'dateTime': '2026-09-30T10:00:00.000Z',
         'location': '서울 볼링장',
         'attendanceStatus': 'ATTENDING',
+        'attendanceCount': 12,
         'laneMode': 'INDIVIDUAL',
         'laneStatus': 'OPEN',
         'assignedLane': '12-2',
@@ -146,6 +147,7 @@ void main() {
     expect(dashboard.nextEvent?.title, '9월 정기전');
     expect(dashboard.nextEvent?.assignedLane, '12-2');
     expect(dashboard.nextEvent?.individualGroup, 'B');
+    expect(dashboard.nextEvent?.attendanceCount, 12);
   });
 
   test('Dashboard.fromJson rejects malformed next event data', () {

@@ -7,6 +7,7 @@ import 'package:bowlingmanager_mobile/features/club/application/club_providers.d
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_team_competition_card.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_competition_card.dart';
+import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -328,6 +329,17 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                     }
                   },
           ),
+          if (event.canManage && event.attendance != null) ...<Widget>[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              key: const Key('attendance-management'),
+              onPressed: _working
+                  ? null
+                  : () => _showAttendanceManagement(event, userId),
+              icon: const Icon(Icons.manage_accounts_outlined),
+              label: const Text('참석 현황 관리'),
+            ),
+          ],
           if (event.attendance != null) ...<Widget>[
             const Divider(height: 28),
             SingleChildScrollView(
@@ -807,12 +819,38 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
       await call();
       if (mounted) {
         invalidateClubEvents(ref, userId, widget.teamId, widget.eventId);
+        ref.invalidate(dashboardProvider(userId));
       }
     } on Object catch (error) {
       if (mounted) _showError(error);
     } finally {
       if (mounted) setState(() => _working = false);
     }
+  }
+
+  Future<void> _showAttendanceManagement(ClubEvent event, String userId) async {
+    final List<ClubEventAttendanceItem> items =
+        event.attendance ?? const <ClubEventAttendanceItem>[];
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) => _AttendanceManagementSheet(
+        items: items,
+        onChange: (String memberId, ClubEventAttendance status) async {
+          await ref
+              .read(clubEventsRepositoryProvider)
+              .setMemberAttendance(
+                widget.teamId,
+                widget.eventId,
+                memberId,
+                status,
+              );
+          if (!mounted) return;
+          invalidateClubEvents(ref, userId, widget.teamId, widget.eventId);
+          ref.invalidate(dashboardProvider(userId));
+        },
+      ),
+    );
   }
 
   Future<void> _addGuest(String userId) async {
@@ -968,6 +1006,125 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
         : clubErrorMessage(error);
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _AttendanceManagementSheet extends StatefulWidget {
+  const _AttendanceManagementSheet({
+    required this.items,
+    required this.onChange,
+  });
+
+  final List<ClubEventAttendanceItem> items;
+  final Future<void> Function(String memberId, ClubEventAttendance status)
+  onChange;
+
+  @override
+  State<_AttendanceManagementSheet> createState() =>
+      _AttendanceManagementSheetState();
+}
+
+class _AttendanceManagementSheetState
+    extends State<_AttendanceManagementSheet> {
+  late final Map<String, ClubEventAttendance> _statuses =
+      <String, ClubEventAttendance>{
+        for (final ClubEventAttendanceItem item in widget.items)
+          item.memberId: item.status,
+      };
+  String? _workingMemberId;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.72,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 12, 8),
+            child: Row(
+              children: <Widget>[
+                const Expanded(
+                  child: Text(
+                    '참석 현황 관리',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              '회원별 참석 상태를 선택하세요.',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ),
+          const Divider(height: 20),
+          Expanded(
+            child: ListView.separated(
+              key: const Key('attendance-management-list'),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              itemCount: widget.items.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (BuildContext context, int index) {
+                final ClubEventAttendanceItem item = widget.items[index];
+                final bool working = _workingMemberId != null;
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: DropdownButton<ClubEventAttendance>(
+                    key: Key('attendance-status-${item.memberId}'),
+                    value: _statuses[item.memberId],
+                    onChanged: working
+                        ? null
+                        : (ClubEventAttendance? value) => _change(item, value),
+                    items: ClubEventAttendance.values
+                        .map(
+                          (ClubEventAttendance value) =>
+                              DropdownMenuItem<ClubEventAttendance>(
+                                value: value,
+                                child: Text(value.label),
+                              ),
+                        )
+                        .toList(growable: false),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Future<void> _change(
+    ClubEventAttendanceItem item,
+    ClubEventAttendance? status,
+  ) async {
+    if (status == null || status == _statuses[item.memberId]) return;
+    setState(() => _workingMemberId = item.memberId);
+    try {
+      await widget.onChange(item.memberId, status);
+      if (mounted) setState(() => _statuses[item.memberId] = status);
+    } on Object catch (error) {
+      if (!mounted) return;
+      final String message = error is ApiException
+          ? error.userMessage
+          : clubErrorMessage(error);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) setState(() => _workingMemberId = null);
+    }
   }
 }
 
