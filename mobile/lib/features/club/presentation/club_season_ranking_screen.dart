@@ -611,27 +611,27 @@ class _ClubSeasonRankingScreenState
             .future,
       );
       if (!mounted) return;
-      final entries = await Navigator.of(context)
-          .push<List<Map<String, Object?>>>(
-            MaterialPageRoute<List<Map<String, Object?>>>(
-              builder: (context) => _HistoricalRankingEditorScreen(
-                title: '시즌 순위 직접 지정',
-                submitLabel: '시즌 순위 저장',
-                members: members,
-                initialEntries:
-                    ranking.explicitSeasonRanking?.entries
-                        .map(_seedFromHistoricalEntry)
-                        .toList(growable: false) ??
-                    const <_HistoricalRankingSeed>[],
-              ),
-            ),
-          );
-      if (entries == null || !mounted) return;
-      await ref
-          .read(clubExpansionApiProvider)
-          .saveExplicitSeasonRanking(widget.teamId, season.id, entries);
-      ref.invalidate(clubSeasonRankingProvider);
-      if (mounted) {
+      final saved = await Navigator.of(context).push<bool>(
+        MaterialPageRoute<bool>(
+          builder: (context) => _HistoricalRankingEditorScreen(
+            title: '시즌 순위 직접 지정',
+            submitLabel: '시즌 순위 저장',
+            members: members,
+            initialEntries:
+                ranking.explicitSeasonRanking?.entries
+                    .map(_seedFromHistoricalEntry)
+                    .toList(growable: false) ??
+                const <_HistoricalRankingSeed>[],
+            onSubmit: (entries) async {
+              await ref
+                  .read(clubExpansionApiProvider)
+                  .saveExplicitSeasonRanking(widget.teamId, season.id, entries);
+              _invalidateRankingViews(request, profileRequest: null);
+            },
+          ),
+        ),
+      );
+      if (saved == true && mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('시즌 순위를 저장했습니다.')));
       }
@@ -679,43 +679,26 @@ class _ClubSeasonRankingScreenState
                 .toList(growable: false) ??
             const <_HistoricalRankingSeed>[];
       }
-      final entries = await Navigator.of(context)
-          .push<List<Map<String, Object?>>>(
-            MaterialPageRoute<List<Map<String, Object?>>>(
-              builder: (context) => _HistoricalRankingEditorScreen(
-                title: '최종 순위 직접 입력',
-                submitLabel: '최종 순위 검토 완료',
-                members: members,
-                initialEntries: initialEntries,
-              ),
-            ),
-          );
-      if (entries == null || !mounted) return;
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('최종 순위 확정'),
-          content: Text('${season.name}의 최종 순위를 역사 기록으로 확정하시겠습니까?'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('취소'),
-            ),
-            FilledButton(
-              key: const Key('finalize-season-submit'),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('최종 순위 확정'),
-            ),
-          ],
+      final hasExistingFinal = ranking.finalRanking != null;
+      final saved = await Navigator.of(context).push<bool>(
+        MaterialPageRoute<bool>(
+          builder: (context) => _HistoricalRankingEditorScreen(
+            title: '최종 순위 직접 입력',
+            submitLabel: hasExistingFinal ? '최종 순위 재확정' : '최종 순위 확정',
+            members: members,
+            initialEntries: initialEntries,
+            confirmationTitle: hasExistingFinal ? '최종 순위 재확정' : '최종 순위 확정',
+            confirmationMessage: '입력한 순서대로 최종 순위를 확정하시겠습니까?\n기존 확정 이력은 유지되고 새로운 revision으로 저장됩니다.',
+            onSubmit: (entries) async {
+              await ref
+                  .read(clubExpansionApiProvider)
+                  .finalizeSeason(widget.teamId, season.id, entries: entries);
+              _invalidateRankingViews(request, profileRequest: profileRequest);
+            },
+          ),
         ),
       );
-      if (confirmed != true) return;
-      await ref
-          .read(clubExpansionApiProvider)
-          .finalizeSeason(widget.teamId, season.id, entries: entries);
-      ref.invalidate(clubSeasonRankingProvider);
-      ref.invalidate(clubTeamProfileProvider(profileRequest));
-      if (mounted) {
+      if (saved == true && mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('최종 순위를 확정했습니다.')));
       }
@@ -725,6 +708,25 @@ class _ClubSeasonRankingScreenState
             .showSnackBar(SnackBar(content: Text(clubErrorMessage(error))));
       }
     }
+  }
+
+  void _invalidateRankingViews(
+    ClubSeasonRankingRequest request, {
+    required ClubExpansionRequest? profileRequest,
+  }) {
+    ref.invalidate(clubSeasonRankingProvider);
+    ref.invalidate(clubSeasonMemberProvider);
+    if (profileRequest != null) {
+      ref.invalidate(clubTeamProfileProvider(profileRequest));
+      ref.invalidate(
+        clubSeasonFinalsProvider((
+          userId: profileRequest.userId,
+          teamId: profileRequest.teamId,
+        )),
+      );
+    }
+    ref.invalidate(dashboardProvider(request.userId));
+    ref.invalidate(recordsControllerProvider(request.userId));
   }
 }
 
@@ -786,12 +788,18 @@ class _HistoricalRankingEditorScreen extends StatefulWidget {
     required this.submitLabel,
     required this.members,
     required this.initialEntries,
+    required this.onSubmit,
+    this.confirmationTitle,
+    this.confirmationMessage,
   });
 
   final String title;
   final String submitLabel;
   final List<ClubMember> members;
   final List<_HistoricalRankingSeed> initialEntries;
+  final Future<void> Function(List<Map<String, Object?>> entries) onSubmit;
+  final String? confirmationTitle;
+  final String? confirmationMessage;
 
   @override
   State<_HistoricalRankingEditorScreen> createState() =>
@@ -802,6 +810,7 @@ class _HistoricalRankingEditorScreenState
     extends State<_HistoricalRankingEditorScreen> {
   final List<_HistoricalRankingDraft> _rows = <_HistoricalRankingDraft>[];
   int _nextKey = 0;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -844,6 +853,7 @@ class _HistoricalRankingEditorScreenState
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(widget.title)),
     body: SafeArea(
+      bottom: false,
       child: Column(
         children: <Widget>[
           Padding(
@@ -870,26 +880,37 @@ class _HistoricalRankingEditorScreenState
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Row(
-              children: <Widget>[
-                OutlinedButton.icon(
-                  key: const Key('ranking-add-row'),
-                  onPressed: () => setState(() => _rows.add(_emptyRow())),
-                  icon: const Icon(Icons.add_rounded),
-                  label: Text('${_rows.length + 1}위 추가'),
-                ),
-                const Spacer(),
-                FilledButton(
-                  key: const Key('ranking-editor-submit'),
-                  onPressed: _submit,
-                  child: Text(widget.submitLabel),
-                ),
-              ],
-            ),
-          ),
         ],
+      ),
+    ),
+    bottomNavigationBar: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            OutlinedButton.icon(
+              key: const Key('ranking-add-row'),
+              onPressed: _isSubmitting
+                  ? null
+                  : () => setState(() => _rows.add(_emptyRow())),
+              icon: const Icon(Icons.add_rounded),
+              label: Text('${_rows.length + 1}위 추가'),
+            ),
+            const SizedBox(height: 8),
+            FilledButton(
+              key: const Key('ranking-editor-submit'),
+              onPressed: _isSubmitting ? null : _submit,
+              child: _isSubmitting
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(widget.submitLabel),
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -983,7 +1004,8 @@ class _HistoricalRankingEditorScreenState
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
     final entries = List<_HistoricalRankingDraft>.from(_rows);
     while (entries.isNotEmpty && entries.last.isEmpty) {
       entries.removeLast();
@@ -1000,7 +1022,7 @@ class _HistoricalRankingEditorScreenState
       _showError('같은 회원을 두 순위에 중복 지정할 수 없습니다.');
       return;
     }
-    Navigator.pop(context, <Map<String, Object?>>[
+    final payload = <Map<String, Object?>>[
       for (int index = 0; index < entries.length; index++)
         <String, Object?>{
           'rank': index + 1,
@@ -1012,7 +1034,37 @@ class _HistoricalRankingEditorScreenState
               ? entries[index].nameController.text.trim()
               : null,
         },
-    ]);
+    ];
+    if (widget.confirmationMessage != null) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(widget.confirmationTitle ?? widget.submitLabel),
+          content: Text(widget.confirmationMessage!),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              key: const Key('finalize-season-submit'),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(widget.submitLabel),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+    setState(() => _isSubmitting = true);
+    try {
+      await widget.onSubmit(payload);
+      if (mounted) Navigator.pop(context, true);
+    } on Object catch (error) {
+      if (mounted) _showError(clubErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   void _showError(String message) =>

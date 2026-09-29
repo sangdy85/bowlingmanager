@@ -779,6 +779,10 @@ void main() {
     'IMAGE season shows explicit ranking and opens a compact 1-to-10 editor',
     (WidgetTester tester) async {
       final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+      final api = _RankingSaveApi();
+      final saveGate = Completer<void>();
+      api.explicitSaveGate = saveGate;
+      int rankingLoads = 0;
       final endedImageSeason = ClubSeason(
         id: 'season-image',
         name: '2025 이미지 시즌',
@@ -827,12 +831,14 @@ void main() {
         ProviderScope(
           overrides: [
             authRepositoryProvider.overrideWithValue(authRepository),
+            clubExpansionApiProvider.overrideWithValue(api),
             clubTeamProfileProvider.overrideWith(
               (ref, request) async => _profile,
             ),
-            clubSeasonRankingProvider.overrideWith(
-              (ref, request) async => ranking,
-            ),
+            clubSeasonRankingProvider.overrideWith((ref, request) async {
+              rankingLoads += 1;
+              return ranking;
+            }),
             clubMembersProvider.overrideWith(
               (ref, request) async => testClubMembers,
             ),
@@ -858,9 +864,220 @@ void main() {
       await tester.tap(find.byKey(const Key('ranking-add-row')));
       await tester.pump();
       expect(find.text('12위 추가'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('ranking-add-row')));
+      await tester.pump();
+      expect(find.text('13위 추가'), findsOneWidget);
+      final submit = find.byKey(const Key('ranking-editor-submit'));
+      expect(submit, findsOneWidget);
+      expect(tester.getRect(submit).bottom, lessThanOrEqualTo(720));
+
+      await tester.tap(submit);
+      await tester.pump();
+      expect(api.explicitSaveCalls, 1);
+      expect(api.savedExplicitEntries, <Map<String, Object?>>[
+        <String, Object?>{
+          'rank': 1,
+          'participantType': 'MEMBER',
+          'memberId': 'member-1',
+          'displayName': null,
+        },
+        <String, Object?>{
+          'rank': 2,
+          'participantType': 'MANUAL',
+          'memberId': null,
+          'displayName': 'Guest A',
+        },
+      ]);
+      expect(
+        tester.widget<FilledButton>(submit).onPressed,
+        isNull,
+        reason: 'saving disables duplicate submissions',
+      );
+      await tester.tap(submit, warnIfMissed: false);
+      expect(api.explicitSaveCalls, 1);
+      saveGate.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('시즌 순위를 저장했습니다.'), findsOneWidget);
+      expect(rankingLoads, greaterThan(1));
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('ranking save action stays reachable on a 412px screen', (
+    WidgetTester tester,
+  ) async {
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    final ranking = _imageSeasonRanking();
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubTeamProfileProvider.overrideWith(
+            (ref, request) async => _profile,
+          ),
+          clubSeasonRankingProvider.overrideWith(
+            (ref, request) async => ranking,
+          ),
+          clubMembersProvider.overrideWith(
+            (ref, request) async => testClubMembers,
+          ),
+        ],
+        child: const MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(1.2)),
+            child: ClubSeasonRankingScreen(teamId: 'team-1'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('edit-explicit-season-ranking')),
+    );
+    await tester.tap(find.byKey(const Key('edit-explicit-season-ranking')));
+    await tester.pumpAndSettle();
+
+    final submit = find.byKey(const Key('ranking-editor-submit'));
+    expect(find.text('시즌 순위 저장'), findsOneWidget);
+    expect(tester.getRect(submit).bottom, lessThanOrEqualTo(915));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ranking API failure keeps the editor and entered values', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    final api = _RankingSaveApi(failExplicit: true);
+    final ranking = _imageSeasonRanking();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubExpansionApiProvider.overrideWithValue(api),
+          clubTeamProfileProvider.overrideWith(
+            (ref, request) async => _profile,
+          ),
+          clubSeasonRankingProvider.overrideWith(
+            (ref, request) async => ranking,
+          ),
+          clubMembersProvider.overrideWith(
+            (ref, request) async => testClubMembers,
+          ),
+        ],
+        child: const MaterialApp(
+          home: ClubSeasonRankingScreen(teamId: 'team-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('edit-explicit-season-ranking')),
+    );
+    await tester.tap(find.byKey(const Key('edit-explicit-season-ranking')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ranking-editor-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('시즌 순위 직접 지정'), findsOneWidget);
+    expect(find.text('Guest A'), findsOneWidget);
+    expect(find.text('순위를 저장하지 못했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('existing final ranking confirms a new revision before saving', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    final api = _RankingSaveApi();
+    final ranking = _imageSeasonRanking(withFinalRanking: true);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubExpansionApiProvider.overrideWithValue(api),
+          clubTeamProfileProvider.overrideWith(
+            (ref, request) async => _profile,
+          ),
+          clubSeasonRankingProvider.overrideWith(
+            (ref, request) async => ranking,
+          ),
+          clubMembersProvider.overrideWith(
+            (ref, request) async => testClubMembers,
+          ),
+        ],
+        child: const MaterialApp(
+          home: ClubSeasonRankingScreen(teamId: 'team-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final open = find.byKey(const Key('finalize-season-ranking'));
+    await tester.ensureVisible(open);
+    await tester.tap(open);
+    await tester.pumpAndSettle();
+
+    expect(find.text('최종 순위 재확정'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('ranking-editor-submit')));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('기존 확정 이력은 유지되고 새로운 revision으로 저장됩니다.'),
+      findsOneWidget,
+    );
+    expect(api.finalSaveCalls, 0);
+    await tester.tap(find.byKey(const Key('finalize-season-submit')));
+    await tester.pumpAndSettle();
+
+    expect(api.finalSaveCalls, 1);
+    expect(find.text('최종 순위를 확정했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('final ranking failure keeps the revision editor values', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    final api = _RankingSaveApi(failFinal: true);
+    final ranking = _imageSeasonRanking(withFinalRanking: true);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubExpansionApiProvider.overrideWithValue(api),
+          clubTeamProfileProvider.overrideWith(
+            (ref, request) async => _profile,
+          ),
+          clubSeasonRankingProvider.overrideWith(
+            (ref, request) async => ranking,
+          ),
+          clubMembersProvider.overrideWith(
+            (ref, request) async => testClubMembers,
+          ),
+        ],
+        child: const MaterialApp(
+          home: ClubSeasonRankingScreen(teamId: 'team-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final open = find.byKey(const Key('finalize-season-ranking'));
+    await tester.ensureVisible(open);
+    await tester.tap(open);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ranking-editor-submit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('finalize-season-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('최종 순위 직접 입력'), findsOneWidget);
+    expect(find.text('Guest A'), findsOneWidget);
+    expect(find.text('최종 순위를 저장하지 못했습니다.'), findsOneWidget);
+  });
 
   testWidgets('member sees explicit season ranking as read-only', (
     WidgetTester tester,
@@ -2013,6 +2230,140 @@ class _LegacyImportApi extends ClubExpansionApi {
     required String importHash,
   }) async {
     commitCalls += 1;
+  }
+}
+
+ClubSeasonRanking _imageSeasonRanking({bool withFinalRanking = false}) {
+  final season = ClubSeason(
+    id: 'season-image',
+    name: '2025 이미지 시즌',
+    startDate: DateTime(2025),
+    endDate: DateTime(2025, 12, 31),
+    scoringMode: 'FULL_RANK',
+    points: const <int>[5, 3, 1],
+    status: 'COMPLETED',
+    lifecycleStatus: 'ENDED',
+    rankingMode: 'IMAGE',
+  );
+  final entries = const <ClubHistoricalRankingEntry>[
+    ClubHistoricalRankingEntry(
+      id: 'entry-1',
+      participantType: 'MEMBER',
+      memberId: 'member-1',
+      displayName: '팀장',
+      rank: 1,
+    ),
+    ClubHistoricalRankingEntry(
+      id: 'entry-2',
+      participantType: 'MANUAL',
+      memberId: null,
+      displayName: 'Guest A',
+      rank: 2,
+    ),
+  ];
+  return ClubSeasonRanking(
+    enabled: true,
+    season: season,
+    seasons: <ClubSeason>[season],
+    rows: const <ClubSeasonRankingRow>[],
+    bowlerHiddenEnabled: true,
+    rankingMode: 'IMAGE',
+    explicitSeasonRanking: ClubHistoricalRankingSnapshot(
+      id: 'snapshot-1',
+      revision: 1,
+      savedAt: DateTime(2026),
+      savedByName: '관리자',
+      entries: entries,
+    ),
+    finalRanking: withFinalRanking
+        ? ClubSeasonFinalRanking(
+            id: 'final-1',
+            revision: 1,
+            rankingMode: 'IMAGE',
+            finalizedAt: DateTime(2026),
+            finalizedByName: '관리자',
+            entries: const <ClubSeasonFinalRankingEntry>[
+              ClubSeasonFinalRankingEntry(
+                id: 'final-entry-1',
+                participantType: 'MEMBER',
+                memberId: 'member-1',
+                displayName: '팀장',
+                rank: 1,
+                totalPoints: null,
+              ),
+              ClubSeasonFinalRankingEntry(
+                id: 'final-entry-2',
+                participantType: 'MANUAL',
+                memberId: null,
+                displayName: 'Guest A',
+                rank: 2,
+                totalPoints: null,
+              ),
+            ],
+          )
+        : null,
+  );
+}
+
+class _RankingSaveApi extends ClubExpansionApi {
+  _RankingSaveApi({this.failExplicit = false, this.failFinal = false})
+    : super(Dio());
+
+  final bool failExplicit;
+  final bool failFinal;
+  Completer<void>? explicitSaveGate;
+  int explicitSaveCalls = 0;
+  int finalSaveCalls = 0;
+  List<Map<String, Object?>> savedExplicitEntries = <Map<String, Object?>>[];
+
+  @override
+  Future<ClubHistoricalRankingSnapshot> saveExplicitSeasonRanking(
+    String teamId,
+    String seasonId,
+    List<Map<String, Object?>> entries,
+  ) async {
+    explicitSaveCalls += 1;
+    savedExplicitEntries = entries;
+    await explicitSaveGate?.future;
+    if (failExplicit) {
+      throw const ApiException(
+        kind: ApiErrorKind.badRequest,
+        code: 'INVALID_RANKING',
+        userMessage: '순위를 저장하지 못했습니다.',
+      );
+    }
+    return ClubHistoricalRankingSnapshot(
+      id: 'snapshot-saved',
+      revision: 2,
+      savedAt: DateTime(2026),
+      savedByName: '관리자',
+      entries: const <ClubHistoricalRankingEntry>[],
+    );
+  }
+
+  @override
+  Future<ClubSeasonFinalRanking> finalizeSeason(
+    String teamId,
+    String seasonId, {
+    List<String>? orderedMemberIds,
+    List<Map<String, Object?>>? entries,
+  }) async {
+    finalSaveCalls += 1;
+    if (failFinal) {
+      throw const ApiException(
+        kind: ApiErrorKind.badRequest,
+        code: 'INVALID_FINAL_RANKING',
+        userMessage: '최종 순위를 저장하지 못했습니다.',
+      );
+    }
+    return ClubSeasonFinalRanking(
+      id: 'final-saved',
+      revision: 2,
+      rankingMode: 'IMAGE',
+      finalizedAt: DateTime(2026),
+      finalizedByName: '관리자',
+      entries: const <ClubSeasonFinalRankingEntry>[],
+    );
   }
 }
 
