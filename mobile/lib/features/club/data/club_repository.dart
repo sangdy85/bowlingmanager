@@ -52,6 +52,11 @@ abstract interface class ClubRepository {
     required String revision,
   });
   Future<void> removeMember({required String teamId, required String memberId});
+  Future<DateTime?> setMemberBlind({
+    required String teamId,
+    required String memberId,
+    required bool blind,
+  });
   Future<ClubRole> changeMemberRole({
     required String teamId,
     required String memberId,
@@ -170,4 +175,11 @@ class MobileClubRepository implements ClubRepository {
     required String memberId,
     required ClubRole role,
   }) => _api.changeMemberRole(teamId: teamId, memberId: memberId, role: role);
+
+  @override
+  Future<DateTime?> setMemberBlind({
+    required String teamId,
+    required String memberId,
+    required bool blind,
+  }) => _api.setMemberBlind(teamId: teamId, memberId: memberId, blind: blind);
 }

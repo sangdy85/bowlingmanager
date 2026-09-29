@@ -19,6 +19,7 @@ type TeamAccess = {
         id: string;
         userId: string;
         alias: string | null;
+        blindAt: Date | null;
         user: { name: string };
     }[];
 };
@@ -64,6 +65,13 @@ export type TeamManagementDependencies = {
         displayName: string;
     }): Promise<void>;
     setManager(teamId: string, userId: string, enabled: boolean): Promise<void>;
+    setMemberBlind(input: {
+        actorUserId: string;
+        teamId: string;
+        memberId: string;
+        blind: boolean;
+        now: Date;
+    }): Promise<{ blindAt: Date | null }>;
 };
 
 const defaultDependencies: TeamManagementDependencies = {
@@ -83,6 +91,7 @@ const defaultDependencies: TeamManagementDependencies = {
                         id: true,
                         userId: true,
                         alias: true,
+                        blindAt: true,
                         user: { select: { name: true } },
                     },
                 },
@@ -226,6 +235,25 @@ const defaultDependencies: TeamManagementDependencies = {
             where: { id: teamId },
             data: { User: enabled ? { connect: { id: userId } } : { disconnect: { id: userId } } },
         });
+    },
+    async setMemberBlind(input) {
+        return prisma.$transaction(async (tx) => {
+            const member = await tx.teamMember.findFirst({
+                where: { id: input.memberId, teamId: input.teamId },
+                select: { id: true, blindAt: true },
+            });
+            if (!member) throw new TeamManagementError("MEMBER_NOT_FOUND", "팀원을 찾을 수 없습니다.", 404);
+            if (input.blind && member.blindAt !== null) return { blindAt: member.blindAt };
+            if (!input.blind && member.blindAt === null) return { blindAt: null };
+            const updated = await tx.teamMember.update({
+                where: { id: input.memberId },
+                data: input.blind
+                    ? { blindAt: input.now, blindByUserId: input.actorUserId }
+                    : { blindAt: null, blindByUserId: null },
+                select: { blindAt: true },
+            });
+            return updated;
+        }, { isolationLevel: "Serializable" });
     },
 };
 
@@ -422,6 +450,32 @@ export async function changeTeamMemberRole(
     }
     await dependencies.setManager(teamId, target.userId, nextRole === "MANAGER");
     return { memberId, role: nextRole };
+}
+
+export async function setTeamMemberBlind(
+    actorUserId: string,
+    teamId: string,
+    memberId: string,
+    blind: unknown,
+    dependencies: TeamManagementDependencies = defaultDependencies,
+    now = new Date(),
+) {
+    const { team } = await requireManager(actorUserId, teamId, dependencies);
+    if (typeof blind !== "boolean") {
+        throw invalid("INVALID_BLIND_STATE", "블라인드 상태를 확인해주세요.");
+    }
+    const target = team.members.find((member) => member.id === memberId);
+    if (!target) throw new TeamManagementError("MEMBER_NOT_FOUND", "팀원을 찾을 수 없습니다.", 404);
+    if (target.userId === team.ownerId) {
+        throw new TeamManagementError("OWNER_PROTECTED", "동호회장은 블라인드 처리할 수 없습니다.", 403);
+    }
+    const result = await dependencies.setMemberBlind({
+        actorUserId, teamId, memberId, blind, now,
+    });
+    return {
+        memberId,
+        blindAt: result.blindAt?.toISOString() ?? null,
+    };
 }
 
 async function requireManager(actorUserId: string, teamId: string, dependencies: TeamManagementDependencies) {

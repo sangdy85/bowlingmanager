@@ -88,22 +88,33 @@ class ClubMember {
     required this.name,
     required this.role,
     required this.handicap,
+    this.blindAt,
   });
 
   final String id;
   final String name;
   final ClubRole role;
   final int? handicap;
+  final DateTime? blindAt;
+  bool get isBlinded => blindAt != null;
 
   factory ClubMember.fromJson(Map<String, dynamic> json) {
     final Object? id = json['id'];
     final Object? name = json['name'];
     final Object? handicap = json['handicap'];
+    final Object? blindAt = json['blindAt'];
     if (id is! String ||
         id.isEmpty ||
         name is! String ||
         name.isEmpty ||
-        (handicap != null && handicap is! int)) {
+        (handicap != null && handicap is! int) ||
+        (blindAt != null && blindAt is! String)) {
+      throw const FormatException('Invalid club member response.');
+    }
+    final DateTime? parsedBlindAt = blindAt == null
+        ? null
+        : DateTime.tryParse(blindAt as String);
+    if (blindAt != null && parsedBlindAt == null) {
       throw const FormatException('Invalid club member response.');
     }
     return ClubMember(
@@ -111,6 +122,7 @@ class ClubMember {
       name: name,
       role: ClubRole.fromJson(json['role']),
       handicap: handicap as int?,
+      blindAt: parsedBlindAt,
     );
   }
 }

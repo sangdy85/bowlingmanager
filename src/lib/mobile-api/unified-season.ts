@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { isCurrentSeason, seasonOverlapsYear } from "@/lib/mobile-api/season-lifecycle";
 import { teamActivityDateKey } from "@/lib/team-records";
+import { getExplicitSeasonRanking } from "@/lib/mobile-api/explicit-season-rankings";
 
 export const SEASON_STATUSES = ["DRAFT", "ACTIVE", "COMPLETED"] as const;
 export const SEASON_COMPETITION_TYPES = ["INDIVIDUAL", "TEAM", "EVENT"] as const;
@@ -289,7 +290,7 @@ export async function getUnifiedSeasonRanking(
         where: { id: teamId, isActive: true, members: { some: { userId: actorUserId } } },
         select: {
             id: true, bowlerHiddenEnabled: true, seasonRankingEnabled: true,
-            members: { orderBy: [{ joinedAt: "asc" }, { id: "asc" }], select: { id: true, alias: true, user: { select: { name: true } } } },
+            members: { orderBy: [{ joinedAt: "asc" }, { id: "asc" }], select: { id: true, alias: true, blindAt: true, user: { select: { name: true } } } },
         },
     });
     if (!team) throw new UnifiedSeasonError("TEAM_NOT_FOUND", "동호회를 찾을 수 없습니다.", 404);
@@ -310,11 +311,14 @@ export async function getUnifiedSeasonRanking(
     }
     if (!season) return { enabled: true, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType, rankings: [] };
     if (season.rankingMode === "IMAGE") {
-        const rankingImages = await prisma.seasonRankingImage.findMany({
-            where: { seasonId: season.id },
-            orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
-            select: { id: true, size: true, displayOrder: true, createdAt: true },
-        });
+        const [rankingImages, explicitSeasonRanking] = await Promise.all([
+            prisma.seasonRankingImage.findMany({
+                where: { seasonId: season.id },
+                orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+                select: { id: true, size: true, displayOrder: true, createdAt: true },
+            }),
+            getExplicitSeasonRanking(actorUserId, teamId, season.id),
+        ]);
         return {
             enabled: true,
             season: serializeSeasonSummary(season),
@@ -325,6 +329,7 @@ export async function getUnifiedSeasonRanking(
             rankings: [],
             competitionColumns: [],
             rankingImages: rankingImages.map((image) => ({ ...image, createdAt: image.createdAt.toISOString() })),
+            explicitSeasonRanking,
         };
     }
     const [entries, adjustments, legacyEntries, manualCompetitions] = await Promise.all([
@@ -372,13 +377,21 @@ export async function getUnifiedSeasonRanking(
             },
         }),
     ]);
+    const hideBlinded = isCurrentSeason(season);
+    const visibleMemberIds = new Set(team.members
+        .filter((member) => !hideBlinded || member.blindAt == null)
+        .map((member) => member.id));
     const rows = new Map<string, {
         id: string; name: string; totalPoints: number; individualPoints: number; teamPoints: number; eventPoints: number; adjustmentPoints: number; legacyPoints: number; openingBalancePoints: number;
         competitionsPlayed: number; individualWins: number; teamWins: number; eventWins: number;
         entries: SeasonLedgerEntry[];
     }>();
-    for (const member of team.members) rows.set(member.id, emptyRankingRow(member.id, member.alias || member.user.name));
+    for (const member of team.members) {
+        if (!visibleMemberIds.has(member.id)) continue;
+        rows.set(member.id, emptyRankingRow(member.id, member.alias || member.user.name));
+    }
     for (const entry of entries) {
+        if (!visibleMemberIds.has(entry.memberId)) continue;
         const row = rows.get(entry.memberId) ?? emptyRankingRow(entry.memberId, entry.memberDisplayName);
         rows.set(entry.memberId, row);
         row.totalPoints += entry.points;
@@ -395,6 +408,7 @@ export async function getUnifiedSeasonRanking(
         });
     }
     for (const adjustment of adjustments) {
+        if (!visibleMemberIds.has(adjustment.memberId)) continue;
         const row = rows.get(adjustment.memberId);
         if (!row) continue;
         row.totalPoints += adjustment.delta;
@@ -408,6 +422,7 @@ export async function getUnifiedSeasonRanking(
         });
     }
     for (const entry of legacyEntries) {
+        if (!visibleMemberIds.has(entry.memberId)) continue;
         const row = rows.get(entry.memberId);
         if (!row) continue;
         const opening = entry.batch.mode === "OPENING_BALANCE";
@@ -435,6 +450,7 @@ export async function getUnifiedSeasonRanking(
     }
     for (const competition of manualCompetitions) {
         for (const result of competition.results) {
+            if (!visibleMemberIds.has(result.memberId)) continue;
             const row = rows.get(result.memberId) ?? emptyRankingRow(result.memberId, result.memberDisplayName);
             rows.set(result.memberId, row);
             row.totalPoints += result.points;
@@ -463,6 +479,7 @@ export async function getUnifiedSeasonRanking(
         competitionType, rankingMode: "DATA" as const, rankingStyle: "HIDDEN_POINTS",
         competitionColumns,
         rankingImages: [],
+        explicitSeasonRanking: null,
         rankings: ranked.map((row) => ({
             ...row,
             points: row.totalPoints,

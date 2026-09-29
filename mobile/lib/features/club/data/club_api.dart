@@ -53,6 +53,11 @@ abstract interface class ClubApi {
     required String revision,
   });
   Future<void> removeMember({required String teamId, required String memberId});
+  Future<DateTime?> setMemberBlind({
+    required String teamId,
+    required String memberId,
+    required bool blind,
+  });
   Future<ClubRole> changeMemberRole({
     required String teamId,
     required String memberId,
@@ -82,6 +87,33 @@ class MobileClubApi implements ClubApi {
           return ClubSummary.fromJson(Map<String, dynamic>.from(value));
         }),
       );
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    } on FormatException {
+      throw ApiException.malformedResponse();
+    } on TypeError {
+      throw ApiException.malformedResponse();
+    }
+  }
+
+  @override
+  Future<DateTime?> setMemberBlind({
+    required String teamId,
+    required String memberId,
+    required bool blind,
+  }) async {
+    try {
+      final data = _readData(
+        (await _dio.patch<dynamic>(
+          '/teams/${Uri.encodeComponent(teamId)}/members/${Uri.encodeComponent(memberId)}/blind',
+          data: <String, dynamic>{'blind': blind},
+        )).data,
+      );
+      final Object? blindAt = data['blindAt'];
+      if (blindAt != null && blindAt is! String) {
+        throw const FormatException('Invalid member blind response.');
+      }
+      return blindAt == null ? null : DateTime.parse(blindAt as String);
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     } on FormatException {

@@ -254,7 +254,7 @@ test('exact unified season fixture totals 50 + 20 + 30 while MINI contributes no
 test('DATA mode total is automatic plus manual competition plus legacy plus adjustment exactly once', async () => {
   const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': {
     team: { findFirst: async () => ({
-      id: 'team-a', bowlerHiddenEnabled: true, seasonRankingEnabled: true,
+      id: 'team-a', ownerId: 'viewer', User: [], bowlerHiddenEnabled: true, seasonRankingEnabled: true,
       members: [member('member-a', 'A')],
     }) },
     teamSeason: { findMany: async () => [{ ...season, rankingMode: 'DATA' }] },
@@ -290,15 +290,49 @@ test('DATA mode total is automatic plus manual competition plus legacy plus adju
   assert.deepEqual(result.competitionColumns.map(item => item.source), ['AUTO', 'LEGACY', 'MANUAL']);
 });
 
+test('active live ranking hides blinded members without deleting points and past season history keeps them', async () => {
+  let selectedSeason = season;
+  const fake = {
+    team: { findFirst: async () => ({
+      id: 'team-a', bowlerHiddenEnabled: true, seasonRankingEnabled: true,
+      members: [member('member-a', 'A', new Date('2026-09-29T01:00:00Z')), member('member-b', 'B')],
+    }) },
+    teamSeason: { findMany: async () => [selectedSeason] },
+    seasonPointEntry: { findMany: async () => [
+      entry('a-points', 'member-a', 'INDIVIDUAL', '2026-03-10T03:00:00.000Z', 1, 120),
+      entry('b-points', 'member-b', 'INDIVIDUAL', '2026-03-10T03:00:00.000Z', 2, 50),
+    ] },
+    seasonPointAdjustment: { findMany: async () => [] },
+    seasonLegacyPointEntry: { findMany: async () => [] },
+    seasonManualCompetition: { findMany: async () => [] },
+  };
+  const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': fake });
+  let result = await service.getUnifiedSeasonRanking('viewer', 'team-a');
+  assert.deepEqual(result.rankings.map(row => [row.id, row.totalPoints]), [['member-b', 50]]);
+
+  selectedSeason = {
+    ...season, id: 'season-2025', status: 'COMPLETED', enabled: false,
+    startDate: new Date('2025-01-01T00:00:00Z'), endDate: new Date('2025-12-31T00:00:00Z'),
+  };
+  result = await service.getUnifiedSeasonRanking('viewer', 'team-a', { seasonId: 'season-2025' });
+  assert.deepEqual(result.rankings.map(row => [row.id, row.totalPoints]), [
+    ['member-a', 120], ['member-b', 50],
+  ]);
+});
+
 test('IMAGE mode returns images only and hides structured ranking data', async () => {
   const imageSeason = { ...season, rankingMode: 'IMAGE' };
   let structuredCalls = 0;
   const service = loadTs('src/lib/mobile-api/unified-season.ts', { '@/lib/prisma': {
     team: { findFirst: async () => ({
-      id: 'team-a', bowlerHiddenEnabled: true, seasonRankingEnabled: true,
+      id: 'team-a', ownerId: 'viewer', User: [], bowlerHiddenEnabled: true, seasonRankingEnabled: true,
       members: [member('member-a', 'A')],
     }) },
-    teamSeason: { findMany: async () => [imageSeason] },
+    teamSeason: {
+      findMany: async () => [imageSeason],
+      findFirst: async () => imageSeason,
+    },
+    seasonRankingSnapshot: { findFirst: async () => null },
     seasonRankingImage: { findMany: async () => [{
       id: 'image-1', size: 1024, displayOrder: 0, createdAt: new Date('2026-01-01T00:00:00Z'),
     }] },
@@ -458,8 +492,8 @@ test('all three competition publish paths use the unified ledger lifecycle', () 
   assert.match(event, /seasonPointsForRank/);
 });
 
-function member(id, name) {
-  return { id, alias: name, user: { name: `private-${name}` } };
+function member(id, name, blindAt = null) {
+  return { id, alias: name, blindAt, user: { name: `private-${name}` } };
 }
 
 function entry(id, memberId, competitionType, date, finalRank, points) {

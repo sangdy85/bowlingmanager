@@ -53,7 +53,7 @@ const scoreRows = [
 ];
 
 function fixture(changes = {}) {
-  const state = { replace: null, deleted: null, removed: null, role: null };
+  const state = { replace: null, deleted: null, removed: null, role: null, blind: null };
   return {
     state,
     dependencies: {
@@ -63,6 +63,10 @@ function fixture(changes = {}) {
       deleteScores: async input => { state.deleted = input; return { deletedCount: input.expectedIds.length }; },
       removeMember: async input => { state.removed = input; },
       setManager: async (teamId, userId, enabled) => { state.role = { teamId, userId, enabled }; },
+      setMemberBlind: async input => {
+        state.blind = input;
+        return { blindAt: input.blind ? new Date('2026-09-29T01:00:00Z') : null };
+      },
       ...changes,
     },
   };
@@ -263,6 +267,54 @@ test('only OWNER changes manager roles and owner remains protected', async () =>
   );
 });
 
+test('OWNER and MANAGER blind members idempotently while preserving membership identity', async () => {
+  for (const actor of ['owner', 'manager']) {
+    const current = fixture();
+    const result = await service.setTeamMemberBlind(
+      actor,
+      'team-1',
+      'membership-member',
+      true,
+      current.dependencies,
+    );
+    assert.equal(result.memberId, 'membership-member');
+    assert.equal(result.blindAt, '2026-09-29T01:00:00.000Z');
+    assert.equal(current.state.blind.teamId, 'team-1');
+    assert.equal(current.state.blind.memberId, 'membership-member');
+    assert.equal(current.state.blind.actorUserId, actor);
+    assert.equal(current.state.blind.blind, true);
+    assert.equal(current.state.blind.now instanceof Date, true);
+    const restored = await service.setTeamMemberBlind(
+      actor,
+      'team-1',
+      'membership-member',
+      false,
+      current.dependencies,
+    );
+    assert.equal(restored.blindAt, null);
+    assert.equal(current.state.removed, null);
+  }
+});
+
+test('blind mutation protects owners and rejects MEMBER, outsider and cross-team targets', async () => {
+  await assert.rejects(
+    () => service.setTeamMemberBlind('owner', 'team-1', 'membership-owner', true, fixture().dependencies),
+    error => error.code === 'OWNER_PROTECTED' && error.status === 403,
+  );
+  await assert.rejects(
+    () => service.setTeamMemberBlind('member', 'team-1', 'membership-member', true, fixture().dependencies),
+    error => error.code === 'FORBIDDEN' && error.status === 403,
+  );
+  await assert.rejects(
+    () => service.setTeamMemberBlind('outsider', 'team-1', 'membership-member', true, fixture().dependencies),
+    error => error.code === 'TEAM_NOT_FOUND' && error.status === 404,
+  );
+  await assert.rejects(
+    () => service.setTeamMemberBlind('owner', 'team-1', 'other-team-member', true, fixture().dependencies),
+    error => error.code === 'MEMBER_NOT_FOUND' && error.status === 404,
+  );
+});
+
 test('mobile bulk parser rejects duplicate current members and duplicate guests', () => {
   const capture = loadTs('src/lib/mobile-api/score-capture.ts', {
     '@/lib/score-bulk-service': { SCORE_GAME_TYPES: ['정기전', '벙개', '상주', '교류전', '기타'] },
@@ -286,6 +338,7 @@ test('management routes require auth and return minimal success envelopes', asyn
     deleteTeamActivity: async () => ({ deletedCount: 2 }),
     removeTeamMember: async () => ({ removedMemberId: 'membership-1' }),
     changeTeamMemberRole: async () => ({ memberId: 'membership-1', role: 'MANAGER' }),
+    setTeamMemberBlind: async () => ({ memberId: 'membership-1', blindAt: '2026-09-29T01:00:00.000Z' }),
     TeamManagementError: service.TeamManagementError,
   };
   const overrides = {
@@ -310,4 +363,13 @@ test('management routes require auth and return minimal success envelopes', asyn
     method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: 'MANAGER' }),
   }), memberContext);
   assert.deepEqual(await response.json(), { success: true, data: { memberId: 'membership-1', role: 'MANAGER' } });
+
+  const blindRoute = loadTs('src/app/api/mobile/v1/teams/[teamId]/members/[memberId]/blind/route.ts', overrides);
+  response = await blindRoute.PATCH(new Request('https://example.test', {
+    method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ blind: true }),
+  }), memberContext);
+  assert.deepEqual(await response.json(), {
+    success: true,
+    data: { memberId: 'membership-1', blindAt: '2026-09-29T01:00:00.000Z' },
+  });
 });

@@ -199,6 +199,47 @@ test('DATA finalization supports rank override, immutable points and revision hi
   assert.deepEqual(snapshots[1].map(row => row.memberId), ['member-a', 'member-b']);
 });
 
+test('explicit final ranking preserves mixed member/manual snapshots with nullable guest points', async () => {
+  let created = null;
+  const fake = {
+    team: { findFirst: async () => ({ id: 'team-a', ownerId: 'owner', bowlerHiddenEnabled: true, seasonRankingEnabled: true, User: [] }) },
+    teamSeason: { findFirst: async () => season({ status: 'COMPLETED', enabled: false }) },
+    teamMember: { findMany: async () => [{ id: 'member-a', alias: null, user: { name: '회원 A' } }] },
+    $transaction: async callback => callback({
+      seasonFinalRanking: {
+        findFirst: async () => ({ revision: 1 }),
+        create: async args => {
+          created = args.data;
+          return {
+            id: 'final-2', revision: 2, rankingMode: 'DATA', finalizedAt: new Date('2027-01-02T00:00:00Z'),
+            finalizedBy: { id: 'owner', name: '관리자' }, entries: [],
+            participants: args.data.participants.create.map((entry, index) => ({ id: `participant-${index}`, ...entry })),
+          };
+        },
+      },
+      teamSeason: { update: async () => ({}) },
+    }),
+  };
+  const api = loadTs('src/lib/mobile-api/season-history.ts', {
+    '@/lib/prisma': fake,
+    '@/lib/mobile-api/club-expansion': { getMobileSeasonRanking: async () => ({ rankings: [
+      { id: 'member-a', name: '회원 A', points: 77 },
+    ] }) },
+    '@/lib/mobile-api/unified-season': { serializeSeasonPointTable: () => '{}', serializeSeasonSummary: value => value },
+  });
+  const result = await api.finalizeTeamSeason('owner', 'team-a', 'season-a', { entries: [
+    { rank: 1, participantType: 'MANUAL', memberId: null, displayName: 'Guest A' },
+    { rank: 2, participantType: 'MEMBER', memberId: 'member-a' },
+  ] });
+  assert.equal(result.revision, 2);
+  assert.deepEqual(result.entries.map(row => [row.rank, row.displayName, row.totalPoints]), [
+    [1, 'Guest A', null], [2, '회원 A', 77],
+  ]);
+  assert.deepEqual(created.entries.create, []);
+  assert.equal(created.participants.create[0].totalPoints, null);
+  assert.equal(created.participants.create[1].totalPoints, 77);
+});
+
 test('members cannot create or finalize seasons and IMAGE needs an official image', async () => {
   const fake = {
     team: { findFirst: async () => ({ id: 'team-a', ownerId: 'owner', bowlerHiddenEnabled: true, seasonRankingEnabled: true, User: [] }) },

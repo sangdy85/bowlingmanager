@@ -221,6 +221,13 @@ class FakeClubApi implements ClubApi {
   }) async {}
 
   @override
+  Future<DateTime?> setMemberBlind({
+    required String teamId,
+    required String memberId,
+    required bool blind,
+  }) async => blind ? DateTime.utc(2026, 9, 29) : null;
+
+  @override
   Future<ClubWriteResult> updateActivity({
     required String teamId,
     required ClubActivityEdit activity,
@@ -325,6 +332,7 @@ class FakeClubRepository implements ClubRepository {
   int deleteCalls = 0;
   int removeCalls = 0;
   int roleCalls = 0;
+  int blindCalls = 0;
   ClubActivityEditEnvelope editableActivity = testEditableActivity;
   Completer<ClubWriteResult>? pendingCreate;
   Object? managementError;
@@ -383,6 +391,17 @@ class FakeClubRepository implements ClubRepository {
   }) async {
     removeCalls += 1;
     if (managementError case final Object error) throw error;
+  }
+
+  @override
+  Future<DateTime?> setMemberBlind({
+    required String teamId,
+    required String memberId,
+    required bool blind,
+  }) async {
+    blindCalls += 1;
+    if (managementError case final Object error) throw error;
+    return blind ? DateTime.utc(2026, 9, 29) : null;
   }
 
   @override

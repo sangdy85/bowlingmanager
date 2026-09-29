@@ -19,6 +19,7 @@ type MemberRecord = {
     id: string;
     alias: string | null;
     userId: string;
+    blindAt: Date | null;
     user: {
         name: string;
         handicap: number | null;
@@ -78,6 +79,7 @@ const defaultDependencies: MobileTeamsDependencies = {
                 id: true,
                 alias: true,
                 userId: true,
+                blindAt: true,
                 user: {
                     select: {
                         name: true,
@@ -133,6 +135,7 @@ export async function listMobileTeamMembers(
         name: member.alias || member.user.name,
         role: teamRole(team, member.userId),
         handicap: member.user.handicap,
+        blindAt: member.blindAt?.toISOString() ?? null,
     }));
     members.sort((left, right) => left.name.localeCompare(right.name, "ko") || left.id.localeCompare(right.id));
     return members;

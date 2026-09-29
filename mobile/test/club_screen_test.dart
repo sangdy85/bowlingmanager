@@ -775,6 +775,141 @@ void main() {
     expect(find.byKey(const Key('hidden-competition-filter')), findsNothing);
   });
 
+  testWidgets(
+    'IMAGE season shows explicit ranking and opens a compact 1-to-10 editor',
+    (WidgetTester tester) async {
+      final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+      final endedImageSeason = ClubSeason(
+        id: 'season-image',
+        name: '2025 이미지 시즌',
+        startDate: DateTime(2025),
+        endDate: DateTime(2025, 12, 31),
+        scoringMode: 'FULL_RANK',
+        points: const <int>[5, 3, 1],
+        status: 'COMPLETED',
+        lifecycleStatus: 'ENDED',
+        rankingMode: 'IMAGE',
+      );
+      final explicit = ClubHistoricalRankingSnapshot(
+        id: 'snapshot-1',
+        revision: 1,
+        savedAt: DateTime(2026),
+        savedByName: '관리자',
+        entries: const <ClubHistoricalRankingEntry>[
+          ClubHistoricalRankingEntry(
+            id: 'entry-1',
+            participantType: 'MEMBER',
+            memberId: 'member-1',
+            displayName: '팀장',
+            rank: 1,
+          ),
+          ClubHistoricalRankingEntry(
+            id: 'entry-2',
+            participantType: 'MANUAL',
+            memberId: null,
+            displayName: 'Guest A',
+            rank: 2,
+          ),
+        ],
+      );
+      final ranking = ClubSeasonRanking(
+        enabled: true,
+        season: endedImageSeason,
+        seasons: <ClubSeason>[endedImageSeason],
+        rows: const <ClubSeasonRankingRow>[],
+        bowlerHiddenEnabled: true,
+        rankingMode: 'IMAGE',
+        explicitSeasonRanking: explicit,
+      );
+      await tester.binding.setSurfaceSize(const Size(360, 720));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authRepositoryProvider.overrideWithValue(authRepository),
+            clubTeamProfileProvider.overrideWith(
+              (ref, request) async => _profile,
+            ),
+            clubSeasonRankingProvider.overrideWith(
+              (ref, request) async => ranking,
+            ),
+            clubMembersProvider.overrideWith(
+              (ref, request) async => testClubMembers,
+            ),
+          ],
+          child: const MaterialApp(
+            home: MediaQuery(
+              data: MediaQueryData(textScaler: TextScaler.linear(1.2)),
+              child: ClubSeasonRankingScreen(teamId: 'team-1'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final editButton = find.byKey(const Key('edit-explicit-season-ranking'));
+      await tester.ensureVisible(editButton);
+      await tester.pumpAndSettle();
+      expect(find.text('Guest A'), findsOneWidget);
+      await tester.tap(editButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('시즌 순위 직접 지정'), findsOneWidget);
+      expect(find.text('11위 추가'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('ranking-add-row')));
+      await tester.pump();
+      expect(find.text('12위 추가'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('member sees explicit season ranking as read-only', (
+    WidgetTester tester,
+  ) async {
+    final authRepository = FakeAuthRepository()..bootstrapResult = testUser;
+    final imageRanking = ClubSeasonRanking(
+      enabled: true,
+      season: _season,
+      seasons: <ClubSeason>[_season],
+      rows: const <ClubSeasonRankingRow>[],
+      bowlerHiddenEnabled: true,
+      rankingMode: 'IMAGE',
+      explicitSeasonRanking: ClubHistoricalRankingSnapshot(
+        id: 'snapshot',
+        revision: 1,
+        savedAt: DateTime(2026),
+        savedByName: '관리자',
+        entries: const <ClubHistoricalRankingEntry>[
+          ClubHistoricalRankingEntry(
+            id: 'entry',
+            participantType: 'MANUAL',
+            memberId: null,
+            displayName: 'Guest A',
+            rank: 1,
+          ),
+        ],
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepository),
+          clubTeamProfileProvider.overrideWith(
+            (ref, request) async => _profileWithRole(ClubRole.member),
+          ),
+          clubSeasonRankingProvider.overrideWith(
+            (ref, request) async => imageRanking,
+          ),
+        ],
+        child: const MaterialApp(
+          home: ClubSeasonRankingScreen(teamId: 'team-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Guest A'), findsOneWidget);
+    expect(find.byKey(const Key('edit-explicit-season-ranking')), findsNothing);
+  });
+
   testWidgets('Club shows an empty state', (WidgetTester tester) async {
     final FakeClubRepository repository = FakeClubRepository()
       ..clubs = const <ClubSummary>[];
@@ -1121,7 +1256,10 @@ void main() {
     await tester.tap(find.byKey(const Key('management-members-link')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('member-remove-member-1')), findsNothing);
+    expect(find.byKey(const Key('member-blind-member-1')), findsNothing);
     expect(find.byKey(const Key('member-role-member-2')), findsOneWidget);
+    expect(find.byKey(const Key('member-blind-member-2')), findsOneWidget);
+    expect(find.byKey(const Key('member-blind-member-3')), findsOneWidget);
     expect(find.byKey(const Key('member-remove-member-3')), findsOneWidget);
   });
 
@@ -1145,7 +1283,44 @@ void main() {
     expect(find.byKey(const Key('member-role-member-3')), findsNothing);
     expect(find.byKey(const Key('member-remove-member-1')), findsNothing);
     expect(find.byKey(const Key('member-remove-member-2')), findsNothing);
+    expect(find.byKey(const Key('member-blind-member-2')), findsOneWidget);
+    expect(find.byKey(const Key('member-blind-member-3')), findsOneWidget);
     expect(find.byKey(const Key('member-remove-member-3')), findsOneWidget);
+  });
+
+  testWidgets('member management shows blind state and confirms unblind', (
+    WidgetTester tester,
+  ) async {
+    final FakeClubRepository repository = FakeClubRepository()
+      ..members = <ClubMember>[
+        ...testClubMembers.take(2),
+        ClubMember(
+          id: 'member-3',
+          name: '회원',
+          role: ClubRole.member,
+          handicap: 20,
+          blindAt: DateTime.utc(2026, 9, 29),
+        ),
+      ];
+    await _openClubs(tester, repository);
+    await tester.tap(find.byKey(const Key('club-team-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('club-management-link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('management-members-link')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('member-blind-badge-member-3')),
+      findsOneWidget,
+    );
+    expect(find.text('블라인드 해제'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('member-blind-member-3')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('별도 가입 절차 없이'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('member-blind-confirm')));
+    await tester.pumpAndSettle();
+    expect(repository.blindCalls, 1);
   });
 
   testWidgets(

@@ -210,12 +210,16 @@ class _ClubSeasonRankingScreenState
             DropdownButtonFormField<String?>(
               key: ValueKey<String?>(ranking.season?.id),
               initialValue: ranking.season?.id,
+              isExpanded: true,
               decoration: const InputDecoration(labelText: '시즌'),
               items: ranking.seasons
                   .map(
                     (season) => DropdownMenuItem<String?>(
                       value: season.id,
-                      child: Text('${season.name} · ${_status(season.status)}'),
+                      child: Text(
+                        '${season.name} · ${_status(season.status)}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   )
                   .toList(),
@@ -240,29 +244,6 @@ class _ClubSeasonRankingScreenState
           if (ranking.season case final ClubSeason season) ...<Widget>[
             _SeasonStatusBanner(season: season),
             const SizedBox(height: 12),
-            if (ranking.finalRanking
-                case final ClubSeasonFinalRanking finalRank)
-              _FinalRankingCard(finalRanking: finalRank)
-            else if (season.lifecycleStatus == 'ENDED')
-              const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('최종 순위 미확정'),
-                ),
-              ),
-            if (canManage && season.lifecycleStatus == 'ENDED') ...<Widget>[
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                key: const Key('finalize-season-ranking'),
-                onPressed: () =>
-                    _finalizeSeason(request, profileRequest, ranking),
-                icon: const Icon(Icons.verified_outlined),
-                label: Text(
-                  ranking.finalRanking == null ? '최종 순위 직접 입력' : '최종 순위 다시 입력',
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
           ],
           if (_historyYear != null && _seasonId == null)
             const SizedBox.shrink()
@@ -298,6 +279,36 @@ class _ClubSeasonRankingScreenState
                     label: const Text('순위표 이미지 관리'),
                   ),
                 ],
+                const SizedBox(height: 16),
+                if (ranking.explicitSeasonRanking
+                    case final ClubHistoricalRankingSnapshot snapshot)
+                  _HistoricalRankingCard(
+                    key: const Key('explicit-season-ranking'),
+                    title: '시즌 순위',
+                    subtitle: '${snapshot.revision}차 저장',
+                    entries: snapshot.entries,
+                  )
+                else
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text('직접 지정한 시즌 순위가 없습니다.'),
+                    ),
+                  ),
+                if (canManage) ...<Widget>[
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    key: const Key('edit-explicit-season-ranking'),
+                    onPressed: () =>
+                        _editExplicitSeasonRanking(request, ranking),
+                    icon: const Icon(Icons.format_list_numbered_rounded),
+                    label: Text(
+                      ranking.explicitSeasonRanking == null
+                          ? '시즌 순위 직접 지정'
+                          : '시즌 순위 수정',
+                    ),
+                  ),
+                ],
               ],
             )
           else if (ranking.rows.isEmpty)
@@ -317,6 +328,31 @@ class _ClubSeasonRankingScreenState
                   ? (row) => _showMember(userId, ranking, row)
                   : null,
             ),
+          ],
+          if (ranking.season case final ClubSeason season) ...<Widget>[
+            const SizedBox(height: 18),
+            if (ranking.finalRanking
+                case final ClubSeasonFinalRanking finalRank)
+              _FinalRankingCard(finalRanking: finalRank)
+            else if (season.lifecycleStatus == 'ENDED')
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('최종 순위 미확정'),
+                ),
+              ),
+            if (canManage && season.lifecycleStatus == 'ENDED') ...<Widget>[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                key: const Key('finalize-season-ranking'),
+                onPressed: () =>
+                    _finalizeSeason(request, profileRequest, ranking),
+                icon: const Icon(Icons.verified_outlined),
+                label: Text(
+                  ranking.finalRanking == null ? '최종 순위 직접 입력' : '최종 순위 다시 입력',
+                ),
+              ),
+            ],
           ],
         ],
       ),
@@ -563,6 +599,50 @@ class _ClubSeasonRankingScreenState
     }
   }
 
+  Future<void> _editExplicitSeasonRanking(
+    ClubSeasonRankingRequest request,
+    ClubSeasonRanking ranking,
+  ) async {
+    final season = ranking.season;
+    if (season == null || ranking.rankingMode != 'IMAGE') return;
+    try {
+      final members = await ref.read(
+        clubMembersProvider((userId: request.userId, teamId: widget.teamId))
+            .future,
+      );
+      if (!mounted) return;
+      final entries = await Navigator.of(context)
+          .push<List<Map<String, Object?>>>(
+            MaterialPageRoute<List<Map<String, Object?>>>(
+              builder: (context) => _HistoricalRankingEditorScreen(
+                title: '시즌 순위 직접 지정',
+                submitLabel: '시즌 순위 저장',
+                members: members,
+                initialEntries:
+                    ranking.explicitSeasonRanking?.entries
+                        .map(_seedFromHistoricalEntry)
+                        .toList(growable: false) ??
+                    const <_HistoricalRankingSeed>[],
+              ),
+            ),
+          );
+      if (entries == null || !mounted) return;
+      await ref
+          .read(clubExpansionApiProvider)
+          .saveExplicitSeasonRanking(widget.teamId, season.id, entries);
+      ref.invalidate(clubSeasonRankingProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('시즌 순위를 저장했습니다.')));
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(clubErrorMessage(error))));
+      }
+    }
+  }
+
   Future<void> _finalizeSeason(
     ClubSeasonRankingRequest request,
     ClubExpansionRequest profileRequest,
@@ -570,110 +650,69 @@ class _ClubSeasonRankingScreenState
   ) async {
     final season = ranking.season;
     if (season == null) return;
-    List<ClubSeasonRankingRow>? ordered;
-    if (ranking.rankingMode == 'DATA') {
-      final rows = List<ClubSeasonRankingRow>.from(ranking.rows);
-      ordered = rows;
-      final edited = await showDialog<bool>(
-        context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setDialogState) => AlertDialog(
-            title: const Text('최종 순위 직접 입력'),
-            content: SizedBox(
-              width: 420,
-              height: 420,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Text('회원 목록을 끌어 최종 순위를 직접 지정하세요.'),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: ReorderableListView.builder(
-                      itemCount: rows.length,
-                      onReorderItem: (oldIndex, newIndex) => setDialogState(() {
-                        final row = rows.removeAt(oldIndex);
-                        rows.insert(newIndex, row);
-                      }),
-                      itemBuilder: (context, index) {
-                        final row = rows[index];
-                        return ListTile(
-                          key: ValueKey(row.id),
-                          leading: Text('${index + 1}위'),
-                          title: Text(row.name),
-                          subtitle: Text('시즌 ${row.rank}위 → 최종 ${index + 1}위'),
-                          trailing: Text('${row.points}P'),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+    try {
+      final members = await ref.read(
+        clubMembersProvider((userId: request.userId, teamId: widget.teamId))
+            .future,
+      );
+      if (!mounted) return;
+      final List<_HistoricalRankingSeed> initialEntries;
+      if (ranking.finalRanking?.entries.isNotEmpty == true) {
+        initialEntries = ranking.finalRanking!.entries
+            .map(_seedFromFinalEntry)
+            .toList(growable: false);
+      } else if (ranking.rankingMode == 'DATA') {
+        initialEntries = ranking.rows
+            .map(
+              (row) => _HistoricalRankingSeed(
+                participantType: 'MEMBER',
+                memberId: row.id,
+                displayName: row.name,
+                points: row.points,
+              ),
+            )
+            .toList(growable: false);
+      } else {
+        initialEntries =
+            ranking.explicitSeasonRanking?.entries
+                .map(_seedFromHistoricalEntry)
+                .toList(growable: false) ??
+            const <_HistoricalRankingSeed>[];
+      }
+      final entries = await Navigator.of(context)
+          .push<List<Map<String, Object?>>>(
+            MaterialPageRoute<List<Map<String, Object?>>>(
+              builder: (context) => _HistoricalRankingEditorScreen(
+                title: '최종 순위 직접 입력',
+                submitLabel: '최종 순위 검토 완료',
+                members: members,
+                initialEntries: initialEntries,
               ),
             ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('취소'),
-              ),
-              FilledButton(
-                key: const Key('finalize-season-confirm'),
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('순위 편집 완료'),
-              ),
-            ],
-          ),
-        ),
-      );
-      if (edited != true) return;
-    } else {
+          );
+      if (entries == null || !mounted) return;
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('이미지 시즌 종료'),
-          content: const Text('등록된 순위표 이미지를 이 시즌의 역사 기록으로 확정할까요?'),
+          title: const Text('최종 순위 확정'),
+          content: Text('${season.name}의 최종 순위를 역사 기록으로 확정하시겠습니까?'),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(context, false),
               child: const Text('취소'),
             ),
             FilledButton(
+              key: const Key('finalize-season-submit'),
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('확정'),
+              child: const Text('최종 순위 확정'),
             ),
           ],
         ),
       );
       if (confirmed != true) return;
-    }
-    if (!mounted) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('최종순위 확정'),
-        content: Text('${season.name}의 최종순위를 확정하시겠습니까?'),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            key: const Key('finalize-season-submit'),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('최종순위 확정'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
       await ref
           .read(clubExpansionApiProvider)
-          .finalizeSeason(
-            widget.teamId,
-            season.id,
-            orderedMemberIds: ordered
-                ?.map((row) => row.id)
-                .toList(growable: false),
-          );
+          .finalizeSeason(widget.teamId, season.id, entries: entries);
       ref.invalidate(clubSeasonRankingProvider);
       ref.invalidate(clubTeamProfileProvider(profileRequest));
       if (mounted) {
@@ -687,6 +726,338 @@ class _ClubSeasonRankingScreenState
       }
     }
   }
+}
+
+_HistoricalRankingSeed _seedFromHistoricalEntry(
+  ClubHistoricalRankingEntry entry,
+) => _HistoricalRankingSeed(
+  participantType: entry.participantType,
+  memberId: entry.memberId,
+  displayName: entry.displayName,
+);
+
+_HistoricalRankingSeed _seedFromFinalEntry(ClubSeasonFinalRankingEntry entry) =>
+    _HistoricalRankingSeed(
+      participantType: entry.participantType,
+      memberId: entry.memberId,
+      displayName: entry.displayName,
+      points: entry.totalPoints,
+    );
+
+class _HistoricalRankingSeed {
+  const _HistoricalRankingSeed({
+    required this.participantType,
+    required this.memberId,
+    required this.displayName,
+    this.points,
+  });
+
+  final String participantType;
+  final String? memberId;
+  final String displayName;
+  final int? points;
+}
+
+class _HistoricalRankingDraft {
+  _HistoricalRankingDraft({
+    required this.key,
+    required this.participantType,
+    required this.memberId,
+    required String displayName,
+    this.points,
+  }) : nameController = TextEditingController(text: displayName);
+
+  final int key;
+  String participantType;
+  String? memberId;
+  final TextEditingController nameController;
+  final int? points;
+
+  bool get isEmpty => participantType == 'MEMBER'
+      ? memberId == null
+      : nameController.text.trim().isEmpty;
+
+  void dispose() => nameController.dispose();
+}
+
+class _HistoricalRankingEditorScreen extends StatefulWidget {
+  const _HistoricalRankingEditorScreen({
+    required this.title,
+    required this.submitLabel,
+    required this.members,
+    required this.initialEntries,
+  });
+
+  final String title;
+  final String submitLabel;
+  final List<ClubMember> members;
+  final List<_HistoricalRankingSeed> initialEntries;
+
+  @override
+  State<_HistoricalRankingEditorScreen> createState() =>
+      _HistoricalRankingEditorScreenState();
+}
+
+class _HistoricalRankingEditorScreenState
+    extends State<_HistoricalRankingEditorScreen> {
+  final List<_HistoricalRankingDraft> _rows = <_HistoricalRankingDraft>[];
+  int _nextKey = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final memberIds = widget.members.map((member) => member.id).toSet();
+    for (final seed in widget.initialEntries) {
+      final memberAvailable =
+          seed.participantType == 'MEMBER' && memberIds.contains(seed.memberId);
+      _rows.add(
+        _HistoricalRankingDraft(
+          key: _nextKey++,
+          participantType: memberAvailable ? 'MEMBER' : 'MANUAL',
+          memberId: memberAvailable ? seed.memberId : null,
+          displayName: memberAvailable ? '' : seed.displayName,
+          points: seed.points,
+        ),
+      );
+    }
+    while (_rows.length < 10) {
+      _rows.add(_emptyRow());
+    }
+  }
+
+  _HistoricalRankingDraft _emptyRow() => _HistoricalRankingDraft(
+    key: _nextKey++,
+    participantType: 'MEMBER',
+    memberId: null,
+    displayName: '',
+  );
+
+  @override
+  void dispose() {
+    for (final row in _rows) {
+      row.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(widget.title)),
+    body: SafeArea(
+      child: Column(
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Text(
+              '순위는 1위부터 연속으로 저장됩니다. 회원을 선택하거나 직접 이름을 입력하세요.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          Expanded(
+            child: ReorderableListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: _rows.length,
+              onReorderItem: (oldIndex, newIndex) => setState(() {
+                final row = _rows.removeAt(oldIndex);
+                _rows.insert(newIndex, row);
+              }),
+              itemBuilder: (context, index) => Card(
+                key: ValueKey<int>(_rows[index].key),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                  child: _rankingRow(index),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Row(
+              children: <Widget>[
+                OutlinedButton.icon(
+                  key: const Key('ranking-add-row'),
+                  onPressed: () => setState(() => _rows.add(_emptyRow())),
+                  icon: const Icon(Icons.add_rounded),
+                  label: Text('${_rows.length + 1}위 추가'),
+                ),
+                const Spacer(),
+                FilledButton(
+                  key: const Key('ranking-editor-submit'),
+                  onPressed: _submit,
+                  child: Text(widget.submitLabel),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _rankingRow(int index) {
+    final row = _rows[index];
+    return Column(
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            SizedBox(
+              width: 42,
+              child: Text(
+                '${index + 1}위',
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+            Expanded(
+              child: SegmentedButton<String>(
+                segments: const <ButtonSegment<String>>[
+                  ButtonSegment(value: 'MEMBER', label: Text('회원')),
+                  ButtonSegment(value: 'MANUAL', label: Text('직접입력')),
+                ],
+                selected: <String>{row.participantType},
+                showSelectedIcon: false,
+                onSelectionChanged: (value) => setState(() {
+                  row.participantType = value.single;
+                  if (row.participantType == 'MANUAL') row.memberId = null;
+                }),
+              ),
+            ),
+            IconButton(
+              key: Key('ranking-remove-$index'),
+              tooltip: '순위 삭제',
+              onPressed: _rows.length <= 1
+                  ? null
+                  : () => setState(() {
+                      final removed = _rows.removeAt(index);
+                      removed.dispose();
+                    }),
+              icon: const Icon(Icons.remove_circle_outline_rounded),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (row.participantType == 'MEMBER')
+          DropdownButtonFormField<String>(
+            key: Key('ranking-member-$index'),
+            initialValue: row.memberId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: '회원 선택',
+              isDense: true,
+            ),
+            items: widget.members
+                .map(
+                  (member) => DropdownMenuItem<String>(
+                    value: member.id,
+                    child: Text(
+                      member.isBlinded ? '${member.name} · 블라인드' : member.name,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                )
+                .toList(growable: false),
+            onChanged: (value) => setState(() => row.memberId = value),
+          )
+        else
+          TextField(
+            key: Key('ranking-manual-$index'),
+            controller: row.nameController,
+            maxLength: 100,
+            decoration: const InputDecoration(
+              labelText: '이름 직접 입력',
+              hintText: 'Guest 또는 과거 회원 이름',
+              isDense: true,
+            ),
+          ),
+        if (row.points != null)
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '${row.points}P',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _submit() {
+    final entries = List<_HistoricalRankingDraft>.from(_rows);
+    while (entries.isNotEmpty && entries.last.isEmpty) {
+      entries.removeLast();
+    }
+    if (entries.isEmpty || entries.any((row) => row.isEmpty)) {
+      _showError('순위 중간을 비울 수 없습니다. 참가자를 확인해주세요.');
+      return;
+    }
+    final memberIds = entries
+        .where((row) => row.participantType == 'MEMBER')
+        .map((row) => row.memberId!)
+        .toList(growable: false);
+    if (memberIds.toSet().length != memberIds.length) {
+      _showError('같은 회원을 두 순위에 중복 지정할 수 없습니다.');
+      return;
+    }
+    Navigator.pop(context, <Map<String, Object?>>[
+      for (int index = 0; index < entries.length; index++)
+        <String, Object?>{
+          'rank': index + 1,
+          'participantType': entries[index].participantType,
+          'memberId': entries[index].participantType == 'MEMBER'
+              ? entries[index].memberId
+              : null,
+          'displayName': entries[index].participantType == 'MANUAL'
+              ? entries[index].nameController.text.trim()
+              : null,
+        },
+    ]);
+  }
+
+  void _showError(String message) =>
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+}
+
+class _HistoricalRankingCard extends StatelessWidget {
+  const _HistoricalRankingCard({
+    required this.title,
+    required this.subtitle,
+    required this.entries,
+    super.key,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<ClubHistoricalRankingEntry> entries;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+          const SizedBox(height: 3),
+          Text(subtitle, style: const TextStyle(color: Colors.grey)),
+          const Divider(height: 24),
+          for (final entry in entries)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 7),
+              child: Row(
+                children: <Widget>[
+                  SizedBox(width: 46, child: Text('${entry.rank}위')),
+                  Expanded(child: Text(entry.displayName)),
+                  Text(entry.participantType == 'MEMBER' ? '회원' : '직접입력'),
+                ],
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _SeasonStatusBanner extends StatelessWidget {
@@ -746,7 +1117,8 @@ class _FinalRankingCard extends StatelessWidget {
                   children: <Widget>[
                     SizedBox(width: 42, child: Text('${entry.rank}위')),
                     Expanded(child: Text(entry.displayName)),
-                    Text('${entry.totalPoints}P'),
+                    if (entry.totalPoints != null)
+                      Text('${entry.totalPoints}P'),
                   ],
                 ),
               ),

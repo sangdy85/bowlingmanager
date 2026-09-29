@@ -3,6 +3,10 @@ import prisma from "@/lib/prisma";
 import { getMobileSeasonRanking } from "@/lib/mobile-api/club-expansion";
 import { serializeSeasonPointTable, serializeSeasonSummary } from "@/lib/mobile-api/unified-season";
 import { seasonLifecycleStatus, seasonYearRange } from "@/lib/mobile-api/season-lifecycle";
+import {
+    ExplicitSeasonRankingError,
+    parseHistoricalRankingEntries,
+} from "@/lib/mobile-api/explicit-season-rankings";
 
 export class SeasonHistoryError extends Error {
     constructor(public readonly code: string, message: string, public readonly status: number) { super(message); }
@@ -43,18 +47,32 @@ const finalRankingSelect = {
     entries: { orderBy: [{ rank: "asc" as const }, { id: "asc" as const }], select: {
         id: true, memberId: true, displayName: true, rank: true, totalPoints: true,
     } },
+    participants: { orderBy: [{ rank: "asc" as const }, { id: "asc" as const }], select: {
+        id: true, participantType: true, memberId: true, displayName: true, rank: true, totalPoints: true,
+    } },
 };
 
 function serializeFinalRanking(value: {
     id: string; revision: number; rankingMode: string; finalizedAt: Date;
     finalizedBy: { id: string; name: string };
     entries: { id: string; memberId: string | null; displayName: string; rank: number; totalPoints: number }[];
+    participants?: { id: string; participantType: string; memberId: string | null; displayName: string; rank: number; totalPoints: number | null }[];
 }) {
+    const participantEntries = value.participants ?? [];
+    const entries = participantEntries.length > 0
+        ? participantEntries.map((entry) => ({
+            ...entry,
+            participantType: entry.participantType === "MEMBER" ? "MEMBER" as const : "MANUAL" as const,
+        }))
+        : value.entries.map((entry) => ({
+            ...entry,
+            participantType: entry.memberId ? "MEMBER" as const : "MANUAL" as const,
+        }));
     return {
         id: value.id, revision: value.revision,
         rankingMode: value.rankingMode === "IMAGE" ? "IMAGE" : "DATA",
         finalizedAt: value.finalizedAt.toISOString(), finalizedBy: value.finalizedBy,
-        entries: value.entries,
+        entries,
     };
 }
 
@@ -174,14 +192,56 @@ export async function finalizeTeamSeason(actorUserId: string, teamId: string, se
     }
     const body = input && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
     let entries: { memberId: string; displayName: string; totalPoints: number }[] = [];
+    let participantEntries: {
+        participantType: "MEMBER" | "MANUAL";
+        memberId: string | null;
+        displayName: string;
+        rank: number;
+        totalPoints: number | null;
+    }[] = [];
+    let explicitEntries: ReturnType<typeof parseHistoricalRankingEntries> | null = null;
+    if (body.entries !== undefined) {
+        try { explicitEntries = parseHistoricalRankingEntries(body.entries); }
+        catch (error) {
+            if (error instanceof ExplicitSeasonRankingError) {
+                throw new SeasonHistoryError(error.code, error.message, error.status);
+            }
+            throw error;
+        }
+    }
     if (season.rankingMode === "IMAGE") {
-        if (body.orderedMemberIds !== undefined) throw new SeasonHistoryError("SEASON_RANKING_MODE_MISMATCH", "이미지 시즌은 포인트 최종 순위를 만들지 않습니다.", 409);
+        if (body.orderedMemberIds !== undefined) throw new SeasonHistoryError("SEASON_RANKING_MODE_MISMATCH", "이미지 시즌은 회원/직접입력 방식으로 최종 순위를 지정해주세요.", 409);
         const imageCount = await prisma.seasonRankingImage.count({ where: { seasonId } });
         if (imageCount < 1) throw new SeasonHistoryError("RANKING_IMAGE_REQUIRED", "최종 순위표 이미지를 먼저 등록해주세요.", 409);
-    } else {
+    } else if (explicitEntries === null) {
         const ranking = await getMobileSeasonRanking(actorUserId, teamId, { seasonId, competitionType: "ALL" });
         const ordered = orderedRankingRows(ranking.rankings, body.orderedMemberIds);
         entries = ordered.map((row) => ({ memberId: row.id, displayName: row.name, totalPoints: row.points }));
+    }
+    if (explicitEntries !== null) {
+        const memberIds = explicitEntries.flatMap((entry) => entry.memberId ? [entry.memberId] : []);
+        const members = memberIds.length === 0 ? [] : await prisma.teamMember.findMany({
+            where: { teamId, id: { in: memberIds } },
+            select: { id: true, alias: true, user: { select: { name: true } } },
+        });
+        if (members.length !== memberIds.length) {
+            throw new SeasonHistoryError("INVALID_MEMBER", "다른 동호회 회원은 최종 순위에 지정할 수 없습니다.", 400);
+        }
+        const memberById = new Map(members.map((member) => [member.id, member]));
+        const pointsByMember = season.rankingMode === "DATA"
+            ? new Map((await getMobileSeasonRanking(actorUserId, teamId, { seasonId, competitionType: "ALL" }))
+                .rankings.map((row) => [row.id, row.points]))
+            : new Map<string, number>();
+        participantEntries = explicitEntries.map((entry) => {
+            const member = entry.memberId ? memberById.get(entry.memberId)! : null;
+            return {
+                participantType: entry.participantType,
+                memberId: entry.memberId,
+                displayName: member ? member.alias || member.user.name : entry.displayName!,
+                rank: entry.rank,
+                totalPoints: entry.memberId ? pointsByMember.get(entry.memberId) ?? null : null,
+            };
+        });
     }
     try {
         const created = await prisma.$transaction(async (tx) => {
@@ -190,6 +250,7 @@ export async function finalizeTeamSeason(actorUserId: string, teamId: string, se
                 seasonId, revision: (latest?.revision ?? 0) + 1, rankingMode: season.rankingMode,
                 finalizedByUserId: actorUserId,
                 entries: { create: entries.map((entry, index) => ({ ...entry, rank: index + 1 })) },
+                participants: { create: participantEntries },
             }, select: finalRankingSelect });
             await tx.teamSeason.update({ where: { id: seasonId }, data: { status: "COMPLETED", enabled: false } });
             return finalRanking;

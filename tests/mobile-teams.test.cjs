@@ -125,14 +125,14 @@ test('default detail query enforces active team membership server-side', async (
 test('member list exposes display name, role and nullable handicap only', async () => {
     const result = await teams.listMobileTeamMembers('member-1', 'team-1', dependencies());
     assert.deepEqual(result, [
-        { id: 'membership-manager', name: '매니저', role: 'MANAGER', handicap: 8 },
-        { id: 'membership-owner', name: '팀장 별명', role: 'OWNER', handicap: 12 },
-        { id: 'membership-member', name: '회원', role: 'MEMBER', handicap: null },
+      { id: 'membership-manager', name: '매니저', role: 'MANAGER', handicap: 8, blindAt: null },
+      { id: 'membership-owner', name: '팀장 별명', role: 'OWNER', handicap: 12, blindAt: null },
+      { id: 'membership-member', name: '회원', role: 'MEMBER', handicap: null, blindAt: null },
     ]);
     assert.equal(JSON.stringify(result).includes('email'), false);
     assert.equal(JSON.stringify(result).includes('userId'), false);
     for (const member of result) {
-        assert.deepEqual(Object.keys(member).sort(), ['handicap', 'id', 'name', 'role']);
+        assert.deepEqual(Object.keys(member).sort(), ['blindAt', 'handicap', 'id', 'name', 'role']);
     }
 });
 

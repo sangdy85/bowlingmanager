@@ -67,6 +67,91 @@ void main() {
     expect(summary.lifecycleStatus, 'ENDED');
   });
 
+  test(
+    'parses explicit IMAGE season ranking and nullable manual final points',
+    () {
+      final ranking = ClubSeasonRanking.fromJson(<String, dynamic>{
+        'enabled': true,
+        'bowlerHiddenEnabled': true,
+        'season': <String, Object>{
+          'id': 'season-image',
+          'name': '이미지 시즌',
+          'startDate': '2025-01-01',
+          'endDate': '2025-12-31',
+          'status': 'COMPLETED',
+          'lifecycleStatus': 'ENDED',
+          'scoringMode': 'FULL_RANK',
+          'rankingMode': 'IMAGE',
+          'points': <int>[50, 30, 20],
+        },
+        'rankings': <Object>[],
+        'explicitSeasonRanking': <String, Object>{
+          'id': 'snapshot-1',
+          'revision': 2,
+          'savedAt': '2026-01-01T00:00:00.000Z',
+          'savedBy': <String, String>{'id': 'manager', 'name': '관리자'},
+          'entries': <Object>[
+            <String, Object?>{
+              'id': 'entry-1',
+              'participantType': 'MANUAL',
+              'memberId': null,
+              'displayName': 'Guest A',
+              'rank': 1,
+            },
+          ],
+        },
+        'finalRanking': <String, Object>{
+          'id': 'final-1',
+          'revision': 1,
+          'rankingMode': 'IMAGE',
+          'finalizedAt': '2026-01-02T00:00:00.000Z',
+          'finalizedBy': <String, String>{'id': 'manager', 'name': '관리자'},
+          'entries': <Object>[
+            <String, Object?>{
+              'id': 'final-entry-1',
+              'participantType': 'MANUAL',
+              'memberId': null,
+              'displayName': 'Guest A',
+              'rank': 1,
+              'totalPoints': null,
+            },
+          ],
+        },
+      });
+
+      expect(
+        ranking.explicitSeasonRanking!.entries.single.displayName,
+        'Guest A',
+      );
+      expect(ranking.finalRanking!.entries.single.totalPoints, isNull);
+      expect(ranking.finalRanking!.entries.single.participantType, 'MANUAL');
+    },
+  );
+
+  test('rejects malformed explicit ranks and non-integer final points', () {
+    expect(
+      () => ClubHistoricalRankingEntry.fromJson(<String, dynamic>{
+        'id': 'entry',
+        'participantType': 'MEMBER',
+        'memberId': 'member',
+        'displayName': '회원',
+        'rank': 0,
+      }),
+      throwsFormatException,
+    );
+    expect(
+      () => ClubSeasonFinalRankingEntry.fromJson(<String, dynamic>{
+        'id': 'entry',
+        'participantType': 'MANUAL',
+        'memberId': null,
+        'displayName': 'Guest',
+        'rank': 1,
+        'totalPoints': 1.5,
+      }),
+      throwsFormatException,
+    );
+  });
+
   test('rejects malformed lifecycle and final rank response', () {
     expect(
       () => DashboardSeasonSummary.fromJson(<String, dynamic>{

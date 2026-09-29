@@ -150,6 +150,9 @@ const defaultDependencies: MobileDashboardDependencies = {
             if (!team.seasonRankingEnabled && !team.bowlerHiddenEnabled) return emptyClubAchievement(membership);
             const ranking = await getMobileSeasonRanking(user.id, membership.teamId);
             const mine = ranking.rankings.find((row) => row.id === membership.id);
+            const explicitMine = "explicitSeasonRanking" in ranking
+                ? ranking.explicitSeasonRanking?.entries.find((entry) => entry.memberId === membership.id)
+                : null;
             const hiddenMine = mine && "individualPoints" in mine ? mine : null;
             return {
                 teamId: team.id,
@@ -157,7 +160,7 @@ const defaultDependencies: MobileDashboardDependencies = {
                 enabled: ranking.enabled,
                 bowlerHiddenEnabled: team.bowlerHiddenEnabled,
                 seasonName: ranking.season?.name ?? null,
-                rank: mine?.rank ?? null,
+                rank: mine?.rank ?? explicitMine?.rank ?? null,
                 points: mine?.points ?? 0,
                 gold: mine?.gold ?? 0,
                 silver: mine?.silver ?? 0,
@@ -178,24 +181,33 @@ const defaultDependencies: MobileDashboardDependencies = {
             include: {
                 finalRankings: {
                     orderBy: [{ revision: "desc" }], take: 1,
-                    select: { finalizedAt: true, entries: { select: { memberId: true, rank: true } } },
+                    select: {
+                        finalizedAt: true,
+                        entries: { select: { memberId: true, rank: true } },
+                        participants: { select: { memberId: true, rank: true } },
+                    },
                 },
             },
         });
         const membershipByTeam = new Map(hiddenMemberships.map((item) => [item.teamId, item]));
         return Promise.all(seasons.map(async (season) => {
             const membership = membershipByTeam.get(season.teamId)!;
-            const ranking = season.rankingMode === "IMAGE" ? null
-                : await getMobileSeasonRanking(user.id, season.teamId, { seasonId: season.id, competitionType: "ALL" });
-            const mine = ranking?.rankings.find((row) => row.id === membership.id);
+            const ranking = await getMobileSeasonRanking(user.id, season.teamId, {
+                seasonId: season.id, competitionType: "ALL",
+            });
+            const mine = ranking.rankings.find((row) => row.id === membership.id);
+            const explicitMine = "explicitSeasonRanking" in ranking
+                ? ranking.explicitSeasonRanking?.entries.find((entry) => entry.memberId === membership.id)
+                : null;
             const final = season.finalRankings[0] ?? null;
+            const finalEntries = final?.participants?.length ? final.participants : final?.entries ?? [];
             return {
                 teamId: season.teamId, teamName: membership.team.name,
                 seasonId: season.id, seasonName: season.name,
                 startDate: season.startDate.toISOString().slice(0, 10), endDate: season.endDate.toISOString().slice(0, 10),
                 lifecycleStatus: seasonLifecycleStatus(season), rankingMode: season.rankingMode === "IMAGE" ? "IMAGE" as const : "DATA" as const,
-                rank: mine?.rank ?? null, points: mine?.points ?? null,
-                finalRank: final?.entries.find((entry) => entry.memberId === membership.id)?.rank ?? null,
+                rank: mine?.rank ?? explicitMine?.rank ?? null, points: mine?.points ?? null,
+                finalRank: finalEntries.find((entry) => entry.memberId === membership.id)?.rank ?? null,
                 finalizedAt: final?.finalizedAt.toISOString() ?? null,
             };
         }));

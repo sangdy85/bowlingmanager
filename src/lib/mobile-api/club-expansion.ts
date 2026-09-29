@@ -52,7 +52,7 @@ const accessSelect = {
     members: {
         orderBy: [{ joinedAt: "asc" as const }, { id: "asc" as const }],
         select: {
-            id: true, userId: true, alias: true, joinedAt: true,
+            id: true, userId: true, alias: true, joinedAt: true, blindAt: true,
             user: { select: { name: true, handicap: true } },
         },
     },
@@ -566,10 +566,13 @@ export async function getMobileSeasonRanking(
     if (!season) return { enabled: true, bowlerHiddenEnabled: false, myMemberId: memberId, season: null, seasons: seasons.map(serializeSeasonSummary), competitionType: "ALL", rankings: [], myCompetitionHistory: [] };
     const scores = mappedScores(await listTeamScores(teamId, season.startDate, season.endDate));
     const pointTable = readSeasonPointTable(season.individualPointsConfig);
+    const rankingMembers = isCurrentSeason(season)
+        ? team.members.filter((member) => member.blindAt == null)
+        : team.members;
     const rankings = calculateSeasonRanking(
         teamId,
         scores,
-        displayMembers(team.members),
+        displayMembers(rankingMembers),
         season.scoringMode === "FULL_RANK" ? "FULL_RANK" : "PODIUM",
         pointTable.map((item) => item.points),
     );

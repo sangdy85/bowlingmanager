@@ -102,6 +102,94 @@ void main() {
     expect(entry.reason, '잘못 지급 수정');
   });
 
+  test(
+    'saves explicit IMAGE season ranking and mixed final ranking payloads',
+    () async {
+      final requests = <RequestOptions>[];
+      final dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
+        ..httpClientAdapter = _Adapter((options) {
+          requests.add(options);
+          final isFinal = options.path.endsWith('/final-ranking');
+          return _json(200, <String, Object?>{
+            'success': true,
+            'data': isFinal
+                ? <String, Object?>{
+                    'id': 'final-1',
+                    'revision': 1,
+                    'rankingMode': 'IMAGE',
+                    'finalizedAt': '2026-09-29T00:00:00.000Z',
+                    'finalizedBy': <String, String>{
+                      'id': 'owner',
+                      'name': '관리자',
+                    },
+                    'entries': <Object>[
+                      <String, Object?>{
+                        'id': 'final-entry-1',
+                        'participantType': 'MANUAL',
+                        'memberId': null,
+                        'displayName': 'Guest A',
+                        'rank': 1,
+                        'totalPoints': null,
+                      },
+                    ],
+                  }
+                : <String, Object?>{
+                    'id': 'snapshot-1',
+                    'revision': 1,
+                    'savedAt': '2026-09-29T00:00:00.000Z',
+                    'savedBy': <String, String>{'id': 'owner', 'name': '관리자'},
+                    'entries': <Object>[
+                      <String, Object?>{
+                        'id': 'entry-1',
+                        'participantType': 'MEMBER',
+                        'memberId': 'member-1',
+                        'displayName': '회원',
+                        'rank': 1,
+                      },
+                    ],
+                  },
+          });
+        });
+      final api = ClubExpansionApi(dio);
+      final entries = <Map<String, Object?>>[
+        <String, Object?>{
+          'rank': 1,
+          'participantType': 'MEMBER',
+          'memberId': 'member-1',
+          'displayName': null,
+        },
+        <String, Object?>{
+          'rank': 2,
+          'participantType': 'MANUAL',
+          'memberId': null,
+          'displayName': 'Guest A',
+        },
+      ];
+      final saved = await api.saveExplicitSeasonRanking(
+        'team-1',
+        'season-1',
+        entries,
+      );
+      final finalRanking = await api.finalizeSeason(
+        'team-1',
+        'season-1',
+        entries: entries,
+      );
+
+      expect(saved.entries.single.displayName, '회원');
+      expect(finalRanking.entries.single.totalPoints, isNull);
+      expect(
+        requests.map((request) => '${request.method} ${request.path}'),
+        <String>[
+          'PUT /teams/team-1/seasons/season-1/explicit-ranking',
+          'POST /teams/team-1/seasons/season-1/final-ranking',
+        ],
+      );
+      expect(requests.first.data, <String, Object>{'entries': entries});
+      expect((requests.last.data as Map<String, Object>)['entries'], entries);
+    },
+  );
+
   test('uses protected member, profile, ranking and board paths', () async {
     final requests = <RequestOptions>[];
     final dio = Dio(BaseOptions(baseUrl: 'https://example.test'))

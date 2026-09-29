@@ -114,12 +114,28 @@ class ClubExpansionApi {
     String teamId,
     String seasonId, {
     List<String>? orderedMemberIds,
+    List<Map<String, Object?>>? entries,
   }) async => _guard(() async {
     final response = await _dio.post<dynamic>(
       '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/final-ranking',
-      data: <String, Object>{'orderedMemberIds': ?orderedMemberIds},
+      data: <String, Object>{
+        'orderedMemberIds': ?orderedMemberIds,
+        'entries': ?entries,
+      },
     );
     return ClubSeasonFinalRanking.fromJson(_data(response.data));
+  });
+
+  Future<ClubHistoricalRankingSnapshot> saveExplicitSeasonRanking(
+    String teamId,
+    String seasonId,
+    List<Map<String, Object?>> entries,
+  ) async => _guard(() async {
+    final response = await _dio.put<dynamic>(
+      '/teams/${Uri.encodeComponent(teamId)}/seasons/${Uri.encodeComponent(seasonId)}/explicit-ranking',
+      data: <String, Object>{'entries': entries},
+    );
+    return ClubHistoricalRankingSnapshot.fromJson(_data(response.data));
   });
 
   Future<void> createManualCompetition(

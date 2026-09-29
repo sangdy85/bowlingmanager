@@ -90,6 +90,7 @@ class _ClubMembersScreenState extends ConsumerState<ClubMembersScreen> {
                   onRemove: () => _removeMember(context, user.id, member),
                   onRoleChange: (ClubRole role) =>
                       _changeRole(context, user.id, member, role),
+                  onBlindChange: () => _changeBlind(context, user.id, member),
                   onOpen: () => context.push(
                     '/club/${Uri.encodeComponent(widget.teamId)}/members/${Uri.encodeComponent(member.id)}',
                   ),
@@ -212,6 +213,64 @@ class _ClubMembersScreenState extends ConsumerState<ClubMembersScreen> {
     }
   }
 
+  Future<void> _changeBlind(
+    BuildContext context,
+    String userId,
+    ClubMember member,
+  ) async {
+    final String actionKey = 'blind:${member.id}';
+    if (_pendingMemberActions.contains(actionKey)) return;
+    setState(() => _pendingMemberActions.add(actionKey));
+    final bool nextBlind = !member.isBlinded;
+    try {
+      final bool confirmed =
+          await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: Text(nextBlind ? '회원 블라인드' : '블라인드 해제'),
+              content: Text(
+                nextBlind
+                    ? '이 회원을 블라인드 처리하시겠습니까?\n회원 자격과 기존 기록은 유지되며 현재 종합순위에서 숨겨집니다.'
+                    : '블라인드를 해제하시겠습니까?\n별도 가입 절차 없이 현재 종합순위에 다시 표시됩니다.',
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('취소'),
+                ),
+                FilledButton(
+                  key: const Key('member-blind-confirm'),
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: Text(nextBlind ? '블라인드' : '해제'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+      if (!confirmed) return;
+      await ref
+          .read(clubRepositoryProvider)
+          .setMemberBlind(
+            teamId: widget.teamId,
+            memberId: member.id,
+            blind: nextBlind,
+          );
+      _invalidate(userId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(nextBlind ? '블라인드 처리했습니다.' : '블라인드를 해제했습니다.')),
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(clubErrorMessage(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _pendingMemberActions.remove(actionKey));
+    }
+  }
+
   void _invalidate(String userId) {
     ref.invalidate(
       clubMembersProvider((userId: userId, teamId: widget.teamId)),
@@ -270,6 +329,7 @@ class _MemberCard extends StatelessWidget {
     required this.busy,
     required this.onRemove,
     required this.onRoleChange,
+    required this.onBlindChange,
     required this.onOpen,
   });
 
@@ -279,10 +339,17 @@ class _MemberCard extends StatelessWidget {
   final bool busy;
   final VoidCallback onRemove;
   final ValueChanged<ClubRole> onRoleChange;
+  final VoidCallback onBlindChange;
   final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
+    final canManageRoleOrRemove =
+        (myRole == ClubRole.owner && member.role != ClubRole.owner) ||
+        (myRole == ClubRole.manager && member.role == ClubRole.member);
+    final canManageBlind =
+        member.role != ClubRole.owner &&
+        (myRole == ClubRole.owner || myRole == ClubRole.manager);
     return Card(
       key: Key('club-member-${member.id}'),
       child: Column(
@@ -296,7 +363,34 @@ class _MemberCard extends StatelessWidget {
               backgroundColor: AppColors.primary,
               child: Icon(Icons.person_outline_rounded, color: Colors.white),
             ),
-            title: Text(member.name),
+            title: Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                Text(member.name),
+                if (member.isBlinded)
+                  Container(
+                    key: Key('member-blind-badge-${member.id}'),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Text(
+                      '블라인드',
+                      style: TextStyle(
+                        color: Colors.orangeAccent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             subtitle: member.handicap == null
                 ? null
                 : Text('핸디캡 ${member.handicap}'),
@@ -318,10 +412,7 @@ class _MemberCard extends StatelessWidget {
             ),
             onTap: managementMode ? null : onOpen,
           ),
-          if (managementMode &&
-              ((myRole == ClubRole.owner && member.role != ClubRole.owner) ||
-                  (myRole == ClubRole.manager &&
-                      member.role == ClubRole.member)))
+          if (managementMode && (canManageRoleOrRemove || canManageBlind))
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
               child: Wrap(
@@ -342,14 +433,21 @@ class _MemberCard extends StatelessWidget {
                         member.role == ClubRole.manager ? '매니저 해제' : '매니저 지정',
                       ),
                     ),
-                  OutlinedButton(
-                    key: Key('member-remove-${member.id}'),
-                    onPressed: busy ? null : onRemove,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.redAccent,
+                  if (canManageBlind)
+                    OutlinedButton(
+                      key: Key('member-blind-${member.id}'),
+                      onPressed: busy ? null : onBlindChange,
+                      child: Text(member.isBlinded ? '블라인드 해제' : '블라인드'),
                     ),
-                    child: const Text('팀에서 제거'),
-                  ),
+                  if (canManageRoleOrRemove)
+                    OutlinedButton(
+                      key: Key('member-remove-${member.id}'),
+                      onPressed: busy ? null : onRemove,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                      ),
+                      child: const Text('팀에서 제거'),
+                    ),
                 ],
               ),
             ),
