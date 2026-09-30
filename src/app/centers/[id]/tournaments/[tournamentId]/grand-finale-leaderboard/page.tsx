@@ -5,7 +5,7 @@ import GrandFinaleLeaderboardView from "@/components/tournaments/GrandFinaleLead
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
-export default async function GrandFinaleLeaderboardPage({ params }: { params: { id: string, tournamentId: string } }) {
+export default async function GrandFinaleLeaderboardPage({ params }: { params: Promise<{ id: string, tournamentId: string }> }) {
     const { id: centerId, tournamentId } = await params;
 
     // 1. Fetch Tournament

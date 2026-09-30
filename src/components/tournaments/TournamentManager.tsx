@@ -372,7 +372,7 @@ export default function TournamentManager({
                                         onChange={(e) => setRules({ ...rules, avgTopRankCount: Number(e.target.value) })}
                                     />
                                     <p className="text-[10px] text-secondary-foreground mt-1">
-                                        * '개인 평균 Top' 페이지에 표시할 인원 수입니다. (기본값: 30)
+                                        * &apos;개인 평균 Top&apos; 페이지에 표시할 인원 수입니다. (기본값: 30)
                                     </p>
                                 </div>
                                 <div>

@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import NewTournamentForm from "@/components/tournaments/NewTournamentForm";
 
-export default async function NewTournamentPage({ params }: { params: { id: string } }) {
+export default async function NewTournamentPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: centerId } = await params;
     const session = await auth();
 

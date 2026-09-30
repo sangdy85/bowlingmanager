@@ -30,7 +30,7 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
           BowlingManager
         </Link>
 
-        <button className={styles.menuToggle} onClick={toggleMenu} aria-label="Toggle menu">
+        <button className={styles.menuToggle} onClick={toggleMenu} aria-label="메뉴 열기 또는 닫기" aria-expanded={isOpen} aria-controls="main-navigation">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             {isOpen ? (
               <path d="M18 6L6 18M6 6l12 12" />
@@ -40,7 +40,7 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
           </svg>
         </button>
 
-        <div className={`${styles.links} ${isOpen ? styles.linksOpen : ''}`}>
+        <div id="main-navigation" className={`${styles.links} ${isOpen ? styles.linksOpen : ''}`}>
           {isLoggedIn ? (
             <>
               <Link href="/about" className={styles.link} onClick={closeMenu}>이용 방법</Link>

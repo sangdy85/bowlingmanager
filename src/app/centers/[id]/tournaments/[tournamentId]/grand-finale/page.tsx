@@ -5,7 +5,7 @@ import GrandFinalePointSettings from "@/components/tournaments/GrandFinalePointS
 import GrandFinaleWinnersManager from "@/components/tournaments/GrandFinaleWinnersManager";
 import { auth } from "@/auth";
 
-export default async function GrandFinalePage({ params }: { params: { id: string, tournamentId: string } }) {
+export default async function GrandFinalePage({ params }: { params: Promise<{ id: string, tournamentId: string }> }) {
     const { id: centerId, tournamentId } = await params;
     const session = await auth();
 

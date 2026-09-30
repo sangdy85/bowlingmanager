@@ -71,6 +71,41 @@ test('web radar helper keeps five axes and the exact web formulas', () => {
     assert.deepEqual(result.radar.series[1].values, [9.1, 9, 9.333333333333334, 10, 3]);
 });
 
+test('profile normalization anchors match the public metric explanation', () => {
+    const constant230 = profile.calculatePersonalProfile({
+        regularScores: [
+            { score: 230, gameDate: day(1) },
+            { score: 230, gameDate: day(2) },
+            { score: 230, gameDate: day(3) },
+        ],
+        officialSessions: [],
+        allTeamRegularScores: [
+            { score: 1, gameDate: day(1), teamId: 'team-1' },
+            { score: 1, gameDate: day(2), teamId: 'team-1' },
+            { score: 1, gameDate: day(3), teamId: 'team-1' },
+        ],
+    });
+    assert.deepEqual(constant230.radar.series[0].values, [9.6, 6, 10, 10, 10]);
+
+    const sessionRanges = profile.calculatePersonalProfile({
+        regularScores: [
+            { score: 240, gameDate: day(1) }, { score: 260, gameDate: day(1) },
+            { score: 220, gameDate: day(2) }, { score: 240, gameDate: day(2) },
+            { score: 180, gameDate: day(3) }, { score: 200, gameDate: day(3) },
+        ],
+        officialSessions: [],
+        allTeamRegularScores: [
+            { score: 1, gameDate: day(1), teamId: 'team-1' },
+            { score: 1, gameDate: day(2), teamId: 'team-1' },
+            { score: 1, gameDate: day(3), teamId: 'team-1' },
+        ],
+    });
+    const [, potential, consistency, floor] = sessionRanges.radar.series[0].values;
+    assert.equal(potential, 10);
+    assert.equal(consistency, 9);
+    assert.equal(floor, 9);
+});
+
 test('radar handles empty and sparse data and clamps normalization boundaries', () => {
     const empty = profile.calculatePersonalProfile({
         regularScores: [], officialSessions: [], allTeamRegularScores: [],

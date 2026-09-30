@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import SideGameManager from "@/components/tournaments/SideGameManager";
 
-export default async function MemberSideGameResultPage({ params, searchParams }: { params: { id: string, tournamentId: string, roundId: string }, searchParams: { from?: string } }) {
+export default async function MemberSideGameResultPage({ params, searchParams }: { params: Promise<{ id: string, tournamentId: string, roundId: string }>, searchParams: Promise<{ from?: string }> }) {
     const { id: centerId, tournamentId, roundId } = await params;
     const { from } = await searchParams;
     const session = await auth();

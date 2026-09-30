@@ -3,7 +3,7 @@ import { verifyCenterAdmin } from "@/lib/auth-utils";
 import { notFound } from "next/navigation";
 import CenterTeamsManager from "@/components/tournaments/CenterTeamsManager";
 
-export default async function CenterTeamsPage({ params }: { params: { id: string } }) {
+export default async function CenterTeamsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: centerId } = await params;
     await verifyCenterAdmin(centerId);
 

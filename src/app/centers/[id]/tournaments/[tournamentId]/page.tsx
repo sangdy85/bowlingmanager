@@ -21,7 +21,7 @@ import TournamentMemberView from "@/components/tournaments/TournamentMemberView"
 import { getLeagueLeaderboard, getIndividualLeaderboard } from "@/app/actions/league-leaderboard";
 import { getEffectiveRoundDate, calculateTournamentStatus } from "@/lib/tournament-utils";
 
-export default async function TournamentDetailPage({ params }: { params: { id: string, tournamentId: string } }) {
+export default async function TournamentDetailPage({ params }: { params: Promise<{ id: string, tournamentId: string }> }) {
     const { id: centerId, tournamentId } = await params;
     const session = await auth();
 

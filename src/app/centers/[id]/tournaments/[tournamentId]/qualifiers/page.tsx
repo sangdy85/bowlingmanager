@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import GrandFinaleQualifiersList from "@/components/tournaments/GrandFinaleQualifiersList";
 import { auth } from "@/auth";
 
-export default async function QualifiersPage({ params }: { params: { id: string, tournamentId: string } }) {
+export default async function QualifiersPage({ params }: { params: Promise<{ id: string, tournamentId: string }> }) {
     const { id: centerId, tournamentId } = await params;
     const session = await auth();
 

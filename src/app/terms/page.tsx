@@ -1,13 +1,17 @@
 import Link from 'next/link';
+import styles from '@/components/public/Public.module.css';
+import PublicNav from '@/components/public/PublicNav';
 
 export const metadata = {
+  alternates: { canonical: "https://bowlingmanager.co.kr/terms" },
   title: '서비스 이용약관 | BowlingManager',
   description: 'BowlingManager 서비스 이용 조건, 이용자와 회사의 권리 및 의무, 책임사항에 관한 공식 약관 규정입니다.',
 };
 
 export default function TermsOfService() {
   return (
-    <div className="max-w-4xl mx-auto py-16 px-4">
+    <div className={`${styles.surface} ${styles.article}`}>
+      <PublicNav />
       <div className="border-b border-slate-200 pb-6 mb-8">
         <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">TERMS & CONDITIONS</span>
         <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">서비스 이용약관</h1>
@@ -22,7 +26,7 @@ export default function TermsOfService() {
             제 1 조 (목적)
           </h3>
           <p className="text-slate-600">
-            본 약관은 BowlingManager(이하 '회사' 또는 '본 서비스')가 제공하는 웹사이트, 모바일 웹 서비스, 동호회/대회 관리 플랫폼 및 제반 정보 서비스(이하 '서비스')의 이용조건, 절차, 이용자와 회사의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.
+            본 약관은 BowlingManager(이하 본 서비스)가 제공하는 웹사이트, 모바일 웹 서비스, 동호회/대회 관리 플랫폼 및 제반 정보 서비스(이하 서비스)의 이용조건, 절차, 이용자와 회사의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.
           </p>
         </div>
 

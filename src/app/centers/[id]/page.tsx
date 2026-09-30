@@ -12,7 +12,7 @@ import ActiveTournaments from "@/components/centers/RecruitingTournaments"; // K
 
 // ... (existing imports)
 
-export default async function CenterDetailPage({ params }: { params: { id: string } }) {
+export default async function CenterDetailPage({ params }: { params: Promise<{ id: string }> }) {
     // ... (existing code: params, session, center fetch)
     const { id } = await params;
     const session = await auth();

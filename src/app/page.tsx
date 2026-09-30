@@ -1,81 +1,21 @@
-import { auth } from "@/auth";
-import Link from "next/link";
-
+import { auth } from '@/auth';
+import Link from 'next/link';
+import type { Metadata } from 'next';
+import { findPublishedGuideArticle } from '@/lib/guide-data';
+import { PRIORITY_GUIDES, PUBLIC_ORIGIN } from '@/lib/public-web';
+import PublicNav from '@/components/public/PublicNav';
+import styles from '@/components/public/Public.module.css';
+export const metadata: Metadata = {title:'볼링매니저 | 볼링 기록 해석·동호회 운영·무료 도구',description:'볼링 점수 계산법과 기록 해석, 동호회 운영 가이드를 읽고 가입 없이 평균 계산기를 사용하세요.',alternates:{canonical:PUBLIC_ORIGIN}};
 export default async function Home() {
-  const session = await auth();
-
-  return (
-    <div className="flex flex-col items-center justify-center py-10">
-      {/* Title Section */}
-      <h1 className="text-center page-title" style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>
-        볼링 점수 관리
-      </h1>
-      <p className="text-center mb-6" style={{ fontSize: '1.25rem', color: 'var(--secondary-foreground)', maxWidth: '600px' }}>
-        팀을 만들고, 점수를 기록하고, 친구들과 경쟁하세요.<br />
-        쉽고 간편한 볼링 점수 관리 서비스입니다.
-      </p>
-
-      {/* 3 Main Buttons / Cards */}
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-4xl" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
-        <Link
-          href={session?.user ? "/personal" : "/login"}
-          prefetch={false}
-          className="card text-center hover:bg-secondary/20 transition-colors cursor-pointer block no-underline text-inherit"
-        >
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🎳</div>
-          <h3 className="mb-2">나의 기록실</h3>
-          <p style={{ color: 'var(--secondary-foreground)' }}>매 게임 점수를 간편하게 기록하고 저장하세요.</p>
-        </Link>
-
-        <Link
-          href={session?.user ? "/team" : "/login"}
-          prefetch={false}
-          className="card text-center hover:bg-secondary/20 transition-colors cursor-pointer block no-underline text-inherit"
-        >
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🏆</div>
-          <h3 className="mb-2">팀 관리</h3>
-          <p style={{ color: 'var(--secondary-foreground)' }}>동호회 팀을 만들고 팀원들과 함께하세요.</p>
-        </Link>
-
-        <Link
-          href="/centers"
-          prefetch={false}
-          className="card text-center hover:bg-secondary/20 transition-colors cursor-pointer block no-underline text-inherit"
-        >
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🏟️</div>
-          <h3 className="mb-2">볼링장/대회</h3>
-          <p style={{ color: 'var(--secondary-foreground)' }}>
-            {session?.user?.role === 'CENTER_ADMIN'
-              ? '보유하신 볼링장을 관리하고 대회를 개최하세요.'
-              : '전국의 볼링장 정보와 진행 중인 대회를 확인하세요.'}
-          </p>
-        </Link>
-      </div>
-
-      {/* Public Knowledge Banner (AdSense Compliance) */}
-      <div className="mt-16 w-full max-w-4xl bg-slate-900 text-white rounded-2xl p-8 border border-slate-800 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="space-y-2">
-          <span className="text-blue-400 text-xs font-black uppercase tracking-wider">Public Knowledge Center</span>
-          <h3 className="text-xl font-bold text-white mb-1">볼링 점수 계산법 & 지식 백과가 필요하신가요?</h3>
-          <p className="text-slate-300 text-xs leading-relaxed max-w-xl">
-            스페어/스트라이크 점수 공식부터 초보자 필수 에티켓, 마이볼 지공 가이드까지 비회원도 누구나 자유롭게 읽어보실 수 있습니다.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3 whitespace-nowrap">
-          <Link
-            href="/guide"
-            className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2.5 rounded-xl transition-all no-underline text-xs shadow-md"
-          >
-            볼링 가이드 센터 &rarr;
-          </Link>
-          <Link
-            href="/about"
-            className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2.5 rounded-xl transition-all no-underline text-xs border border-slate-700"
-          >
-            이용 방법 안내 &rarr;
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
+ const session=await auth();
+ return <div className={styles.surface}><PublicNav /><header className={styles.hero}><p className={styles.eyebrow}>BOWLING MANAGER · 기록에서 시작하는 볼링</p>
+ <h1>볼링 기록을 이해하고,<br />동호회를 더 편하게<br />운영하세요.</h1>
+ <p className={styles.intro}>한 게임의 점수부터 함께하는 정기전까지.<br />읽고, 계산하고, 다음 경기를 준비하는 공간입니다.</p>
+ <div className={styles.actions}><Link className={styles.button} href="/tools/average">내 점수 평균 계산하기</Link><Link href="/guide">가이드 둘러보기 →</Link></div></header>
+ <section className={styles.card}><span className={styles.tag}>바로 사용할 수 있는 무료 도구</span><h2>오늘 친 세 게임, 평균은 얼마일까요?</h2>
+ <p>120 · 150 · 180점 → 총점 450점, 평균 150.0점. 가상 예시처럼 내 점수를 넣어 게임 수와 최고·최저까지 확인하세요. 가입이나 점수 저장 없이 사용할 수 있습니다.</p><Link href="/tools/average">평균 계산기 열기 →</Link></section>
+ <h2>처음 읽기 좋은 가이드</h2><div className={styles.grid}>{PRIORITY_GUIDES.map(slug=>{const article=findPublishedGuideArticle(slug);if(!article)return null;return <article key={slug} className={styles.card}><span className={styles.tag}>{article.category}</span><h3><Link href={'/guide/'+slug}>{article.title}</Link></h3><p>{article.description}</p></article>;})}</div>
+ <section><h2>기록을 이어가고 싶다면</h2><p>개인 기록 저장과 팀 관리는 로그인 후 사용하는 회원 기능입니다. 공개 가이드와 계산기는 비회원도 이용할 수 있습니다.</p>
+ <div className={styles.actions}><Link href={session?.user?'/personal':'/login'} prefetch={false}>나의 기록실{!session?.user&&' · 로그인 필요'}</Link><Link href={session?.user?'/team':'/login'} prefetch={false}>팀 관리{!session?.user&&' · 로그인 필요'}</Link><Link href="/centers" prefetch={false}>볼링장/대회</Link></div></section>
+ <aside className={styles.notice}><h2>어떻게 이용하나요?</h2><p>점수판 확인 → 게임별 점수 입력 → 결과 대조 → 기간별 기록 확인. OCR 결과도 최종 저장 전에 직접 확인하세요.</p><Link href="/about">서비스 이용 설명과 작성 기준</Link> · <Link href="/inquiry">문의하기</Link></aside></div>;
 }

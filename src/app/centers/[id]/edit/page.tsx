@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { updateBowlingCenter } from "@/app/actions/center";
 
-export default async function CenterEditPage({ params }: { params: { id: string } }) {
+export default async function CenterEditPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
     const session = await auth();
     if (!session?.user?.id) {

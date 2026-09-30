@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import styles from './public/Public.module.css';
+import PublicNav from './public/PublicNav';
 
 export default function AboutPageContent({
     initialInquiries,
@@ -21,17 +23,19 @@ export default function AboutPageContent({
     };
 
     return (
-        <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className={`${styles.surface} ${styles.legacyAbout} bm-public-about`}>
+            <PublicNav />
+            <section id="standards" className={styles.notice}><h2>공개 콘텐츠와 작성 기준</h2><p>가이드와 평균 계산기는 로그인 없이 이용할 수 있습니다. 개인 기록 저장과 팀 관리는 회원 기능입니다. 예시로 만든 점수와 일정은 가상 예시라고 표시합니다. 글의 편집일은 내용이나 형식을 수정한 날짜이며 전문가 검수 완료일을 뜻하지 않습니다.</p><p>공식 규칙은 연결된 원문과 해당 대회 요강을 확인하세요. 정정할 내용은 페이지 주소와 참고자료를 함께 알려주세요.</p><Link href="/tools/average">무료 평균 계산기</Link> · <Link href="/inquiry">기존 문의 게시판</Link></section>
             <style dangerouslySetInnerHTML={{
                 __html: `
-                .content-card {
+                .bm-public-about .content-card {
                     background: #0f172a !important;
                     border: 1px solid #1e293b !important;
                     border-radius: 1.25rem !important;
                     padding: 2.5rem !important;
                     color: #f8fafc !important;
                 }
-                .guide-step-number {
+                .bm-public-about .guide-step-number {
                     width: 2.5rem;
                     height: 2.5rem;
                     background: #3b82f6;
@@ -44,7 +48,7 @@ export default function AboutPageContent({
                     font-size: 1.125rem;
                     flex-shrink: 0;
                 }
-                .sub-tabs-container {
+                .bm-public-about .sub-tabs-container {
                     display: flex;
                     gap: 0.5rem;
                     background: #1e293b;
@@ -53,36 +57,36 @@ export default function AboutPageContent({
                     width: fit-content;
                     border: 1px solid #334155;
                 }
-                .sub-tab-btn {
+                .bm-public-about .sub-tab-btn {
                     padding: 0.5rem 1.25rem;
                     border-radius: 0.5rem;
                     font-weight: 800;
                     font-size: 0.875rem;
                     transition: all 0.2s;
                 }
-                .sub-tab-btn.active {
+                .bm-public-about .sub-tab-btn.active {
                     background: #3b82f6;
                     color: white;
                 }
-                .sub-tab-btn.inactive {
+                .bm-public-about .sub-tab-btn.inactive {
                     color: #94a3b8;
                 }
-                .sub-tab-btn.inactive:hover {
+                .bm-public-about .sub-tab-btn.inactive:hover {
                     color: white;
                     background: #334155;
                 }
-                .feature-box {
+                .bm-public-about .feature-box {
                     background: #1e293b;
                     border: 1px solid #334155;
                     border-radius: 1rem;
                     padding: 1.5rem;
                 }
-                .mockup-table {
+                .bm-public-about .mockup-table {
                     width: 100%;
                     border-collapse: collapse;
                     font-size: 0.8rem;
                 }
-                .mockup-table th {
+                .bm-public-about .mockup-table th {
                     background: #1e293b;
                     color: #94a3b8;
                     padding: 0.6rem 0.8rem;
@@ -90,7 +94,7 @@ export default function AboutPageContent({
                     border-bottom: 1px solid #334155;
                     font-weight: 700;
                 }
-                .mockup-table td {
+                .bm-public-about .mockup-table td {
                     padding: 0.6rem 0.8rem;
                     text-align: center;
                     border-bottom: 1px solid #1e293b;
@@ -108,7 +112,7 @@ export default function AboutPageContent({
                 </h1>
                 <p className="text-lg md:text-xl text-slate-600 font-medium max-w-3xl mx-auto leading-relaxed">
                     볼링 점수의 정밀 기록 아카이빙부터 동호회 점수 자동 집계, 볼링장 상주리그 및 대회 운영 시스템까지<br />
-                    구체적인 이용 방법과 실시간 가이드를 항목별로 1,000자 이상의 상세한 설명으로 제공합니다.
+                    개인 기록 확인과 팀 관리에 필요한 이용 방법을 항목별로 안내합니다.
                 </p>
             </header>
 
@@ -150,23 +154,23 @@ export default function AboutPageContent({
                                 기존의 오프라인 볼링 문화에서는 매주 개최되는 동호회 정기전이나 상주리그 경기 후 점수판 종이 기록지를 수기로 작성하고, 이를 임원진이 수동으로 엑셀 시트에 일일이 입력하는 번거로운 과정이 필연적으로 수반되었습니다. 이 과정에서 계산 오류가 발생하거나 수기로 적은 가독성 낮은 글씨 때문에 점수가 잘못 기재되는 일이 빈번했으며, 수개월 이상 지난 과거의 점수 기록지가 수기 분실되어 개인의 성장을 객관적인 수치로 증명하기 어려운 한계가 존재했습니다.
                             </p>
                             <p className="text-slate-300 text-base leading-relaxed mb-6">
-                                **BowlingManager**는 이러한 아날로그 방식의 문제점을 기술적으로 완벽하게 해결하기 위해 탄생한 **통합 볼링 데이터 관리 플랫폼**입니다. 서비스는 개인 볼러의 매 게임 점수를 영구적으로 클라우드 데이터베이스에 보존함과 동시에, 최신 **AI OCR (광학 문자 인식) 기술**을 접목하여 볼링장 레인 위 모니터 점수판을 스마트폰 카메라로 촬영하기만 하면 플레이어 이름과 프레임별 점수가 자동으로 집계되는 혁신적인 편의성을 제공합니다.
+                                BowlingManager는 이러한 아날로그 방식의 문제점을 줄이기 위해 만든 볼링 기록 관리 서비스입니다. 점수판 이미지를 업로드하면 OCR이 플레이어 이름과 게임별 최종 점수를 추출해 입력 후보로 보여 줍니다. 인식 결과는 원본 점수판과 대조하고 수정한 뒤 저장해야 합니다.
                             </p>
                             <p className="text-slate-300 text-base leading-relaxed mb-8">
-                                또한 단순한 점수 저장에 그치지 않고, 수집된 데이터를 바탕으로 에버리지 추이 선 그래프, 하이 및 로우 방어력, 게임별 표준편차 기복 수치, 출석 성실도를 종합 연산하여 **5대 입체 오각형 스파이더 그래프**로 제공합니다. 이를 통해 볼러 개인은 자신의 약점(예: 수비력 부족, 경기 기복 심함)을 직관적으로 파악하고 정교한 연습 목표를 설정할 수 있습니다.
+                                저장된 기록을 바탕으로 에버리지, 최고·최저 점수와 세션별 최고-최저 범위를 확인할 수 있습니다. 정기전과 대회 기록이 각 기준을 충족하면 이 값과 출석 정보를 5개 축의 오각형 그래프로 표시해 기록 흐름을 비교할 수 있습니다.
                             </p>
 
                             <div className="grid md:grid-cols-3 gap-6 pt-6 border-t border-slate-800">
                                 <div className="feature-box">
                                     <h3 className="text-lg font-black text-blue-400 mb-2">👤 개인 볼러 (Individual Player)</h3>
                                     <p className="text-slate-400 text-xs leading-relaxed">
-                                        매 경기 스코어를 영구 아카이빙하고, 연도별/월별 에버리지 변화 추이, 하이 점수 포텐셜, 최저 로우 방어력, 표준편차 기복 지표를 다각도로 분석받아 실력 향상의 객관적 이정표로 활용합니다.
+                                        매 경기 최종 점수를 저장하고, 연도별·월별 에버리지 변화와 최고·최저 점수, 세션별 점수 범위를 확인해 연습 기록을 비교합니다.
                                     </p>
                                 </div>
                                 <div className="feature-box">
                                     <h3 className="text-lg font-black text-emerald-400 mb-2">🏆 동호회 임원진 (Club Executive)</h3>
                                     <p className="text-slate-400 text-xs leading-relaxed">
-                                        정기전 점수 입력 수단(수동, 엑셀 파일 일괄 업로드, 점수판 OCR 사진 촬영)을 제공받아 매주 정기전 집계 시간을 90% 이상 단축하며, 회원별 출석률과 에버리지 순위표를 자동 생성합니다.
+                                        정기전 점수 입력 수단(수동, 엑셀 파일 일괄 업로드, 점수판 OCR 사진 촬영)을 제공받아 정기전 집계를 돕고, 회원별 출석률과 에버리지 순위표를 자동 생성합니다.
                                     </p>
                                 </div>
                                 <div className="feature-box">
@@ -226,8 +230,8 @@ export default function AboutPageContent({
                                     },
                                     {
                                         step: 'STEP 2',
-                                        title: '첫 볼링 점수 기록 (수동 핀 입력 또는 모니터 사진 OCR 인식)',
-                                        detail: '로그인 후 [나의 기록실] 메뉴로 이동하여 [점수 추가] 버튼을 클릭합니다. 경기를 치른 날짜, 방문한 볼링장 이름, 그리고 경기 성격(소속 클럽 정기전, 번개 모임, 개인 연습 경기, 볼링장 공식 대회)을 선택합니다. 그 후 1게임을 포함한 각 게임별 점수를 키보드로 수동 입력하거나, 레인 모니터 화면 전체가 또렷하게 나오도록 스마트폰 카메라로 촬영한 점수판 사진을 업로드하면 AI 비전 엔진이 숫자를 인식하여 수초 내에 자동 세팅됩니다.'
+                                        title: '첫 볼링 점수 기록 (수동 점수 입력 또는 모니터 사진 OCR)',
+                                        detail: '로그인 후 [나의 기록실]에서 경기 날짜, 볼링장, 경기 성격과 게임별 최종 점수를 입력합니다. 점수판 사진을 업로드하면 OCR이 이름과 최종 점수를 입력 후보로 추출합니다. 저장 전에 원본 사진과 결과를 직접 대조하고 잘못 인식된 이름이나 점수를 수정해야 합니다.'
                                     },
                                     {
                                         step: 'STEP 3',
@@ -237,7 +241,7 @@ export default function AboutPageContent({
                                     {
                                         step: 'STEP 4',
                                         title: '5대 기량 오각형 분석 그래프 및 성적 성장 리포트 확인',
-                                        detail: '최소 5게임 이상의 점수 기록이 축적되면 [나의 기록실] 메인 페이지에서 본인의 투구 성향이 반영된 5대 입체 오각형 스파이더 그래프가 생성됩니다. 내 에버리지 기량, 공식 하이 점수 포텐셜, 로우 수비력, 출석 성실도, 게임 간 기복 표준편차 수치를 실시간으로 점검하고, 통계 그래프 추이를 보며 부족한 파트를 보완하는 정교한 볼링 연습 계획을 수립할 수 있습니다.'
+                                        detail: '정기전 또는 대회 기록이 각각 3회 이상 쌓이면 해당 기록의 에버리지, 최고·최저 성적, 출석과 세션별 점수 범위를 바탕으로 오각형 그래프가 표시됩니다. 기복 축은 표준편차가 아니라 한 세션 안 최고점과 최저점 차이의 평균을 바탕으로 합니다.'
                                     }
                                 ].map((s, idx) => (
                                     <div key={idx} className="flex gap-5 p-6 bg-slate-50 rounded-xl border border-slate-200">
@@ -319,45 +323,45 @@ export default function AboutPageContent({
 
                             {/* Detailed Explanation Text (1,000자 이상) */}
                             <div className="space-y-6 text-sm text-slate-300 leading-relaxed">
-                                <h3 className="text-xl font-black text-white border-l-4 border-blue-500 pl-3">📐 오각형 스파이더 그래프 5대 지표 개별 산출 공식 및 진단 원리</h3>
+                                <h3 className="text-xl font-black text-white border-l-4 border-blue-500 pl-3">📐 오각형 스파이더 그래프 5대 지표 산출 방식</h3>
                                 <p>
-                                    BowlingManager의 프로필 분석 시스템은 단순히 평균 점수 하나만으로 선수의 실력을 평가하던 기존 방식에서 벗어나, 선수의 공격력, 수비력, 출석 성실도, 꾸준함(기복)을 5가지 축으로 다각도 연산하여 시각화합니다. 각 지표의 정밀 계산 공식은 아래와 같습니다.
+                                    BowlingManager의 프로필 화면은 저장된 정기전·대회 점수와 출석 기록을 바탕으로 에버리지, 포텐셜, 기복, 안정감, 성실도를 5개 축으로 표시합니다. 이 값은 기록을 비교하기 위한 서비스 지표이며 공식 경기력 판정이나 코칭 진단이 아닙니다.
                                 </p>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="feature-box space-y-2">
                                         <h4 className="font-extrabold text-blue-300 text-base">1. 클럽 / 볼링장 기량 (에버리지 지표)</h4>
                                         <p className="text-xs text-slate-400 leading-relaxed">
-                                            소속 동호회 정기전 및 공식 대회에서 기록한 경기 스코어의 총합을 총 게임수로 나눈 에버리지 수치입니다. **230점 에버리지가 100% 만점** 기준으로 적용되며, 에버리지가 낮아질수록 해당 오각형 상단 축의 길이가 중심부로 점차 축소됩니다.
+                                            소속 동호회 정기전 및 볼링장 대회에서 기록한 점수의 총합을 게임 수로 나눈 평균입니다. 234점을 축 점수 10점 기준으로 두며, 평균이 1점 낮아질 때 축 점수는 0.1점씩 낮아집니다. 예를 들어 평균 230점은 축 점수 9.6점이며, 결과는 1점에서 10점 사이로 제한됩니다.
                                         </p>
                                     </div>
 
                                     <div className="feature-box space-y-2">
                                         <h4 className="font-extrabold text-blue-300 text-base">2. 성실도 (클럽 정기전 & 대회 출석률)</h4>
                                         <p className="text-xs text-slate-400 leading-relaxed">
-                                            **클럽 성실**: 소속 동호회의 연간 정기전 횟수 대비 개인 참가 횟수를 비율로 계산하여 100% 참사 시 만점 산출.<br />
-                                            **볼링장 성실**: 상주 볼링장에서 주최하는 공식 대회에 10회 이상 참가 시 만점이 부여됩니다.
+                                            클럽 성실: 전체 동호회 정기전 회차 대비 개인이 점수를 남긴 정기전 회차의 비율을 사용하며, 출석률 100%를 축 점수 10점으로 표시합니다.<br />
+                                            볼링장 성실: 저장된 볼링장 대회 세션 수를 사용하며, 10회 이상이면 축 점수 10점으로 표시합니다.
                                         </p>
                                     </div>
 
                                     <div className="feature-box space-y-2">
-                                        <h4 className="font-extrabold text-blue-300 text-base">3. 포텐셜 (최고 하이 평균 지표)</h4>
+                                        <h4 className="font-extrabold text-blue-300 text-base">3. 포텐셜 (최고 세션 평균 지표)</h4>
                                         <p className="text-xs text-slate-400 leading-relaxed">
-                                            공식 경기 중에 달성한 상위 하이(High) 스코어의 평균치를 계산하여 선수가 지닌 순간 폭발력을 진단합니다. **하이 평균 250점 달성 시 만점**으로 수치화됩니다.
+                                            여러 정기전 또는 볼링장 대회 세션 가운데 가장 높은 세션 평균을 사용합니다. 최고 세션 평균 250점을 축 점수 10점 기준으로 두며, 선수의 원인이나 능력을 진단하는 값은 아닙니다.
                                         </p>
                                     </div>
 
                                     <div className="feature-box space-y-2">
-                                        <h4 className="font-extrabold text-blue-300 text-base">4. 안정감 (최저 로우 방어 지표)</h4>
+                                        <h4 className="font-extrabold text-blue-300 text-base">4. 안정감 (최저 세션 평균 지표)</h4>
                                         <p className="text-xs text-slate-400 leading-relaxed">
-                                            레인 오일 상태가 어렵거나 본인의 투구 실수가 발생했을 때 최저 스코어를 얼마나 잘 방어하는지 수비력을 측정합니다. **로우 평균 200점 이상 유지 시 만점**이 부여됩니다.
+                                            여러 정기전 또는 볼링장 대회 세션 가운데 가장 낮은 세션 평균을 사용합니다. 최저 세션 평균 200점을 축 점수 10점 기준으로 두며, 레인 상태나 투구 실수의 원인을 분석하는 값은 아닙니다.
                                         </p>
                                     </div>
 
                                     <div className="feature-box col-span-1 md:col-span-2 space-y-2">
-                                        <h4 className="font-extrabold text-emerald-400 text-base">5. 기복 (통계학적 표준 편차 지표)</h4>
+                                        <h4 className="font-extrabold text-emerald-400 text-base">5. 기복 (세션별 점수 범위 지표)</h4>
                                         <p className="text-xs text-slate-400 leading-relaxed">
-                                            매 게임 스코어 간의 흔들림 정도를 통계학의 표준 편차 공식인 <strong>σ = √[ Σ(경기점수 - 에버리지)² / N ]</strong> 로 산출합니다. 게임 당 **점수 편차가 20점 이하인 매우 일관되고 안정적인 투구**를 보이는 볼러일 때 만점 수치가 부여되며, 180점과 240점을 넘나드는 등 기복이 심할수록 이 수치는 낮아지게 됩니다.
+                                            각 세션에서 최고점과 최저점의 차이를 구한 뒤 여러 세션의 범위를 평균합니다. 평균 범위가 10점 이하면 축 점수 10점이며, 10점을 넘은 범위 1점마다 축 점수가 0.1점씩 낮아집니다. 이 값은 모집단 또는 표본 표준편차가 아닙니다.
                                         </p>
                                     </div>
                                 </div>
@@ -453,7 +457,7 @@ export default function AboutPageContent({
                                     <div className="feature-box space-y-2">
                                         <h4 className="font-bold text-white text-base">📸 3. 점수판 모니터 OCR 사진 인식</h4>
                                         <p className="text-xs text-slate-400 leading-relaxed">
-                                            볼링장 레인 위 모니터 화면 전체가 보이도록 카메라 사진을 촬영해 업로드하면, 컴퓨터 비전 AI가 레인 번호, 선수 이름, 프레임 점수 숫자를 시각적으로 추출하여 자동 기재합니다.
+                                            볼링장 레인 위 모니터 화면 전체가 보이도록 사진을 촬영해 업로드하면 OCR이 선수 이름과 게임별 최종 점수를 추출해 입력 후보로 표시합니다. 프레임 분석이나 자동 코칭 기능은 아니며, 원본 점수판과 대조한 뒤 저장해야 합니다.
                                         </p>
                                     </div>
                                 </div>
@@ -461,7 +465,7 @@ export default function AboutPageContent({
                                 <div className="p-6 bg-slate-900 border border-slate-800 rounded-xl space-y-3">
                                     <h4 className="font-bold text-white text-base">📋 팀 활동일지 자동 보존 및 엑셀 다운로드 리포트</h4>
                                     <p className="text-xs text-slate-400 leading-relaxed">
-                                        입력된 모든 정기전 기록은 날짜별 팀 활동일지로 자동 보존되며, 임원진은 클릭 한 번으로 모든 데이터를 엑셀 파일(.xlsx)로 내려받아 동호회 장부 및 결산 자료로 활용할 수 있습니다. 또한 회원들의 참가 횟수를 기반으로 한 **월별/연간 출석률 및 에버리지 순위 리더보드**가 실시간 갱신됩니다.
+                                        입력된 모든 정기전 기록은 날짜별 팀 활동일지로 자동 보존되며, 임원진은 클릭 한 번으로 모든 데이터를 엑셀 파일(.xlsx)로 내려받아 동호회 장부 및 결산 자료로 활용할 수 있습니다. 또한 회원들의 참가 횟수를 기반으로 한 월별/연간 출석률 및 에버리지 순위 리더보드가 실시간 갱신됩니다.
                                     </p>
                                 </div>
                             </div>
@@ -510,7 +514,7 @@ export default function AboutPageContent({
                                         <h4 className="font-bold text-blue-400 text-base">🎳 1. 상주리그 (Resident League)</h4>
                                         <p className="text-xs text-slate-400 leading-relaxed">
                                             볼링장에 등록된 10~20개 동호회 팀 간 대진표가 주간 라운드별로 자동 매칭됩니다.<br />
-                                            **승점 산출 룰**: 각 게임 승리 팀에 부여되는 Game 승점(2점)과 3게임 총점(Total Pin) 승리 팀에 부여되는 승점(4점)을 합산하여 라운드당 총 10점의 승점을 다투는 장기 시즌제 리그입니다.
+                                            승점 산출 룰: 각 게임 승리 팀에 부여되는 Game 승점(2점)과 3게임 총점(Total Pin) 승리 팀에 부여되는 승점(4점)을 합산하여 라운드당 총 10점의 승점을 다투는 장기 시즌제 리그입니다.
                                         </p>
                                     </div>
 
@@ -524,8 +528,8 @@ export default function AboutPageContent({
                                     <div className="feature-box space-y-2">
                                         <h4 className="font-bold text-emerald-400 text-base">🎉 3. 이벤트전 (스카치 & 베이커)</h4>
                                         <p className="text-xs text-slate-400 leading-relaxed">
-                                            **쌍쌍 스카치 (Scotch Duo)**: 2인 1조가 되어 1구와 2구를 번갈아 투구하는 단합 경기.<br />
-                                            **베이커 포맷 (Baker Format)**: 5인 1조 팀원이 1프레임씩 담당하여 10프레임을 완성하는 끈끈한 단체전 경기.
+                                            쌍쌍 스카치 (Scotch Duo): 2인 1조가 되어 1구와 2구를 번갈아 투구하는 단합 경기.<br />
+                                            베이커 포맷 (Baker Format): 5인 1조 팀원이 1프레임씩 담당하여 10프레임을 완성하는 끈끈한 단체전 경기.
                                         </p>
                                     </div>
                                 </div>
@@ -561,7 +565,7 @@ export default function AboutPageContent({
                                     },
                                     {
                                         q: '2. 모니터 점수판 사진(OCR) 인식이 잘 안 될 때는 어떻게 하나요?',
-                                        a: '레인 전광판 조명이 너무 어둡거나 화면에 빛 반사가 심한 경우 숫자 인식이 지연될 수 있습니다. 정면 수평 위치에서 또렷하게 촬영해 주시거나, [수동 입력] 모드로 빠르게 수정하실 수 있습니다.'
+                                        a: '레인 전광판 조명이 어둡거나 화면에 빛 반사가 심하면 이름이나 최종 점수가 잘못 인식될 수 있습니다. 정면에서 또렷하게 촬영하고, 결과를 원본과 대조해 수정한 뒤 저장하세요. 필요한 경우 [수동 입력]을 사용할 수 있습니다.'
                                     },
                                     {
                                         q: '3. 볼링장 센터 관리자(CENTER_ADMIN) 권한은 어떻게 신청하나요?',

@@ -164,7 +164,7 @@ export default function DailyScoreTable({ scores, date, dailyAvg, memo, gameType
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                         {memo && (
-                                            <span style={{ fontSize: '13px', color: '#666', fontStyle: 'italic' }}>"{memo}"</span>
+                                            <span style={{ fontSize: '13px', color: '#666', fontStyle: 'italic' }}>&ldquo;{memo}&rdquo;</span>
                                         )}
                                         <div style={{ display: 'flex', gap: '4px' }}>
                                             {(isOwner || isManager) && (

@@ -1,13 +1,17 @@
 import Link from 'next/link';
+import styles from '@/components/public/Public.module.css';
+import PublicNav from '@/components/public/PublicNav';
 
 export const metadata = {
+  alternates: { canonical: "https://bowlingmanager.co.kr/disclaimer" },
   title: '책임 한계 및 법적 고지 | BowlingManager',
   description: 'BowlingManager 서비스의 스포츠 데이터 정보 제공, 제3자 웹사이트 링크 및 법적 책임 한계에 관한 고지 사항입니다.',
 };
 
 export default function DisclaimerPage() {
   return (
-    <div className="max-w-4xl mx-auto py-16 px-4">
+    <div className={`${styles.surface} ${styles.article}`}>
+      <PublicNav />
       <div className="border-b border-slate-200 pb-6 mb-8">
         <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">LEGAL & DISCLAIMER</span>
         <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">책임 한계 및 법적 고지</h1>
@@ -22,7 +26,7 @@ export default function DisclaimerPage() {
             1. 스포츠 백과사전 및 경기 규정 정보의 목적
           </h3>
           <p className="text-slate-600 leading-relaxed">
-            본 웹사이트에서 제공하는 볼링 가이드, 볼링공 기술 스펙, KPBA 경기 규정 요약, 점수 산출 공식 등의 정보는 일반 이용자 및 동호인분들의 **이해를 돕기 위한 교육용 참고 자료**로 제작되었습니다.
+            본 웹사이트에서 제공하는 볼링 가이드, 볼링공 기술 스펙, KPBA 경기 규정 요약, 점수 산출 공식 등의 정보는 일반 이용자 및 동호인분들의 <strong>이해를 돕기 위한 교육용 참고 자료</strong>로 제작되었습니다.
             각 볼링장 센터, 주관 동호회, 스포츠 상주 협회의 개별 규정 및 대회 운영 방식에 따라 실제 현장 규칙은 일부 상이할 수 있으므로, 참가 전 해당 주관사의 공식 대회 요강을 반드시 확인하시기 바랍니다.
           </p>
         </div>

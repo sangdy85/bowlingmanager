@@ -7,9 +7,10 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "npm run lint && npm run typecheck && prisma generate && next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint src --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit --incremental false",
     "seed:test": "node scripts/seed-test-fixtures.cjs",
     "qa:create": "node scripts/production-qa-fixture.cjs create",
     "qa:remove": "node scripts/production-qa-fixture.cjs remove"
@@ -32,6 +33,8 @@
     "nodemailer": "^6.10.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
     "sharp": "^0.34.5",
     "tesseract.js": "^7.0.0",
     "uuid": "^13.0.0",

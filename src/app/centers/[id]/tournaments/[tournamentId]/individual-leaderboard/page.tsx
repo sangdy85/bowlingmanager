@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 
-export default async function IndividualLeaderboardPage({ params }: { params: { id: string, tournamentId: string } }) {
+export default async function IndividualLeaderboardPage({ params }: { params: Promise<{ id: string, tournamentId: string }> }) {
     const { id: centerId, tournamentId } = await params;
 
     const tournament = await prisma.tournament.findUnique({

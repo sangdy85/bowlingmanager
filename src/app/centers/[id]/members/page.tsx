@@ -6,7 +6,7 @@ import { removeCenterMember } from "@/app/actions/center-members";
 import MemberSearchModal from "@/components/tournaments/MemberSearchModal";
 import CenterGuestManager from "@/components/tournaments/CenterGuestManager";
 
-export default async function CenterMembersPage({ params }: { params: { id: string } }) {
+export default async function CenterMembersPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
     const session = await auth();
 

@@ -3,10 +3,10 @@ import prisma from '@/lib/prisma';
 
 export async function GET(
     request: Request,
-    { params }: { params: { roundId: string } }
+    { params }: { params: Promise<{ roundId: string }> }
 ) {
     try {
-        const { roundId } = params;
+        const { roundId } = await params;
 
         const round = await prisma.leagueRound.findUnique({
             where: { id: roundId },

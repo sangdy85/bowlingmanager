@@ -222,7 +222,7 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
                             <option value="true">사용 (Y)</option>
                         </select>
                     </div>
-                    <p className="mt-2 text-xs text-gray-500">• 사용(Y) 시 점수 입력 창에서 특정 인원을 '여성 챔프'로 지정할 수 있습니다.</p>
+                    <p className="mt-2 text-xs text-gray-500">• 사용(Y) 시 점수 입력 창에서 특정 인원을 &apos;여성 챔프&apos;로 지정할 수 있습니다.</p>
                 </div>
             )}
 

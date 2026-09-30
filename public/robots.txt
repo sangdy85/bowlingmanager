@@ -1,8 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /admin/
-Disallow: /api/
-Disallow: /settings/
-Disallow: /dashboard/
-
-Sitemap: https://bowlingmanager.co.kr/sitemap.xml

@@ -6,7 +6,7 @@ import RoundDetailPageContent from "@/components/tournaments/RoundDetailPageCont
 
 import { calculateTournamentStatus, getEffectiveRoundDate } from "@/lib/tournament-utils";
 
-export default async function RoundDetailPage({ params }: { params: { id: string, tournamentId: string, roundId: string } }) {
+export default async function RoundDetailPage({ params }: { params: Promise<{ id: string, tournamentId: string, roundId: string }> }) {
     const { id: centerId, tournamentId, roundId } = await params;
     const session = await auth();
     const now = new Date();

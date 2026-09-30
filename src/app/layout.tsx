@@ -4,7 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/NavbarWrapper";
 import Footer from "@/components/Footer";
 import AuthContext from '@/components/AuthContext';
-import Script from "next/script";
+
 
 const inter = Inter({ subsets: ["latin"] });
 export const dynamic = "force-dynamic";
@@ -24,13 +24,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <head>
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6753153221253393"
-          crossOrigin="anonymous"
-        ></script>
-      </head>
       <body className={inter.className}>
         <AuthContext>
           <div className="min-h-screen bg-background text-foreground flex flex-col justify-between">

@@ -3,7 +3,7 @@ const prisma = new PrismaClient()
 
 async function main() {
     const tournament = await prisma.tournament.findFirst({
-        where: { title: { contains: '2026년 상반기 챔프전2' } },
+        where: { name: { contains: '2026년 상반기 챔프전2' } },
         include: { leagueRounds: true }
     })
 
@@ -42,7 +42,7 @@ async function main() {
         data: { lane: null }
     })
 
-    console.log(`Successfully reset lane for test1 in ${tournament.title} Round ${round.roundNumber}`)
+    console.log(`Successfully reset lane for test1 in ${tournament.name} Round ${round.roundNumber}`)
 }
 
 main()

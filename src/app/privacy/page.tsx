@@ -1,18 +1,22 @@
 import Link from 'next/link';
+import styles from '@/components/public/Public.module.css';
+import PublicNav from '@/components/public/PublicNav';
 
 export const metadata = {
+  alternates: { canonical: "https://bowlingmanager.co.kr/privacy" },
   title: '개인정보처리방침 | BowlingManager',
   description: 'BowlingManager 서비스의 개인정보 수집, 이용 목적, 구글 애드센스 쿠키 사용 고지 및 보호 정책 안내입니다.',
 };
 
 export default function PrivacyPolicy() {
   return (
-    <div className="max-w-4xl mx-auto py-16 px-4">
+    <div className={`${styles.surface} ${styles.article}`}>
+      <PublicNav />
       <div className="border-b border-slate-200 pb-6 mb-8">
         <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">LEGAL & PRIVACY</span>
         <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">개인정보처리방침</h1>
         <p className="text-slate-500 text-sm mt-2">
-          BowlingManager(이하 '회사' 또는 '본 서비스')는 이용자의 개인정보 및 권익을 보호하고 관련 법령을 준수하기 위해 최선을 다하고 있습니다.
+          BowlingManager(이하 본 서비스)는 이용자의 개인정보 및 권익을 보호하고 관련 법령을 준수하기 위해 최선을 다하고 있습니다.
         </p>
       </div>
 
@@ -21,7 +25,7 @@ export default function PrivacyPolicy() {
           <h3 className="text-lg font-extrabold text-slate-900 mb-3 border-l-4 border-blue-600 pl-3">
             1. 수집하는 개인정보 항목 및 수집 방법
           </h3>
-          <p className="mb-2">회사는 회원가입, 고객 문의, 서비스 제공을 위해 아래와 같은 минима 수의 개인정보를 수집하고 있습니다.</p>
+          <p className="mb-2">회사는 회원가입, 고객 문의, 서비스 제공을 위해 아래와 같은 필요한 개인정보를 수집하고 있습니다.</p>
           <ul className="list-disc ml-6 space-y-1 text-slate-600">
             <li><strong>필수 수집 항목</strong>: 이메일 주소, 비밀번호, 닉네임/이름, 사용자 역할(일반/관리자)</li>
             <li><strong>소셜 가입 시</strong>: 구글/네이버 고유 식별자(ID), 프로필 이메일</li>
@@ -41,23 +45,23 @@ export default function PrivacyPolicy() {
           </ul>
         </div>
 
-        {/* GOOGLE ADSENSE MANDATORY CLAUSE */}
+        <div><h2>사진 인식·모바일 알림·공개 계산기</h2><p>AI 점수판 인식 기능은 요청한 이미지와 인식에 필요한 정보를 Google Gemini 서비스에 전송합니다. 저장 전 인식 결과를 확인하세요. 모바일 푸시에는 등록한 기기 토큰이 사용되며 Firebase Cloud Messaging을 통해 전달됩니다.</p><p>공개 평균 계산기에 입력한 점수는 브라우저에서만 계산하며 저장하거나 서버·분석도구로 전송하지 않습니다.</p></div>
         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3">
           <h3 className="text-lg font-extrabold text-blue-900 mb-2 border-l-4 border-blue-600 pl-3">
             3. 구글(Google) 애드센스 및 제3자 광고 사업자 쿠키(Cookie) 게재 고지 (필수 고지)
           </h3>
           <p className="text-slate-700 text-sm leading-relaxed">
-            본 웹사이트는 이용자에게 최선의 무료 정보 콘텐츠를 제공하기 위해 **Google Inc.의 웹 분석 및 맞춤형 광고 게재 서비스인 구글 애드센스(Google AdSense)**를 활용합니다.
+            Google AdSense 광고가 제공되는 경우, Google과 광고 파트너는 아래와 같이 광고 쿠키를 사용할 수 있습니다.
           </p>
           <ul className="list-disc ml-6 space-y-2 text-slate-600 text-xs md:text-sm">
             <li>
-              **제3자 제공업체 및 광고 네트워크**: 구글을 포함한 제3자 제공업체는 쿠키(Cookie)를 사용하여 사용자의 이전 웹사이트 방문 기록을 바탕으로 맞춤형 광고를 제공합니다.
+              <strong>제3자 제공업체 및 광고 네트워크</strong>: 구글을 포함한 제3자 제공업체는 쿠키(Cookie)를 사용하여 사용자의 이전 웹사이트 방문 기록을 바탕으로 맞춤형 광고를 제공합니다.
             </li>
             <li>
-              **DART 쿠키 사용 고지**: 구글은 광고 쿠키를 사용하여 본 사이트 및 인터넷상의 다른 사이트 방문 정보를 기반으로 사용자에게 적절한 광고를 제공할 수 있습니다.
+              <strong>Google 광고 쿠키</strong>: 구글은 광고 쿠키를 사용하여 본 사이트 및 인터넷상의 다른 사이트 방문 정보를 기반으로 사용자에게 적절한 광고를 제공할 수 있습니다.
             </li>
             <li>
-              **맞춤형 광고 수신 거부 (Opt-Out)**: 이용자는 구글 광고 설정 페이지(
+              <strong>맞춤형 광고 수신 거부 (Opt-Out)</strong>: 이용자는 구글 광고 설정 페이지(
               <a
                 href="https://adssettings.google.com"
                 target="_blank"
@@ -97,7 +101,7 @@ export default function PrivacyPolicy() {
             5. 개인정보의 보유 및 파기 절차
           </h3>
           <p className="text-slate-600">
-            이용자의 개인정보는 회원 탈퇴 시 또는 수집 목적이 달성된 후 지체 없이 전자적 방법으로 안전하게 파기됩니다. 단, 상법 및 관련 법령의 규정에 의하여 보존할 필요가 있는 경우 해당 법정 보관 기간 동안 별도 DB로 분리 보관됩니다.
+            계정 설정에서 회원 탈퇴를 요청할 수 있습니다. 소유 중인 활성 팀이 있으면 소유권 이전 또는 팀 정리가 먼저 필요할 수 있습니다. 삭제 처리 결과는 화면에서 확인할 수 있으며, 개인정보 처리에 관한 문의는 문의 게시판에서 접수할 수 있습니다.
           </p>
         </div>
 
@@ -115,14 +119,14 @@ export default function PrivacyPolicy() {
             7. 개인정보 보호책임자 및 담당자 안내
           </h3>
           <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-slate-700">
-            <p><strong>개인정보 보호책임자</strong>: BowlingManager 운영 관리팀</p>
-            <p><strong>이메일 문의</strong>: info@bowlingmanager.co.kr</p>
+            <p><strong>서비스</strong>: BowlingManager</p>
+
             <p><strong>고객지원 페이지</strong>: <Link href="/inquiry" className="text-blue-600 underline">1:1 문의하기 센터 바로가기</Link></p>
           </div>
         </div>
 
         <div className="pt-8 border-t border-slate-200 flex flex-wrap justify-between items-center text-xs text-slate-400">
-          <p>공고 일자: 2024년 01월 01일 | 개정 일자: 2026년 08월 24일</p>
+          <p>문서 편집: 2026년 09월 30일</p>
           <div className="flex gap-4">
             <Link href="/terms" className="hover:underline">이용약관</Link>
             <Link href="/disclaimer" className="hover:underline">책임 한계 및 법적 고지</Link>
