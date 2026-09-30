@@ -9,9 +9,84 @@ function load(relative) {
  new Function('exports','require',compiled)(m.exports, id=>load(path.relative(path.resolve(__dirname,'..'),path.resolve(path.dirname(filename),id+'.ts'))));
  return m.exports;
 }
+function loadWithMocks(relative,mocks) {
+ const filename=path.resolve(__dirname,'..',relative), m={exports:{}};
+ const compiled=ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,esModuleInterop:true}}).outputText;
+ new Function('exports','require','module',compiled)(m.exports,id=>{
+  if(Object.prototype.hasOwnProperty.call(mocks,id))return mocks[id];
+  throw new Error('Unexpected module: '+id);
+ },m);
+ return m.exports;
+}
 const {calculateAverage}=load('src/lib/average-calculator.ts');
 const policy=load('src/lib/public-web.ts');
 const {GUIDE_ARTICLES,PUBLISHED_GUIDE_ARTICLES,MERGED_GUIDE_REDIRECTS,findPublishedGuideArticle,findMergedGuideDestination}=load('src/lib/guide-data.ts');
+test('www is the single public origin for canonical metadata, sitemap and robots',()=>{
+ assert.equal(policy.PUBLIC_ORIGIN,'https://www.bowlingmanager.co.kr');
+ assert.equal(policy.CANONICAL_HOSTNAME,'www.bowlingmanager.co.kr');
+ const sitemap=loadWithMocks('src/app/sitemap.ts',{
+  '@/lib/guide-data':{PUBLISHED_GUIDE_ARTICLES},
+  '@/lib/public-web':policy,
+ }).default();
+ assert.ok(sitemap.length>0);
+ for(const entry of sitemap)assert.match(entry.url,/^https:\/\/www\.bowlingmanager\.co\.kr(?:\/|$)/);
+ const robots=loadWithMocks('src/app/robots.ts',{'@/lib/public-web':policy}).default();
+ assert.equal(robots.sitemap,'https://www.bowlingmanager.co.kr/sitemap.xml');
+ for(const file of ['about','privacy','terms','disclaimer']){
+  const source=fs.readFileSync(path.join(__dirname,`../src/app/${file}/page.tsx`),'utf8');
+  assert.ok(source.includes("import { PUBLIC_ORIGIN } from '@/lib/public-web'")||source.includes('import { PUBLIC_ORIGIN } from "@/lib/public-web"'));
+  assert.equal(source.includes('https://bowlingmanager.co.kr'),false);
+ }
+});
+test('production canonical host redirect preserves path and query without touching other hosts',()=>{
+ const redirect=policy.canonicalHostRedirectUrl;
+ assert.equal(
+  redirect('https://bowlingmanager.co.kr/team/abc?x=1',{
+   requestHostname:'bowlingmanager.co.kr',host:'bowlingmanager.co.kr',
+  },true),
+  'https://www.bowlingmanager.co.kr/team/abc?x=1',
+ );
+ assert.equal(
+  redirect('http://internal:3000/guide?topic=score',{
+   requestHostname:'internal',host:'internal:3000',forwardedHost:'bowlingmanager.co.kr:443, proxy.local',
+  },true),
+  'https://www.bowlingmanager.co.kr/guide?topic=score',
+ );
+ for(const input of [
+  ['https://www.bowlingmanager.co.kr/guide',{requestHostname:'www.bowlingmanager.co.kr',host:'www.bowlingmanager.co.kr'},true],
+  ['http://localhost:3000/guide',{requestHostname:'localhost',host:'localhost:3000'},true],
+  ['http://127.0.0.1:3000/guide',{requestHostname:'127.0.0.1',host:'127.0.0.1:3000'},true],
+  ['https://preview.internal/guide',{requestHostname:'preview.internal',host:'preview.internal'},true],
+  ['https://bowlingmanager.co.kr/guide',{requestHostname:'bowlingmanager.co.kr',host:'bowlingmanager.co.kr'},false],
+ ])assert.equal(redirect(input[0],input[1],input[2]),null);
+ const responseFactory={
+  redirect:(url,status)=>({kind:'redirect',url,status}),
+  next:()=>({kind:'next'}),
+ };
+ const middleware=loadWithMocks('src/middleware.ts',{
+  'next/server':{NextResponse:responseFactory},
+  '@/lib/public-web':policy,
+ }).middleware;
+ const originalNodeEnv=process.env.NODE_ENV;
+ try{
+  process.env.NODE_ENV='production';
+  const result=middleware({
+   url:'https://bowlingmanager.co.kr/team/abc?x=1',
+   nextUrl:{hostname:'bowlingmanager.co.kr'},
+   headers:new Headers({host:'bowlingmanager.co.kr'}),
+  });
+  assert.deepEqual(result,{kind:'redirect',url:'https://www.bowlingmanager.co.kr/team/abc?x=1',status:308});
+  const canonicalResult=middleware({
+   url:'https://www.bowlingmanager.co.kr/team/abc?x=1',
+   nextUrl:{hostname:'www.bowlingmanager.co.kr'},
+   headers:new Headers({host:'www.bowlingmanager.co.kr','x-forwarded-host':'bowlingmanager.co.kr'}),
+  });
+  assert.deepEqual(canonicalResult,{kind:'next'});
+ }finally{
+  if(originalNodeEnv===undefined)delete process.env.NODE_ENV;
+  else process.env.NODE_ENV=originalNodeEnv;
+ }
+});
 test('average handles normal scores, zero, limits and fractional display without intermediate rounding',()=>{
  assert.deepEqual(calculateAverage('120, 150\n180').result,{count:3,total:450,average:150,high:180,low:120});
  assert.deepEqual(calculateAverage('0 300').result,{count:2,total:300,average:150,high:300,low:0});
@@ -271,6 +346,16 @@ test('two overlapping practice guides merge into one canonical article with dire
  const detail=fs.readFileSync(path.join(__dirname,'../src/app/guide/[slug]/page.tsx'),'utf8');
  assert.ok(detail.includes("permanentRedirect('/guide/'+mergedInto)"));
  assert.ok(detail.includes('findMergedGuideDestination(slug)'));
+ for(const legacySlug of legacySlugs){
+  assert.equal(
+   policy.canonicalHostRedirectUrl(
+    'https://bowlingmanager.co.kr/guide/'+legacySlug,
+    {requestHostname:'bowlingmanager.co.kr',host:'bowlingmanager.co.kr'},
+    true,
+   ),
+   'https://www.bowlingmanager.co.kr/guide/'+legacySlug,
+  );
+ }
  const sitemap=fs.readFileSync(path.join(__dirname,'../src/app/sitemap.ts'),'utf8');
  assert.ok(sitemap.includes('PUBLISHED_GUIDE_ARTICLES.map'));
  for(const hidden of ['kpba-official-bowling-tournament-rules-2026','health-benefits-and-effects-of-bowling','bowling-injury-prevention-and-stretching-guide']){

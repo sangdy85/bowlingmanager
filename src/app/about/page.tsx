@@ -1,10 +1,11 @@
 import { getInquiries } from "@/app/actions/inquiry-actions";
 import AboutPageContent from "@/components/AboutPageContent";
 import { auth } from "@/auth";
+import { PUBLIC_ORIGIN } from "@/lib/public-web";
 
 export const metadata = {
     title: "이용 방법 | BowlingManager",
-    alternates: { canonical: "https://bowlingmanager.co.kr/about" },
+    alternates: { canonical: `${PUBLIC_ORIGIN}/about` },
     description: "BowlingManager 이용 방법 및 상세 가이드, 문의 게시판입니다.",
 };
 

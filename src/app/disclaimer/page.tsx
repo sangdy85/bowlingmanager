@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import styles from '@/components/public/Public.module.css';
 import PublicNav from '@/components/public/PublicNav';
+import { PUBLIC_ORIGIN } from '@/lib/public-web';
 
 export const metadata = {
-  alternates: { canonical: "https://bowlingmanager.co.kr/disclaimer" },
+  alternates: { canonical: `${PUBLIC_ORIGIN}/disclaimer` },
   title: '책임 한계 및 법적 고지 | BowlingManager',
   description: 'BowlingManager 서비스의 스포츠 데이터 정보 제공, 제3자 웹사이트 링크 및 법적 책임 한계에 관한 고지 사항입니다.',
 };

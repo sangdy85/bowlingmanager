@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import styles from '@/components/public/Public.module.css';
 import PublicNav from '@/components/public/PublicNav';
+import { PUBLIC_ORIGIN } from '@/lib/public-web';
 
 export const metadata = {
-  alternates: { canonical: "https://bowlingmanager.co.kr/privacy" },
+  alternates: { canonical: `${PUBLIC_ORIGIN}/privacy` },
   title: '개인정보처리방침 | BowlingManager',
   description: 'BowlingManager 서비스의 개인정보 수집, 이용 목적, 구글 애드센스 쿠키 사용 고지 및 보호 정책 안내입니다.',
 };

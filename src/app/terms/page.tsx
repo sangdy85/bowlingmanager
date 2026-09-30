@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import styles from '@/components/public/Public.module.css';
 import PublicNav from '@/components/public/PublicNav';
+import { PUBLIC_ORIGIN } from '@/lib/public-web';
 
 export const metadata = {
-  alternates: { canonical: "https://bowlingmanager.co.kr/terms" },
+  alternates: { canonical: `${PUBLIC_ORIGIN}/terms` },
   title: '서비스 이용약관 | BowlingManager',
   description: 'BowlingManager 서비스 이용 조건, 이용자와 회사의 권리 및 의무, 책임사항에 관한 공식 약관 규정입니다.',
 };
