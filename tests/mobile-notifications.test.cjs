@@ -228,6 +228,65 @@ test('outbox uses stable notification/device keys and supports multiple devices'
   assert.equal(deliveries.size, 2);
 });
 
+test('finance notification remains durable without a device and daily dedupe creates no duplicate delivery', async () => {
+  const notifications = new Map();
+  const deliveries = new Map();
+  const tx = {
+    mobileNotification: { upsert: async ({ where, create }) => {
+      const existing = notifications.get(where.dedupeKey);
+      if (existing) return existing;
+      const row = { id: `n-${notifications.size + 1}`, userId: create.userId, ...create };
+      notifications.set(where.dedupeKey, row); return row;
+    } },
+    mobilePushDevice: { findMany: async () => [] },
+    mobileNotificationDelivery: { upsert: async ({ where, create }) => {
+      deliveries.set(JSON.stringify(where), create);
+    } },
+  };
+  const service = loadService({});
+  const input = {
+    userId: 'u1', dedupeKey: 'finance-due-reminder:c1:u1:2026-10-03', type: 'FINANCE_DUE_REMINDER',
+    title: '10월 회비', body: '25,000원 납부 확인이 필요합니다.', teamId: 't1',
+    eventId: null, chargeId: 'c1', target: 'FINANCE_CHARGE',
+  };
+  await service.enqueueMobileNotifications(tx, [input]);
+  await service.enqueueMobileNotifications(tx, [input]);
+  assert.equal(notifications.size, 1);
+  assert.equal(deliveries.size, 0);
+  assert.deepEqual(JSON.parse(notifications.values().next().value.data), {
+    type: 'FINANCE_DUE_REMINDER', teamId: 't1', eventId: null, chargeId: 'c1', target: 'FINANCE_CHARGE',
+  });
+});
+
+test('finance outbox creates one delivery for an enabled device and permits a new KST day', async () => {
+  const notifications = new Map();
+  const deliveries = new Map();
+  const tx = {
+    mobileNotification: { upsert: async ({ where, create }) => {
+      const existing = notifications.get(where.dedupeKey);
+      if (existing) return existing;
+      const row = { id: `n-${notifications.size + 1}`, userId: create.userId };
+      notifications.set(where.dedupeKey, row); return row;
+    } },
+    mobilePushDevice: { findMany: async () => [{ id: 'device-1' }] },
+    mobileNotificationDelivery: { upsert: async ({ where, create }) => {
+      const key = `${where.notificationId_deviceId.notificationId}:${where.notificationId_deviceId.deviceId}`;
+      if (!deliveries.has(key)) deliveries.set(key, create);
+    } },
+  };
+  const service = loadService({});
+  const input = {
+    userId: 'u1', dedupeKey: 'finance-due-reminder:c1:u1:2026-10-03', type: 'FINANCE_DUE_REMINDER',
+    title: '10월 회비', body: '25,000원 납부 확인이 필요합니다.', teamId: 't1',
+    eventId: null, chargeId: 'c1', target: 'FINANCE_CHARGE',
+  };
+  await service.enqueueMobileNotifications(tx, [input]);
+  await service.enqueueMobileNotifications(tx, [input]);
+  await service.enqueueMobileNotifications(tx, [{ ...input, dedupeKey: 'finance-due-reminder:c1:u1:2026-10-04' }]);
+  assert.equal(notifications.size, 2);
+  assert.equal(deliveries.size, 2);
+});
+
 test('worker sends Android high priority notification and safe navigation data', async () => {
   let sentMessage;
   const row = {
@@ -258,10 +317,36 @@ test('worker sends Android high priority notification and safe navigation data',
     notification: { channelId: 'bowlingmanager_competition', sound: 'default' },
   });
   assert.deepEqual(sentMessage.data, {
-    type: 'LANE_ASSIGNED', teamId: 'team-1', eventId: 'event-1', target: 'LANE_DRAW',
+    type: 'LANE_ASSIGNED', teamId: 'team-1', eventId: 'event-1', chargeId: '', target: 'LANE_DRAW',
   });
-  assert.deepEqual(Object.keys(sentMessage.data).sort(), ['eventId', 'target', 'teamId', 'type']);
+  assert.deepEqual(Object.keys(sentMessage.data).sort(), ['chargeId', 'eventId', 'target', 'teamId', 'type']);
   assert.doesNotMatch(JSON.stringify(sentMessage.data), /token|password|email|cookie|authorization/i);
+});
+
+test('finance delivery selects the finance channel and includes only safe finance navigation data', async () => {
+  let sentMessage;
+  const row = {
+    id: 'delivery-finance', deviceId: 'device-1', status: 'PENDING', retryCount: 0,
+    device: { id: 'device-1', token: 'fcm-token' },
+    notification: {
+      title: '10월 회비', body: '25,000원 납부 확인이 필요합니다.',
+      data: '{"type":"FINANCE_DUE_REMINDER","teamId":"team-1","eventId":null,"chargeId":"charge-1","target":"FINANCE_CHARGE"}',
+    },
+  };
+  const prisma = {
+    mobileNotificationDelivery: {
+      findMany: async () => [row], updateMany: async () => ({ count: 1 }), update: async () => {},
+    },
+  };
+  const service = loadService(prisma);
+  await service.deliverPendingMobileNotifications(async message => { sentMessage = message; });
+  assert.deepEqual(sentMessage.android, {
+    priority: 'high', notification: { channelId: 'bowlingmanager_finance', sound: 'default' },
+  });
+  assert.deepEqual(sentMessage.data, {
+    type: 'FINANCE_DUE_REMINDER', teamId: 'team-1', eventId: '', chargeId: 'charge-1', target: 'FINANCE_CHARGE',
+  });
+  assert.doesNotMatch(JSON.stringify(sentMessage.data), /memberId|userId|targetId|guestId|email/i);
 });
 
 test('invalid FCM token disables only that device while other deliveries continue', async () => {
@@ -322,6 +407,7 @@ test('notification source declares all required trigger types and transaction en
   for (const type of [
     'LANE_DRAW_OPENED', 'LANE_ASSIGNED', 'INDIVIDUAL_GROUP_READY', 'TEAM_CAPTAIN_SELECTED',
     'TEAM_DRAFT_TURN', 'TEAM_MEMBER_SELECTED', 'EVENT_VOTING_OPENED',
+    'FINANCE_DUE_REMINDER',
   ]) assert.match(notificationSource, new RegExp(type));
   for (const file of ['team-events.ts', 'bowler-hidden.ts', 'team-competition.ts', 'event-competition.ts']) {
     const source = fs.readFileSync(path.resolve(__dirname, `../src/lib/mobile-api/${file}`), 'utf8');

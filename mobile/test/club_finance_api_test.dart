@@ -28,6 +28,17 @@ void main() {
             }),
           );
         }
+        if (options.path.endsWith('/reminders/unpaid')) {
+          return _json(
+            200,
+            _envelope(<String, dynamic>{
+              'eligibleMemberCount': 1,
+              'unpaidGuestCount': 1,
+              'skippedUnavailableMemberCount': 0,
+              'processed': true,
+            }),
+          );
+        }
         return _json(200, _envelope(_detail()));
       });
     final ClubFinanceApi api = ClubFinanceApi(dio);
@@ -53,6 +64,10 @@ void main() {
       'target/1',
       ClubPaymentAction.markPaid,
     );
+    final ClubFinanceReminderResult reminder = await api.remindUnpaidMembers(
+      'team 1',
+      'charge/1',
+    );
     expect(
       requests.map((RequestOptions r) => '${r.method} ${r.path}'),
       containsAll(<String>[
@@ -62,10 +77,15 @@ void main() {
         'POST /teams/team%201/finance/charges',
         'PATCH /teams/team%201/finance/charges/charge%2F1',
         'PATCH /teams/team%201/finance/charges/charge%2F1/targets/target%2F1',
+        'POST /teams/team%201/finance/charges/charge%2F1/reminders/unpaid',
       ]),
     );
     expect((requests[3].data as Map)['targetMemberIds'], <String>['m1']);
-    expect((requests.last.data as Map)['action'], 'MARK_PAID');
+    expect((requests[5].data as Map)['action'], 'MARK_PAID');
+    expect(requests.last.data, isNull);
+    expect(reminder.eligibleMemberCount, 1);
+    expect(reminder.unpaidGuestCount, 1);
+    expect(reminder.processed, isTrue);
   });
 
   test('maps server and malformed privacy errors', () async {

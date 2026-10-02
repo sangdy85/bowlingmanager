@@ -48,6 +48,44 @@ const AndroidNotificationDetails competitionNotificationDetails =
       enableVibration: true,
     );
 
+const String financeNotificationChannelId = 'bowlingmanager_finance';
+const String financeNotificationChannelName = '회비 알림';
+const String financeNotificationChannelDescription = '동호회 회비와 게임비 납부 확인 알림';
+
+const AndroidNotificationChannel financeNotificationChannel =
+    AndroidNotificationChannel(
+      financeNotificationChannelId,
+      financeNotificationChannelName,
+      description: financeNotificationChannelDescription,
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+const AndroidNotificationDetails financeNotificationDetails =
+    AndroidNotificationDetails(
+      financeNotificationChannelId,
+      financeNotificationChannelName,
+      channelDescription: financeNotificationChannelDescription,
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+const List<AndroidNotificationChannel> mobileNotificationChannels =
+    <AndroidNotificationChannel>[
+      competitionNotificationChannel,
+      financeNotificationChannel,
+    ];
+
+AndroidNotificationDetails mobileNotificationDetails(
+  Map<String, dynamic> data,
+) =>
+    data['target'] == 'FINANCE_CHARGE' || data['type'] == 'FINANCE_DUE_REMINDER'
+    ? financeNotificationDetails
+    : competitionNotificationDetails;
+
 class MobilePushMessage {
   const MobilePushMessage({
     required this.messageId,
@@ -97,11 +135,14 @@ class FirebaseMobileNotificationPlatform implements MobileNotificationPlatform {
         if (data != null) onLocalTap(data);
       },
     );
-    await _local
+    final android = _local
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(competitionNotificationChannel);
+        >();
+    for (final AndroidNotificationChannel channel
+        in mobileNotificationChannels) {
+      await android?.createNotificationChannel(channel);
+    }
   }
 
   @override
@@ -144,8 +185,8 @@ class FirebaseMobileNotificationPlatform implements MobileNotificationPlatform {
       id: (message.messageId ?? message.data.toString()).hashCode,
       title: message.title,
       body: message.body,
-      notificationDetails: const NotificationDetails(
-        android: competitionNotificationDetails,
+      notificationDetails: NotificationDetails(
+        android: mobileNotificationDetails(message.data),
       ),
       payload: jsonEncode(message.data),
     );

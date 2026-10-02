@@ -47,6 +47,7 @@ class NotificationScreen extends ConsumerWidget {
                       final path = mobileNotificationPath(<String, dynamic>{
                         'teamId': items[index].teamId,
                         'eventId': items[index].eventId,
+                        'chargeId': items[index].chargeId,
                         'target': items[index].target,
                       });
                       if (context.mounted && path != null) context.push(path);

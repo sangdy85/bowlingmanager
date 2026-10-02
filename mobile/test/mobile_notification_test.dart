@@ -8,10 +8,14 @@ import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
 import 'package:bowlingmanager_mobile/features/notifications/application/notification_providers.dart';
 import 'package:bowlingmanager_mobile/features/notifications/data/notification_api.dart';
 import 'package:bowlingmanager_mobile/features/notifications/domain/mobile_notification.dart';
+import 'package:bowlingmanager_mobile/features/notifications/presentation/notification_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   test(
@@ -39,6 +43,32 @@ void main() {
     },
   );
 
+  test('maps finance notifications to detail with a safe finance fallback', () {
+    expect(
+      mobileNotificationPath(const <String, dynamic>{
+        'teamId': 'team 1',
+        'chargeId': 'charge/1',
+        'target': 'FINANCE_CHARGE',
+      }),
+      '/club/team%201/finance/charge%2F1',
+    );
+    expect(
+      mobileNotificationPath(const <String, dynamic>{
+        'teamId': 'team-1',
+        'target': 'FINANCE_CHARGE',
+      }),
+      '/club/team-1/finance',
+    );
+    expect(
+      mobileNotificationPath(const <String, dynamic>{
+        'teamId': 'team-1',
+        'chargeId': <String>['invalid'],
+        'target': 'FINANCE_CHARGE',
+      }),
+      '/club/team-1/finance',
+    );
+  });
+
   test('uses the required high importance Android competition channel', () {
     expect(competitionNotificationChannel.id, 'bowlingmanager_competition');
     expect(competitionNotificationChannel.name, '경기 알림');
@@ -50,6 +80,28 @@ void main() {
     expect(competitionNotificationChannel.playSound, isTrue);
     expect(competitionNotificationChannel.enableVibration, isTrue);
     expect(competitionNotificationDetails.priority, Priority.high);
+  });
+
+  test('registers competition and high importance finance channels', () {
+    expect(mobileNotificationChannels.map((channel) => channel.id), <String>[
+      'bowlingmanager_competition',
+      'bowlingmanager_finance',
+    ]);
+    expect(financeNotificationChannel.name, '회비 알림');
+    expect(financeNotificationChannel.description, '동호회 회비와 게임비 납부 확인 알림');
+    expect(financeNotificationChannel.importance, Importance.high);
+    expect(
+      mobileNotificationDetails(const <String, dynamic>{
+        'target': 'FINANCE_CHARGE',
+      }).channelId,
+      financeNotificationChannelId,
+    );
+    expect(
+      mobileNotificationDetails(const <String, dynamic>{
+        'target': 'EVENT_DETAIL',
+      }).channelId,
+      competitionNotificationChannelId,
+    );
   });
 
   test(
@@ -147,6 +199,32 @@ void main() {
       await platform.dispose();
     },
   );
+
+  test('finance notification tap also waits for authentication', () async {
+    final platform = _FakeNotificationPlatform()
+      ..initial = const MobilePushMessage(
+        messageId: 'finance-message',
+        title: '10월 회비',
+        body: '25,000원 납부 확인이 필요합니다.',
+        data: <String, dynamic>{
+          'teamId': 'team-1',
+          'chargeId': 'charge-1',
+          'target': 'FINANCE_CHARGE',
+        },
+      );
+    final paths = <String>[];
+    final coordinator = MobileNotificationCoordinator(
+      _FakeNotificationApi(),
+      platform: platform,
+      enabled: true,
+    );
+    await coordinator.initialize(paths.add);
+    expect(paths, isEmpty);
+    await coordinator.handleAuthState(const AuthState.authenticated(_user));
+    expect(paths, <String>['/club/team-1/finance/charge-1']);
+    coordinator.dispose();
+    await platform.dispose();
+  });
 
   test(
     'foreground local notification tap opens its competition deep link',
@@ -253,6 +331,7 @@ void main() {
       await api.markRead(items.single.id);
       await api.revokeDevice('fcm-token-123456789012345');
       expect(items.single.isUnread, isTrue);
+      expect(items.single.chargeId, isNull);
       expect(
         requests.map((request) => '${request.method} ${request.path}'),
         <String>[
@@ -268,6 +347,89 @@ void main() {
       });
     },
   );
+
+  test('strictly parses finance notification chargeId from data', () {
+    final item = MobileNotificationItem.fromJson(<String, dynamic>{
+      'id': 'finance-1',
+      'type': 'FINANCE_DUE_REMINDER',
+      'title': '10월 회비',
+      'body': '25,000원 납부 확인이 필요합니다.',
+      'teamId': 'team-1',
+      'eventId': null,
+      'data': <String, Object>{
+        'target': 'FINANCE_CHARGE',
+        'chargeId': 'charge-1',
+      },
+      'createdAt': '2026-10-03T00:00:00.000Z',
+      'readAt': null,
+    });
+    expect(item.chargeId, 'charge-1');
+    expect(item.eventId, isNull);
+    expect(
+      () => MobileNotificationItem.fromJson(<String, dynamic>{
+        'id': 'bad',
+        'type': 'FINANCE_DUE_REMINDER',
+        'title': 'title',
+        'body': 'body',
+        'teamId': 'team-1',
+        'eventId': null,
+        'data': <String, Object>{'target': 'FINANCE_CHARGE', 'chargeId': 1},
+        'createdAt': '2026-10-03T00:00:00.000Z',
+        'readAt': null,
+      }),
+      throwsFormatException,
+    );
+  });
+
+  testWidgets('notification screen marks finance reminder read then navigates', (
+    WidgetTester tester,
+  ) async {
+    final api = _FakeNotificationApi(
+      items: <MobileNotificationItem>[
+        MobileNotificationItem.fromJson(<String, dynamic>{
+          'id': 'finance-1',
+          'type': 'FINANCE_DUE_REMINDER',
+          'title': '10월 회비',
+          'body': '25,000원 납부 확인이 필요합니다.',
+          'teamId': 'team-1',
+          'eventId': null,
+          'data': <String, Object>{
+            'target': 'FINANCE_CHARGE',
+            'chargeId': 'charge-1',
+          },
+          'createdAt': '2026-10-03T00:00:00.000Z',
+          'readAt': null,
+        }),
+      ],
+    );
+    final router = GoRouter(
+      initialLocation: '/notifications',
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/notifications',
+          builder: (_, _) => const NotificationScreen(),
+        ),
+        GoRoute(
+          path: '/club/:teamId/finance/:chargeId',
+          builder: (_, state) => Text(
+            'finance ${state.pathParameters['teamId']} ${state.pathParameters['chargeId']}',
+          ),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [notificationApiProvider.overrideWithValue(api)],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('10월 회비'));
+    await tester.pumpAndSettle();
+    expect(api.markedRead, <String>['finance-1']);
+    expect(find.text('finance team-1 charge-1'), findsOneWidget);
+    router.dispose();
+  });
 
   test('malformed notification envelope uses the safe API error', () async {
     final dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
@@ -334,9 +496,18 @@ Future<void> _flushEvents() async {
 }
 
 class _FakeNotificationApi extends NotificationApi {
-  _FakeNotificationApi() : super(Dio());
+  _FakeNotificationApi({this.items = const <MobileNotificationItem>[]})
+    : super(Dio());
+  final List<MobileNotificationItem> items;
   final List<String> registered = <String>[];
   final List<String> revoked = <String>[];
+  final List<String> markedRead = <String>[];
+
+  @override
+  Future<List<MobileNotificationItem>> list() async => items;
+
+  @override
+  Future<void> markRead(String id) async => markedRead.add(id);
 
   @override
   Future<void> registerDevice(String token) async => registered.add(token);

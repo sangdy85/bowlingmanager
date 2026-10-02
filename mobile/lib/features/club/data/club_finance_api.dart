@@ -66,6 +66,18 @@ class ClubFinanceApi {
       ),
     ),
   );
+  Future<ClubFinanceReminderResult> remindUnpaidMembers(
+    String teamId,
+    String chargeId,
+  ) => _request(
+    () async => ClubFinanceReminderResult.fromJson(
+      _data(
+        (await _dio.post<dynamic>(
+          '${_base(teamId)}/charges/${Uri.encodeComponent(chargeId)}/reminders/unpaid',
+        )).data,
+      ),
+    ),
+  );
 }
 
 String _base(String teamId) => '/teams/${Uri.encodeComponent(teamId)}/finance';

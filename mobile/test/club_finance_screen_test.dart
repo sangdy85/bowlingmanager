@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_finance_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_finance_api.dart';
@@ -93,6 +95,88 @@ void main() {
     expect(find.text('게스트'), findsOneWidget);
     expect(find.text('납부 확인'), findsOneWidget);
     expect(find.text('면제'), findsOneWidget);
+    final OutlinedButton reminder = tester.widget(
+      find.byKey(const Key('finance-reminder-button')),
+    );
+    expect(reminder.onPressed, isNull);
+    expect(find.text('알림 가능한 회원 미납자가 없습니다.'), findsOneWidget);
+  });
+
+  testWidgets(
+    'OPEN manager confirms one reminder request and sees processed wording',
+    (WidgetTester tester) async {
+      final Completer<ClubFinanceReminderResult> completer =
+          Completer<ClubFinanceReminderResult>();
+      final _FakeFinanceApi api = _FakeFinanceApi.manager(
+        memberTarget: true,
+        reminderCompleter: completer,
+      );
+      await _pump(
+        tester,
+        const ClubFinanceDetailScreen(teamId: 'team-1', chargeId: 'charge-1'),
+        api,
+      );
+      final Finder button = find.byKey(const Key('finance-reminder-button'));
+      expect((tester.widget<OutlinedButton>(button)).onPressed, isNotNull);
+      await tester.tap(button);
+      await tester.tap(button, warnIfMissed: false);
+      await tester.pump();
+      expect(find.text('미납 회원에게 알림을 보낼까요?'), findsOneWidget);
+      expect(find.textContaining('중복 알림이 생성되지 않습니다.'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('finance-reminder-confirm')));
+      await tester.pump();
+      expect(api.reminderCalls, 1);
+      expect((tester.widget<OutlinedButton>(button)).onPressed, isNull);
+      await tester.tap(button, warnIfMissed: false);
+      expect(api.reminderCalls, 1);
+      completer.complete(
+        const ClubFinanceReminderResult(
+          eligibleMemberCount: 1,
+          unpaidGuestCount: 0,
+          skippedUnavailableMemberCount: 0,
+          processed: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('미납 알림 요청을 처리했습니다. 대상 1명'), findsOneWidget);
+      expect(find.textContaining('전송 완료'), findsNothing);
+    },
+  );
+
+  testWidgets('non-OPEN charges never show the reminder action', (
+    WidgetTester tester,
+  ) async {
+    for (final ClubChargeStatus status in <ClubChargeStatus>[
+      ClubChargeStatus.draft,
+      ClubChargeStatus.closed,
+      ClubChargeStatus.cancelled,
+    ]) {
+      await _pump(
+        tester,
+        const ClubFinanceDetailScreen(teamId: 'team-1', chargeId: 'charge-1'),
+        _FakeFinanceApi.manager(status: status, memberTarget: true),
+      );
+      expect(find.byKey(const Key('finance-reminder-button')), findsNothing);
+    }
+  });
+
+  testWidgets('reminder API errors use the safe finance message', (
+    WidgetTester tester,
+  ) async {
+    final _FakeFinanceApi api = _FakeFinanceApi.manager(
+      memberTarget: true,
+      reminderFailure: true,
+    );
+    await _pump(
+      tester,
+      const ClubFinanceDetailScreen(teamId: 'team-1', chargeId: 'charge-1'),
+      api,
+    );
+    await tester.tap(find.byKey(const Key('finance-reminder-button')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('finance-reminder-confirm')));
+    await tester.pumpAndSettle();
+    expect(find.text('요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.'), findsOneWidget);
   });
 }
 
@@ -125,16 +209,32 @@ class _FakeFinanceApi extends ClubFinanceApi {
     this.role, {
     this.paymentStatus = ClubPaymentStatus.unpaid,
     this.chargeStatus = ClubChargeStatus.open,
+    this.memberTarget = false,
+    this.reminderCompleter,
+    this.reminderFailure = false,
   }) : super(Dio());
   factory _FakeFinanceApi.member({
     ClubPaymentStatus status = ClubPaymentStatus.unpaid,
   }) => _FakeFinanceApi._(ClubRole.member, paymentStatus: status);
   factory _FakeFinanceApi.manager({
     ClubChargeStatus status = ClubChargeStatus.open,
-  }) => _FakeFinanceApi._(ClubRole.manager, chargeStatus: status);
+    bool memberTarget = false,
+    Completer<ClubFinanceReminderResult>? reminderCompleter,
+    bool reminderFailure = false,
+  }) => _FakeFinanceApi._(
+    ClubRole.manager,
+    chargeStatus: status,
+    memberTarget: memberTarget,
+    reminderCompleter: reminderCompleter,
+    reminderFailure: reminderFailure,
+  );
   final ClubRole role;
   final ClubPaymentStatus paymentStatus;
   final ClubChargeStatus chargeStatus;
+  final bool memberTarget;
+  final Completer<ClubFinanceReminderResult>? reminderCompleter;
+  final bool reminderFailure;
+  int reminderCalls = 0;
   @override
   Future<ClubChargesEnvelope> fetchCharges(String teamId) async =>
       ClubChargesEnvelope(role: role, charges: <ClubChargeItem>[_item]);
@@ -152,6 +252,22 @@ class _FakeFinanceApi extends ClubFinanceApi {
   @override
   Future<ClubChargeDetail> fetchCharge(String teamId, String chargeId) async =>
       ClubChargeDetail(role: role, item: _item);
+  @override
+  Future<ClubFinanceReminderResult> remindUnpaidMembers(
+    String teamId,
+    String chargeId,
+  ) async {
+    reminderCalls += 1;
+    if (reminderFailure) throw Exception('synthetic failure');
+    if (reminderCompleter != null) return reminderCompleter!.future;
+    return const ClubFinanceReminderResult(
+      eligibleMemberCount: 1,
+      unpaidGuestCount: 0,
+      skippedUnavailableMemberCount: 0,
+      processed: true,
+    );
+  }
+
   ClubCharge get _charge => ClubCharge(
     id: 'charge-1',
     type: ClubChargeType.monthlyDues,
@@ -171,7 +287,7 @@ class _FakeFinanceApi extends ClubFinanceApi {
       : ClubChargeItem(
           charge: _charge,
           summary: _summary,
-          targets: <ClubChargeTarget>[_target],
+          targets: <ClubChargeTarget>[memberTarget ? _memberTarget : _target],
         );
 }
 
@@ -192,6 +308,18 @@ final ClubChargeTarget _target = ClubChargeTarget(
   memberId: null,
   displayName: '게스트 김볼러',
   amount: 30000,
+  status: ClubPaymentStatus.unpaid,
+  createdAt: _stamp,
+  updatedAt: _stamp,
+  audits: const <ClubPaymentAudit>[],
+);
+
+final ClubChargeTarget _memberTarget = ClubChargeTarget(
+  id: 'target-member-1',
+  targetType: ClubChargeTargetType.member,
+  memberId: 'member-1',
+  displayName: '회원 김볼러',
+  amount: 25000,
   status: ClubPaymentStatus.unpaid,
   createdAt: _stamp,
   updatedAt: _stamp,

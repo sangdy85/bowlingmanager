@@ -13,6 +13,7 @@ export const MOBILE_NOTIFICATION_TYPES = {
     teamMemberSelected: "TEAM_MEMBER_SELECTED",
     eventVotingOpened: "EVENT_VOTING_OPENED",
     eventVoteReminder: "EVENT_VOTE_REMINDER",
+    financeDueReminder: "FINANCE_DUE_REMINDER",
 } as const;
 
 export type MobileNotificationType = typeof MOBILE_NOTIFICATION_TYPES[keyof typeof MOBILE_NOTIFICATION_TYPES];
@@ -22,10 +23,11 @@ export type MobileNotificationTarget =
     | "INDIVIDUAL_GROUP"
     | "TEAM_DRAFT"
     | "TEAM_DETAIL"
-    | "EVENT_VOTING";
+    | "EVENT_VOTING"
+    | "FINANCE_CHARGE";
 
 type DbClient = Prisma.TransactionClient | PrismaClient;
-type NotificationInput = {
+export type NotificationInput = {
     userId: string;
     dedupeKey: string;
     type: MobileNotificationType;
@@ -33,6 +35,7 @@ type NotificationInput = {
     body: string;
     teamId: string;
     eventId?: string | null;
+    chargeId?: string | null;
     target: MobileNotificationTarget;
 };
 
@@ -153,7 +156,13 @@ export async function enqueueMobileNotifications(tx: DbClient, inputs: Notificat
                 userId: input.userId, dedupeKey: input.dedupeKey, type: input.type,
                 title: input.title, body: input.body, teamId: input.teamId,
                 eventId: input.eventId ?? null,
-                data: JSON.stringify({ type: input.type, teamId: input.teamId, eventId: input.eventId ?? null, target: input.target }),
+                data: JSON.stringify({
+                    type: input.type,
+                    teamId: input.teamId,
+                    eventId: input.eventId ?? null,
+                    chargeId: input.chargeId ?? null,
+                    target: input.target,
+                }),
             },
             update: {}, select: { id: true, userId: true },
         });
@@ -240,7 +249,7 @@ type MessageSender = (message: {
     data: Record<string, string>;
     android: {
         priority: "high";
-        notification: { channelId: "bowlingmanager_competition"; sound: "default" };
+        notification: { channelId: "bowlingmanager_competition" | "bowlingmanager_finance"; sound: "default" };
     };
 }) => Promise<unknown>;
 
@@ -269,11 +278,12 @@ export async function deliverPendingMobileNotifications(send?: MessageSender, no
                     type: messageDataValue(data.type),
                     teamId: messageDataValue(data.teamId),
                     eventId: messageDataValue(data.eventId),
+                    chargeId: messageDataValue(data.chargeId),
                     target: messageDataValue(data.target),
                 },
                 android: {
                     priority: "high",
-                    notification: { channelId: "bowlingmanager_competition", sound: "default" },
+                    notification: { channelId: notificationChannelId(data), sound: "default" },
                 },
             });
             await prisma.mobileNotificationDelivery.update({ where: { id: delivery.id }, data: { status: "SENT", sentAt: now, lastErrorCode: null } });
@@ -334,6 +344,12 @@ function safeData(value: string): Record<string, unknown> {
 
 function messageDataValue(value: unknown) {
     return typeof value === "string" ? value : "";
+}
+
+export function notificationChannelId(data: Record<string, unknown>) {
+    return data.target === "FINANCE_CHARGE" || data.type === MOBILE_NOTIFICATION_TYPES.financeDueReminder
+        ? "bowlingmanager_finance" as const
+        : "bowlingmanager_competition" as const;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

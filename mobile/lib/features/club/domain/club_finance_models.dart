@@ -355,6 +355,34 @@ class ClubFinanceSummary {
   }
 }
 
+class ClubFinanceReminderResult {
+  const ClubFinanceReminderResult({
+    required this.eligibleMemberCount,
+    required this.unpaidGuestCount,
+    required this.skippedUnavailableMemberCount,
+    required this.processed,
+  });
+
+  final int eligibleMemberCount;
+  final int unpaidGuestCount;
+  final int skippedUnavailableMemberCount;
+  final bool processed;
+
+  factory ClubFinanceReminderResult.fromJson(Map<String, dynamic> json) {
+    if (json['processed'] != true) {
+      throw const FormatException('Invalid finance reminder response.');
+    }
+    return ClubFinanceReminderResult(
+      eligibleMemberCount: _integer(json['eligibleMemberCount']),
+      unpaidGuestCount: _integer(json['unpaidGuestCount']),
+      skippedUnavailableMemberCount: _integer(
+        json['skippedUnavailableMemberCount'],
+      ),
+      processed: json['processed'] as bool,
+    );
+  }
+}
+
 class ClubChargeDraft {
   const ClubChargeDraft({
     required this.type,

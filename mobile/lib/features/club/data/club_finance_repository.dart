@@ -23,4 +23,8 @@ class ClubFinanceRepository {
     String targetId,
     ClubPaymentAction action,
   ) => _api.updatePayment(teamId, chargeId, targetId, action);
+  Future<ClubFinanceReminderResult> remindUnpaidMembers(
+    String teamId,
+    String chargeId,
+  ) => _api.remindUnpaidMembers(teamId, chargeId);
 }

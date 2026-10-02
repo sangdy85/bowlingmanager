@@ -60,7 +60,7 @@ String clubFinanceErrorMessage(Object error) {
     'CHARGE_NOT_FOUND' => '회비 항목을 찾을 수 없습니다.',
     'TARGET_NOT_FOUND' => '납부 대상을 찾을 수 없습니다.',
     'CHARGE_LOCKED' => '이미 납부 처리가 있어 이 항목은 수정할 수 없습니다.',
-    'CHARGE_NOT_OPEN' => '공개 중인 항목만 납부 상태를 변경할 수 있습니다.',
+    'CHARGE_NOT_OPEN' => '공개 중인 항목에서만 처리할 수 있습니다.',
     'CHARGE_CLOSED' => '마감되거나 취소된 항목은 수정할 수 없습니다.',
     'INVALID_AMOUNT' => '금액을 다시 확인해주세요.',
     'INVALID_TITLE' => '제목을 다시 확인해주세요.',

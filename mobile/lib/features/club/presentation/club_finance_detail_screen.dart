@@ -21,6 +21,7 @@ class ClubFinanceDetailScreen extends ConsumerStatefulWidget {
 
 class _State extends ConsumerState<ClubFinanceDetailScreen> {
   bool _busy = false;
+  bool _reminderConfirmationOpen = false;
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authControllerProvider).user;
@@ -54,6 +55,15 @@ class _State extends ConsumerState<ClubFinanceDetailScreen> {
                   changeStatus: (ClubChargeStatus status) =>
                       _changeStatus(request, detail, status),
                 ),
+                if (detail.item.charge.status ==
+                    ClubChargeStatus.open) ...<Widget>[
+                  const SizedBox(height: 10),
+                  _ReminderAction(
+                    detail: detail,
+                    busy: _busy || _reminderConfirmationOpen,
+                    remind: () => _remindUnpaid(request),
+                  ),
+                ],
                 if (detail.item.charge.status ==
                     ClubChargeStatus.draft) ...<Widget>[
                   const SizedBox(height: 10),
@@ -135,6 +145,40 @@ class _State extends ConsumerState<ClubFinanceDetailScreen> {
     );
   }
 
+  Future<void> _remindUnpaid(ClubChargeRequest request) async {
+    if (_busy || _reminderConfirmationOpen) return;
+    setState(() => _reminderConfirmationOpen = true);
+    final bool confirmed;
+    try {
+      confirmed = await _confirmReminder();
+    } finally {
+      if (mounted && _reminderConfirmationOpen) {
+        setState(() => _reminderConfirmationOpen = false);
+      }
+    }
+    if (!mounted || !confirmed || _busy) return;
+    setState(() => _busy = true);
+    try {
+      final ClubFinanceReminderResult result = await ref
+          .read(clubFinanceRepositoryProvider)
+          .remindUnpaidMembers(widget.teamId, widget.chargeId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('미납 알림 요청을 처리했습니다. 대상 ${result.eligibleMemberCount}명'),
+        ),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(clubFinanceErrorMessage(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _mutate(
     ClubChargeRequest request,
     Future<Object> Function() action,
@@ -175,6 +219,30 @@ class _State extends ConsumerState<ClubFinanceDetailScreen> {
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
               child: const Text('확인'),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+
+  Future<bool> _confirmReminder() async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+          title: const Text('미납 회원에게 알림을 보낼까요?'),
+          content: const Text(
+            '앱을 사용하는 미납 회원에게 납부 확인 알림을 등록합니다.\n'
+            '같은 회비는 같은 날 같은 회원에게 중복 알림이 생성되지 않습니다.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              key: const Key('finance-reminder-confirm'),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('알림 등록'),
             ),
           ],
         ),
@@ -284,6 +352,69 @@ class _ManagerActions extends StatelessWidget {
             child: const Text('취소'),
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _ReminderAction extends StatelessWidget {
+  const _ReminderAction({
+    required this.detail,
+    required this.busy,
+    required this.remind,
+  });
+
+  final ClubChargeDetail detail;
+  final bool busy;
+  final VoidCallback remind;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<ClubChargeTarget> unpaid = detail.item.targets
+        .where(
+          (ClubChargeTarget target) =>
+              target.status == ClubPaymentStatus.unpaid,
+        )
+        .toList(growable: false);
+    final bool hasEligibleMember = unpaid.any(
+      (ClubChargeTarget target) =>
+          target.targetType == ClubChargeTargetType.member &&
+          target.memberId != null,
+    );
+    final bool hasGuest = unpaid.any(
+      (ClubChargeTarget target) =>
+          target.targetType == ClubChargeTargetType.guest,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        OutlinedButton.icon(
+          key: const Key('finance-reminder-button'),
+          onPressed: busy || !hasEligibleMember ? null : remind,
+          icon: busy
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.notifications_active_outlined),
+          label: const Text('미납자에게 알림'),
+        ),
+        if (!hasEligibleMember)
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text(
+              '알림 가능한 회원 미납자가 없습니다.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          )
+        else if (hasGuest)
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text(
+              '게스트는 앱 알림 대상에서 제외됩니다.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
       ],
     );
   }
