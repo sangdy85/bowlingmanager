@@ -4,7 +4,7 @@ import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
 import 'package:bowlingmanager_mobile/features/records/share/score_share_card.dart';
 import 'package:bowlingmanager_mobile/features/records/share/score_share_data.dart';
 import 'package:bowlingmanager_mobile/features/records/share/score_share_preview_sheet.dart';
-import 'package:bowlingmanager_mobile/features/records/share/score_share_service.dart';
+import 'package:bowlingmanager_mobile/shared/share/share_image_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -137,7 +137,7 @@ void main() {
 
 Future<void> _pumpPreview(
   WidgetTester tester,
-  ScoreShareService service,
+  ShareImageService service,
 ) async {
   await tester.binding.setSurfaceSize(const Size(420, 900));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -193,7 +193,7 @@ GameSession _session({
   );
 }
 
-class _FakeShareService implements ScoreShareService {
+class _FakeShareService implements ShareImageService {
   _FakeShareService({Future<void>? result, this.error})
     : result = result ?? Future<void>.value();
 
@@ -202,7 +202,11 @@ class _FakeShareService implements ScoreShareService {
   int callCount = 0;
 
   @override
-  Future<void> share(GlobalKey boundaryKey) async {
+  Future<void> share(
+    GlobalKey boundaryKey, {
+    required String fileName,
+    required String text,
+  }) async {
     callCount += 1;
     if (error case final Object currentError) throw currentError;
     await result;

@@ -1357,6 +1357,21 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('상세 기록'));
     await tester.pumpAndSettle();
+    final Finder shareButton = find.byKey(
+      Key('club-activity-share-${testClubActivity.id}'),
+    );
+    expect(shareButton, findsOneWidget);
+    await tester.tap(shareButton);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('club-result-share-card')), findsOneWidget);
+    expect(find.text('테스트 동호회'), findsOneWidget);
+    expect(
+      find.byKey(Key('club-activity-menu-${testClubActivity.id}')),
+      findsOneWidget,
+    );
+    expect(find.text('삭제'), findsNothing);
+    await tester.tap(find.byKey(const Key('club-result-share-close')));
+    await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(Key('club-activity-menu-${testClubActivity.id}')),
     );
@@ -1729,6 +1744,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(Key('club-activity-${second.id}')), findsOneWidget);
+      expect(
+        find.byKey(Key('club-activity-share-${second.id}')),
+        findsOneWidget,
+      );
       expect(find.byKey(Key('club-activity-menu-${second.id}')), findsNothing);
 
       await tester.tap(find.byKey(const Key('club-activity-filter-REGULAR')));

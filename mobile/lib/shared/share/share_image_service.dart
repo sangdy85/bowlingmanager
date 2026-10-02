@@ -5,17 +5,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:share_plus/share_plus.dart';
 
-abstract interface class ScoreShareService {
-  Future<void> share(GlobalKey boundaryKey);
+abstract interface class ShareImageService {
+  Future<void> share(
+    GlobalKey boundaryKey, {
+    required String fileName,
+    required String text,
+  });
 }
 
-class FlutterScoreShareService implements ScoreShareService {
-  const FlutterScoreShareService({this.pixelRatio = 3});
+class FlutterShareImageService implements ShareImageService {
+  const FlutterShareImageService({this.pixelRatio = 3});
 
   final double pixelRatio;
 
   @override
-  Future<void> share(GlobalKey boundaryKey) async {
+  Future<void> share(
+    GlobalKey boundaryKey, {
+    required String fileName,
+    required String text,
+  }) async {
     await WidgetsBinding.instance.endOfFrame;
     final BuildContext? boundaryContext = boundaryKey.currentContext;
     final RenderObject? renderObject = boundaryContext?.findRenderObject();
@@ -36,14 +44,13 @@ class FlutterScoreShareService implements ScoreShareService {
         byteData.offsetInBytes,
         byteData.lengthInBytes,
       );
-      const String fileName = 'bowlingmanager-score.png';
       await SharePlus.instance.share(
         ShareParams(
           files: <XFile>[
             XFile.fromData(bytes, mimeType: 'image/png', name: fileName),
           ],
-          fileNameOverrides: const <String>[fileName],
-          text: 'BowlingManager에서 기록한 볼링 스코어입니다.',
+          fileNameOverrides: <String>[fileName],
+          text: text,
         ),
       );
     } finally {

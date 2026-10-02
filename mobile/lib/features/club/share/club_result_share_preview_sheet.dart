@@ -1,15 +1,20 @@
 import 'package:bowlingmanager_mobile/core/theme/app_colors.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_text_styles.dart';
-import 'package:bowlingmanager_mobile/features/records/share/score_share_card.dart';
-import 'package:bowlingmanager_mobile/features/records/share/score_share_data.dart';
+import 'package:bowlingmanager_mobile/features/club/share/club_result_share_card.dart';
+import 'package:bowlingmanager_mobile/features/club/share/club_result_share_data.dart';
 import 'package:bowlingmanager_mobile/shared/share/share_image_service.dart';
 import 'package:flutter/material.dart';
 
-Future<void> showScoreSharePreview({
+Future<void> showClubResultSharePreview({
   required BuildContext context,
-  required ScoreShareData data,
+  required ClubResultShareData data,
   ShareImageService service = const FlutterShareImageService(),
 }) {
+  if (data.participants.isEmpty) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('공유할 경기 결과가 없습니다.')));
+    return Future<void>.value();
+  }
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -17,37 +22,44 @@ Future<void> showScoreSharePreview({
     backgroundColor: AppColors.surface,
     builder: (BuildContext context) => FractionallySizedBox(
       heightFactor: 0.92,
-      child: ScoreSharePreviewSheet(data: data, service: service),
+      child: ClubResultSharePreviewSheet(data: data, service: service),
     ),
   );
 }
 
-class ScoreSharePreviewSheet extends StatefulWidget {
-  const ScoreSharePreviewSheet({
+class ClubResultSharePreviewSheet extends StatefulWidget {
+  const ClubResultSharePreviewSheet({
     required this.data,
     required this.service,
     super.key,
   });
 
-  final ScoreShareData data;
+  final ClubResultShareData data;
   final ShareImageService service;
 
   @override
-  State<ScoreSharePreviewSheet> createState() => _ScoreSharePreviewSheetState();
+  State<ClubResultSharePreviewSheet> createState() =>
+      _ClubResultSharePreviewSheetState();
 }
 
-class _ScoreSharePreviewSheetState extends State<ScoreSharePreviewSheet> {
+class _ClubResultSharePreviewSheetState
+    extends State<ClubResultSharePreviewSheet> {
   final GlobalKey _boundaryKey = GlobalKey();
+  bool _maskNames = true;
   bool _isSharing = false;
 
   Future<void> _share() async {
     if (_isSharing) return;
     setState(() => _isSharing = true);
     try {
+      final String? clubName = widget.data.clubName;
+      final String shareText = clubName == null
+          ? 'BowlingManager 동호회 경기 결과입니다.'
+          : '$clubName 경기 결과입니다.';
       await widget.service.share(
         _boundaryKey,
-        fileName: 'bowlingmanager-score.png',
-        text: 'BowlingManager에서 기록한 볼링 스코어입니다.',
+        fileName: 'bowlingmanager-club-result.png',
+        text: shareText,
       );
     } catch (_) {
       if (mounted) {
@@ -72,7 +84,7 @@ class _ScoreSharePreviewSheetState extends State<ScoreSharePreviewSheet> {
                 child: Text('공유 카드 미리보기', style: AppTextStyles.title),
               ),
               IconButton(
-                key: const Key('score-share-close'),
+                key: const Key('club-result-share-close'),
                 tooltip: '닫기',
                 onPressed: _isSharing
                     ? null
@@ -81,14 +93,27 @@ class _ScoreSharePreviewSheetState extends State<ScoreSharePreviewSheet> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          SwitchListTile(
+            key: const Key('club-result-share-mask'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('이름 가리기'),
+            subtitle: const Text('공유 이미지에서 참가자 이름을 가립니다.'),
+            value: _maskNames,
+            onChanged: _isSharing
+                ? null
+                : (bool value) => setState(() => _maskNames = value),
+          ),
+          const SizedBox(height: 6),
           Expanded(
             child: SingleChildScrollView(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: RepaintBoundary(
                   key: _boundaryKey,
-                  child: ScoreShareCard(data: widget.data),
+                  child: ClubResultShareCard(
+                    data: widget.data,
+                    maskNames: _maskNames,
+                  ),
                 ),
               ),
             ),
@@ -97,13 +122,13 @@ class _ScoreSharePreviewSheetState extends State<ScoreSharePreviewSheet> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              key: const Key('score-share-submit'),
+              key: const Key('club-result-share-submit'),
               onPressed: _isSharing ? null : _share,
               icon: _isSharing
                   ? const SizedBox.square(
                       dimension: 18,
                       child: CircularProgressIndicator(
-                        key: Key('score-share-progress'),
+                        key: Key('club-result-share-progress'),
                         strokeWidth: 2,
                       ),
                     )

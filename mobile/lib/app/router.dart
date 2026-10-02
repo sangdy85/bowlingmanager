@@ -314,6 +314,9 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                     builder: (BuildContext context, GoRouterState state) =>
                         ClubRecordsScreen(
                           teamId: state.pathParameters['teamId']!,
+                          clubName: state.extra is String
+                              ? state.extra! as String
+                              : null,
                           initialSection:
                               switch (state.uri.queryParameters['section']) {
                                 'statistics' => 1,

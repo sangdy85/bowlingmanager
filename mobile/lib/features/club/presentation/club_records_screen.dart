@@ -11,6 +11,8 @@ import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.d
 import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_season_ranking_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/share/club_result_share_data.dart';
+import 'package:bowlingmanager_mobile/features/club/share/club_result_share_preview_sheet.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
 import 'package:bowlingmanager_mobile/shared/widgets/bowling_medal.dart';
@@ -25,6 +27,7 @@ class ClubRecordsScreen extends ConsumerStatefulWidget {
     this.initialYear,
     this.targetActivityId,
     this.targetFilter,
+    this.clubName,
     super.key,
   });
 
@@ -33,6 +36,7 @@ class ClubRecordsScreen extends ConsumerStatefulWidget {
   final int? initialYear;
   final String? targetActivityId;
   final ClubRecordFilter? targetFilter;
+  final String? clubName;
 
   @override
   ConsumerState<ClubRecordsScreen> createState() => _ClubRecordsScreenState();
@@ -249,6 +253,7 @@ class _ClubRecordsScreenState extends ConsumerState<ClubRecordsScreen> {
             _ => _ActivitiesBody(
               request: feedRequest,
               targetActivityId: widget.targetActivityId,
+              clubName: widget.clubName,
             ),
           },
         ),
@@ -781,10 +786,15 @@ class _MedalLeaders extends StatelessWidget {
 }
 
 class _ActivitiesBody extends ConsumerStatefulWidget {
-  const _ActivitiesBody({required this.request, this.targetActivityId});
+  const _ActivitiesBody({
+    required this.request,
+    this.targetActivityId,
+    this.clubName,
+  });
 
   final ClubActivityFeedRequest request;
   final String? targetActivityId;
+  final String? clubName;
 
   @override
   ConsumerState<_ActivitiesBody> createState() => _ActivitiesBodyState();
@@ -864,6 +874,7 @@ class _ActivitiesBodyState extends ConsumerState<_ActivitiesBody> {
                       request: request,
                       activity: activity,
                       currentMemberId: data.currentMemberId,
+                      clubName: widget.clubName,
                       targetHighlighted:
                           _highlightTarget &&
                           activity.id == widget.targetActivityId,
@@ -927,12 +938,14 @@ class _ActivityFeedCard extends ConsumerStatefulWidget {
     required this.request,
     required this.activity,
     required this.currentMemberId,
+    required this.clubName,
     this.targetHighlighted = false,
   });
 
   final ClubActivityFeedRequest request;
   final ClubActivityFeedItem activity;
   final String? currentMemberId;
+  final String? clubName;
   final bool targetHighlighted;
 
   @override
@@ -1014,6 +1027,22 @@ class _ActivityFeedCardState extends ConsumerState<_ActivityFeedCard> {
                     ],
                   ),
                 ),
+                if (activity.participants.isNotEmpty)
+                  IconButton(
+                    key: Key('club-activity-share-${activity.id}'),
+                    tooltip: '경기 결과 공유',
+                    onPressed: _working
+                        ? null
+                        : () => showClubResultSharePreview(
+                            context: context,
+                            data: ClubResultShareData.fromActivity(
+                              activity: activity,
+                              clubName: widget.clubName,
+                              currentMemberId: widget.currentMemberId,
+                            ),
+                          ),
+                    icon: const Icon(Icons.share_outlined),
+                  ),
                 if (activity.canManage)
                   PopupMenuButton<_ActivityAction>(
                     key: Key('club-activity-menu-${activity.id}'),

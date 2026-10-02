@@ -103,8 +103,10 @@ class ClubDetailScreen extends ConsumerWidget {
               icon: Icons.query_stats_rounded,
               title: '동호회 기록',
               subtitle: '종합 순위, 종합 기록, 상세 기록',
-              onTap: () =>
-                  context.push('/club/${Uri.encodeComponent(teamId)}/records'),
+              onTap: () => context.push(
+                '/club/${Uri.encodeComponent(teamId)}/records',
+                extra: club.name,
+              ),
             ),
             const SizedBox(height: 12),
             _ClubMenuCard(
