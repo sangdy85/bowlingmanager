@@ -7,10 +7,11 @@ import 'package:bowlingmanager_mobile/features/club/application/club_expansion_p
 import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/share/club_invite_share_data.dart';
+import 'package:bowlingmanager_mobile/features/club/share/club_invite_share_preview_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 
 class ClubDetailScreen extends ConsumerWidget {
   const ClubDetailScreen({required this.teamId, super.key});
@@ -79,22 +80,13 @@ class ClubDetailScreen extends ConsumerWidget {
             if (club.inviteUrl != null) ...<Widget>[
               _ClubMenuCard(
                 tileKey: const Key('club-invite-share'),
-                icon: Icons.share_outlined,
-                title: '초대 링크 공유',
-                subtitle: '메신저나 문자로 동호회 초대장을 보내세요',
-                onTap: () async {
-                  try {
-                    await SharePlus.instance.share(
-                      ShareParams(text: buildClubInviteShareText(club)),
-                    );
-                  } on Object {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('초대 링크를 공유하지 못했습니다.')),
-                      );
-                    }
-                  }
-                },
+                icon: Icons.person_add_alt_1_rounded,
+                title: '동호회 초대',
+                subtitle: '초대 카드와 링크를 공유하세요',
+                onTap: () => showClubInviteSharePreview(
+                  context: context,
+                  data: ClubInviteShareData.fromClub(club),
+                ),
               ),
               const SizedBox(height: 12),
             ],

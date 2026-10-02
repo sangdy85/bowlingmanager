@@ -1203,6 +1203,35 @@ void main() {
     expect(repository.memberTeamIds, <String>['team-1']);
   });
 
+  testWidgets('Club detail opens the invite card preview', (
+    WidgetTester tester,
+  ) async {
+    final FakeClubRepository repository = FakeClubRepository()
+      ..detail = ClubDetail(
+        id: 'team-1',
+        name: '테스트 동호회',
+        myRole: ClubRole.owner,
+        memberCount: 3,
+        inviteUrl: Uri.parse(
+          'https://www.bowlingmanager.co.kr/invite/team/TEST01',
+        ),
+      );
+    await _openClubs(tester, repository);
+    await tester.tap(find.byKey(const Key('club-team-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('동호회 초대'), findsOneWidget);
+    expect(find.text('초대 카드와 링크를 공유하세요'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('club-invite-share')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('동호회 초대 미리보기'), findsOneWidget);
+    expect(find.byKey(const Key('club-invite-share-card')), findsOneWidget);
+    expect(find.byKey(const Key('club-invite-share-submit')), findsOneWidget);
+    expect(find.byKey(const Key('club-invite-copy')), findsOneWidget);
+    expect(find.byKey(const Key('club-invite-share-close')), findsOneWidget);
+  });
+
   testWidgets('Club detail menu cards keep equal heights at mobile scale', (
     WidgetTester tester,
   ) async {

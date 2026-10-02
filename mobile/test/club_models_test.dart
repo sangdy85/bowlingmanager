@@ -111,8 +111,7 @@ void main() {
     );
     expect(
       buildClubInviteShareText(detail),
-      '테스트 동호회 동호회에 초대합니다 🎳\n\n'
-      'BowlingManager에서 일정, 정모 기록과 시즌 순위를 함께 확인하세요.\n\n'
+      '테스트 동호회에서 함께 볼링 기록을 관리해보세요.\n'
       'https://www.bowlingmanager.co.kr/invite/team/TEST01',
     );
   });

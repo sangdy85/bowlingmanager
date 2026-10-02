@@ -124,9 +124,15 @@ class ClubJoinResult {
 }
 
 String buildClubInviteShareText(ClubDetail club) =>
-    '${club.name} 동호회에 초대합니다 🎳\n\n'
-    'BowlingManager에서 일정, 정모 기록과 시즌 순위를 함께 확인하세요.\n\n'
-    '${club.inviteUrl ?? ''}';
+    buildClubInviteShareTextValues(
+      clubName: club.name,
+      inviteUrl: club.inviteUrl?.toString() ?? '',
+    );
+
+String buildClubInviteShareTextValues({
+  required String clubName,
+  required String inviteUrl,
+}) => '$clubName에서 함께 볼링 기록을 관리해보세요.\n$inviteUrl';
 
 class ClubMember {
   const ClubMember({
