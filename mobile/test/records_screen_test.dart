@@ -268,6 +268,7 @@ void main() {
     expect(find.text('203.8'), findsOneWidget);
     expect(find.text('202 · 첫 메모'), findsOneWidget);
     expect(find.text('213 · 둘째 메모'), findsOneWidget);
+    expect(find.byKey(const Key('record-share-group-1')), findsOneWidget);
     expect(find.byKey(const Key('record-rank-1')), findsNothing);
   });
 
@@ -340,6 +341,12 @@ void main() {
       scoresRepository,
       clubRepository: clubRepository,
     );
+    await tester.tap(find.byKey(const Key('record-share-linked-session')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('score-share-card')), findsOneWidget);
+    expect(find.byKey(const Key('club-activities-list')), findsNothing);
+    await tester.tap(find.byKey(const Key('score-share-close')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('record-session-linked-session')));
     await tester.pump();
     final Finder targetCard = find.byKey(

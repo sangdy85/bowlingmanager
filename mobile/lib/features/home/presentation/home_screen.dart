@@ -10,6 +10,8 @@ import 'package:bowlingmanager_mobile/features/club/application/club_event_provi
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/home/domain/dashboard.dart';
+import 'package:bowlingmanager_mobile/features/records/share/score_share_data.dart';
+import 'package:bowlingmanager_mobile/features/records/share/score_share_preview_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -37,6 +39,13 @@ class HomeScreen extends ConsumerWidget {
         userId: user.id,
         userName: userName,
         onRefresh: () => ref.refresh(dashboardProvider(user.id).future),
+        onShare: (GameSession session) => showScoreSharePreview(
+          context: context,
+          data: ScoreShareData.fromSession(
+            session: session,
+            displayName: user.displayName,
+          ),
+        ),
       ),
       error: (Object error, StackTrace stackTrace) => _HomeError(
         userName: userName,
@@ -54,12 +63,14 @@ class _DashboardContent extends StatelessWidget {
     required this.userId,
     required this.userName,
     required this.onRefresh,
+    required this.onShare,
   });
 
   final Dashboard dashboard;
   final String userId;
   final String userName;
   final Future<void> Function() onRefresh;
+  final Future<void> Function(GameSession session) onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +157,7 @@ class _DashboardContent extends StatelessWidget {
             const _EmptyRecentCard()
           else
             for (final GameSession session in recentSessions) ...<Widget>[
-              _RecentGameCard(session: session),
+              _RecentGameCard(session: session, onShare: onShare),
               const SizedBox(height: 10),
             ],
           const SizedBox(height: 18),
@@ -1256,9 +1267,10 @@ class _TrendCard extends StatelessWidget {
 }
 
 class _RecentGameCard extends StatelessWidget {
-  const _RecentGameCard({required this.session});
+  const _RecentGameCard({required this.session, required this.onShare});
 
   final GameSession session;
+  final Future<void> Function(GameSession session) onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -1280,20 +1292,40 @@ class _RecentGameCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-                child: Text(
-                  gameType,
-                  style: const TextStyle(
-                    color: AppColors.primaryBright,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(
+                          gameType,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.primaryBright,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  IconButton(
+                    key: Key('home-share-${session.id}'),
+                    tooltip: '이 기록 공유',
+                    onPressed: () => onShare(session),
+                    icon: const Icon(Icons.share_outlined),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Text(

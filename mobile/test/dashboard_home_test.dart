@@ -111,6 +111,7 @@ void main() {
     expect(find.text('2게임'), findsOneWidget);
     expect(find.text('총점 404'), findsOneWidget);
     expect(find.text('AVG 202.0'), findsOneWidget);
+    expect(find.byKey(const Key('home-share-session-1')), findsOneWidget);
   });
 
   testWidgets('Home team session opens the exact club activity', (
@@ -157,6 +158,12 @@ void main() {
       find.byKey(const Key('home-session-team-session')),
     );
     await tester.pump();
+    await tester.tap(find.byKey(const Key('home-share-team-session')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('score-share-card')), findsOneWidget);
+    expect(find.byKey(const Key('club-activities-list')), findsNothing);
+    await tester.tap(find.byKey(const Key('score-share-close')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('home-session-team-session')));
     await tester.pumpAndSettle();
 

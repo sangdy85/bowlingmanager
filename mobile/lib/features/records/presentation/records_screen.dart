@@ -6,6 +6,8 @@ import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_state.dart';
 import 'package:bowlingmanager_mobile/features/records/domain/score_record.dart';
+import 'package:bowlingmanager_mobile/features/records/share/score_share_data.dart';
+import 'package:bowlingmanager_mobile/features/records/share/score_share_preview_sheet.dart';
 import 'package:bowlingmanager_mobile/features/home/domain/dashboard.dart';
 import 'package:bowlingmanager_mobile/features/home/presentation/home_screen.dart';
 import 'package:bowlingmanager_mobile/shared/widgets/bowling_medal.dart';
@@ -36,6 +38,13 @@ class RecordsScreen extends ConsumerWidget {
         onFilter: (RecordsFilter filter) => ref
             .read(recordsControllerProvider(user.id).notifier)
             .applyFilter(filter),
+        onShare: (GameSession session) => showScoreSharePreview(
+          context: context,
+          data: ScoreShareData.fromSession(
+            session: session,
+            displayName: user.displayName,
+          ),
+        ),
       ),
       error: (Object error, StackTrace stackTrace) => _RecordsError(
         message: recordsErrorMessage(error),
@@ -54,12 +63,14 @@ class _RecordsContent extends StatelessWidget {
     required this.onRefresh,
     required this.onLoadMore,
     required this.onFilter,
+    required this.onShare,
   });
 
   final RecordsState state;
   final Future<void> Function() onRefresh;
   final Future<void> Function() onLoadMore;
   final Future<void> Function(RecordsFilter filter) onFilter;
+  final Future<void> Function(GameSession session) onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +100,7 @@ class _RecordsContent extends StatelessWidget {
           if (state.items.isEmpty)
             const _EmptyRecords()
           else
-            ..._recordSections(state.items),
+            ..._recordSections(state.items, onShare),
           if (state.isLoadingMore)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 18),
@@ -254,7 +265,10 @@ class _ProfileStatLine extends StatelessWidget {
   }
 }
 
-List<Widget> _recordSections(List<GameSession> sessions) {
+List<Widget> _recordSections(
+  List<GameSession> sessions,
+  Future<void> Function(GameSession session) onShare,
+) {
   final widgets = <Widget>[];
   int? currentYear;
   for (final session in sessions) {
@@ -273,7 +287,7 @@ List<Widget> _recordSections(List<GameSession> sessions) {
       );
     }
     widgets
-      ..add(_RecordCard(session: session))
+      ..add(_RecordCard(session: session, onShare: onShare))
       ..add(const SizedBox(height: 12));
   }
   return widgets;
@@ -678,9 +692,10 @@ class _InlineError extends StatelessWidget {
 }
 
 class _RecordCard extends StatelessWidget {
-  const _RecordCard({required this.session});
+  const _RecordCard({required this.session, required this.onShare});
 
   final GameSession session;
+  final Future<void> Function(GameSession session) onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -736,8 +751,14 @@ class _RecordCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  IconButton(
+                    key: Key('record-share-${session.id}'),
+                    tooltip: '이 기록 공유',
+                    onPressed: () => onShare(session),
+                    icon: const Icon(Icons.share_outlined),
+                  ),
                   if (session.rank case final GameSessionRank rank) ...<Widget>[
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 4),
                     _RecordRankBadge(rank: rank),
                   ],
                 ],
