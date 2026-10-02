@@ -12,5 +12,11 @@ void main() {
       AppWebUrls.passwordRecovery.toString(),
       'https://www.bowlingmanager.co.kr/find-account/password',
     );
+    expect(
+      AppWebUrls.teamCreation.toString(),
+      'https://www.bowlingmanager.co.kr/team/create',
+    );
+    expect(AppWebUrls.teamCreation.scheme, 'https');
+    expect(AppWebUrls.teamCreation.host, 'www.bowlingmanager.co.kr');
   });
 }

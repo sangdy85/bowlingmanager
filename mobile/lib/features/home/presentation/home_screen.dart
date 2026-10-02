@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/core/domain/game_session.dart';
+import 'package:bowlingmanager_mobile/core/storage/onboarding_storage.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_colors.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_text_styles.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
@@ -10,6 +11,7 @@ import 'package:bowlingmanager_mobile/features/club/application/club_event_provi
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/home/domain/dashboard.dart';
+import 'package:bowlingmanager_mobile/features/onboarding/application/onboarding_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/share/score_share_data.dart';
 import 'package:bowlingmanager_mobile/features/records/share/score_share_preview_sheet.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +31,27 @@ class HomeScreen extends ConsumerWidget {
     final String userName = user.name?.trim().isNotEmpty == true
         ? user.name!.trim()
         : '볼러';
+    final bool showPersonalActivation =
+        ref.watch(onboardingControllerProvider).intent ==
+        OnboardingIntent.personal;
+
+    Future<void> consumePersonalIntent() async {
+      if (ref.read(onboardingControllerProvider).intent !=
+          OnboardingIntent.personal) {
+        return;
+      }
+      await ref.read(onboardingControllerProvider.notifier).consumeIntent();
+    }
+
+    final Widget? activationCard = showPersonalActivation
+        ? _PersonalActivationCard(
+            onStart: () async {
+              await consumePersonalIntent();
+              if (context.mounted) context.go('/capture');
+            },
+            onLater: consumePersonalIntent,
+          )
+        : null;
 
     final AsyncValue<Dashboard> dashboard = ref.watch(
       dashboardProvider(user.id),
@@ -38,6 +61,7 @@ class HomeScreen extends ConsumerWidget {
         dashboard: data,
         userId: user.id,
         userName: userName,
+        activationCard: activationCard,
         onRefresh: () => ref.refresh(dashboardProvider(user.id).future),
         onShare: (GameSession session) => showScoreSharePreview(
           context: context,
@@ -49,10 +73,12 @@ class HomeScreen extends ConsumerWidget {
       ),
       error: (Object error, StackTrace stackTrace) => _HomeError(
         userName: userName,
+        activationCard: activationCard,
         message: _dashboardErrorMessage(error),
         onRetry: () => ref.invalidate(dashboardProvider(user.id)),
       ),
-      loading: () => _HomeLoading(userName: userName),
+      loading: () =>
+          _HomeLoading(userName: userName, activationCard: activationCard),
     );
   }
 }
@@ -62,6 +88,7 @@ class _DashboardContent extends StatelessWidget {
     required this.dashboard,
     required this.userId,
     required this.userName,
+    required this.activationCard,
     required this.onRefresh,
     required this.onShare,
   });
@@ -69,6 +96,7 @@ class _DashboardContent extends StatelessWidget {
   final Dashboard dashboard;
   final String userId;
   final String userName;
+  final Widget? activationCard;
   final Future<void> Function() onRefresh;
   final Future<void> Function(GameSession session) onShare;
 
@@ -85,6 +113,10 @@ class _DashboardContent extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
         children: <Widget>[
           _HomeHeader(userName: userName),
+          if (activationCard != null) ...<Widget>[
+            const SizedBox(height: 18),
+            activationCard!,
+          ],
           const SizedBox(height: 18),
           _NextEventCard(event: dashboard.nextEvent, userId: userId),
           const SizedBox(height: 26),
@@ -492,10 +524,63 @@ class _HomeHeader extends StatelessWidget {
   }
 }
 
+class _PersonalActivationCard extends StatelessWidget {
+  const _PersonalActivationCard({required this.onStart, required this.onLater});
+
+  final Future<void> Function() onStart;
+  final Future<void> Function() onLater;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      key: const Key('personal-activation-card'),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Icon(
+              Icons.add_chart_rounded,
+              color: AppColors.primaryBright,
+              size: 30,
+            ),
+            const SizedBox(height: 12),
+            const Text('첫 볼링 기록을 남겨보세요', style: AppTextStyles.title),
+            const SizedBox(height: 6),
+            const Text(
+              '기록을 추가하면 평균과 최근 경기 변화를 확인할 수 있습니다.',
+              style: TextStyle(color: AppColors.textSecondary, height: 1.45),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: FilledButton(
+                    key: const Key('personal-activation-start'),
+                    onPressed: onStart,
+                    child: const Text('기록 시작'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  key: const Key('personal-activation-later'),
+                  onPressed: onLater,
+                  child: const Text('나중에'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _HomeLoading extends StatelessWidget {
-  const _HomeLoading({required this.userName});
+  const _HomeLoading({required this.userName, this.activationCard});
 
   final String userName;
+  final Widget? activationCard;
 
   @override
   Widget build(BuildContext context) {
@@ -503,6 +588,10 @@ class _HomeLoading extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
       children: <Widget>[
         _HomeHeader(userName: userName),
+        if (activationCard != null) ...<Widget>[
+          const SizedBox(height: 18),
+          activationCard!,
+        ],
         const SizedBox(height: 96),
         const Center(child: CircularProgressIndicator()),
       ],
@@ -515,11 +604,13 @@ class _HomeError extends StatelessWidget {
     required this.userName,
     required this.message,
     required this.onRetry,
+    this.activationCard,
   });
 
   final String userName;
   final String message;
   final VoidCallback onRetry;
+  final Widget? activationCard;
 
   @override
   Widget build(BuildContext context) {
@@ -527,6 +618,10 @@ class _HomeError extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
       children: <Widget>[
         _HomeHeader(userName: userName),
+        if (activationCard != null) ...<Widget>[
+          const SizedBox(height: 18),
+          activationCard!,
+        ],
         const SizedBox(height: 36),
         Card(
           child: Padding(

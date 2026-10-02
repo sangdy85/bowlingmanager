@@ -119,20 +119,23 @@ void main() {
     );
   });
 
-  test('pending invite takes priority over the general join intent', () {
-    expect(
-      resolveAppRedirect(
-        authState: const AuthState.authenticated(_user),
-        onboardingState: const OnboardingState(
-          isInitialized: true,
-          completed: true,
-          intent: OnboardingIntent.joinClub,
-          pendingInviteCode: 'A1B2C3',
+  test('pending invite takes priority over every onboarding intent', () {
+    for (final OnboardingIntent intent in OnboardingIntent.values) {
+      expect(
+        resolveAppRedirect(
+          authState: const AuthState.authenticated(_user),
+          onboardingState: OnboardingState(
+            isInitialized: true,
+            completed: true,
+            intent: intent,
+            pendingInviteCode: 'A1B2C3',
+          ),
+          location: '/login',
         ),
-        location: '/login',
-      ),
-      '/club/join?code=A1B2C3',
-    );
+        '/club/join?code=A1B2C3',
+        reason: intent.storageValue,
+      );
+    }
   });
 
   test('pending invite follows welcome and login onboarding gates', () {
@@ -156,18 +159,41 @@ void main() {
     }
   });
 
-  test('manage club intent keeps the existing home destination', () {
+  test('manage club intent routes entry locations to club without a loop', () {
+    const OnboardingState onboarding = OnboardingState(
+      isInitialized: true,
+      completed: true,
+      intent: OnboardingIntent.manageClub,
+    );
+    expect(
+      resolveAppRedirect(
+        authState: const AuthState.authenticated(_user),
+        onboardingState: onboarding,
+        location: '/home',
+      ),
+      '/club',
+    );
+    expect(
+      resolveAppRedirect(
+        authState: const AuthState.authenticated(_user),
+        onboardingState: onboarding,
+        location: '/club',
+      ),
+      isNull,
+    );
+  });
+
+  test('consumed manage intent restores normal home navigation', () {
     expect(
       resolveAppRedirect(
         authState: const AuthState.authenticated(_user),
         onboardingState: const OnboardingState(
           isInitialized: true,
           completed: true,
-          intent: OnboardingIntent.manageClub,
         ),
-        location: '/login',
+        location: '/home',
       ),
-      '/home',
+      isNull,
     );
   });
 }

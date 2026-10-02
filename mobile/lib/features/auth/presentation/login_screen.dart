@@ -1,7 +1,10 @@
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_state.dart';
 import 'package:bowlingmanager_mobile/core/config/app_web_urls.dart';
+import 'package:bowlingmanager_mobile/core/storage/onboarding_storage.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_colors.dart';
+import 'package:bowlingmanager_mobile/features/onboarding/application/onboarding_providers.dart';
+import 'package:bowlingmanager_mobile/features/onboarding/application/onboarding_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -55,6 +58,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final AuthState authState = ref.watch(authControllerProvider);
+    final OnboardingState onboardingState = ref.watch(
+      onboardingControllerProvider,
+    );
     final bool isLoggingIn =
         authState.isLoading && authState.operation == AuthOperation.login;
 
@@ -86,10 +92,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'BowlingManager 계정으로 로그인하세요',
+                    Text(
+                      loginContextMessage(onboardingState),
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.textSecondary),
+                      style: const TextStyle(color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: 36),
                     TextFormField(
@@ -212,6 +218,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
+}
+
+String loginContextMessage(OnboardingState state) {
+  if (state.pendingInviteCode != null) {
+    return '로그인 후 초대받은 동호회 가입을 이어갑니다.';
+  }
+  return switch (state.intent) {
+    OnboardingIntent.joinClub => '로그인 후 동호회 가입 화면으로 이동합니다.',
+    OnboardingIntent.manageClub => '로그인 후 동호회 관리 화면으로 이동합니다.',
+    OnboardingIntent.personal => '로그인 후 개인 기록을 시작할 수 있습니다.',
+    null => 'BowlingManager 계정으로 로그인하세요',
+  };
 }
 
 class _OAuthPlaceholder extends StatelessWidget {

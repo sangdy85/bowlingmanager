@@ -29,6 +29,11 @@ String? resolveAppRedirect({
         (isSplash || isLogin || isWelcome || location == '/home')) {
       return '/club/join';
     }
+    if (onboardingState.isInitialized &&
+        onboardingState.intent == OnboardingIntent.manageClub &&
+        (isSplash || isLogin || isWelcome || location == '/home')) {
+      return '/club';
+    }
     return isSplash || isLogin || isWelcome ? '/home' : null;
   }
 
