@@ -10,11 +10,20 @@ String? resolveAppRedirect({
   final bool isSplash = location == '/splash';
   final bool isLogin = location == '/login';
   final bool isWelcome = location == '/welcome';
+  final bool isInviteEntry = location.startsWith('/invite/team/');
+
+  // The entry screen persists the code before authentication redirects run.
+  if (isInviteEntry) return null;
 
   if (authState.isBootstrapping) return isSplash ? null : '/splash';
   if (authState.isLoading) return null;
 
   if (authState.isAuthenticated) {
+    final String? pendingInviteCode = onboardingState.pendingInviteCode;
+    if (pendingInviteCode != null &&
+        (isSplash || isLogin || isWelcome || location == '/home')) {
+      return '/club/join?code=$pendingInviteCode';
+    }
     if (onboardingState.isInitialized &&
         onboardingState.intent == OnboardingIntent.joinClub &&
         (isSplash || isLogin || isWelcome || location == '/home')) {

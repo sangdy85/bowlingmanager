@@ -64,4 +64,38 @@ void main() {
       expect(snapshot.intent, isNull);
     },
   );
+
+  test(
+    'pending invite is normalized, survives relaunch, and clears alone',
+    () async {
+      final SharedPreferencesOnboardingStorage storage =
+          SharedPreferencesOnboardingStorage();
+      await storage.complete(intent: OnboardingIntent.joinClub);
+
+      await storage.savePendingInviteCode(' a1b2c3 ');
+
+      final OnboardingSnapshot relaunched = await storage.read();
+      expect(relaunched.pendingInviteCode, 'A1B2C3');
+      expect(relaunched.intent, OnboardingIntent.joinClub);
+      await storage.clearPendingInviteCode();
+
+      final OnboardingSnapshot cleared = await storage.read();
+      expect(cleared.pendingInviteCode, isNull);
+      expect(cleared.completed, isTrue);
+      expect(cleared.intent, OnboardingIntent.joinClub);
+    },
+  );
+
+  test(
+    'pending invite rejects values outside the six-character format',
+    () async {
+      final SharedPreferencesOnboardingStorage storage =
+          SharedPreferencesOnboardingStorage();
+      await expectLater(
+        storage.savePendingInviteCode('../secret'),
+        throwsFormatException,
+      );
+      expect((await storage.read()).pendingInviteCode, isNull);
+    },
+  );
 }

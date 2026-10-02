@@ -23,12 +23,12 @@ void main() {
     final onboarding = MemoryOnboardingStorage(
       completed: true,
       intent: OnboardingIntent.joinClub,
+      pendingInviteCode: 'A1B2C3',
     );
     await _pumpJoinApp(tester, repository, onboarding);
 
     expect(find.byKey(const Key('club-join-screen')), findsOneWidget);
     expect(onboarding.consumeCount, 1);
-    await tester.enterText(find.byKey(const Key('club-code-field')), 'a1b2c3');
     expect(
       tester
           .widget<TextFormField>(find.byKey(const Key('club-code-field')))
@@ -40,6 +40,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.joinedCode, 'A1B2C3');
+    expect(onboarding.clearPendingInviteCount, 1);
+    expect(onboarding.pendingInviteCode, isNull);
     expect(find.byKey(const Key('club-detail')), findsOneWidget);
   });
 
@@ -52,18 +54,16 @@ void main() {
         joined: false,
         alreadyMember: true,
       );
-    await _pumpJoinApp(
-      tester,
-      repository,
-      MemoryOnboardingStorage(
-        completed: true,
-        intent: OnboardingIntent.joinClub,
-      ),
+    final onboarding = MemoryOnboardingStorage(
+      completed: true,
+      intent: OnboardingIntent.joinClub,
+      pendingInviteCode: 'TEST01',
     );
-    await tester.enterText(find.byKey(const Key('club-code-field')), 'TEST01');
+    await _pumpJoinApp(tester, repository, onboarding);
     await tester.tap(find.byKey(const Key('club-join-submit')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('club-detail')), findsOneWidget);
+    expect(onboarding.clearPendingInviteCount, 1);
   });
 
   testWidgets('invalid code API error remains on the form', (tester) async {
@@ -73,19 +73,18 @@ void main() {
         code: 'INVALID_TEAM_CODE',
         userMessage: '유효하지 않은 초대 코드입니다.',
       );
-    await _pumpJoinApp(
-      tester,
-      repository,
-      MemoryOnboardingStorage(
-        completed: true,
-        intent: OnboardingIntent.joinClub,
-      ),
+    final onboarding = MemoryOnboardingStorage(
+      completed: true,
+      intent: OnboardingIntent.joinClub,
+      pendingInviteCode: 'TEST01',
     );
-    await tester.enterText(find.byKey(const Key('club-code-field')), 'TEST01');
+    await _pumpJoinApp(tester, repository, onboarding);
     await tester.tap(find.byKey(const Key('club-join-submit')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('club-join-error')), findsOneWidget);
     expect(find.text('유효하지 않은 초대 코드입니다.'), findsOneWidget);
+    expect(onboarding.clearPendingInviteCount, 1);
+    expect(onboarding.pendingInviteCode, isNull);
   });
 }
 

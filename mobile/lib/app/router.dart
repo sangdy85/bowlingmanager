@@ -2,11 +2,13 @@ import 'package:bowlingmanager_mobile/features/auth/presentation/login_screen.da
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_state.dart';
 import 'package:bowlingmanager_mobile/app/router_redirect.dart';
+import 'package:bowlingmanager_mobile/core/storage/onboarding_storage.dart';
 import 'package:bowlingmanager_mobile/features/admin/presentation/super_admin_screens.dart';
 import 'package:bowlingmanager_mobile/features/capture/presentation/capture_screen.dart';
 import 'package:bowlingmanager_mobile/features/capture/presentation/capture_review_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_detail_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_join_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/invite_team_entry_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_detail_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_form_screen.dart';
@@ -68,7 +70,7 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       return resolveAppRedirect(
         authState: authState,
         onboardingState: onboardingState,
-        location: routerState.matchedLocation,
+        location: routerState.uri.path,
       );
     },
     routes: <RouteBase>[
@@ -86,6 +88,11 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
         path: '/welcome',
         builder: (BuildContext context, GoRouterState state) =>
             const WelcomeScreen(),
+      ),
+      GoRoute(
+        path: '/invite/team/:code',
+        builder: (BuildContext context, GoRouterState state) =>
+            InviteTeamEntryScreen(rawCode: state.pathParameters['code'] ?? ''),
       ),
       ShellRoute(
         builder: (BuildContext context, GoRouterState state, Widget child) {
@@ -122,7 +129,11 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
               GoRoute(
                 path: 'join',
                 builder: (BuildContext context, GoRouterState state) =>
-                    const ClubJoinScreen(),
+                    ClubJoinScreen(
+                      initialCode: normalizePendingInviteCode(
+                        state.uri.queryParameters['code'],
+                      ),
+                    ),
               ),
               GoRoute(
                 path: ':teamId',

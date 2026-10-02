@@ -1,4 +1,5 @@
 import 'package:bowlingmanager_mobile/core/storage/onboarding_storage.dart';
+import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_colors.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_text_styles.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
@@ -12,7 +13,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class ClubJoinScreen extends ConsumerStatefulWidget {
-  const ClubJoinScreen({super.key});
+  const ClubJoinScreen({this.initialCode, super.key});
+
+  final String? initialCode;
 
   @override
   ConsumerState<ClubJoinScreen> createState() => _ClubJoinScreenState();
@@ -27,12 +30,22 @@ class _ClubJoinScreenState extends ConsumerState<ClubJoinScreen> {
   @override
   void initState() {
     super.initState();
+    _codeController.text = normalizePendingInviteCode(widget.initialCode) ?? '';
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final state = ref.read(onboardingControllerProvider);
       if (state.intent == OnboardingIntent.joinClub) {
         ref.read(onboardingControllerProvider.notifier).consumeIntent();
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant ClubJoinScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final String? code = normalizePendingInviteCode(widget.initialCode);
+    if (code != null && code != _codeController.text) {
+      _codeController.text = code;
+    }
   }
 
   @override
@@ -56,9 +69,22 @@ class _ClubJoinScreenState extends ConsumerState<ClubJoinScreen> {
         ref.invalidate(clubListProvider(userId));
         ref.invalidate(dashboardProvider(userId));
       }
+      await ref
+          .read(onboardingControllerProvider.notifier)
+          .clearPendingInviteCode();
       if (!mounted) return;
       context.go('/club/${Uri.encodeComponent(result.team.id)}');
     } on Object catch (error) {
+      if (error is ApiException &&
+          const <String>{
+            'INVALID_TEAM_CODE',
+            'TEAM_NOT_FOUND',
+            'TEAM_INACTIVE',
+          }.contains(error.code)) {
+        await ref
+            .read(onboardingControllerProvider.notifier)
+            .clearPendingInviteCode();
+      }
       if (!mounted) return;
       setState(() => _errorMessage = clubErrorMessage(error));
     } finally {

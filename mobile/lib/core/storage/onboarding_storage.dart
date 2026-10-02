@@ -2,6 +2,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const String growthOnboardingCompletedKey = 'growth_onboarding_completed_v1';
 const String growthOnboardingIntentKey = 'growth_onboarding_intent_v1';
+const String growthPendingInviteCodeKey = 'growth_pending_invite_code_v1';
+
+String? normalizePendingInviteCode(Object? value) {
+  if (value is! String) return null;
+  final String code = value.trim().toUpperCase();
+  return RegExp(r'^[A-Z0-9]{6}$').hasMatch(code) ? code : null;
+}
 
 enum OnboardingIntent {
   personal('personal'),
@@ -21,10 +28,15 @@ enum OnboardingIntent {
 }
 
 class OnboardingSnapshot {
-  const OnboardingSnapshot({required this.completed, this.intent});
+  const OnboardingSnapshot({
+    required this.completed,
+    this.intent,
+    this.pendingInviteCode,
+  });
 
   final bool completed;
   final OnboardingIntent? intent;
+  final String? pendingInviteCode;
 }
 
 abstract interface class OnboardingStorage {
@@ -33,9 +45,19 @@ abstract interface class OnboardingStorage {
   Future<void> complete({OnboardingIntent? intent});
 
   Future<void> consumeIntent();
+
+  Future<void> savePendingInviteCode(String code);
+
+  Future<void> clearPendingInviteCode();
 }
 
 class SharedPreferencesOnboardingStorage implements OnboardingStorage {
+  @override
+  Future<void> clearPendingInviteCode() async {
+    final SharedPreferences preferences = await SharedPreferences.getInstance();
+    await preferences.remove(growthPendingInviteCodeKey);
+  }
+
   @override
   Future<void> consumeIntent() async {
     final SharedPreferences preferences = await SharedPreferences.getInstance();
@@ -50,7 +72,20 @@ class SharedPreferencesOnboardingStorage implements OnboardingStorage {
       intent: OnboardingIntent.fromStorage(
         preferences.getString(growthOnboardingIntentKey),
       ),
+      pendingInviteCode: normalizePendingInviteCode(
+        preferences.getString(growthPendingInviteCodeKey),
+      ),
     );
+  }
+
+  @override
+  Future<void> savePendingInviteCode(String code) async {
+    final String? normalized = normalizePendingInviteCode(code);
+    if (normalized == null) {
+      throw const FormatException('Invalid team invite code.');
+    }
+    final SharedPreferences preferences = await SharedPreferences.getInstance();
+    await preferences.setString(growthPendingInviteCodeKey, normalized);
   }
 
   @override

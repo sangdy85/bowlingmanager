@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class OnboardingController extends Notifier<OnboardingState> {
   late OnboardingStorage _storage;
   bool _bootstrapStarted = false;
+  final Completer<void> _bootstrapCompleter = Completer<void>();
 
   @override
   OnboardingState build() {
@@ -26,9 +27,35 @@ class OnboardingController extends Notifier<OnboardingState> {
         isInitialized: true,
         completed: snapshot.completed,
         intent: snapshot.intent,
+        pendingInviteCode: snapshot.pendingInviteCode,
       );
     } on Object {
       state = const OnboardingState(isInitialized: true, completed: false);
+    } finally {
+      if (!_bootstrapCompleter.isCompleted) _bootstrapCompleter.complete();
+    }
+  }
+
+  Future<bool> savePendingInviteCode(String code) async {
+    final String? normalized = normalizePendingInviteCode(code);
+    if (normalized == null) return false;
+    await _bootstrapCompleter.future;
+    try {
+      await _storage.savePendingInviteCode(normalized);
+      state = state.copyWith(pendingInviteCode: normalized, clearError: true);
+      return true;
+    } on Object {
+      return false;
+    }
+  }
+
+  Future<void> clearPendingInviteCode() async {
+    await _bootstrapCompleter.future;
+    try {
+      await _storage.clearPendingInviteCode();
+      state = state.copyWith(clearPendingInvite: true, clearError: true);
+    } on Object {
+      // Keep the code so a later successful action can retry clearing it.
     }
   }
 

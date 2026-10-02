@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "kr.co.bowlingmanager.app",
+      "sha256_cert_fingerprints": [
+        "46:EE:87:E2:14:DC:CE:D6:62:7F:4C:1D:98:C2:67:5D:FC:07:FC:94:A9:58:AA:05:E4:BA:2B:95:0A:15:4D:21"
+      ]
+    }
+  }
+]
