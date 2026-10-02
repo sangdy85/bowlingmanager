@@ -164,6 +164,7 @@ Map<String, dynamic> _summary() => <String, dynamic>{
 Map<String, dynamic> _target() => <String, dynamic>{
   'id': 'target-1',
   'targetType': 'MEMBER',
+  'memberId': 'member-1',
   'displayName': '회원',
   'amount': 30000,
   'status': 'UNPAID',

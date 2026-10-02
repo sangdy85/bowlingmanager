@@ -30,6 +30,8 @@ class _State extends ConsumerState<ClubFinanceFormScreen> {
   String? _eventId;
   bool _initialized = false;
   bool _memberSelectionInitialized = false;
+  bool _editTargetsInitialized = false;
+  bool _targetEditingLocked = false;
   bool _saving = false;
 
   @override
@@ -96,6 +98,31 @@ class _State extends ConsumerState<ClubFinanceFormScreen> {
             .where((ClubMember item) => !item.isBlinded)
             .map((ClubMember item) => item.id),
       );
+    }
+    final bool canEditMemberTargets =
+        editing != null &&
+        editing.item.charge.status == ClubChargeStatus.draft &&
+        editing.item.charge.type != ClubChargeType.eventFee;
+    if (canEditMemberTargets &&
+        memberState.hasValue &&
+        !_editTargetsInitialized) {
+      _editTargetsInitialized = true;
+      final Set<String> currentMemberIds = memberState.requireValue
+          .where((ClubMember item) => !item.isBlinded)
+          .map((ClubMember item) => item.id)
+          .toSet();
+      final ClubDraftTargetSelection selection =
+          resolveClubDraftTargetSelection(
+            targets: editing.item.targets,
+            currentMemberIds: currentMemberIds,
+          );
+      _targetEditingLocked = selection.locked;
+      if (!selection.locked) {
+        _memberSelectionInitialized = true;
+        _members
+          ..clear()
+          ..addAll(selection.memberIds);
+      }
     }
     return Scaffold(
       appBar: AppBar(title: Text(editing == null ? '새 회비/게임비' : '초안 수정')),
@@ -194,11 +221,26 @@ class _State extends ConsumerState<ClubFinanceFormScreen> {
                   }),
                 ),
               const SizedBox(height: 18),
-            ] else if (_type != ClubChargeType.eventFee) ...<Widget>[
-              const Text(
-                '기존 대상자는 안전하게 식별할 수 있는 회원 ID가 응답에 없어 이 화면에서는 변경하지 않습니다.',
-                style: TextStyle(color: AppColors.textSecondary),
-              ),
+            ] else if (_type == ClubChargeType.eventFee) ...<Widget>[
+              const _EventSnapshotNotice(),
+              const SizedBox(height: 18),
+            ] else if (canEditMemberTargets) ...<Widget>[
+              if (_targetEditingLocked)
+                const Text(
+                  '현재 회원 목록과 일치하지 않는 기존 대상이 있어 대상 수정이 제한됩니다.',
+                  key: Key('finance-target-edit-locked'),
+                  style: TextStyle(color: AppColors.warning),
+                )
+              else
+                _MemberSelector(
+                  state: memberState,
+                  selected: _members,
+                  changed: (Set<String> value) => setState(() {
+                    _members
+                      ..clear()
+                      ..addAll(value);
+                  }),
+                ),
               const SizedBox(height: 18),
             ],
             FilledButton(
@@ -256,6 +298,15 @@ class _State extends ConsumerState<ClubFinanceFormScreen> {
       _snack('납부 대상을 1명 이상 선택해주세요.');
       return;
     }
+    final bool updatingMemberTargets =
+        editing != null &&
+        editing.item.charge.status == ClubChargeStatus.draft &&
+        editing.item.charge.type != ClubChargeType.eventFee &&
+        !_targetEditingLocked;
+    if (updatingMemberTargets && _members.isEmpty) {
+      _snack('납부 대상을 1명 이상 선택해주세요.');
+      return;
+    }
     if (editing == null &&
         _type == ClubChargeType.eventFee &&
         _eventId == null) {
@@ -288,6 +339,8 @@ class _State extends ConsumerState<ClubFinanceFormScreen> {
             'amount': int.parse(_amount.text),
             'dueDate': _dueDate.text,
             'memo': _memo.text.trim().isEmpty ? null : _memo.text.trim(),
+            if (updatingMemberTargets)
+              'targetMemberIds': _members.toList(growable: false),
           },
         );
       }
@@ -387,10 +440,7 @@ class _EventSelector extends StatelessWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 6),
-        const Text(
-          '현재 참석자와 게스트를 기준으로 납부 대상이 생성됩니다.\n이후 참석 상태가 바뀌어도 자동 변경되지 않습니다.',
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
+        const _EventSnapshotNotice(),
         const SizedBox(height: 10),
         ...value.events.map(
           (ClubEvent event) => ListTile(
@@ -409,6 +459,17 @@ class _EventSelector extends StatelessWidget {
         ),
       ],
     ),
+  );
+}
+
+class _EventSnapshotNotice extends StatelessWidget {
+  const _EventSnapshotNotice();
+
+  @override
+  Widget build(BuildContext context) => const Text(
+    '현재 참석자와 게스트를 기준으로 납부 대상이 생성됩니다.\n이후 참석 상태가 바뀌어도 자동 변경되지 않습니다.',
+    key: Key('finance-event-snapshot-notice'),
+    style: TextStyle(color: AppColors.textSecondary),
   );
 }
 

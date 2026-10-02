@@ -581,6 +581,7 @@ function serializeManagerCharge(charge: FinanceChargeRecord) {
         targets: charge.targets.map((target) => ({
             id: target.id,
             targetType: target.targetType,
+            memberId: target.memberId,
             displayName: target.displayNameSnapshot,
             amount: target.amount,
             status: target.paymentStatus,

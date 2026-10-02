@@ -224,6 +224,7 @@ test('member list exposes only myPayment and never another payer name or target 
   assert.equal(Object.hasOwn(result.charges[0], 'targets'), false);
   assert.equal(json.includes('팀장'), false);
   assert.equal(json.includes('membership-owner'), false);
+  assert.equal(json.includes('memberId'), false);
 });
 
 test('member cannot see DRAFT or CANCELLED charges before or after publication', async () => {
@@ -250,10 +251,32 @@ test('manager list exposes all targets and integer aggregates with waived exclud
   ] })];
   const result = await service.listTeamCharges('manager', 'team-1', fixture(rows).dependencies);
   assert.equal(result.charges[0].targets.length, 3);
+  assert.equal(result.charges[0].targets[0].memberId, 'member-paid');
   assert.deepEqual(result.charges[0].summary, {
     targetCount: 3, paidCount: 1, unpaidCount: 1, waivedCount: 1,
     expectedAmount: 50000, paidAmount: 30000, unpaidAmount: 20000, waivedAmount: 10000,
   });
+});
+
+test('manager target identity exposes memberId only and preserves nullable snapshots', async () => {
+  const rows = [charge({ status: 'DRAFT', targets: [
+    target('member', { targetType: 'MEMBER', memberId: 'membership-member', displayNameSnapshot: '동명이인' }),
+    target('deleted', { targetType: 'MEMBER', memberId: null, guestId: null, displayNameSnapshot: '탈퇴 회원' }),
+    target('guest', { targetType: 'GUEST', memberId: null, guestId: 'guest-1', displayNameSnapshot: '게스트' }),
+  ] })];
+  const result = await service.getTeamCharge('manager', 'team-1', 'charge-1', fixture(rows).dependencies);
+  assert.deepEqual(result.targets.map(item => item.memberId), ['membership-member', null, null]);
+  const json = JSON.stringify(result.targets);
+  assert.equal(json.includes('userId'), false);
+  assert.equal(json.includes('email'), false);
+  assert.equal(json.includes('guestId'), false);
+  assert.equal(json.includes('displayNameSnapshot'), false);
+});
+
+test('DRAFT target replacement remains team-scoped and rejects unavailable member ids', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../src/lib/mobile-api/team-finance.ts'), 'utf8');
+  assert.match(source, /where: \{ teamId: input\.teamId, id: \{ in: input\.targetMemberIds \} \}/);
+  assert.match(source, /members\.length !== input\.targetMemberIds\.length[\s\S]+INVALID_TARGET/);
 });
 
 test('finance summary is manager-only and excludes cancelled charge amounts', async () => {

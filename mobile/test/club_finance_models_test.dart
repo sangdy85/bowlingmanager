@@ -57,6 +57,7 @@ void main() {
       );
       expect(detail.item.summary?.targetCount, 1);
       expect(detail.item.targets.single.targetType, ClubChargeTargetType.guest);
+      expect(detail.item.targets.single.memberId, isNull);
       expect(detail.item.targets.single.audits.single.actorDisplayName, '운영자');
     });
 
@@ -90,6 +91,39 @@ void main() {
       expect(
         () => ClubCharge.fromJson(_charge()..['dueDate'] = '2026-02-30'),
         throwsFormatException,
+      );
+    });
+
+    test('uses memberId for duplicate names and locks missing members', () {
+      final ClubChargeTarget first = ClubChargeTarget.fromJson(
+        _target(memberId: 'member-1', displayName: '동명이인'),
+      );
+      final ClubChargeTarget second = ClubChargeTarget.fromJson(
+        _target(memberId: 'member-2', displayName: '동명이인'),
+      );
+      final ClubDraftTargetSelection safe = resolveClubDraftTargetSelection(
+        targets: <ClubChargeTarget>[first, second],
+        currentMemberIds: <String>{'member-1', 'member-2'},
+      );
+      expect(safe.locked, isFalse);
+      expect(safe.memberIds, <String>{'member-1', 'member-2'});
+
+      final ClubChargeTarget deleted = ClubChargeTarget.fromJson(
+        _target(memberId: null, displayName: '탈퇴 회원'),
+      );
+      expect(
+        resolveClubDraftTargetSelection(
+          targets: <ClubChargeTarget>[deleted],
+          currentMemberIds: <String>{'member-1'},
+        ).locked,
+        isTrue,
+      );
+      expect(
+        resolveClubDraftTargetSelection(
+          targets: <ClubChargeTarget>[first],
+          currentMemberIds: <String>{'other-member'},
+        ).locked,
+        isTrue,
       );
     });
   });
@@ -152,24 +186,28 @@ Map<String, dynamic> _summary() => <String, dynamic>{
   'unpaidAmount': 30000,
   'waivedAmount': 0,
 };
-Map<String, dynamic> _target({String targetType = 'MEMBER'}) =>
+Map<String, dynamic> _target({
+  String targetType = 'MEMBER',
+  String? memberId = 'member-1',
+  String displayName = '게스트 김볼러',
+}) => <String, dynamic>{
+  'id': 'target-1',
+  'targetType': targetType,
+  'memberId': targetType == 'GUEST' ? null : memberId,
+  'displayName': displayName,
+  'amount': 30000,
+  'status': 'UNPAID',
+  'paidAt': null,
+  'createdAt': '2026-10-01T00:00:00.000Z',
+  'updatedAt': '2026-10-01T00:00:00.000Z',
+  'audits': <Object>[
     <String, dynamic>{
-      'id': 'target-1',
-      'targetType': targetType,
-      'displayName': '게스트 김볼러',
-      'amount': 30000,
-      'status': 'UNPAID',
-      'paidAt': null,
+      'id': 'audit-1',
+      'action': 'MARK_PAID',
+      'previousStatus': 'UNPAID',
+      'nextStatus': 'PAID',
+      'actorDisplayName': '운영자',
       'createdAt': '2026-10-01T00:00:00.000Z',
-      'updatedAt': '2026-10-01T00:00:00.000Z',
-      'audits': <Object>[
-        <String, dynamic>{
-          'id': 'audit-1',
-          'action': 'MARK_PAID',
-          'previousStatus': 'UNPAID',
-          'nextStatus': 'PAID',
-          'actorDisplayName': '운영자',
-          'createdAt': '2026-10-01T00:00:00.000Z',
-        },
-      ],
-    };
+    },
+  ],
+};

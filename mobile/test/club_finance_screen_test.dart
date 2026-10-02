@@ -189,6 +189,7 @@ const ClubChargeSummary _summary = ClubChargeSummary(
 final ClubChargeTarget _target = ClubChargeTarget(
   id: 'target-1',
   targetType: ClubChargeTargetType.guest,
+  memberId: null,
   displayName: '게스트 김볼러',
   amount: 30000,
   status: ClubPaymentStatus.unpaid,

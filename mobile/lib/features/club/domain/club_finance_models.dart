@@ -184,6 +184,7 @@ class ClubChargeTarget {
   const ClubChargeTarget({
     required this.id,
     required this.targetType,
+    required this.memberId,
     required this.displayName,
     required this.amount,
     required this.status,
@@ -194,23 +195,67 @@ class ClubChargeTarget {
   });
   final String id, displayName;
   final ClubChargeTargetType targetType;
+  final String? memberId;
   final int amount;
   final ClubPaymentStatus status;
   final DateTime? paidAt;
   final DateTime createdAt, updatedAt;
   final List<ClubPaymentAudit> audits;
-  factory ClubChargeTarget.fromJson(Map<String, dynamic> json) =>
-      ClubChargeTarget(
-        id: _string(json['id']),
-        targetType: ClubChargeTargetType.fromJson(json['targetType']),
-        displayName: _string(json['displayName']),
-        amount: _integer(json['amount']),
-        status: ClubPaymentStatus.fromJson(json['status']),
-        paidAt: json['paidAt'] == null ? null : _dateTime(json['paidAt']),
-        createdAt: _dateTime(json['createdAt']),
-        updatedAt: _dateTime(json['updatedAt']),
-        audits: _list(json['audits'], ClubPaymentAudit.fromJson),
+  factory ClubChargeTarget.fromJson(Map<String, dynamic> json) {
+    if (!json.containsKey('memberId')) {
+      throw const FormatException('Missing target member identity.');
+    }
+    final ClubChargeTargetType targetType = ClubChargeTargetType.fromJson(
+      json['targetType'],
+    );
+    final Object? memberId = json['memberId'];
+    if ((memberId != null && (memberId is! String || memberId.isEmpty)) ||
+        (targetType == ClubChargeTargetType.guest && memberId != null)) {
+      throw const FormatException('Invalid target member identity.');
+    }
+    return ClubChargeTarget(
+      id: _string(json['id']),
+      targetType: targetType,
+      memberId: memberId as String?,
+      displayName: _string(json['displayName']),
+      amount: _integer(json['amount']),
+      status: ClubPaymentStatus.fromJson(json['status']),
+      paidAt: json['paidAt'] == null ? null : _dateTime(json['paidAt']),
+      createdAt: _dateTime(json['createdAt']),
+      updatedAt: _dateTime(json['updatedAt']),
+      audits: _list(json['audits'], ClubPaymentAudit.fromJson),
+    );
+  }
+}
+
+class ClubDraftTargetSelection {
+  const ClubDraftTargetSelection({
+    required this.memberIds,
+    required this.locked,
+  });
+
+  final Set<String> memberIds;
+  final bool locked;
+}
+
+ClubDraftTargetSelection resolveClubDraftTargetSelection({
+  required List<ClubChargeTarget> targets,
+  required Set<String> currentMemberIds,
+}) {
+  final Set<String> selected = <String>{};
+  for (final ClubChargeTarget target in targets) {
+    final String? memberId = target.memberId;
+    if (target.targetType != ClubChargeTargetType.member ||
+        memberId == null ||
+        !currentMemberIds.contains(memberId)) {
+      return const ClubDraftTargetSelection(
+        memberIds: <String>{},
+        locked: true,
       );
+    }
+    selected.add(memberId);
+  }
+  return ClubDraftTargetSelection(memberIds: selected, locked: false);
 }
 
 class ClubChargeItem {
