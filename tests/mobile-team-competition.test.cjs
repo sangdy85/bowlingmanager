@@ -504,6 +504,172 @@ test('team handicap is manager-only, non-negative, and scoped to the current eve
   }), error => error.code === 'INVALID_TEAM_HANDICAP');
 });
 
+function lateParticipantHarness({ status = 'ATTENDANCE_LOCKED', scoreCount = 0, failClaim = false } = {}) {
+  const members = [1, 2, 3].map(member);
+  const event = {
+    id: 'event-late', teamId: 'team-1', title: '늦은 참가자 테스트',
+    competitionEnabled: true, competitionType: 'TEAM', competitionStatus: status,
+    draftGeneration: 4, currentPickNumber: 3,
+    laneDrawStatus: status === 'LANES_ASSIGNED' ? 'COMPLETED' : 'NOT_STARTED',
+    team: { ownerId: 'user-1', bowlerHiddenEnabled: true, User: [], members },
+    attendances: [
+      { memberId: 'member-1', memberDisplayName: '회원1', status: 'ATTENDING', member: members[0] },
+      { memberId: 'member-2', memberDisplayName: '회원2', status: 'NOT_ATTENDING', member: members[1] },
+    ],
+    guests: [],
+    competitionTeams: [{ id: 'old-team', generation: 4 }],
+    competitionParticipants: [{ id: 'old-participant', generation: 4, memberId: 'member-1' }],
+    competitionDraftPicks: [{ id: 'old-pick', generation: 4 }],
+    laneSlots: [{ id: 'slot-1', laneNumber: 1, position: 1 }],
+    laneAssignments: [{ id: 'assignment-1', eventId: 'event-late' }],
+    seasonPublications: [{ id: 'finance-snapshot', resultSnapshot: '{}' }],
+  };
+  const calls = { deletedAssignments: 0, scoreCounts: 0, updateArgs: null };
+  let nextGuest = 1;
+  const prisma = {
+    teamEvent: {
+      findFirst: async args => args.where.id === event.id && args.where.teamId === event.teamId ? event : null,
+      updateMany: async args => {
+        calls.updateArgs = args;
+        if (failClaim || args.where.draftGeneration !== event.draftGeneration ||
+            args.where.competitionStatus !== event.competitionStatus ||
+            args.where.laneDrawStatus !== event.laneDrawStatus) return { count: 0 };
+        if (args.data.draftGeneration?.increment) event.draftGeneration += args.data.draftGeneration.increment;
+        if (typeof args.data.currentPickNumber === 'number') event.currentPickNumber = args.data.currentPickNumber;
+        if (args.data.competitionStatus) event.competitionStatus = args.data.competitionStatus;
+        if (args.data.laneDrawStatus) event.laneDrawStatus = args.data.laneDrawStatus;
+        return { count: 1 };
+      },
+    },
+    score: { count: async () => { calls.scoreCounts += 1; return scoreCount; } },
+    teamEventAttendance: { upsert: async args => {
+      const existing = event.attendances.find(item => item.memberId === args.where.eventId_memberId.memberId);
+      if (existing) Object.assign(existing, args.update);
+      else event.attendances.push({ ...args.create, member: members.find(item => item.id === args.create.memberId) });
+      return existing ?? event.attendances.at(-1);
+    } },
+    teamEventGuest: { create: async args => {
+      const guest = { id: `late-guest-${nextGuest++}`, ...args.data };
+      event.guests.push(guest); return guest;
+    } },
+    teamEventLaneAssignment: { deleteMany: async () => {
+      calls.deletedAssignments += event.laneAssignments.length;
+      event.laneAssignments = []; return { count: calls.deletedAssignments };
+    } },
+  };
+  prisma.$transaction = async callback => {
+    const snapshot = structuredClone(event);
+    try { return await callback(prisma); }
+    catch (error) { Object.assign(event, snapshot); throw error; }
+  };
+  const service = loadTs('src/lib/mobile-api/team-competition.ts', {
+    '@/lib/prisma': prisma, '@/lib/mobile-api/bowler-hidden': { readRankPoints: () => [] },
+  });
+  return { event, calls, service };
+}
+
+test('late member can be added after attendance lock without resetting the draft generation', async () => {
+  const { event, calls, service } = lateParticipantHarness();
+  const result = await service.updateTeamCompetition('user-1', 'team-1', event.id, {
+    action: 'ADD_LATE_PARTICIPANT', participantKind: 'MEMBER', memberId: 'member-2',
+  });
+  assert.deepEqual(result, {
+    status: 'ATTENDANCE_LOCKED', generation: 4, participantKind: 'MEMBER',
+    participantId: 'member-2', draftReset: false,
+  });
+  assert.equal(event.attendances.find(item => item.memberId === 'member-2').status, 'ATTENDING');
+  assert.equal(event.draftGeneration, 4);
+  assert.equal(calls.deletedAssignments, 0);
+  assert.deepEqual(calls.updateArgs.where, {
+    id: event.id, teamId: 'team-1', draftGeneration: 4,
+    competitionStatus: 'ATTENDANCE_LOCKED', laneDrawStatus: 'NOT_STARTED',
+  });
+});
+
+test('late guest resets active draft and lane state while preserving prior generations and snapshots', async () => {
+  const { event, calls, service } = lateParticipantHarness({ status: 'LANES_ASSIGNED' });
+  const oldRows = {
+    teams: [...event.competitionTeams], participants: [...event.competitionParticipants],
+    picks: [...event.competitionDraftPicks], slots: [...event.laneSlots], publications: [...event.seasonPublications],
+  };
+  let result = await service.updateTeamCompetition('user-1', 'team-1', event.id, {
+    action: 'ADD_LATE_PARTICIPANT', participantKind: 'GUEST', guestName: '  같은 이름  ',
+  });
+  assert.equal(result.draftReset, true);
+  assert.equal(event.competitionStatus, 'ATTENDANCE_LOCKED');
+  assert.equal(event.draftGeneration, 5);
+  assert.equal(event.currentPickNumber, 1);
+  assert.equal(event.laneDrawStatus, 'NOT_STARTED');
+  assert.equal(calls.deletedAssignments, 1);
+  assert.deepEqual(event.competitionTeams, oldRows.teams);
+  assert.deepEqual(event.competitionParticipants, oldRows.participants);
+  assert.deepEqual(event.competitionDraftPicks, oldRows.picks);
+  assert.deepEqual(event.laneSlots, oldRows.slots);
+  assert.deepEqual(event.seasonPublications, oldRows.publications);
+
+  result = await service.updateTeamCompetition('user-1', 'team-1', event.id, {
+    action: 'ADD_LATE_PARTICIPANT', participantKind: 'GUEST', guestName: '같은 이름',
+  });
+  assert.equal(result.draftReset, false);
+  assert.equal(event.guests.length, 2);
+  assert.equal(new Set(event.guests.map(item => item.id)).size, 2);
+});
+
+test('every active draft phase returns to a clean new generation after late member add', async () => {
+  for (const status of ['DRAFT_READY', 'DRAFT_IN_PROGRESS', 'LUCKY_DRAW', 'TEAMS_FINALIZED']) {
+    const { event, service } = lateParticipantHarness({ status });
+    const result = await service.updateTeamCompetition('user-1', 'team-1', event.id, {
+      action: 'ADD_LATE_PARTICIPANT', participantKind: 'MEMBER', memberId: 'member-2',
+    });
+    assert.equal(result.draftReset, true, status);
+    assert.equal(event.draftGeneration, 5, status);
+    assert.equal(event.currentPickNumber, 1, status);
+    assert.equal(event.competitionStatus, 'ATTENDANCE_LOCKED', status);
+    assert.equal(event.competitionParticipants.length, 1, status);
+    assert.equal(event.competitionTeams.length, 1, status);
+    assert.equal(event.competitionDraftPicks.length, 1, status);
+  }
+});
+
+test('late participant rejects duplicates, cross-team members and team-assignment payloads', async () => {
+  const { event, service } = lateParticipantHarness();
+  await assert.rejects(() => service.updateTeamCompetition('user-1', 'team-1', event.id, {
+    action: 'ADD_LATE_PARTICIPANT', participantKind: 'MEMBER', memberId: 'member-1',
+  }), error => error.code === 'ALREADY_PARTICIPATING');
+  await assert.rejects(() => service.updateTeamCompetition('user-1', 'team-1', event.id, {
+    action: 'ADD_LATE_PARTICIPANT', participantKind: 'MEMBER', memberId: 'other-team-member',
+  }), error => error.code === 'MEMBER_NOT_FOUND');
+  await assert.rejects(() => service.updateTeamCompetition('user-1', 'team-1', event.id, {
+    action: 'ADD_LATE_PARTICIPANT', participantKind: 'MEMBER', memberId: 'member-2', competitionTeamId: 'old-team',
+  }), error => error.code === 'INVALID_REQUEST');
+  await assert.rejects(() => service.updateTeamCompetition('user-3', 'team-1', event.id, {
+    action: 'ADD_LATE_PARTICIPANT', participantKind: 'MEMBER', memberId: 'member-2',
+  }), error => error.code === 'FORBIDDEN');
+});
+
+test('late participant is blocked after score entry or publication, and conflicts roll back writes', async () => {
+  let harness = lateParticipantHarness({ status: 'LANES_ASSIGNED', scoreCount: 1 });
+  await assert.rejects(() => harness.service.updateTeamCompetition('user-1', 'team-1', harness.event.id, {
+    action: 'ADD_LATE_PARTICIPANT', participantKind: 'GUEST', guestName: '게스트',
+  }), error => error.code === 'COMPETITION_SCORE_STARTED');
+  assert.equal(harness.event.guests.length, 0);
+  assert.equal(harness.event.laneAssignments.length, 1);
+
+  harness = lateParticipantHarness({ status: 'PUBLISHED' });
+  await assert.rejects(() => harness.service.updateTeamCompetition('user-1', 'team-1', harness.event.id, {
+    action: 'ADD_LATE_PARTICIPANT', participantKind: 'GUEST', guestName: '게스트',
+  }), error => error.code === 'COMPETITION_PUBLISHED');
+  assert.equal(harness.calls.scoreCounts, 0);
+
+  harness = lateParticipantHarness({ status: 'DRAFT_READY', failClaim: true });
+  await assert.rejects(() => harness.service.updateTeamCompetition('user-1', 'team-1', harness.event.id, {
+    action: 'ADD_LATE_PARTICIPANT', participantKind: 'GUEST', guestName: '게스트',
+  }), error => error.code === 'LATE_PARTICIPANT_CONFLICT');
+  assert.equal(harness.event.guests.length, 0);
+  assert.equal(harness.event.laneAssignments.length, 1);
+  assert.equal(harness.event.draftGeneration, 4);
+});
+
 test('migration keeps reset generations and conflict-prevention uniqueness', () => {
   const sql = fs.readFileSync(path.resolve(__dirname,
     '../prisma/migrations/20260922210000_add_bowler_hidden_competitions/migration.sql'), 'utf8');

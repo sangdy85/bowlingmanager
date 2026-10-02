@@ -32,12 +32,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('member cannot see another member attendance action', (
-    tester,
-  ) async {
-    await _pumpDetail(tester, _AttendanceApi(role: 'MEMBER'));
-    expect(find.byKey(const Key('attendance-management')), findsNothing);
-  });
+  testWidgets(
+    'member sees the read-only attendance and guest lists without management action',
+    (tester) async {
+      await _pumpDetail(tester, _AttendanceApi(role: 'MEMBER'));
+      expect(find.byKey(const Key('attendance-management')), findsNothing);
+      expect(find.text('미응답 30'), findsOneWidget);
+      await tester.tap(find.text('미응답 30'));
+      await tester.pumpAndSettle();
+      expect(find.text('회원 1'), findsOneWidget);
+      await tester.tap(find.text('게스트 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('게스트 회원'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'member attendance list remains visible after the event is locked',
+    (tester) async {
+      await _pumpDetail(tester, _AttendanceApi(role: 'MEMBER', locked: true));
+      expect(find.text('미응답 30'), findsOneWidget);
+      expect(find.byKey(const Key('attendance-management')), findsNothing);
+    },
+  );
 
   testWidgets(
     'manager attendance failure keeps the sheet and shows safe error',
@@ -84,9 +101,10 @@ Future<void> _pumpDetail(WidgetTester tester, _AttendanceApi api) async {
 }
 
 class _AttendanceApi extends ClubEventsApi {
-  _AttendanceApi({required this.role}) : super(Dio());
+  _AttendanceApi({required this.role, this.locked = false}) : super(Dio());
 
   final String role;
+  final bool locked;
   final List<String> changes = <String>[];
   ApiException? error;
 
@@ -104,29 +122,29 @@ class _AttendanceApi extends ClubEventsApi {
         'attendanceEnabled': true,
         'laneDrawEnabled': false,
         'laneDrawMode': 'BULK',
-        'laneDrawStatus': 'NOT_STARTED',
+        'laneDrawStatus': locked ? 'COMPLETED' : 'NOT_STARTED',
         'myRole': role,
         'myAttendance': 'UNANSWERED',
         'counts': <String, int>{
           'attending': 0,
           'notAttending': 0,
           'unanswered': 30,
-          'guests': 0,
+          'guests': 1,
         },
-        'guests': <Object>[],
+        'guests': <Object>[
+          <String, Object>{'id': 'guest-1', 'name': '게스트 회원'},
+        ],
         'slots': <Object>[],
         'assignments': <Object>[],
         'myAssignment': null,
-        'attendance': role == 'MEMBER'
-            ? null
-            : <Object>[
-                for (int index = 1; index <= 30; index++)
-                  <String, Object>{
-                    'memberId': 'member-$index',
-                    'name': '회원 $index',
-                    'status': 'UNANSWERED',
-                  },
-              ],
+        'attendance': <Object>[
+          for (int index = 1; index <= 30; index++)
+            <String, Object>{
+              'memberId': 'member-$index',
+              'name': '회원 $index',
+              'status': 'UNANSWERED',
+            },
+        ],
         'bowlerHiddenEnabled': false,
         'competition': null,
       });

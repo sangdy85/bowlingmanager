@@ -15,6 +15,7 @@ class ClubTeamCompetitionCard extends ConsumerStatefulWidget {
     required this.teamId,
     required this.eventId,
     required this.competitionMode,
+    this.attendance = const <ClubEventAttendanceItem>[],
     super.key,
   });
 
@@ -22,6 +23,7 @@ class ClubTeamCompetitionCard extends ConsumerStatefulWidget {
   final String teamId;
   final String eventId;
   final ClubCompetitionMode? competitionMode;
+  final List<ClubEventAttendanceItem> attendance;
 
   @override
   ConsumerState<ClubTeamCompetitionCard> createState() =>
@@ -445,6 +447,23 @@ class _ClubTeamCompetitionCardState
         ),
       );
     }
+    if (const <String>{
+      'ATTENDANCE_LOCKED',
+      'DRAFT_READY',
+      'DRAFT_IN_PROGRESS',
+      'LUCKY_DRAW',
+      'TEAMS_FINALIZED',
+      'LANES_ASSIGNED',
+    }.contains(state.status)) {
+      actions.add(
+        OutlinedButton.icon(
+          key: const Key('add-late-participant'),
+          onPressed: _working ? null : () => _addLateParticipant(state),
+          icon: const Icon(Icons.person_add_alt_1_outlined),
+          label: const Text('늦은 참가자 추가'),
+        ),
+      );
+    }
     return Wrap(spacing: 8, runSpacing: 8, children: actions);
   }
 
@@ -740,6 +759,51 @@ class _ClubTeamCompetitionCardState
     }
   }
 
+  Future<void> _addLateParticipant(ClubTeamCompetitionState state) async {
+    final List<ClubEventAttendanceItem> availableMembers = widget.attendance
+        .where((item) => item.status != ClubEventAttendance.attending)
+        .toList();
+    final bool resetsDraft = state.status != 'ATTENDANCE_LOCKED';
+    final bool resetsLanes = state.status == 'LANES_ASSIGNED';
+    final Map<String, dynamic>? action = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (BuildContext context) => _LateParticipantDialog(
+        availableMembers: availableMembers,
+        resetsDraft: resetsDraft,
+        resetsLanes: resetsLanes,
+      ),
+    );
+    if (action == null || !mounted || _working) return;
+    setState(() => _working = true);
+    try {
+      await ref
+          .read(clubEventsRepositoryProvider)
+          .teamCompetitionAction(widget.teamId, widget.eventId, action);
+      if (mounted) {
+        invalidateClubEvents(ref, widget.userId, widget.teamId, widget.eventId);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              resetsDraft
+                  ? '참가자를 추가했습니다. 공정한 팀 편성을 위해 기존 드래프트가 초기화되었습니다.${resetsLanes ? ' 기존 레인 배정도 초기화되었습니다.' : ''}'
+                  : '늦은 참가자를 추가했습니다.',
+            ),
+          ),
+        );
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        final String message = error is ApiException
+            ? error.userMessage
+            : clubErrorMessage(error);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      }
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
   Future<void> _publish() async {
     await _run(<String, dynamic>{'action': 'PUBLISH'});
   }
@@ -800,6 +864,131 @@ class _ClubTeamCompetitionCardState
     } finally {
       if (mounted) setState(() => _working = false);
     }
+  }
+}
+
+class _LateParticipantDialog extends StatefulWidget {
+  const _LateParticipantDialog({
+    required this.availableMembers,
+    required this.resetsDraft,
+    required this.resetsLanes,
+  });
+
+  final List<ClubEventAttendanceItem> availableMembers;
+  final bool resetsDraft;
+  final bool resetsLanes;
+
+  @override
+  State<_LateParticipantDialog> createState() => _LateParticipantDialogState();
+}
+
+class _LateParticipantDialogState extends State<_LateParticipantDialog> {
+  late String _participantKind;
+  String? _memberId;
+  final TextEditingController _guestController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _participantKind = widget.availableMembers.isEmpty ? 'GUEST' : 'MEMBER';
+    _memberId = widget.availableMembers.firstOrNull?.memberId;
+  }
+
+  @override
+  void dispose() {
+    _guestController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool canSubmit = _participantKind == 'MEMBER'
+        ? _memberId != null
+        : _guestController.text.trim().isNotEmpty;
+    return AlertDialog(
+      title: Text(widget.resetsDraft ? '참가자 추가 및 팀 편성 초기화' : '늦은 참가자 추가'),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(
+                widget.resetsLanes
+                    ? '새 참가자를 추가하면 현재 팀장 선정과 드래프트 결과가 모두 초기화됩니다. 공정한 팀 편성을 위해 참가자 추가 후 팀장 선정부터 다시 진행해야 합니다. 기존 레인 배정도 초기화됩니다.'
+                    : widget.resetsDraft
+                    ? '새 참가자를 추가하면 현재 팀장 선정과 드래프트 결과가 모두 초기화됩니다. 공정한 팀 편성을 위해 참가자 추가 후 팀장 선정부터 다시 진행해야 합니다.'
+                    : '참석 마감 후 참가자를 추가합니다. 아직 만든 팀이 없어 초기화는 발생하지 않습니다.',
+                key: const Key('late-participant-warning'),
+                style: TextStyle(
+                  color: widget.resetsDraft
+                      ? Theme.of(context).colorScheme.error
+                      : null,
+                  fontWeight: widget.resetsDraft ? FontWeight.w700 : null,
+                ),
+              ),
+              const SizedBox(height: 16),
+              SegmentedButton<String>(
+                segments: const <ButtonSegment<String>>[
+                  ButtonSegment<String>(value: 'MEMBER', label: Text('회원')),
+                  ButtonSegment<String>(value: 'GUEST', label: Text('게스트')),
+                ],
+                selected: <String>{_participantKind},
+                onSelectionChanged: (Set<String> selected) =>
+                    setState(() => _participantKind = selected.first),
+              ),
+              const SizedBox(height: 12),
+              if (_participantKind == 'MEMBER')
+                widget.availableMembers.isEmpty
+                    ? const Text('추가할 수 있는 회원이 없습니다.')
+                    : DropdownButtonFormField<String>(
+                        key: const Key('late-member-picker'),
+                        initialValue: _memberId,
+                        decoration: const InputDecoration(labelText: '회원 선택'),
+                        items: widget.availableMembers
+                            .map(
+                              (item) => DropdownMenuItem<String>(
+                                value: item.memberId,
+                                child: Text(item.name),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (String? value) =>
+                            setState(() => _memberId = value),
+                      )
+              else
+                TextField(
+                  key: const Key('late-guest-name'),
+                  controller: _guestController,
+                  maxLength: 40,
+                  decoration: const InputDecoration(labelText: '게스트 이름'),
+                  onChanged: (_) => setState(() {}),
+                ),
+            ],
+          ),
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          key: const Key('confirm-late-participant'),
+          onPressed: !canSubmit
+              ? null
+              : () => Navigator.pop(context, <String, dynamic>{
+                  'action': 'ADD_LATE_PARTICIPANT',
+                  'participantKind': _participantKind,
+                  if (_participantKind == 'MEMBER') 'memberId': _memberId,
+                  if (_participantKind == 'GUEST')
+                    'guestName': _guestController.text.trim(),
+                }),
+          child: Text(widget.resetsDraft ? '추가하고 다시 편성' : '참가자 추가'),
+        ),
+      ],
+    );
   }
 }
 

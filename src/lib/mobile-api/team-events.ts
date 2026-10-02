@@ -2,6 +2,7 @@ import { randomInt } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { enqueueMobileNotifications, MOBILE_NOTIFICATION_TYPES } from "@/lib/mobile-api/notifications";
+import { normalizeTeamEventGuestName } from "@/lib/mobile-api/team-event-guest";
 import {
     BOWLER_HIDDEN_COMPETITION_TYPES,
     serializeRankPoints,
@@ -369,7 +370,8 @@ export async function addEventGuest(actorUserId: string, teamId: string, eventId
     const access = await getAccess(actorUserId, teamId); requireManager(access.role);
     const event = await findEvent(teamId, eventId); requireNotStarted(event.laneDrawStatus);
     requireCompetitionAttendanceOpen(event);
-    const name = requiredText(asRecord(value).name, 40, "게스트 이름을 확인해주세요.");
+    const name = normalizeTeamEventGuestName(asRecord(value).name);
+    if (!name) throw new TeamEventError("INVALID_REQUEST", "게스트 이름을 확인해주세요.", 400);
     return prisma.teamEventGuest.create({ data: { eventId, name }, select: { id: true, name: true } });
 }
 
@@ -604,11 +606,11 @@ function serializeEvent(event: EventWithRelations, access: Awaited<ReturnType<ty
         slots: event.laneSlots.map((slot) => ({ id: slot.id, laneNumber: slot.laneNumber, position: slot.position })),
         assignments,
         myAssignment: myAssignment ? serializeAssignment(myAssignment) : null,
-        attendance: access.role === "MEMBER" ? null : event.team.members.map((member) => ({
+        attendance: event.attendanceEnabled ? event.team.members.map((member) => ({
             memberId: member.id,
             name: attendanceByMember.get(member.id)?.memberDisplayName ?? member.alias?.trim() ?? member.user.name,
             status: attendanceByMember.get(member.id)?.status ?? "UNANSWERED",
-        })),
+        })) : null,
         createdAt: event.createdAt.toISOString(), updatedAt: event.updatedAt.toISOString(),
     };
 }

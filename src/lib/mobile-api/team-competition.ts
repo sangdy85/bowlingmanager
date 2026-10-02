@@ -10,10 +10,14 @@ import {
     seasonPointsForRank,
 } from "@/lib/mobile-api/unified-season";
 import { readTeamGamePointTables } from "@/lib/mobile-api/team-game-points";
+import { normalizeTeamEventGuestName } from "@/lib/mobile-api/team-event-guest";
 
 type Direction = "FORWARD" | "REVERSE";
 type LaneSlot = { id: string; laneNumber: number; position: number };
 type LaneTeam = { id: string; lanePriority: number; memberIds: string[] };
+type LateParticipantInput =
+    | { participantKind: "MEMBER"; memberId: string }
+    | { participantKind: "GUEST"; guestName: string };
 export const LUCKY_DRAW_RANDOM_BOUND = 2;
 
 export class TeamCompetitionError extends Error {
@@ -192,7 +196,90 @@ export async function updateTeamCompetition(actorUserId: string, teamId: string,
         case "SET_HANDICAP": return setTeamHandicap(actorUserId, teamId, eventId, body.competitionTeamId, body.teamHandicap);
         case "PUBLISH": return publishTeamCompetition(actorUserId, teamId, eventId, body.tieBreakPolicy);
         case "REOPEN": return reopenTeamCompetition(actorUserId, teamId, eventId);
+        case "ADD_LATE_PARTICIPANT": return addLateParticipant(actorUserId, teamId, eventId, body);
         default: throw new TeamCompetitionError("INVALID_ACTION", "TEAM 대회 작업을 확인해주세요.", 400);
+    }
+}
+
+async function addLateParticipant(
+    actorUserId: string,
+    teamId: string,
+    eventId: string,
+    body: Record<string, unknown>,
+) {
+    const input = parseLateParticipant(body);
+    try {
+        return await prisma.$transaction(async (tx) => {
+            const event = await tx.teamEvent.findFirst({ where: {
+                id: eventId, teamId, team: { isActive: true, members: { some: { userId: actorUserId } } },
+            }, include: competitionInclude });
+            if (!event) throw new TeamCompetitionError("EVENT_NOT_FOUND", "일정을 찾을 수 없습니다.", 404);
+            requireManager(event, actorUserId);
+            requireTeamCompetition(event);
+
+            if (event.competitionStatus === "PUBLISHED") {
+                throw new TeamCompetitionError("COMPETITION_PUBLISHED", "발표된 TEAM 결과는 변경할 수 없습니다.", 409);
+            }
+            const resetStatuses = ["DRAFT_READY", "DRAFT_IN_PROGRESS", "LUCKY_DRAW", "TEAMS_FINALIZED", "LANES_ASSIGNED"];
+            const requiresReset = resetStatuses.includes(event.competitionStatus);
+            if (event.competitionStatus !== "ATTENDANCE_LOCKED" && !requiresReset) throw stateError();
+            if (await tx.score.count({ where: { teamEventId: eventId } }) > 0) {
+                throw new TeamCompetitionError("COMPETITION_SCORE_STARTED", "이미 경기 점수가 입력되어 참가자를 변경할 수 없습니다.", 409);
+            }
+
+            let participantId: string;
+            if (input.participantKind === "MEMBER") {
+                const member = event.team.members.find((item) => item.id === input.memberId);
+                if (!member) throw new TeamCompetitionError("MEMBER_NOT_FOUND", "동호회 회원을 찾을 수 없습니다.", 404);
+                const alreadyAttending = event.attendances.some((item) => item.memberId === member.id && item.status === "ATTENDING");
+                const alreadyInGeneration = currentParticipants(event).some((item) => item.memberId === member.id);
+                if (alreadyAttending || alreadyInGeneration) {
+                    throw new TeamCompetitionError("ALREADY_PARTICIPATING", "이미 참가 중인 회원입니다.", 409);
+                }
+                await tx.teamEventAttendance.upsert({
+                    where: { eventId_memberId: { eventId, memberId: member.id } },
+                    create: { eventId, memberId: member.id, memberDisplayName: displayName(member), status: "ATTENDING" },
+                    update: { memberDisplayName: displayName(member), status: "ATTENDING" },
+                });
+                participantId = member.id;
+            } else {
+                const guest = await tx.teamEventGuest.create({
+                    data: { eventId, name: input.guestName }, select: { id: true },
+                });
+                participantId = guest.id;
+            }
+
+            if (requiresReset) await tx.teamEventLaneAssignment.deleteMany({ where: { eventId } });
+            const claimed = await tx.teamEvent.updateMany({ where: {
+                id: eventId,
+                teamId,
+                draftGeneration: event.draftGeneration,
+                competitionStatus: event.competitionStatus,
+                laneDrawStatus: event.laneDrawStatus,
+            }, data: requiresReset ? {
+                draftGeneration: { increment: 1 },
+                currentPickNumber: 1,
+                competitionStatus: "ATTENDANCE_LOCKED",
+                laneDrawStatus: "NOT_STARTED",
+            } : {
+                currentPickNumber: event.currentPickNumber,
+            } });
+            if (claimed.count !== 1) {
+                throw new TeamCompetitionError("LATE_PARTICIPANT_CONFLICT", "대회 상태가 변경되었습니다. 새로고침 후 다시 시도해주세요.", 409);
+            }
+            return {
+                status: "ATTENDANCE_LOCKED",
+                generation: event.draftGeneration + (requiresReset ? 1 : 0),
+                participantKind: input.participantKind,
+                participantId,
+                draftReset: requiresReset,
+            };
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+        if ((error as { code?: unknown })?.code === "P2034") {
+            throw new TeamCompetitionError("LATE_PARTICIPANT_CONFLICT", "대회 상태가 변경되었습니다. 새로고침 후 다시 시도해주세요.", 409);
+        }
+        throw error;
     }
 }
 
@@ -690,6 +777,29 @@ function serializeTeam(team: ReturnType<typeof currentTeams>[number], event: Com
     };
 }
 function stateError() { return new TeamCompetitionError("INVALID_COMPETITION_STATE", "현재 TEAM 대회 단계에서는 수행할 수 없습니다.", 409); }
+function parseLateParticipant(body: Record<string, unknown>): LateParticipantInput {
+    const kind = body.participantKind;
+    const expectedKeys = kind === "MEMBER"
+        ? ["action", "memberId", "participantKind"]
+        : kind === "GUEST"
+            ? ["action", "guestName", "participantKind"]
+            : [];
+    const actualKeys = Object.keys(body).sort();
+    if (body.action !== "ADD_LATE_PARTICIPANT" ||
+        expectedKeys.length !== actualKeys.length ||
+        expectedKeys.some((key, index) => key !== actualKeys[index])) {
+        throw new TeamCompetitionError("INVALID_REQUEST", "늦은 참가자 정보를 확인해주세요.", 400);
+    }
+    if (kind === "MEMBER") {
+        if (typeof body.memberId !== "string" || !body.memberId) {
+            throw new TeamCompetitionError("INVALID_PARTICIPANT", "추가할 회원을 확인해주세요.", 400);
+        }
+        return { participantKind: kind, memberId: body.memberId };
+    }
+    const guestName = normalizeTeamEventGuestName(body.guestName);
+    if (!guestName) throw new TeamCompetitionError("INVALID_REQUEST", "게스트 이름을 확인해주세요.", 400);
+    return { participantKind: "GUEST", guestName };
+}
 function asRecord(value: unknown): Record<string, unknown> {
     if (!value || typeof value !== "object" || Array.isArray(value)) throw new TeamCompetitionError("INVALID_REQUEST", "요청 내용을 확인해주세요.", 400);
     return value as Record<string, unknown>;

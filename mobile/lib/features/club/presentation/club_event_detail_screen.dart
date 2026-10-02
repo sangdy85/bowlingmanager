@@ -121,6 +121,9 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                         teamId: widget.teamId,
                         eventId: widget.eventId,
                         competitionMode: event.competition!.mode,
+                        attendance:
+                            event.attendance ??
+                            const <ClubEventAttendanceItem>[],
                       ),
                     )
                   else if (event.competition!.type == ClubCompetitionType.event)

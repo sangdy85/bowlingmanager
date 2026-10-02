@@ -234,6 +234,46 @@ test('BULK and INDIVIDUAL lane flows assign every attending member and guest exa
   assert.equal(individual.event.laneAssignments.some(item => item.memberId === 'member-4'), false, 'non-attendee assigned');
 });
 
+test('active members can read attendance names and guests without private user fields', async () => {
+  const members = [1, 2].map(number => ({
+    id: `member-${number}`, userId: `user-${number}`, alias: null,
+    user: { name: `회원${number}` },
+  }));
+  const event = {
+    id: 'event-visible', teamId: 'team-1', title: '공개 참석 명단',
+    eventDate: new Date('2026-09-21T15:00:00.000Z'), eventTime: '19:00',
+    location: '볼링장', gameType: '정기전', attendanceEnabled: true,
+    laneDrawEnabled: false, laneDrawMode: 'BULK', laneDrawStatus: 'NOT_STARTED',
+    competitionEnabled: true, competitionType: 'TEAM', competitionMode: 'OFFICIAL',
+    competitionStatus: 'PUBLISHED', competitionGameCount: 4, rankPoints: '{}',
+    competitionStartAt: null, votingDurationMinutes: 30,
+    attendances: [{ memberId: 'member-1', memberDisplayName: '별명1', status: 'ATTENDING' }],
+    guests: [{ id: 'guest-1', name: '게스트1' }], laneSlots: [], laneAssignments: [],
+    team: { name: '테스트팀', members }, createdAt: new Date(), updatedAt: new Date(),
+  };
+  const prisma = {
+    team: { findFirst: async () => ({
+      ownerId: 'user-1', bowlerHiddenEnabled: true, User: [], members: [members[1]],
+    }) },
+    teamEvent: { findFirst: async () => event },
+  };
+  const service = loadTs('src/lib/mobile-api/team-events.ts', { '@/lib/prisma': prisma });
+  for (const type of ['INDIVIDUAL', 'TEAM', 'EVENT']) {
+    event.competitionType = type;
+    const response = await service.getTeamEvent('user-2', 'team-1', event.id);
+    assert.deepEqual(response.attendance, [
+      { memberId: 'member-1', name: '별명1', status: 'ATTENDING' },
+      { memberId: 'member-2', name: '회원2', status: 'UNANSWERED' },
+    ], type);
+    assert.deepEqual(response.guests, [{ id: 'guest-1', name: '게스트1' }], type);
+    assert.equal(response.myRole, 'MEMBER', type);
+    for (const item of response.attendance) {
+      assert.deepEqual(Object.keys(item).sort(), ['memberId', 'name', 'status']);
+    }
+    assert.equal(JSON.stringify(response).includes('user-1'), false, type);
+  }
+});
+
 test('event routes require authentication and keep actor/team/event scope', async () => {
   let call = null;
   const fakes = {
