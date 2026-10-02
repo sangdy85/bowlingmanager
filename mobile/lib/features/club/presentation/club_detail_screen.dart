@@ -127,6 +127,15 @@ class ClubDetailScreen extends ConsumerWidget {
               onTap: () =>
                   context.push('/club/${Uri.encodeComponent(teamId)}/board'),
             ),
+            const SizedBox(height: 12),
+            _ClubMenuCard(
+              tileKey: const Key('club-finance-link'),
+              icon: Icons.payments_outlined,
+              title: '회비 / 정산',
+              subtitle: '회비와 게임비 납부 현황을 확인하세요',
+              onTap: () =>
+                  context.push('/club/${Uri.encodeComponent(teamId)}/finance'),
+            ),
             if (club.myRole == ClubRole.owner ||
                 club.myRole == ClubRole.manager) ...<Widget>[
               const SizedBox(height: 12),

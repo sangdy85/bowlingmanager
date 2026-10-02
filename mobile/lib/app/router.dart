@@ -15,6 +15,9 @@ import 'package:bowlingmanager_mobile/features/club/presentation/club_event_form
 import 'package:bowlingmanager_mobile/features/club/presentation/club_lane_draw_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_competition_score_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_events_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_finance_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_finance_detail_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_finance_form_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_activity_detail_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_activity_edit_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_management_screen.dart';
@@ -249,6 +252,42 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                                     ClubLaneDrawScreen(
                                       teamId: state.pathParameters['teamId']!,
                                       eventId: state.pathParameters['eventId']!,
+                                    ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'finance',
+                    builder: (BuildContext context, GoRouterState state) =>
+                        ClubFinanceScreen(
+                          teamId: state.pathParameters['teamId']!,
+                        ),
+                    routes: <RouteBase>[
+                      GoRoute(
+                        path: 'new',
+                        builder: (BuildContext context, GoRouterState state) =>
+                            ClubFinanceFormScreen(
+                              teamId: state.pathParameters['teamId']!,
+                            ),
+                      ),
+                      GoRoute(
+                        path: ':chargeId',
+                        builder: (BuildContext context, GoRouterState state) =>
+                            ClubFinanceDetailScreen(
+                              teamId: state.pathParameters['teamId']!,
+                              chargeId: state.pathParameters['chargeId']!,
+                            ),
+                        routes: <RouteBase>[
+                          GoRoute(
+                            path: 'edit',
+                            builder:
+                                (BuildContext context, GoRouterState state) =>
+                                    ClubFinanceFormScreen(
+                                      teamId: state.pathParameters['teamId']!,
+                                      chargeId:
+                                          state.pathParameters['chargeId']!,
                                     ),
                           ),
                         ],
