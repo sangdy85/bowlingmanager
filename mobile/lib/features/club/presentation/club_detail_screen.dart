@@ -10,6 +10,7 @@ import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dar
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ClubDetailScreen extends ConsumerWidget {
   const ClubDetailScreen({required this.teamId, super.key});
@@ -75,6 +76,28 @@ class ClubDetailScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
+            if (club.inviteUrl != null) ...<Widget>[
+              _ClubMenuCard(
+                tileKey: const Key('club-invite-share'),
+                icon: Icons.share_outlined,
+                title: '초대 링크 공유',
+                subtitle: '메신저나 문자로 동호회 초대장을 보내세요',
+                onTap: () async {
+                  try {
+                    await SharePlus.instance.share(
+                      ShareParams(text: buildClubInviteShareText(club)),
+                    );
+                  } on Object {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('초대 링크를 공유하지 못했습니다.')),
+                      );
+                    }
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
             _ClubMenuCard(
               tileKey: const Key('club-records-link'),
               icon: Icons.query_stats_rounded,

@@ -1,10 +1,12 @@
 import prisma from "@/lib/prisma";
+import { teamInviteUrl } from "@/lib/team-membership";
 
 export type MobileTeamRole = "OWNER" | "MANAGER" | "MEMBER";
 
 type TeamRecord = {
     id: string;
     name: string;
+    code: string;
     ownerId: string | null;
     User: { id: string }[];
     _count: { members: number };
@@ -45,6 +47,7 @@ const defaultDependencies: MobileTeamsDependencies = {
                     select: {
                         id: true,
                         name: true,
+                        code: true,
                         ownerId: true,
                         User: { select: { id: true } },
                         _count: { select: { members: true } },
@@ -64,6 +67,7 @@ const defaultDependencies: MobileTeamsDependencies = {
             select: {
                 id: true,
                 name: true,
+                code: true,
                 ownerId: true,
                 User: { select: { id: true } },
                 _count: { select: { members: true } },
@@ -119,6 +123,7 @@ export async function getMobileTeamDetail(
         myRole: teamRole(team, userId),
         memberCount: team._count.members,
         bowlerHiddenEnabled: team.bowlerHiddenEnabled === true,
+        inviteUrl: teamInviteUrl(team.code),
     };
 }
 

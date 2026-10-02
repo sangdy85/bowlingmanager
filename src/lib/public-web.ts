@@ -3,6 +3,32 @@ export const CANONICAL_HOSTNAME = 'www.bowlingmanager.co.kr';
 export const LEGACY_HOSTNAME = 'bowlingmanager.co.kr';
 export const PUBLIC_UPDATED = '2026-09-30';
 export const PRIORITY_GUIDES = ['bowling-scoring-system', 'average-and-score-distribution', 'club-event-checklist'];
+export const ANDROID_PACKAGE_ID = 'kr.co.bowlingmanager.app';
+
+export function safeAndroidAppUrl(value = process.env.NEXT_PUBLIC_ANDROID_APP_URL): string {
+  const candidate = value?.trim();
+  if (!candidate) return '';
+
+  try {
+    const url = new URL(candidate);
+    if (
+      url.protocol !== 'https:' ||
+      url.hostname !== 'play.google.com' ||
+      url.username ||
+      url.password ||
+      url.port ||
+      url.pathname !== '/store/apps/details' ||
+      url.searchParams.get('id') !== ANDROID_PACKAGE_ID
+    ) {
+      return '';
+    }
+    return url.toString();
+  } catch {
+    return '';
+  }
+}
+
+export const ANDROID_APP_URL = safeAndroidAppUrl();
 
 type CanonicalHostInput = {
   requestHostname?: string | null;

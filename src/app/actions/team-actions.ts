@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { verifyCenterAdmin } from "@/lib/auth-utils";
+import { createWithUniqueTeamCode } from "@/lib/team-code";
 
 export async function createResidentTeam(centerId: string, formData: FormData) {
     await verifyCenterAdmin(centerId);
@@ -29,15 +30,15 @@ export async function createResidentTeam(centerId: string, formData: FormData) {
     } else {
         // Create new placeholder team
         if (!name) throw new Error("팀 이름을 입력하거나 팀 코드를 입력해주세요.");
-        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-
-        await prisma.team.create({
-            data: {
-                name,
-                code,
-                centerId,
-            } as any
-        });
+        await createWithUniqueTeamCode((code) =>
+            prisma.team.create({
+                data: {
+                    name,
+                    code,
+                    centerId,
+                } as any
+            }),
+        );
     }
 
     revalidatePath(`/centers/${centerId}/teams`);

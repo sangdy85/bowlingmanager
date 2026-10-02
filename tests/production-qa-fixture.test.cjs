@@ -31,6 +31,9 @@ function initializeTestDatabase(databasePath, databaseUrl, childEnv) {
     }
     return;
   }
+  // Prisma 5's SQLite db push expects the target file to exist on the
+  // production Node 20 runtime used by this project.
+  fs.closeSync(fs.openSync(databasePath, 'a'));
   execFileSync(process.execPath, [prismaCli, 'db', 'push', '--skip-generate'], {
     cwd: repositoryRoot,
     env: { ...childEnv, DATABASE_URL: databaseUrl },

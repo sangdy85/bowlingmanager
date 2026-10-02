@@ -106,6 +106,58 @@ test('content links reject executable or ambiguous protocols',()=>{
  assert.equal(policy.safeContentUrl('/tools/average'),'/tools/average');
  assert.equal(policy.safeContentUrl('https://bowl.com/'),'https://bowl.com/');
 });
+test('Android app URL is absent by default and accepts only the verified Play package URL',()=>{
+ assert.equal(policy.ANDROID_PACKAGE_ID,'kr.co.bowlingmanager.app');
+ assert.equal(policy.safeAndroidAppUrl(undefined),'');
+ assert.equal(policy.safeAndroidAppUrl('  '),'');
+ assert.equal(
+  policy.safeAndroidAppUrl('https://play.google.com/store/apps/details?id=kr.co.bowlingmanager.app'),
+  'https://play.google.com/store/apps/details?id=kr.co.bowlingmanager.app',
+ );
+ for(const invalid of [
+  'http://play.google.com/store/apps/details?id=kr.co.bowlingmanager.app',
+  'https://example.com/store/apps/details?id=kr.co.bowlingmanager.app',
+  'https://play.google.com/store/apps/details?id=wrong.package',
+  'https://play.google.com/other?id=kr.co.bowlingmanager.app',
+  'https://user@play.google.com/store/apps/details?id=kr.co.bowlingmanager.app',
+  'javascript:alert(1)',
+  'data:text/html,bad',
+  '//play.google.com/store/apps/details?id=kr.co.bowlingmanager.app',
+ ])assert.equal(policy.safeAndroidAppUrl(invalid),'',invalid);
+});
+test('/app stays noindex with www canonical and outside the sitemap until store launch',()=>{
+ const appPage=fs.readFileSync(path.join(__dirname,'../src/app/app/page.tsx'),'utf8');
+ assert.ok(appPage.includes('canonical: `${PUBLIC_ORIGIN}/app`'));
+ assert.ok(appPage.includes('robots: { index: false, follow: true }'));
+ assert.ok(appPage.includes('ANDROID_APP_URL'));
+ assert.ok(appPage.includes('Android 앱은 현재 테스트/출시 준비 중입니다.'));
+ assert.ok(appPage.includes('href="/register"'));
+ assert.ok(appPage.includes('href="/login"'));
+ const sitemap=loadWithMocks('src/app/sitemap.ts',{
+  '@/lib/guide-data':{PUBLISHED_GUIDE_ARTICLES},
+  '@/lib/public-web':policy,
+ }).default();
+ assert.equal(sitemap.some(entry=>entry.url===policy.PUBLIC_ORIGIN+'/app'),false);
+});
+test('home, guide and average expose one contextual app CTA with funnel source',()=>{
+ const component=fs.readFileSync(path.join(__dirname,'../src/components/public/AppGrowthCta.tsx'),'utf8');
+ assert.ok(component.includes('/app?from=${source}'));
+ const sources={
+  home:fs.readFileSync(path.join(__dirname,'../src/app/page.tsx'),'utf8'),
+  guide:fs.readFileSync(path.join(__dirname,'../src/app/guide/[slug]/page.tsx'),'utf8'),
+  average:fs.readFileSync(path.join(__dirname,'../src/app/tools/average/page.tsx'),'utf8'),
+ };
+ assert.ok(sources.home.includes('<AppGrowthCta source="home" variant="full" />'));
+ assert.ok(sources.home.includes("session?.user?'/personal':'/login'"));
+ assert.ok(sources.home.includes("session?.user?'/team':'/login'"));
+ assert.equal((sources.guide.match(/<AppGrowthCta /g)||[]).length,1);
+ assert.ok(sources.guide.includes('<AppGrowthCta source="guide" variant="compact" />'));
+ assert.ok(sources.guide.indexOf('<AppGrowthCta')>sources.guide.indexOf('</Markdown></article>'));
+ assert.ok(sources.guide.indexOf('<AppGrowthCta')<sources.guide.indexOf('className={styles.documentInfo}'));
+ assert.equal((sources.average.match(/<AppGrowthCta /g)||[]).length,1);
+ assert.ok(sources.average.includes('<AppGrowthCta source="average" variant="compact" />'));
+ assert.ok(sources.average.indexOf('<AppGrowthCta')>sources.average.indexOf('<AverageCalculator />'));
+});
 test('private crawler boundaries cover exact, slash and query without matching lookalikes',()=>{
  const rules=policy.privateRobotsRules();
  const blocked=url=>rules.some(rule=>rule.endsWith('$')?url===rule.slice(0,-1):url.startsWith(rule));
@@ -123,6 +175,8 @@ test('ads remain off, even on eligible content; form/private/error inventory is 
 });
 test('all source articles survive while unpublished and merged articles stay out of public inventory',()=>{
  assert.equal(GUIDE_ARTICLES.length,18);assert.equal(new Set(GUIDE_ARTICLES.map(a=>a.slug)).size,18);
+ assert.equal(GUIDE_ARTICLES.filter(article=>article.status==='unpublished').length,3);
+ assert.equal(GUIDE_ARTICLES.filter(article=>article.status==='merged').length,2);
  for(const article of GUIDE_ARTICLES){assert.ok(article.content.length>100);assert.equal(/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(article.content),false);assert.equal(article.content.includes('\\text{'),false);}
  const hidden=['kpba-official-bowling-tournament-rules-2026','health-benefits-and-effects-of-bowling','bowling-injury-prevention-and-stretching-guide'];
  assert.equal(PUBLISHED_GUIDE_ARTICLES.length,13);

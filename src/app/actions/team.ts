@@ -4,10 +4,8 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-
-function generateTeamCode() {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-}
+import { joinTeamByCode } from "@/lib/team-membership";
+import { createWithUniqueTeamCode } from "@/lib/team-code";
 
 async function migrateUserRecordsToTeam(userId: string, teamId: string) {
     try {
@@ -45,22 +43,22 @@ export async function createTeam(prevState: string | undefined, formData: FormDa
         return "팀 이름을 입력해주세요.";
     }
 
-    const code = generateTeamCode();
-
     try {
-        const team = await prisma.team.create({
-            data: {
-                name,
-                code,
-                ownerId: session.user.id, // Set owner immediately
-                members: {
-                    create: {
-                        userId: session.user.id,
-                        // Alias defaults to null (original name)
+        const team = await createWithUniqueTeamCode((code) =>
+            prisma.team.create({
+                data: {
+                    name,
+                    code,
+                    ownerId: session.user.id, // Set owner immediately
+                    members: {
+                        create: {
+                            userId: session.user.id,
+                            // Alias defaults to null (original name)
+                        }
                     }
                 }
-            }
-        });
+            }),
+        );
 
         // No need for raw query fix if we set ownerId in create, 
         // assuming no circular dependency issues. 
@@ -84,89 +82,19 @@ export async function joinTeam(prevState: string | undefined, formData: FormData
         return "로그인이 필요합니다.";
     }
 
-    const code = formData.get("code") as string;
+    const code = formData.get("code");
     if (!code) {
         return "팀 코드를 입력해주세요.";
     }
 
     try {
-        const team = await prisma.team.findUnique({
-            where: { code }
-        });
-
-        if (!team || !team.isActive) {
+        const result = await joinTeamByCode({ userId: session.user.id, code });
+        if (result.status === "INVALID_CODE" || result.status === "TEAM_NOT_FOUND" || result.status === "TEAM_INACTIVE") {
             return "유효하지 않은 팀 코드이거나 삭제된 팀입니다.";
         }
-
-        // Check for existing membership
-        const existingMember = await prisma.teamMember.findUnique({
-            where: {
-                userId_teamId: {
-                    userId: session.user.id,
-                    teamId: team.id
-                }
-            }
-        });
-
-        if (existingMember) {
+        if (result.status === "ALREADY_MEMBER") {
             return "이미 가입된 팀입니다.";
         }
-
-        const userName = session.user.name!;
-
-        // 1. Fetch all members to check for name collisions
-        const allMembers = await prisma.teamMember.findMany({
-            where: { teamId: team.id },
-            include: { user: true },
-            orderBy: { joinedAt: 'asc' }
-        });
-
-        // 2. Identify collision group (Members with same base name)
-        // We look for members whose original name matches, OR whose current alias suggests they are this person?
-        // Actually, strictly speaking, we check against their *User Name*.
-        // If "John" joins, we look for other users named "John".
-        const sameNameMembers = allMembers.filter((m: any) => m.user.name === userName);
-
-        let newAlias: string | null = null;
-
-        if (sameNameMembers.length > 0) {
-            // Collision detected!
-            // We have existing members [John (joined 2024), John (joined 2025)...]
-            // And now new John (now).
-
-            // Re-assign aliases for ALL of them + new one.
-            // Suffixes: A, B, C...
-            const suffixes = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-
-            // Update existing members
-            for (let i = 0; i < sameNameMembers.length; i++) {
-                const member = sameNameMembers[i];
-                const targetAlias = `${userName} ${suffixes[i]}`; // "John A"
-
-                if (member.alias !== targetAlias) {
-                    await prisma.teamMember.update({
-                        where: { id: member.id },
-                        data: { alias: targetAlias }
-                    });
-                }
-            }
-
-            // Set alias for the NEW member (next suffix)
-            newAlias = `${userName} ${suffixes[sameNameMembers.length]}`; // "John B" (if length was 1)
-        }
-
-        // 3. Create Key
-        await prisma.teamMember.create({
-            data: {
-                userId: session.user.id,
-                teamId: team.id,
-                alias: newAlias
-            }
-        });
-
-        // Migrate existing user records to the new team
-        await migrateUserRecordsToTeam(session.user.id, team.id);
-
     } catch (error) {
         console.error(error);
         return "팀 가입 중 오류가 발생했습니다.";

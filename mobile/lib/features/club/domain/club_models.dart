@@ -61,6 +61,7 @@ class ClubDetail {
     required this.name,
     required this.myRole,
     required this.memberCount,
+    this.inviteUrl,
     this.bowlerHiddenEnabled = false,
   });
 
@@ -68,19 +69,64 @@ class ClubDetail {
   final String name;
   final ClubRole myRole;
   final int memberCount;
+  final Uri? inviteUrl;
   final bool bowlerHiddenEnabled;
 
   factory ClubDetail.fromJson(Map<String, dynamic> json) {
     final ClubSummary summary = ClubSummary.fromJson(json);
+    final Object? inviteUrl = json['inviteUrl'];
+    final Uri? parsedInviteUrl = inviteUrl is String
+        ? Uri.tryParse(inviteUrl)
+        : null;
+    if (parsedInviteUrl == null ||
+        parsedInviteUrl.scheme != 'https' ||
+        parsedInviteUrl.host.isEmpty) {
+      throw const FormatException('Invalid club invite URL response.');
+    }
     return ClubDetail(
       id: summary.id,
       name: summary.name,
       myRole: summary.myRole,
       memberCount: summary.memberCount,
+      inviteUrl: parsedInviteUrl,
       bowlerHiddenEnabled: summary.bowlerHiddenEnabled,
     );
   }
 }
+
+class ClubJoinResult {
+  const ClubJoinResult({
+    required this.team,
+    required this.joined,
+    required this.alreadyMember,
+  });
+
+  final ClubSummary team;
+  final bool joined;
+  final bool alreadyMember;
+
+  factory ClubJoinResult.fromJson(Map<String, dynamic> json) {
+    final Object? team = json['team'];
+    final Object? joined = json['joined'];
+    final Object? alreadyMember = json['alreadyMember'];
+    if (team is! Map ||
+        joined is! bool ||
+        alreadyMember is! bool ||
+        joined == alreadyMember) {
+      throw const FormatException('Invalid club join response.');
+    }
+    return ClubJoinResult(
+      team: ClubSummary.fromJson(Map<String, dynamic>.from(team)),
+      joined: joined,
+      alreadyMember: alreadyMember,
+    );
+  }
+}
+
+String buildClubInviteShareText(ClubDetail club) =>
+    '${club.name} 동호회에 초대합니다 🎳\n\n'
+    'BowlingManager에서 일정, 정모 기록과 시즌 순위를 함께 확인하세요.\n\n'
+    '${club.inviteUrl ?? ''}';
 
 class ClubMember {
   const ClubMember({

@@ -15,6 +15,7 @@ void main() {
       'name': '테스트 동호회',
       'myRole': 'MANAGER',
       'memberCount': 3,
+      'inviteUrl': 'https://www.bowlingmanager.co.kr/invite/team/TEST01',
     });
     final ClubMember member = ClubMember.fromJson(<String, dynamic>{
       'id': 'membership-1',
@@ -26,6 +27,10 @@ void main() {
     expect(summary.myRole, ClubRole.owner);
     expect(summary.bowlerHiddenEnabled, isTrue);
     expect(detail.myRole, ClubRole.manager);
+    expect(
+      detail.inviteUrl.toString(),
+      'https://www.bowlingmanager.co.kr/invite/team/TEST01',
+    );
     expect(member.handicap, isNull);
     expect(member.role.label, '회원');
   });
@@ -91,6 +96,24 @@ void main() {
         'bowlerHiddenEnabled': 'true',
       }),
       throwsFormatException,
+    );
+  });
+
+  test('invite share text uses the server-provided HTTPS URL exactly', () {
+    final ClubDetail detail = ClubDetail(
+      id: 'team-1',
+      name: '테스트 동호회',
+      myRole: ClubRole.member,
+      memberCount: 3,
+      inviteUrl: Uri.parse(
+        'https://www.bowlingmanager.co.kr/invite/team/TEST01',
+      ),
+    );
+    expect(
+      buildClubInviteShareText(detail),
+      '테스트 동호회 동호회에 초대합니다 🎳\n\n'
+      'BowlingManager에서 일정, 정모 기록과 시즌 순위를 함께 확인하세요.\n\n'
+      'https://www.bowlingmanager.co.kr/invite/team/TEST01',
     );
   });
 }

@@ -11,6 +11,34 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('normalizes a join code and parses joined membership', () async {
+    RequestOptions? seen;
+    final Dio dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
+      ..httpClientAdapter = _Adapter((RequestOptions options) {
+        seen = options;
+        return _json(200, <String, Object>{
+          'success': true,
+          'data': <String, Object>{
+            'team': <String, Object>{
+              'id': 'team-1',
+              'name': '테스트 동호회',
+              'myRole': 'MEMBER',
+              'memberCount': 3,
+            },
+            'joined': true,
+            'alreadyMember': false,
+          },
+        });
+      });
+
+    final ClubJoinResult result = await MobileClubApi(dio).joinClub(' a1b2c3 ');
+
+    expect(seen?.path, '/teams/join');
+    expect(seen?.data, <String, dynamic>{'code': 'A1B2C3'});
+    expect(result.joined, isTrue);
+    expect(result.team.id, 'team-1');
+  });
+
   test('fetches team list, detail and members from protected paths', () async {
     final List<String> paths = <String>[];
     final Dio dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
@@ -40,6 +68,8 @@ void main() {
                 'name': '테스트 동호회',
                 'myRole': 'OWNER',
                 'memberCount': 2,
+                'inviteUrl':
+                    'https://www.bowlingmanager.co.kr/invite/team/TEST01',
               },
             },
           });
@@ -66,6 +96,10 @@ void main() {
 
     expect(clubs.single.myRole, ClubRole.owner);
     expect(detail.name, '테스트 동호회');
+    expect(
+      detail.inviteUrl.toString(),
+      'https://www.bowlingmanager.co.kr/invite/team/TEST01',
+    );
     expect(members.single.handicap, isNull);
     expect(paths, <String>['/teams', '/teams/team-1', '/teams/team-1/members']);
   });

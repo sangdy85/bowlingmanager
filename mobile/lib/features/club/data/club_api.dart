@@ -5,6 +5,7 @@ import 'package:bowlingmanager_mobile/features/club/domain/club_management_model
 import 'package:dio/dio.dart';
 
 abstract interface class ClubApi {
+  Future<ClubJoinResult> joinClub(String code);
   Future<List<ClubSummary>> fetchClubs();
   Future<ClubDetail> fetchClubDetail(String teamId);
   Future<List<ClubMember>> fetchClubMembers(String teamId);
@@ -69,6 +70,23 @@ class MobileClubApi implements ClubApi {
   MobileClubApi(this._dio);
 
   final Dio _dio;
+
+  @override
+  Future<ClubJoinResult> joinClub(String code) async {
+    try {
+      final Response<dynamic> response = await _dio.post<dynamic>(
+        '/teams/join',
+        data: <String, dynamic>{'code': code.trim().toUpperCase()},
+      );
+      return ClubJoinResult.fromJson(_readData(response.data));
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    } on FormatException {
+      throw ApiException.malformedResponse();
+    } on TypeError {
+      throw ApiException.malformedResponse();
+    }
+  }
 
   @override
   Future<List<ClubSummary>> fetchClubs() async {

@@ -27,7 +27,7 @@ function loadTs(relative, overrides = {}, cache = new Map()) {
 
 function team(changes = {}) {
     return {
-        id: 'team-1', name: 'Fixture Club', ownerId: 'owner-1',
+        id: 'team-1', name: 'Fixture Club', code: 'TEST01', ownerId: 'owner-1',
         User: [{ id: 'manager-1' }], _count: { members: 3 }, bowlerHiddenEnabled: false, ...changes,
     };
 }
@@ -87,7 +87,7 @@ test('detail requires an active membership and supports an ordinary member', asy
         },
     }));
     assert.deepEqual(seen, [{ userId: 'member-1', teamId: 'team-1' }]);
-    assert.deepEqual(result, { id: 'team-1', name: 'Fixture Club', myRole: 'MEMBER', memberCount: 3, bowlerHiddenEnabled: false });
+    assert.deepEqual(result, { id: 'team-1', name: 'Fixture Club', myRole: 'MEMBER', memberCount: 3, bowlerHiddenEnabled: false, inviteUrl: 'https://www.bowlingmanager.co.kr/invite/team/TEST01' });
 });
 
 test('detail hides missing teams and teams belonging to another user', async () => {

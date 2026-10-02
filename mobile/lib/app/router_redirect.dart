@@ -1,0 +1,32 @@
+import 'package:bowlingmanager_mobile/features/auth/application/auth_state.dart';
+import 'package:bowlingmanager_mobile/core/storage/onboarding_storage.dart';
+import 'package:bowlingmanager_mobile/features/onboarding/application/onboarding_state.dart';
+
+String? resolveAppRedirect({
+  required AuthState authState,
+  required OnboardingState onboardingState,
+  required String location,
+}) {
+  final bool isSplash = location == '/splash';
+  final bool isLogin = location == '/login';
+  final bool isWelcome = location == '/welcome';
+
+  if (authState.isBootstrapping) return isSplash ? null : '/splash';
+  if (authState.isLoading) return null;
+
+  if (authState.isAuthenticated) {
+    if (onboardingState.isInitialized &&
+        onboardingState.intent == OnboardingIntent.joinClub &&
+        (isSplash || isLogin || isWelcome || location == '/home')) {
+      return '/club/join';
+    }
+    return isSplash || isLogin || isWelcome ? '/home' : null;
+  }
+
+  if (!onboardingState.isInitialized) {
+    return isSplash ? null : '/splash';
+  }
+
+  final String target = onboardingState.completed ? '/login' : '/welcome';
+  return location == target ? null : target;
+}

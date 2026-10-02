@@ -2,25 +2,29 @@ import 'package:bowlingmanager_mobile/app/app.dart';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
+import 'package:bowlingmanager_mobile/features/onboarding/application/onboarding_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'support/auth_fakes.dart';
 import 'support/dashboard_fakes.dart';
+import 'support/onboarding_fakes.dart';
 
 void main() {
-  testWidgets('splash transitions to the login foundation', (
+  testWidgets('unauthenticated first launch opens welcome', (
     WidgetTester tester,
   ) async {
     final FakeAuthRepository repository = FakeAuthRepository();
     final FakeDashboardRepository dashboardRepository =
         FakeDashboardRepository();
+    final MemoryOnboardingStorage onboardingStorage = MemoryOnboardingStorage();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           authRepositoryProvider.overrideWithValue(repository),
           dashboardRepositoryProvider.overrideWithValue(dashboardRepository),
+          onboardingStorageProvider.overrideWithValue(onboardingStorage),
         ],
         child: const BowlingManagerApp(),
       ),
@@ -31,8 +35,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('다시 만나 반가워요'), findsOneWidget);
-    expect(find.text('로그인'), findsOneWidget);
+    expect(find.text('내 기록부터 우리 동호회까지,\n볼링을 더 편하게 관리하세요.'), findsOneWidget);
+    expect(find.text('개인 기록'), findsOneWidget);
+    expect(find.text('동호회 가입'), findsOneWidget);
+    expect(find.text('동호회 운영'), findsOneWidget);
   });
 
   testWidgets('authenticated bootstrap opens home without showing login', (
@@ -42,11 +48,13 @@ void main() {
       ..bootstrapResult = testUser;
     final FakeDashboardRepository dashboardRepository =
         FakeDashboardRepository();
+    final MemoryOnboardingStorage onboardingStorage = MemoryOnboardingStorage();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           authRepositoryProvider.overrideWithValue(repository),
           dashboardRepositoryProvider.overrideWithValue(dashboardRepository),
+          onboardingStorageProvider.overrideWithValue(onboardingStorage),
         ],
         child: const BowlingManagerApp(),
       ),
@@ -56,6 +64,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.bootstrapCount, 1);
+    expect(onboardingStorage.completed, isTrue);
+    expect(onboardingStorage.intent, isNull);
     expect(find.text('안녕하세요,\n테스트 볼러님 👋'), findsOneWidget);
     expect(find.text('다시 만나 반가워요'), findsNothing);
   });
@@ -66,11 +76,15 @@ void main() {
     final FakeAuthRepository repository = FakeAuthRepository();
     final FakeDashboardRepository dashboardRepository =
         FakeDashboardRepository();
+    final MemoryOnboardingStorage onboardingStorage = MemoryOnboardingStorage(
+      completed: true,
+    );
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           authRepositoryProvider.overrideWithValue(repository),
           dashboardRepositoryProvider.overrideWithValue(dashboardRepository),
+          onboardingStorageProvider.overrideWithValue(onboardingStorage),
         ],
         child: const BowlingManagerApp(),
       ),
@@ -109,11 +123,15 @@ void main() {
       );
     final FakeDashboardRepository dashboardRepository =
         FakeDashboardRepository();
+    final MemoryOnboardingStorage onboardingStorage = MemoryOnboardingStorage(
+      completed: true,
+    );
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           authRepositoryProvider.overrideWithValue(repository),
           dashboardRepositoryProvider.overrideWithValue(dashboardRepository),
+          onboardingStorageProvider.overrideWithValue(onboardingStorage),
         ],
         child: const BowlingManagerApp(),
       ),

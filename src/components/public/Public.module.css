@@ -18,6 +18,12 @@
 .surface .button, .surface button { display: inline-block; border: 1px solid #2153a4; background: #184992; color: white; border-radius: 8px; padding: 11px 18px; font: inherit; cursor: pointer; text-decoration: none; }
 .surface .button:hover, .surface button:hover { background: #10366d; color: white; }
 .notice { background: #e8eff9; border-left: 4px solid #3264b7; padding: 18px 22px; border-radius: 4px; margin: 24px 0; }
+.appCta { background: #eef3f9; border: 1px solid #b8c8dc; border-radius: 14px; padding: 24px; margin: 32px 0; }
+.appCta[data-variant="compact"] { padding: 20px 22px; margin: 32px 0; }
+.appCta h2 { margin: 6px 0 10px; }
+.appCta[data-variant="compact"] h2 { font-size: 1.25rem; }
+.appCtaEyebrow { color: #38526f; font-size: 12px; font-weight: 750; letter-spacing: .1em; margin: 0 !important; }
+.appCtaActions { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin-top: 18px; }
 .article { max-width: 780px; margin: auto; }
 .article ul, .article ol { padding-left: 26px; }
 .article li { margin: 7px 0; }
@@ -50,7 +56,7 @@
 .footer a { color: #d9e7ff; text-decoration: underline; }
 .footer nav { display: flex; flex-wrap: wrap; gap: 12px 24px; }
 .footer a:focus-visible { outline: 3px solid #ffbc70; outline-offset: 4px; }
-@media (max-width: 480px) { .surface { padding: 20px 16px; border-radius: 12px; } .card { padding: 18px; } .surface h1 { font-size: 1.9rem; } .documentInfo { padding: 18px 16px; } .documentMeta div { grid-template-columns: 1fr; gap: 2px; } }
+@media (max-width: 480px) { .surface { padding: 20px 16px; border-radius: 12px; } .card { padding: 18px; } .surface h1 { font-size: 1.9rem; } .appCta { padding: 20px 16px; } .appCtaActions { align-items: stretch; flex-direction: column; } .appCtaActions a { text-align: center; } .documentInfo { padding: 18px 16px; } .documentMeta div { grid-template-columns: 1fr; gap: 2px; } }
 
 .legacyAbout :global(.content-card) :is(h2,h3,h4) { color: #f8fafc; }
 .legacyAbout :global(.sub-tabs-container) { max-width: 100%; flex-wrap: wrap; }

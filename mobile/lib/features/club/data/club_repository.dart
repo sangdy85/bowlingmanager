@@ -4,6 +4,7 @@ import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.d
 import 'package:bowlingmanager_mobile/features/club/domain/club_management_models.dart';
 
 abstract interface class ClubRepository {
+  Future<ClubJoinResult> joinClub(String code);
   Future<List<ClubSummary>> fetchClubs();
   Future<ClubDetail> fetchClubDetail(String teamId);
   Future<List<ClubMember>> fetchClubMembers(String teamId);
@@ -68,6 +69,9 @@ class MobileClubRepository implements ClubRepository {
   MobileClubRepository(this._api);
 
   final ClubApi _api;
+
+  @override
+  Future<ClubJoinResult> joinClub(String code) => _api.joinClub(code);
 
   @override
   Future<List<ClubSummary>> fetchClubs() => _api.fetchClubs();

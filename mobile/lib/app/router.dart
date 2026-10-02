@@ -1,10 +1,12 @@
 import 'package:bowlingmanager_mobile/features/auth/presentation/login_screen.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_state.dart';
+import 'package:bowlingmanager_mobile/app/router_redirect.dart';
 import 'package:bowlingmanager_mobile/features/admin/presentation/super_admin_screens.dart';
 import 'package:bowlingmanager_mobile/features/capture/presentation/capture_screen.dart';
 import 'package:bowlingmanager_mobile/features/capture/presentation/capture_review_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_detail_screen.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_join_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_detail_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_form_screen.dart';
@@ -30,6 +32,9 @@ import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dar
 import 'package:bowlingmanager_mobile/features/home/presentation/home_screen.dart';
 import 'package:bowlingmanager_mobile/features/profile/presentation/profile_screen.dart';
 import 'package:bowlingmanager_mobile/features/notifications/presentation/notification_screen.dart';
+import 'package:bowlingmanager_mobile/features/onboarding/application/onboarding_providers.dart';
+import 'package:bowlingmanager_mobile/features/onboarding/application/onboarding_state.dart';
+import 'package:bowlingmanager_mobile/features/onboarding/presentation/welcome_screen.dart';
 import 'package:bowlingmanager_mobile/features/records/presentation/records_screen.dart';
 import 'package:bowlingmanager_mobile/features/splash/presentation/splash_screen.dart';
 import 'package:bowlingmanager_mobile/shared/widgets/app_scaffold.dart';
@@ -45,22 +50,26 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
   ) {
     refreshNotifier.refresh();
   });
+  ref.listen<OnboardingState>(onboardingControllerProvider, (
+    OnboardingState? previous,
+    OnboardingState next,
+  ) {
+    refreshNotifier.refresh();
+  });
 
   final GoRouter router = GoRouter(
     initialLocation: '/splash',
     refreshListenable: refreshNotifier,
     redirect: (BuildContext context, GoRouterState routerState) {
       final AuthState authState = ref.read(authControllerProvider);
-      final String location = routerState.matchedLocation;
-      final bool isSplash = location == '/splash';
-      final bool isLogin = location == '/login';
-
-      if (authState.isBootstrapping) return isSplash ? null : '/splash';
-      if (authState.isLoading) return null;
-      if (authState.isAuthenticated) {
-        return isSplash || isLogin ? '/home' : null;
-      }
-      return isLogin ? null : '/login';
+      final OnboardingState onboardingState = ref.read(
+        onboardingControllerProvider,
+      );
+      return resolveAppRedirect(
+        authState: authState,
+        onboardingState: onboardingState,
+        location: routerState.matchedLocation,
+      );
     },
     routes: <RouteBase>[
       GoRoute(
@@ -72,6 +81,11 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
         path: '/login',
         builder: (BuildContext context, GoRouterState state) =>
             const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/welcome',
+        builder: (BuildContext context, GoRouterState state) =>
+            const WelcomeScreen(),
       ),
       ShellRoute(
         builder: (BuildContext context, GoRouterState state, Widget child) {
@@ -105,6 +119,11 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
             builder: (BuildContext context, GoRouterState state) =>
                 const ClubScreen(),
             routes: <RouteBase>[
+              GoRoute(
+                path: 'join',
+                builder: (BuildContext context, GoRouterState state) =>
+                    const ClubJoinScreen(),
+              ),
               GoRoute(
                 path: ':teamId',
                 builder: (BuildContext context, GoRouterState state) =>

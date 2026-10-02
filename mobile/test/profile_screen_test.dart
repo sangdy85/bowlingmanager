@@ -8,6 +8,7 @@ import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
+import 'package:bowlingmanager_mobile/features/onboarding/application/onboarding_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/auth_fakes.dart';
 import 'support/club_fakes.dart';
 import 'support/dashboard_fakes.dart';
+import 'support/onboarding_fakes.dart';
 
 void main() {
   testWidgets('MY displays real profile and multiple club summaries', (
@@ -376,6 +378,9 @@ Future<ProviderContainer> _openProfile(
           FakeDashboardRepository(),
         ),
         clubRepositoryProvider.overrideWithValue(clubRepository),
+        onboardingStorageProvider.overrideWithValue(
+          MemoryOnboardingStorage(completed: true),
+        ),
       ],
       child: const BowlingManagerApp(),
     ),

@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import type { Metadata } from 'next';
 import { PUBLIC_ORIGIN, safeContentUrl } from '@/lib/public-web';
 import PublicNav from '@/components/public/PublicNav';
+import AppGrowthCta from '@/components/public/AppGrowthCta';
 import styles from '@/components/public/Public.module.css';
 interface Props { params: Promise<{ slug: string }> }
 export async function generateStaticParams() { return PUBLISHED_GUIDE_ARTICLES.map(article => ({slug:article.slug})); }
@@ -35,6 +36,7 @@ export default async function GuideDetailPage({ params }: Props) {
  table:({children})=><div className={styles.tableScroll} tabIndex={0} role="region" aria-label="가이드 표, 좌우로 스크롤 가능"><table>{children}</table></div>,
  a:({href,children})=>href?<a href={href} rel={href.startsWith('https:')?'noopener noreferrer':undefined}>{children}</a>:<span>{children}</span>
  }}>{article.content}</Markdown></article>
+ <AppGrowthCta source="guide" variant="compact" />
  <section className={styles.documentInfo} aria-labelledby="document-info-heading">
   <h2 id="document-info-heading">문서 정보</h2>
   <dl className={styles.documentMeta}><div><dt>마지막 검토</dt><dd><time dateTime={article.lastReviewed}>{article.lastReviewed}</time></dd></div></dl>

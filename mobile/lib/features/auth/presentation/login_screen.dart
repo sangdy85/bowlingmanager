@@ -1,8 +1,10 @@
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_state.dart';
+import 'package:bowlingmanager_mobile/core/config/app_web_urls.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -30,6 +32,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await ref
         .read(authControllerProvider.notifier)
         .login(_emailController.text, _passwordController.text);
+  }
+
+  Future<void> _openWebPage(Uri uri) async {
+    try {
+      final bool opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened && mounted) _showUrlError();
+    } on Object {
+      if (mounted) _showUrlError();
+    }
+  }
+
+  void _showUrlError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('웹 페이지를 열지 못했습니다. 잠시 후 다시 시도해주세요.')),
+    );
   }
 
   @override
@@ -139,13 +159,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        TextButton(onPressed: null, child: const Text('회원가입')),
+                        TextButton(
+                          onPressed: isLoggingIn
+                              ? null
+                              : () => _openWebPage(AppWebUrls.registration),
+                          child: const Text('회원가입'),
+                        ),
                         const Text(
                           '·',
                           style: TextStyle(color: AppColors.textSecondary),
                         ),
                         TextButton(
-                          onPressed: null,
+                          onPressed: isLoggingIn
+                              ? null
+                              : () => _openWebPage(AppWebUrls.passwordRecovery),
                           child: const Text('비밀번호 찾기'),
                         ),
                       ],

@@ -186,6 +186,10 @@ class FakeClubApi implements ClubApi {
   Object? error;
 
   @override
+  Future<ClubJoinResult> joinClub(String code) async =>
+      const ClubJoinResult(team: testClub, joined: true, alreadyMember: false);
+
+  @override
   Future<ClubRole> changeMemberRole({
     required String teamId,
     required String memberId,
@@ -336,6 +340,20 @@ class FakeClubRepository implements ClubRepository {
   ClubActivityEditEnvelope editableActivity = testEditableActivity;
   Completer<ClubWriteResult>? pendingCreate;
   Object? managementError;
+  ClubJoinResult joinResult = const ClubJoinResult(
+    team: testClub,
+    joined: true,
+    alreadyMember: false,
+  );
+  Object? joinError;
+  String? joinedCode;
+
+  @override
+  Future<ClubJoinResult> joinClub(String code) async {
+    joinedCode = code;
+    if (joinError case final Object error) throw error;
+    return joinResult;
+  }
 
   @override
   Future<ClubRole> changeMemberRole({
