@@ -374,14 +374,7 @@ class _ClubEventCompetitionCardState
           ),
         ];
       case 'PUBLISHED':
-        return <Widget>[
-          OutlinedButton(
-            onPressed: _working
-                ? null
-                : () => _run(<String, dynamic>{'action': 'REOPEN'}),
-            child: const Text('발표 결과 다시 열기'),
-          ),
-        ];
+        return const <Widget>[];
       default:
         return const <Widget>[];
     }

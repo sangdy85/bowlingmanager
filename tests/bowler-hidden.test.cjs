@@ -192,8 +192,9 @@ test('event parser gates competitions and accepts implemented individual/team/ev
     rankPoints: [{ rank: 1, points: 20 }, { rank: 2, points: 17 }],
   };
   assert.throws(() => events.parseTeamEventInput(body, false), error => error.code === 'FEATURE_DISABLED');
-  assert.deepEqual(events.parseTeamEventInput(body, true).rankPoints, []);
-  assert.equal(events.parseTeamEventInput(body, true).competitionGameCount, 3);
+  assert.throws(() => events.parseTeamEventInput(body, true),
+    error => error.code === 'INVALID_GAME_COUNT');
+  assert.deepEqual(events.parseTeamEventInput({ ...body, competitionGameCount: 3 }, true).rankPoints, []);
   assert.equal(events.parseTeamEventInput({ ...body, competitionGameCount: 5 }, true).competitionGameCount, 5);
   assert.equal(events.parseTeamEventInput({
     ...body, laneDrawEnabled: true, competitionType: 'TEAM', competitionGameCount: 4,

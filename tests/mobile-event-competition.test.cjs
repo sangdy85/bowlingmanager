@@ -58,6 +58,9 @@ test('server voting opens after finalization and closes exactly after the deadli
   assert.equal(service.votingPhase(start, 30, new Date('2026-09-22T10:29:59Z')).open, true);
   const close = service.votingPhase(start, 30, new Date('2026-09-22T10:30:00Z'));
   assert.equal(close.open, false); assert.equal(close.closed, true);
+  const override = new Date('2026-09-22T11:00:00Z');
+  assert.equal(service.votingPhase(start, 30, new Date('2026-09-22T10:45:00Z'), override).open, true);
+  assert.equal(service.votingPhase(start, 30, override, override).closed, true);
 });
 
 test('share, voter bonus and final score preserve decimal precision', () => {

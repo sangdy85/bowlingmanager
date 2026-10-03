@@ -2,6 +2,7 @@ import { randomInt } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { enqueueMobileNotifications, MOBILE_NOTIFICATION_TYPES } from "@/lib/mobile-api/notifications";
+import { recordEventAdminAudit } from "@/lib/mobile-api/event-admin-audit";
 import { normalizeTeamEventGuestName } from "@/lib/mobile-api/team-event-guest";
 import {
     BOWLER_HIDDEN_COMPETITION_TYPES,
@@ -100,9 +101,7 @@ export function parseTeamEventInput(value: unknown, bowlerHiddenEnabled = false)
     if (competitionEnabled && requestedType === "TEAM" && laneDrawEnabled !== true) {
         throw new TeamEventError("LANE_CONFIG_REQUIRED", "TEAM 대회는 레인 배정 설정이 필요합니다.", 400);
     }
-    const competitionGameCount = competitionEnabled && requestedType === "INDIVIDUAL" && body.competitionGameCount == null
-        ? 3
-        : body.competitionGameCount;
+    const competitionGameCount = body.competitionGameCount;
     if (competitionEnabled &&
         (!Number.isSafeInteger(competitionGameCount) || (competitionGameCount as number) < 1 || (competitionGameCount as number) > 12)) {
         throw new TeamEventError("INVALID_GAME_COUNT", "대회 게임 수는 1~12 사이여야 합니다.", 400);
@@ -264,6 +263,16 @@ export async function updateTeamEvent(actorUserId: string, teamId: string, event
     requireManager(access.role);
     const current = await findEvent(teamId, eventId);
     const input = parseTeamEventInput(value, access.bowlerHiddenEnabled);
+    if (current.competitionEnabled && current.competitionGameCount !== input.competitionGameCount) {
+        const linkedScoreCount = await prisma.score.count({ where: { teamEventId: eventId } });
+        if (current.competitionStatus !== "ATTENDANCE_OPEN" || linkedScoreCount > 0) {
+            throw new TeamEventError(
+                "GAME_COUNT_CHANGE_REQUIRES_ADMIN",
+                "관리자 운영 도구에서 경기 게임 수를 변경해주세요.",
+                409,
+            );
+        }
+    }
     if (current.competitionMode !== input.competitionMode && current.competitionEnabled) {
         const dayEnd = new Date(current.eventDate.getTime() + 24 * 60 * 60 * 1000);
         const hasScores = await prisma.score.count({ where: { teamId, gameDate: { gte: current.eventDate, lt: dayEnd }, ...(current.gameType ? { gameType: current.gameType } : {}) } }) > 0;
@@ -315,14 +324,12 @@ export async function updateTeamEvent(actorUserId: string, teamId: string, event
 export async function deleteTeamEvent(actorUserId: string, teamId: string, eventId: string) {
     const access = await getAccess(actorUserId, teamId);
     requireManager(access.role);
-    const event = await findEvent(teamId, eventId);
-    if (event.competitionEnabled && (event.competitionType === "TEAM" || event.competitionType === "EVENT") &&
-        event.competitionStatus !== "ATTENDANCE_OPEN") {
-        throw new TeamEventError("EVENT_LOCKED", "대회 참가자 확정 후에는 일정을 삭제할 수 없습니다.", 409);
-    }
-    requireNotStarted(event.laneDrawStatus, "추첨 시작 후에는 일정과 추첨 결과를 삭제할 수 없습니다.");
-    await prisma.teamEvent.delete({ where: { id: eventId } });
-    return { deleted: true };
+    await findEvent(teamId, eventId);
+    throw new TeamEventError(
+        "ADMIN_OPERATION_REQUIRED",
+        "관리자 운영 도구에서 삭제 경고를 확인한 뒤 일정을 삭제해주세요.",
+        409,
+    );
 }
 
 export async function updateMyAttendance(actorUserId: string, teamId: string, eventId: string, value: unknown) {
@@ -386,18 +393,81 @@ export async function deleteEventGuest(actorUserId: string, teamId: string, even
 
 export async function replaceEventLaneSlots(actorUserId: string, teamId: string, eventId: string, value: unknown) {
     const access = await getAccess(actorUserId, teamId); requireManager(access.role);
-    const event = await findEvent(teamId, eventId); requireNotStarted(event.laneDrawStatus);
+    const event = await findEvent(teamId, eventId);
     if (!event.laneDrawEnabled) throw new TeamEventError("LANE_DRAW_DISABLED", "레인 추첨을 사용하지 않는 일정입니다.", 409);
-    if (event.competitionEnabled && event.competitionType === "TEAM" &&
-        event.competitionStatus !== "TEAMS_FINALIZED" && event.competitionStatus !== "LANES_ASSIGNED") {
-        throw new TeamEventError("TEAMS_NOT_FINALIZED", "TEAM 확정 후 레인 좌석을 설정할 수 있습니다.", 409);
-    }
+    const body = asRecord(value);
     const slots = parseLaneSlots(value);
+    const isTeamCompetition = event.competitionEnabled && event.competitionType === "TEAM";
+    if (!isTeamCompetition) requireNotStarted(event.laneDrawStatus);
+    if (isTeamCompetition) {
+        requireContiguousTeamLaneCapacities(slots);
+        if (event.competitionStatus !== "TEAMS_FINALIZED" && event.competitionStatus !== "LANES_ASSIGNED") {
+            throw new TeamEventError("TEAMS_NOT_FINALIZED", "TEAM 확정 후 레인 좌석을 설정할 수 있습니다.", 409);
+        }
+        if (event.competitionStatus === "TEAMS_FINALIZED") requireNotStarted(event.laneDrawStatus);
+        if (event.competitionStatus === "LANES_ASSIGNED") {
+            if (body.resetAssignments !== true) {
+                throw new TeamEventError("LANE_ASSIGNMENT_RESET_REQUIRED", "현재 레인 배정 초기화 확인이 필요합니다.", 409);
+            }
+            try {
+                await prisma.$transaction(async (tx) => {
+                    const current = await tx.teamEvent.findFirst({ where: { id: eventId, teamId }, include: eventInclude });
+                    if (!current) throw new TeamEventError("EVENT_NOT_FOUND", "일정을 찾을 수 없습니다.", 404);
+                    if (current.competitionType !== "TEAM" || current.competitionStatus !== "LANES_ASSIGNED" || current.laneDrawStatus !== "COMPLETED" ||
+                        current.draftGeneration !== event.draftGeneration) {
+                        throw new TeamEventError("LANE_CONFIG_CONFLICT", "레인 배정 상태가 변경되었습니다.", 409);
+                    }
+                    if (await tx.score.count({ where: { teamEventId: eventId } }) > 0) {
+                        throw new TeamEventError("COMPETITION_SCORE_STARTED", "이미 경기 점수가 입력되어 레인 설정을 변경할 수 없습니다.", 409);
+                    }
+                    const claimed = await tx.teamEvent.updateMany({ where: {
+                        id: eventId, teamId, draftGeneration: event.draftGeneration,
+                        competitionStatus: "LANES_ASSIGNED", laneDrawStatus: "COMPLETED",
+                    }, data: { competitionStatus: "TEAMS_FINALIZED", laneDrawStatus: "NOT_STARTED" } });
+                    if (claimed.count !== 1) throw new TeamEventError("LANE_CONFIG_CONFLICT", "레인 배정 상태가 변경되었습니다.", 409);
+                    await tx.teamEventLaneAssignment.deleteMany({ where: { eventId } });
+                    await tx.teamEventLaneSlot.deleteMany({ where: { eventId } });
+                    for (const slot of slots) await tx.teamEventLaneSlot.create({ data: { eventId, ...slot } });
+                    await recordEventAdminAudit(tx, {
+                        eventId, eventTitle: current.title, teamId, actorUserId,
+                        action: "RESET_LANES", competitionType: current.competitionType,
+                        beforeStatus: "LANES_ASSIGNED", afterStatus: "TEAMS_FINALIZED",
+                        details: {
+                            assignmentsCleared: current.laneAssignments?.length ?? 0,
+                            configuredSlotCount: slots.length,
+                            capacityChanged: true,
+                        },
+                    });
+                }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+                return { slots, assignmentsReset: true, competitionStatus: "TEAMS_FINALIZED", laneDrawStatus: "NOT_STARTED" };
+            } catch (error) {
+                if ((error as { code?: unknown })?.code === "P2034") {
+                    throw new TeamEventError("LANE_CONFIG_CONFLICT", "레인 배정 상태가 변경되었습니다.", 409);
+                }
+                throw error;
+            }
+        }
+    }
     await prisma.$transaction(async (tx) => {
         await tx.teamEventLaneSlot.deleteMany({ where: { eventId } });
         for (const slot of slots) await tx.teamEventLaneSlot.create({ data: { eventId, ...slot } });
     });
     return { slots };
+}
+
+function requireContiguousTeamLaneCapacities(slots: readonly SlotInput[]) {
+    const positionsByLane = new Map<number, number[]>();
+    for (const slot of slots) {
+        const positions = positionsByLane.get(slot.laneNumber) ?? [];
+        positions.push(slot.position);
+        positionsByLane.set(slot.laneNumber, positions);
+    }
+    for (const positions of positionsByLane.values()) {
+        positions.sort((a, b) => a - b);
+        if (positions.some((position, index) => position !== index + 1)) {
+            throw new TeamEventError("INVALID_TEAM_LANE_CAPACITY", "TEAM 레인 자리는 1번부터 연속으로 설정해주세요.", 400);
+        }
+    }
 }
 
 export async function startEventDraw(actorUserId: string, teamId: string, eventId: string, now = new Date()) {
@@ -559,11 +629,7 @@ async function getAccess(userId: string, teamId: string) {
 
 function serializeEvent(event: EventWithRelations, access: Awaited<ReturnType<typeof getAccess>>) {
     const competitionVisible = access.bowlerHiddenEnabled && event.competitionEnabled;
-    const competitionGameCount = event.competitionType === "TEAM"
-        ? event.competitionGameCount ?? 4
-        : event.competitionType === "INDIVIDUAL"
-            ? event.competitionGameCount ?? 3
-            : event.competitionGameCount;
+    const competitionGameCount = event.competitionGameCount;
     const attendanceByMember = new Map(event.attendances.map((item) => [item.memberId, item]));
     const myAttendance = attendanceByMember.get(access.member.id)?.status ?? "UNANSWERED";
     const assignments = event.laneAssignments.map(serializeAssignment).sort((a, b) => a.laneNumber - b.laneNumber || a.position - b.position);
@@ -589,16 +655,16 @@ function serializeEvent(event: EventWithRelations, access: Awaited<ReturnType<ty
             type: event.competitionType,
             mode: event.competitionMode,
             status: event.competitionStatus,
-            rankPoints: event.competitionType === "TEAM"
-                ? readTeamGamePointTables(event.rankPoints, competitionGameCount ?? 4)[0]?.points ?? []
+            rankPoints: event.competitionType === "TEAM" && competitionGameCount != null
+                ? readTeamGamePointTables(event.rankPoints, competitionGameCount)[0]?.points ?? []
                 : [],
-            teamGamePointTables: event.competitionType === "TEAM"
-                ? readTeamGamePointTables(event.rankPoints, competitionGameCount ?? 4)
+            teamGamePointTables: event.competitionType === "TEAM" && competitionGameCount != null
+                ? readTeamGamePointTables(event.rankPoints, competitionGameCount)
                 : [],
             competitionStartAt: event.competitionStartAt?.toISOString() ?? null,
-            voteCloseAt: event.competitionStartAt
+            voteCloseAt: event.eventVotingDeadlineAt?.toISOString() ?? (event.competitionStartAt
                 ? new Date(event.competitionStartAt.getTime() + event.votingDurationMinutes * 60_000).toISOString()
-                : null,
+                : null),
             votingDurationMinutes: event.votingDurationMinutes,
             gameCount: competitionGameCount,
         } : null,

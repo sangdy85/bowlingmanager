@@ -186,6 +186,7 @@ type EventVoteReminderEvent = {
     teamId: string;
     draftGeneration: number;
     competitionStartAt: Date | null;
+    eventVotingDeadlineAt: Date | null;
     votingDurationMinutes: number;
     eventCompetitionParticipants: Array<{
         member: { userId: string } | null;
@@ -196,8 +197,8 @@ type EventVoteReminderEvent = {
 export function eventVoteReminderInputs(events: readonly EventVoteReminderEvent[], now = new Date()): NotificationInput[] {
     return events.flatMap((event) => {
         if (!event.competitionStartAt) return [];
-        const deadline = new Date(event.competitionStartAt.getTime() + event.votingDurationMinutes * 60_000);
-        if (now < event.competitionStartAt || now >= deadline) return [];
+        const deadline = event.eventVotingDeadlineAt ?? new Date(event.competitionStartAt.getTime() + event.votingDurationMinutes * 60_000);
+        if ((!event.eventVotingDeadlineAt && now < event.competitionStartAt) || now >= deadline) return [];
         return event.eventCompetitionParticipants.flatMap((participant) => participant.member && !participant.ballot ? [{
             userId: participant.member.userId,
             dedupeKey: `event-vote-reminder:${event.id}:${event.draftGeneration}:${participant.member.userId}`,
@@ -218,7 +219,7 @@ export async function generateEventVoteReminderNotifications(now = new Date()) {
             competitionEnabled: true,
             competitionType: "EVENT",
             competitionStatus: "EVENT_READY",
-            competitionStartAt: { lte: now },
+            OR: [{ eventVotingDeadlineAt: { not: null } }, { competitionStartAt: { lte: now } }],
         },
         orderBy: { competitionStartAt: "asc" },
         take: 200,
@@ -227,6 +228,7 @@ export async function generateEventVoteReminderNotifications(now = new Date()) {
             teamId: true,
             draftGeneration: true,
             competitionStartAt: true,
+            eventVotingDeadlineAt: true,
             votingDurationMinutes: true,
             eventCompetitionParticipants: {
                 select: {

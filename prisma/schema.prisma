@@ -45,6 +45,7 @@ model User {
   createdTeamCharges              TeamCharge[]                      @relation("TeamChargeCreatedBy")
   markedTeamChargeTargets         TeamChargeTarget[]                @relation("TeamChargeTargetMarkedBy")
   teamChargeTargetAudits          TeamChargeTargetAudit[]           @relation("TeamChargeTargetAuditActor")
+  teamEventAdminAudits            TeamEventAdminAudit[]             @relation("TeamEventAdminAuditActor")
 }
 
 model VerificationToken {
@@ -169,6 +170,7 @@ model Team {
   seasonFinals                 SeasonFinalTournament[]
   seasonFinalTemplates         SeasonFinalTemplate[]
   charges                      TeamCharge[]
+  eventAdminAudits             TeamEventAdminAudit[]
 }
 
 model TeamSeason {
@@ -509,6 +511,7 @@ model TeamEvent {
   currentPickNumber            Int                           @default(1)
   competitionStartAt           DateTime?
   votingDurationMinutes        Int                           @default(30)
+  eventVotingDeadlineAt        DateTime?
   competitionGameCount         Int?
   eventNonVoterPolicy          String?
   eventTieBreakPolicy          String?
@@ -535,6 +538,7 @@ model TeamEvent {
   seasonPointEntries           SeasonPointEntry[]
   scores                       Score[]
   charges                      TeamCharge[]
+  adminAudits                  TeamEventAdminAudit[]
 
   @@index([teamId, eventDate])
   @@index([seasonId, eventDate])
@@ -878,6 +882,28 @@ model TeamCharge {
   @@index([teamId, status, dueDate])
   @@index([eventId])
   @@index([createdByUserId])
+}
+
+model TeamEventAdminAudit {
+  id              String     @id @default(cuid())
+  eventId         String?
+  eventSnapshotId String
+  eventTitle      String
+  teamId          String
+  actorUserId     String?
+  action          String
+  competitionType String?
+  beforeStatus    String?
+  afterStatus     String?
+  detailsJson     String     @default("{}")
+  createdAt       DateTime   @default(now())
+  event           TeamEvent? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  team            Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  actor           User?      @relation("TeamEventAdminAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([teamId, createdAt])
+  @@index([eventSnapshotId, createdAt])
+  @@index([actorUserId, createdAt])
 }
 
 model TeamChargeTarget {

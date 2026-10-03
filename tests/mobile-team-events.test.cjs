@@ -126,6 +126,115 @@ test('lane slots enforce range and event-local uniqueness', () => {
   ] }), error => error.code === 'DUPLICATE_LANE_SLOT');
 });
 
+function teamLaneCapacityHarness({ scoreCount = 0 } = {}) {
+  const event = {
+    id: 'event-capacity', teamId: 'team-1', laneDrawEnabled: true,
+    competitionEnabled: true, competitionType: 'TEAM', competitionStatus: 'LANES_ASSIGNED',
+    laneDrawStatus: 'COMPLETED', draftGeneration: 2,
+  };
+  let slots = [
+    { id: 'old-1', eventId: event.id, laneNumber: 1, position: 1 },
+    { id: 'old-2', eventId: event.id, laneNumber: 1, position: 2 },
+  ];
+  let assignments = [{ id: 'assignment-1', eventId: event.id, slotId: 'old-1' }];
+  let nextSlot = 1;
+  const prisma = {
+    team: { findFirst: async () => ({
+      ownerId: 'user-1', bowlerHiddenEnabled: true, User: [],
+      members: [{ id: 'member-1', alias: null, user: { name: '관리자' } }],
+    }) },
+    teamEvent: {
+      findFirst: async args => args.where.id === event.id && args.where.teamId === event.teamId
+        ? { ...event }
+        : null,
+      updateMany: async args => {
+        if (event.competitionStatus !== args.where.competitionStatus ||
+            event.laneDrawStatus !== args.where.laneDrawStatus ||
+            event.draftGeneration !== args.where.draftGeneration) return { count: 0 };
+        Object.assign(event, args.data);
+        return { count: 1 };
+      },
+    },
+    score: { count: async () => scoreCount },
+    teamEventLaneAssignment: {
+      deleteMany: async () => { const count = assignments.length; assignments = []; return { count }; },
+    },
+    teamEventLaneSlot: {
+      deleteMany: async () => { const count = slots.length; slots = []; return { count }; },
+      create: async ({ data }) => {
+        const slot = { id: `new-${nextSlot++}`, ...data };
+        slots.push(slot);
+        return slot;
+      },
+    },
+  };
+  prisma.$transaction = async callback => {
+    const eventSnapshot = { ...event };
+    const slotSnapshot = slots.map(item => ({ ...item }));
+    const assignmentSnapshot = assignments.map(item => ({ ...item }));
+    try { return await callback(prisma); }
+    catch (error) {
+      Object.assign(event, eventSnapshot);
+      slots = slotSnapshot;
+      assignments = assignmentSnapshot;
+      throw error;
+    }
+  };
+  const capacityService = loadTs('src/lib/mobile-api/team-events.ts', { '@/lib/prisma': prisma });
+  return {
+    service: capacityService, event,
+    get slots() { return slots; },
+    get assignments() { return assignments; },
+  };
+}
+
+test('TEAM capacity reset requires confirmation and atomically returns to finalized state', async () => {
+  const harness = teamLaneCapacityHarness();
+  const requested = [
+    { laneNumber: 8, position: 1 }, { laneNumber: 8, position: 2 }, { laneNumber: 8, position: 3 },
+    { laneNumber: 12, position: 1 }, { laneNumber: 12, position: 2 },
+  ];
+  await assert.rejects(
+    harness.service.replaceEventLaneSlots('user-1', 'team-1', 'event-capacity', { slots: requested }),
+    error => error.code === 'LANE_ASSIGNMENT_RESET_REQUIRED',
+  );
+  assert.equal(harness.assignments.length, 1);
+
+  const result = await harness.service.replaceEventLaneSlots('user-1', 'team-1', 'event-capacity', {
+    resetAssignments: true, slots: requested,
+  });
+  assert.equal(result.assignmentsReset, true);
+  assert.equal(harness.event.competitionStatus, 'TEAMS_FINALIZED');
+  assert.equal(harness.event.laneDrawStatus, 'NOT_STARTED');
+  assert.deepEqual(harness.assignments, []);
+  assert.deepEqual(harness.slots.map(({ laneNumber, position }) => ({ laneNumber, position })), requested);
+});
+
+test('TEAM capacity rejects nonconsecutive positions and score-started reset', async () => {
+  const invalid = teamLaneCapacityHarness();
+  await assert.rejects(
+    invalid.service.replaceEventLaneSlots('user-1', 'team-1', 'event-capacity', {
+      resetAssignments: true,
+      slots: [{ laneNumber: 8, position: 1 }, { laneNumber: 8, position: 3 }],
+    }),
+    error => error.code === 'INVALID_TEAM_LANE_CAPACITY',
+  );
+  assert.equal(invalid.assignments.length, 1);
+
+  const scored = teamLaneCapacityHarness({ scoreCount: 1 });
+  await assert.rejects(
+    scored.service.replaceEventLaneSlots('user-1', 'team-1', 'event-capacity', {
+      resetAssignments: true,
+      slots: [{ laneNumber: 8, position: 1 }],
+    }),
+    error => error.code === 'COMPETITION_SCORE_STARTED' &&
+      error.message === '이미 경기 점수가 입력되어 레인 설정을 변경할 수 없습니다.',
+  );
+  assert.equal(scored.event.competitionStatus, 'LANES_ASSIGNED');
+  assert.equal(scored.event.laneDrawStatus, 'COMPLETED');
+  assert.equal(scored.assignments.length, 1);
+});
+
 test('Fisher-Yates uses injectable cryptographic index source', () => {
   const calls = [];
   const shuffled = service.fisherYatesShuffle(['a', 'b', 'c', 'd'], upper => {

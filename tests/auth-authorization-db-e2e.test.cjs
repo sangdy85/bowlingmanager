@@ -341,7 +341,11 @@ test('mobile authentication and authorization hold at a real SQLite and HTTP bou
       assert.equal((await request(`/teams/${ids.normalTeam}/events/${eventId}/attendance`, { method: 'PUT', token: tokens.member.accessToken, body: { status: 'ATTENDING' } })).status, 200);
       assert.equal((await request(`/teams/${ids.normalTeam}/events/${eventId}`, { method: 'PATCH', token: tokens.member.accessToken, body: baseEvent })).status, 403);
       assert.equal((await request(`/teams/${ids.normalTeam}/events/${eventId}`, { method: 'PATCH', token: tokens.manager.accessToken, body: { ...baseEvent, title: 'Manager Update' } })).status, 200);
-      assert.equal((await request(`/teams/${ids.normalTeam}/events/${eventId}`, { method: 'DELETE', token: tokens.owner.accessToken })).status, 200);
+      assert.equal((await request(`/teams/${ids.normalTeam}/events/${eventId}`, { method: 'DELETE', token: tokens.owner.accessToken })).status, 409);
+      assert.equal((await request(`/teams/${ids.normalTeam}/events/${eventId}/admin-operations`, {
+        method: 'POST', token: tokens.owner.accessToken,
+        body: { action: 'DELETE_EVENT', confirmTitle: 'Manager Update' },
+      })).status, 200);
       assert.equal((await request(`/teams/${ids.normalTeam}/events`, { method: 'POST', token: tokens.owner.accessToken, body: { ...baseEvent, competitionEnabled: true, competitionType: 'INDIVIDUAL', competitionMode: 'OFFICIAL', rankPoints: [] } })).status, 403);
       // Season OFF + Hidden OFF is a normal empty state rather than an API error.
       const disabledSeason = await request(`/teams/${ids.normalTeam}/season-ranking`, { token: tokens.owner.accessToken });

@@ -30,7 +30,6 @@ class _ClubCompetitionScoreScreenState
   final Map<String, List<TextEditingController>> _controllers =
       <String, List<TextEditingController>>{};
   String? _initializedEventId;
-  int? _gameCount;
   bool _working = false;
   String? _message;
 
@@ -83,41 +82,8 @@ class _ClubCompetitionScoreScreenState
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${entry.date} · ${_typeLabel(entry.competitionType)} · ${_modeLabel(entry.competitionMode)} · ${_gameCount ?? entry.gameCount}게임',
+                    '${entry.date} · ${_typeLabel(entry.competitionType)} · ${_modeLabel(entry.competitionMode)} · ${entry.gameCount}게임',
                   ),
-                  if (!entry.readOnly &&
-                      entry.competitionType == 'INDIVIDUAL') ...<Widget>[
-                    const SizedBox(height: 12),
-                    Row(
-                      key: const Key('competition-game-count-stepper'),
-                      children: <Widget>[
-                        const Text(
-                          '공식 경기 수',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          onPressed:
-                              _working || (_gameCount ?? entry.gameCount) <= 1
-                              ? null
-                              : () => _resizeGameCount(
-                                  (_gameCount ?? entry.gameCount) - 1,
-                                ),
-                          icon: const Icon(Icons.remove_circle_outline),
-                        ),
-                        Text('${_gameCount ?? entry.gameCount}게임'),
-                        IconButton(
-                          onPressed:
-                              _working || (_gameCount ?? entry.gameCount) >= 12
-                              ? null
-                              : () => _resizeGameCount(
-                                  (_gameCount ?? entry.gameCount) + 1,
-                                ),
-                          icon: const Icon(Icons.add_circle_outline),
-                        ),
-                      ],
-                    ),
-                  ],
                   if (entry.readOnly) ...<Widget>[
                     const SizedBox(height: 12),
                     const Text(
@@ -192,7 +158,7 @@ class _ClubCompetitionScoreScreenState
               spacing: 8,
               runSpacing: 8,
               children: List<Widget>.generate(
-                _gameCount ?? entry.gameCount,
+                entry.gameCount,
                 (index) => SizedBox(
                   width: 92,
                   child: TextFormField(
@@ -230,24 +196,7 @@ class _ClubCompetitionScoreScreenState
             ),
           );
     }
-    _gameCount = entry.gameCount;
     _initializedEventId = entry.eventId;
-  }
-
-  void _resizeGameCount(int next) {
-    if (next < 1 || next > 12 || next == _gameCount) return;
-    setState(() {
-      for (final controllers in _controllers.values) {
-        while (controllers.length < next) {
-          controllers.add(TextEditingController());
-        }
-        while (controllers.length > next) {
-          controllers.removeLast().dispose();
-        }
-      }
-      _gameCount = next;
-      _message = '저장하면 일정의 공식 경기 수가 $next게임으로 변경됩니다.';
-    });
   }
 
   Future<void> _applyOcr(ClubCompetitionScoreEntry entry) async {
@@ -266,7 +215,7 @@ class _ClubCompetitionScoreScreenState
       final result = matchCompetitionOcrPlayers(
         entry,
         players,
-        gameCount: _gameCount ?? entry.gameCount,
+        gameCount: entry.gameCount,
       );
       for (final match in result.matches.entries) {
         final controllers = _controllers[match.key]!;
@@ -303,29 +252,7 @@ class _ClubCompetitionScoreScreenState
     ClubCompetitionScoreEntry entry,
     ClubEventRequest request,
   ) async {
-    final int gameCount = _gameCount ?? entry.gameCount;
-    if (gameCount != entry.gameCount) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('공식 경기 수 변경'),
-          content: Text(
-            '일정의 공식 경기 수를 ${entry.gameCount}게임에서 $gameCount게임으로 변경하고 점수를 저장할까요?',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('취소'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('변경 후 저장'),
-            ),
-          ],
-        ),
-      );
-      if (confirmed != true) return;
-    }
+    final int gameCount = entry.gameCount;
     final participants = <Map<String, dynamic>>[];
     for (final participant in entry.participants) {
       final scores = _controllers[participant.participantId]!
@@ -348,10 +275,7 @@ class _ClubCompetitionScoreScreenState
       await ref.read(clubEventsRepositoryProvider).saveCompetitionScores(
         widget.teamId,
         widget.eventId,
-        <String, dynamic>{
-          'gameCount': entry.competitionType == 'INDIVIDUAL' ? gameCount : null,
-          'participants': participants,
-        },
+        <String, dynamic>{'gameCount': gameCount, 'participants': participants},
       );
       ref.invalidate(clubCompetitionScoresProvider(request));
       invalidateClubEvents(ref, request.userId, widget.teamId, widget.eventId);

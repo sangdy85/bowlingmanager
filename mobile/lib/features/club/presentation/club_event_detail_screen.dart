@@ -5,6 +5,7 @@ import 'package:bowlingmanager_mobile/features/club/application/club_event_provi
 import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_event_admin_card.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_team_competition_card.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_competition_card.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
@@ -57,13 +58,10 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                   context.push(
                     '/club/${Uri.encodeComponent(widget.teamId)}/events/${Uri.encodeComponent(widget.eventId)}/edit',
                   );
-                } else if (value == 'delete') {
-                  _delete(user.id);
                 }
               },
               itemBuilder: (_) => const <PopupMenuEntry<String>>[
                 PopupMenuItem(value: 'edit', child: Text('수정')),
-                PopupMenuItem(value: 'delete', child: Text('삭제')),
               ],
             ),
         ],
@@ -160,6 +158,15 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                 ],
                 if (event.canManage) ...<Widget>[
                   const SizedBox(height: 12),
+                  ClubEventAdminCard(
+                    userId: user.id,
+                    teamId: widget.teamId,
+                    eventId: widget.eventId,
+                    onDeleted: () => context.go(
+                      '/club/${Uri.encodeComponent(widget.teamId)}/events',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   _adminCard(event, user.id),
                 ],
               ],
@@ -172,7 +179,11 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
 
   bool _canEnterCompetitionScores(ClubEvent event) {
     final competition = event.competition;
-    if (competition == null || competition.status == 'PUBLISHED') return false;
+    if (competition == null ||
+        competition.gameCount == null ||
+        competition.status == 'PUBLISHED') {
+      return false;
+    }
     return switch (competition.type) {
       ClubCompetitionType.individual => competition.status == 'GROUPS_READY',
       ClubCompetitionType.team => const <String>{
@@ -584,18 +595,13 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                     child: const Text('조 편성 완료'),
                   ),
               ],
-              if (event.canManage) ...<Widget>[
+              if (event.canManage && result.status != 'PUBLISHED') ...<Widget>[
                 const Divider(height: 28),
                 FilledButton(
                   onPressed: _working
                       ? null
-                      : () => _individualPublicationAction(
-                          userId,
-                          result.status == 'PUBLISHED' ? 'REOPEN' : 'PUBLISH',
-                        ),
-                  child: Text(
-                    result.status == 'PUBLISHED' ? '결과 다시 열기' : '경기 결과 발표',
-                  ),
+                      : () => _individualPublicationAction(userId, 'PUBLISH'),
+                  child: const Text('경기 결과 발표'),
                 ),
               ],
             ],
@@ -970,37 +976,6 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
           .read(clubEventsRepositoryProvider)
           .replaceLaneSlots(widget.teamId, widget.eventId, slots),
     );
-  }
-
-  Future<void> _delete(String userId) async {
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: const Text('일정 삭제'),
-        content: const Text('이 일정과 참석/추첨 정보를 삭제할까요?'),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('삭제'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await ref
-          .read(clubEventsRepositoryProvider)
-          .deleteEvent(widget.teamId, widget.eventId);
-      if (!mounted) return;
-      invalidateClubEvents(ref, userId, widget.teamId);
-      context.go('/club/${Uri.encodeComponent(widget.teamId)}/events');
-    } on Object catch (error) {
-      if (mounted) _showError(error);
-    }
   }
 
   void _showError(Object error) {

@@ -75,9 +75,10 @@ export async function getCompetitionScoreEntry(actorUserId: string, teamId: stri
         participants = participants.map((item) => ({ ...item, group: groupByParticipant.get(item.participantId) ?? null }));
     }
     const scores = scoresByParticipant(event, participants);
-    const configuredGameCount = event.competitionGameCount;
-    const existingGameCount = Math.max(0, ...participants.map((item) => scores.get(item.participantId)?.length ?? 0));
-    const gameCount = configuredGameCount ?? (existingGameCount || 3);
+    const gameCount = event.competitionGameCount;
+    if (!gameCount) {
+        throw new CompetitionScoreError("GAME_COUNT_REQUIRED", "이 대회의 경기 게임 수를 먼저 설정해주세요.", 409);
+    }
     return {
         event: {
             id: event.id,
@@ -124,13 +125,14 @@ export async function saveCompetitionScores(actorUserId: string, teamId: string,
         if (new Set(ids).size !== ids.length) {
             throw new CompetitionScoreError("DUPLICATE_PARTICIPANT", "같은 참가자의 점수를 중복 제출할 수 없습니다.", 400);
         }
-        const currentScores = scoresByParticipant(event, participants);
-        const existingGameCount = Math.max(0, ...participants.map((item) => currentScores.get(item.participantId)?.length ?? 0));
         const requestedGameCount = input.gameCount;
-        if (requestedGameCount != null && event.competitionType !== "INDIVIDUAL") {
-            throw new CompetitionScoreError("INVALID_GAME_COUNT", "경기 수 변경은 개인전에서만 가능합니다.", 400);
+        if (!event.competitionGameCount) {
+            throw new CompetitionScoreError("GAME_COUNT_REQUIRED", "이 대회의 경기 게임 수를 먼저 설정해주세요.", 409);
         }
-        const expectedGameCount = requestedGameCount ?? event.competitionGameCount ?? (existingGameCount || 3);
+        if (requestedGameCount != null && requestedGameCount !== event.competitionGameCount) {
+            throw new CompetitionScoreError("GAME_COUNT_CHANGE_REQUIRES_ADMIN", "관리자 운영 도구에서 경기 게임 수를 변경해주세요.", 409);
+        }
+        const expectedGameCount = event.competitionGameCount;
         if (!expectedGameCount || expectedGameCount < 1 || expectedGameCount > 12 ||
             input.participants.some((item) => item.scores.length !== expectedGameCount)) {
             throw new CompetitionScoreError("INVALID_GAME_COUNT", "모든 참가자의 경기 수를 동일하게 입력해주세요.", 400);
@@ -156,9 +158,6 @@ export async function saveCompetitionScores(actorUserId: string, teamId: string,
         });
         await tx.score.deleteMany({ where: { teamEventId: event.id } });
         await tx.score.createMany({ data: rows });
-        if (event.competitionType === "INDIVIDUAL" && event.competitionGameCount !== expectedGameCount) {
-            await tx.teamEvent.update({ where: { id: event.id }, data: { competitionGameCount: expectedGameCount } });
-        }
         return { eventId: event.id, participantCount: participants.length, gameCount: expectedGameCount, savedCount: rows.length };
     }, { timeout: 60_000 });
 }

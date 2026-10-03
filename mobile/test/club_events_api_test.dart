@@ -26,6 +26,27 @@ void main() {
             },
           });
         }
+        if (options.path.endsWith('/admin-operations')) {
+          return _json(200, <String, Object>{
+            'success': true,
+            'data': <String, Object?>{
+              'eventId': 'event-1',
+              'title': '정기전',
+              'competitionType': 'INDIVIDUAL',
+              'competitionStatus': 'GROUPS_READY',
+              'laneDrawStatus': 'NOT_STARTED',
+              'gameCount': 3,
+              'scoreCount': 0,
+              'activePublicationCount': 0,
+              'financeLinkCount': 0,
+              'generation': 1,
+              'teams': <Object>[],
+              'unassignedParticipants': <Object>[],
+              'eventParticipants': <Object>[],
+              'audits': <Object>[],
+            },
+          });
+        }
         if (options.path.endsWith('/events/event-1')) {
           return _json(200, <String, Object>{
             'success': true,
@@ -60,6 +81,10 @@ void main() {
       ClubEventListScope.upcoming,
     );
     final ClubEvent detail = await api.fetchEvent('team-1', 'event-1');
+    final admin = await api.fetchAdminOperations('team-1', 'event-1');
+    await api.runAdminOperation('team-1', 'event-1', <String, dynamic>{
+      'action': 'RESET_LANES',
+    });
     await api.setAttendance('team-1', 'event-1', ClubEventAttendance.attending);
     await api.setMemberAttendance(
       'team-1',
@@ -71,17 +96,21 @@ void main() {
       'team-1',
       'event-1',
       <({int laneNumber, int position})>[(laneNumber: 1, position: 1)],
+      resetAssignments: true,
     );
     await api.drawMine('team-1', 'event-1');
 
     expect(list.events.single.id, 'event-1');
     expect(requests.first.queryParameters['scope'], 'UPCOMING');
     expect(detail.laneDrawMode, ClubEventDrawMode.individual);
+    expect(admin.gameCount, 3);
     expect(
       requests.map((RequestOptions item) => '${item.method} ${item.path}'),
       containsAll(<String>[
         'GET /teams/team-1/events',
         'GET /teams/team-1/events/event-1',
+        'GET /teams/team-1/events/event-1/admin-operations',
+        'POST /teams/team-1/events/event-1/admin-operations',
         'PUT /teams/team-1/events/event-1/attendance',
         'PUT /teams/team-1/events/event-1/attendance/member-2',
         'PUT /teams/team-1/events/event-1/lane-config',
@@ -92,6 +121,13 @@ void main() {
       (RequestOptions item) => item.path.endsWith('/attendance/member-2'),
     );
     expect((managedAttendance.data as Map)['status'], 'UNANSWERED');
+    final RequestOptions laneConfig = requests.firstWhere(
+      (RequestOptions item) => item.path.endsWith('/lane-config'),
+    );
+    expect((laneConfig.data as Map)['resetAssignments'], isTrue);
+    expect((laneConfig.data as Map)['slots'], <Map<String, int>>[
+      <String, int>{'laneNumber': 1, 'position': 1},
+    ]);
   });
 
   test('maps API errors and malformed event envelopes', () async {

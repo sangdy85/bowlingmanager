@@ -3,6 +3,7 @@ import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.d
 import 'package:bowlingmanager_mobile/features/club/application/club_event_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_events_api.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_events_repository.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_event_admin_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_detail_screen.dart';
 import 'package:dio/dio.dart';
@@ -17,6 +18,7 @@ void main() {
     final _AttendanceApi api = _AttendanceApi(role: 'OWNER');
     await _pumpDetail(tester, api);
 
+    expect(find.byKey(const Key('event-admin-operations')), findsOneWidget);
     expect(find.byKey(const Key('attendance-management')), findsOneWidget);
     await tester.tap(find.byKey(const Key('attendance-management')));
     await tester.pumpAndSettle();
@@ -36,6 +38,7 @@ void main() {
     'member sees the read-only attendance and guest lists without management action',
     (tester) async {
       await _pumpDetail(tester, _AttendanceApi(role: 'MEMBER'));
+      expect(find.byKey(const Key('event-admin-operations')), findsNothing);
       expect(find.byKey(const Key('attendance-management')), findsNothing);
       expect(find.text('미응답 30'), findsOneWidget);
       await tester.tap(find.text('미응답 30'));
@@ -107,6 +110,27 @@ class _AttendanceApi extends ClubEventsApi {
   final bool locked;
   final List<String> changes = <String>[];
   ApiException? error;
+
+  @override
+  Future<ClubEventAdminState> fetchAdminOperations(
+    String teamId,
+    String eventId,
+  ) async => ClubEventAdminState.fromJson(<String, dynamic>{
+    'eventId': eventId,
+    'title': '10월 팀전',
+    'competitionType': null,
+    'competitionStatus': null,
+    'laneDrawStatus': locked ? 'COMPLETED' : 'NOT_STARTED',
+    'gameCount': null,
+    'scoreCount': 0,
+    'activePublicationCount': 0,
+    'financeLinkCount': 0,
+    'generation': 1,
+    'teams': <Object>[],
+    'unassignedParticipants': <Object>[],
+    'eventParticipants': <Object>[],
+    'audits': <Object>[],
+  });
 
   @override
   Future<ClubEvent> fetchEvent(String teamId, String eventId) async =>

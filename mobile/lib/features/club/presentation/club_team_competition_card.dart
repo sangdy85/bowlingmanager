@@ -136,12 +136,15 @@ class _ClubTeamCompetitionCardState
         const SizedBox(height: 12),
         _managerActions(state),
       ],
-      if (state.status == 'TEAMS_FINALIZED') ...<Widget>[
+      if (const <String>{
+        'TEAMS_FINALIZED',
+        'LANES_ASSIGNED',
+      }.contains(state.status)) ...<Widget>[
         const SizedBox(height: 8),
         Text(
-          state.laneNumbers.isEmpty
-              ? '사용 레인이 설정되지 않았습니다.'
-              : '사용 레인: ${state.laneNumbers.join(', ')}',
+          state.laneSlots.isEmpty
+              ? '사용 레인/자리가 설정되지 않았습니다.'
+              : '사용 자리: ${state.laneSlots.length}개 · 레인 ${state.laneNumbers.join(', ')}',
           key: const Key('team-lane-pool-summary'),
         ),
       ],
@@ -409,13 +412,17 @@ class _ClubTeamCompetitionCardState
             key: const Key('configure-team-lanes'),
             onPressed: _working ? null : () => _configureLanePool(state),
             icon: const Icon(Icons.view_week_outlined),
-            label: const Text('사용 레인 설정'),
+            label: const Text('사용 레인/인원 설정'),
           ),
+        );
+        final int participantCount = state.teams.fold<int>(
+          0,
+          (sum, team) => sum + team.members.length,
         );
         actions.add(
           FilledButton(
             key: const Key('assign-team-lanes'),
-            onPressed: _working || state.laneNumbers.isEmpty
+            onPressed: _working || state.laneSlots.length < participantCount
                 ? null
                 : () => _assignLanes(state),
             child: const Text('팀별 레인 배정'),
@@ -423,29 +430,29 @@ class _ClubTeamCompetitionCardState
         );
       case 'LANES_ASSIGNED':
         actions.add(
+          OutlinedButton.icon(
+            key: const Key('configure-team-lanes'),
+            onPressed: _working ? null : () => _configureLanePool(state),
+            icon: const Icon(Icons.view_week_outlined),
+            label: const Text('사용 레인/인원 재설정'),
+          ),
+        );
+        actions.add(
+          OutlinedButton.icon(
+            key: const Key('adjust-team-lanes'),
+            onPressed: _working ? null : () => _adjustLanes(state),
+            icon: const Icon(Icons.swap_horiz_rounded),
+            label: const Text('레인 배정 조정'),
+          ),
+        );
+        actions.add(
           FilledButton(
             onPressed: _working ? null : _publish,
             child: const Text('최종 TEAM 결과 발표'),
           ),
         );
       case 'PUBLISHED':
-        actions.add(
-          OutlinedButton(
-            onPressed: _working
-                ? null
-                : () => _run(<String, dynamic>{'action': 'REOPEN'}),
-            child: const Text('발표 결과 다시 열기'),
-          ),
-        );
-    }
-    if (state.status != 'ATTENDANCE_OPEN' &&
-        state.status != 'ATTENDANCE_LOCKED') {
-      actions.add(
-        OutlinedButton(
-          onPressed: _working ? null : _confirmReset,
-          child: const Text('드래프트 초기화'),
-        ),
-      );
+        break;
     }
     if (const <String>{
       'ATTENDANCE_LOCKED',
@@ -570,110 +577,125 @@ class _ClubTeamCompetitionCardState
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => StatefulBuilder(
-        builder: (BuildContext context, StateSetter setDialogState) =>
-            AlertDialog(
-              title: const Text('팀별 레인 배정'),
-              content: SizedBox(
-                width: 460,
-                height: 520,
-                child: ListView.builder(
-                  itemCount: teams.length,
-                  itemBuilder: (BuildContext context, int teamIndex) {
-                    final team = teams[teamIndex];
-                    final teamMembers = members[team.id]!;
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+        builder: (BuildContext context, StateSetter setDialogState) => AlertDialog(
+          title: const Text('팀별 레인 배정'),
+          content: SizedBox(
+            width: 460,
+            height: 520,
+            child: ListView.builder(
+              itemCount: teams.length,
+              itemBuilder: (BuildContext context, int teamIndex) {
+                final team = teams[teamIndex];
+                final teamMembers = members[team.id]!;
+                final int slotOffset = teams
+                    .take(teamIndex)
+                    .fold<int>(
+                      0,
+                      (sum, item) => sum + members[item.id]!.length,
+                    );
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Row(
                           children: <Widget>[
-                            Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: Text('${teamIndex + 1}. ${team.name}'),
-                                ),
-                                IconButton(
-                                  onPressed: teamIndex == 0
-                                      ? null
-                                      : () => setDialogState(() {
-                                          final moved = teams.removeAt(
-                                            teamIndex,
-                                          );
-                                          teams.insert(teamIndex - 1, moved);
-                                        }),
-                                  icon: const Icon(Icons.arrow_upward),
-                                ),
-                                IconButton(
-                                  onPressed: teamIndex == teams.length - 1
-                                      ? null
-                                      : () => setDialogState(() {
-                                          final moved = teams.removeAt(
-                                            teamIndex,
-                                          );
-                                          teams.insert(teamIndex + 1, moved);
-                                        }),
-                                  icon: const Icon(Icons.arrow_downward),
-                                ),
-                              ],
+                            Expanded(
+                              child: Text('${teamIndex + 1}. ${team.name}'),
                             ),
-                            ...List<Widget>.generate(teamMembers.length, (
-                              index,
-                            ) {
-                              final member = teamMembers[index];
-                              return Row(
-                                children: <Widget>[
-                                  Expanded(
-                                    child: Text('${index + 1}. ${member.name}'),
-                                  ),
-                                  IconButton(
-                                    onPressed: index == 0
-                                        ? null
-                                        : () => setDialogState(() {
-                                            final moved = teamMembers.removeAt(
-                                              index,
-                                            );
-                                            teamMembers.insert(
-                                              index - 1,
-                                              moved,
-                                            );
-                                          }),
-                                    icon: const Icon(Icons.keyboard_arrow_up),
-                                  ),
-                                  IconButton(
-                                    onPressed: index == teamMembers.length - 1
-                                        ? null
-                                        : () => setDialogState(() {
-                                            final moved = teamMembers.removeAt(
-                                              index,
-                                            );
-                                            teamMembers.insert(
-                                              index + 1,
-                                              moved,
-                                            );
-                                          }),
-                                    icon: const Icon(Icons.keyboard_arrow_down),
-                                  ),
-                                ],
-                              );
-                            }),
+                            IconButton(
+                              key: Key('team-order-up-${team.id}'),
+                              onPressed: teamIndex == 0
+                                  ? null
+                                  : () => setDialogState(() {
+                                      final moved = teams.removeAt(teamIndex);
+                                      teams.insert(teamIndex - 1, moved);
+                                    }),
+                              icon: const Icon(Icons.arrow_upward),
+                            ),
+                            IconButton(
+                              key: Key('team-order-down-${team.id}'),
+                              onPressed: teamIndex == teams.length - 1
+                                  ? null
+                                  : () => setDialogState(() {
+                                      final moved = teams.removeAt(teamIndex);
+                                      teams.insert(teamIndex + 1, moved);
+                                    }),
+                              icon: const Icon(Icons.arrow_downward),
+                            ),
                           ],
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('취소'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('이 순서로 배정'),
-                ),
-              ],
+                        ...List<Widget>.generate(teamMembers.length, (index) {
+                          final member = teamMembers[index];
+                          return Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Text('${index + 1}. ${member.name}'),
+                                    Text(
+                                      slotOffset + index <
+                                              state.laneSlots.length
+                                          ? '→ ${state.laneSlots[slotOffset + index].label}'
+                                          : '→ 좌석 부족',
+                                      key: Key(
+                                        'lane-preview-${member.participantId}',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                key: Key(
+                                  'member-order-up-${member.participantId}',
+                                ),
+                                onPressed: index == 0
+                                    ? null
+                                    : () => setDialogState(() {
+                                        final moved = teamMembers.removeAt(
+                                          index,
+                                        );
+                                        teamMembers.insert(index - 1, moved);
+                                      }),
+                                icon: const Icon(Icons.keyboard_arrow_up),
+                              ),
+                              IconButton(
+                                key: Key(
+                                  'member-order-down-${member.participantId}',
+                                ),
+                                onPressed: index == teamMembers.length - 1
+                                    ? null
+                                    : () => setDialogState(() {
+                                        final moved = teamMembers.removeAt(
+                                          index,
+                                        );
+                                        teamMembers.insert(index + 1, moved);
+                                      }),
+                                icon: const Icon(Icons.keyboard_arrow_down),
+                              ),
+                            ],
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('이 순서로 배정'),
+            ),
+          ],
+        ),
       ),
     );
     if (confirmed != true) return;
@@ -693,26 +715,55 @@ class _ClubTeamCompetitionCardState
   }
 
   Future<void> _configureLanePool(ClubTeamCompetitionState state) async {
-    final Set<int>? result = await showDialog<Set<int>>(
+    final bool resetsAssignments = state.status == 'LANES_ASSIGNED';
+    if (resetsAssignments) {
+      final bool? confirmed = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+          title: const Text('레인 배정 초기화'),
+          content: const Text('레인 배정을 다시 설정하면 현재 레인 배정이 초기화됩니다.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              key: const Key('confirm-reset-lane-capacity'),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('계속'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+    final int participantCount = state.teams.fold<int>(
+      0,
+      (sum, team) => sum + team.members.length,
+    );
+    final Map<int, int>? result = await showDialog<Map<int, int>>(
       context: context,
       builder: (BuildContext context) => _TeamLanePoolDialog(
-        teamCount: state.teams.length,
-        initialLanes: state.laneNumbers,
+        participantCount: participantCount,
+        initialSlots: state.laneSlots,
       ),
     );
     if (result == null || !mounted) return;
-    final ordered = result.toList()..sort();
+    final ordered = <({int laneNumber, int position})>[
+      for (final lane in result.keys.toList()..sort())
+        for (int position = 1; position <= result[lane]!; position++)
+          (laneNumber: lane, position: position),
+    ];
     setState(() => _working = true);
     try {
-      await ref.read(clubEventsRepositoryProvider).replaceLaneSlots(
-        widget.teamId,
-        widget.eventId,
-        <({int laneNumber, int position})>[
-          for (final lane in ordered)
-            for (int position = 1; position <= 6; position++)
-              (laneNumber: lane, position: position),
-        ],
-      );
+      await ref
+          .read(clubEventsRepositoryProvider)
+          .replaceLaneSlots(
+            widget.teamId,
+            widget.eventId,
+            ordered,
+            resetAssignments: resetsAssignments,
+          );
       if (mounted) {
         ref.invalidate(clubTeamCompetitionProvider(_request));
         invalidateClubEvents(ref, widget.userId, widget.teamId, widget.eventId);
@@ -734,29 +785,37 @@ class _ClubTeamCompetitionCardState
     }
   }
 
-  Future<void> _confirmReset() async {
+  Future<void> _adjustLanes(ClubTeamCompetitionState state) async {
+    final List<Map<String, String>>? assignments =
+        await showDialog<List<Map<String, String>>>(
+          context: context,
+          builder: (BuildContext context) =>
+              _TeamLaneAdjustmentDialog(state: state),
+        );
+    if (assignments == null || !mounted) return;
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: const Text('드래프트 초기화'),
-        content: const Text(
-          '현재 팀과 레인 배정을 초기화할까요? 이전 드래프트 기록은 세대별 감사 기록으로 보존됩니다.',
-        ),
+        title: const Text('레인 배정 저장'),
+        content: const Text('조정한 최종 레인/자리 배정을 저장할까요?'),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('취소'),
           ),
           FilledButton(
+            key: const Key('confirm-adjust-team-lanes'),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('초기화'),
+            child: const Text('저장'),
           ),
         ],
       ),
     );
-    if (confirmed == true) {
-      await _run(<String, dynamic>{'action': 'RESET'});
-    }
+    if (confirmed != true || !mounted) return;
+    await _run(<String, dynamic>{
+      'action': 'ADJUST_LANES',
+      'assignments': assignments,
+    });
   }
 
   Future<void> _addLateParticipant(ClubTeamCompetitionState state) async {
@@ -994,62 +1053,139 @@ class _LateParticipantDialogState extends State<_LateParticipantDialog> {
 
 class _TeamLanePoolDialog extends StatefulWidget {
   const _TeamLanePoolDialog({
-    required this.teamCount,
-    required this.initialLanes,
+    required this.participantCount,
+    required this.initialSlots,
   });
 
-  final int teamCount;
-  final List<int> initialLanes;
+  final int participantCount;
+  final List<ClubTeamLaneSlot> initialSlots;
 
   @override
   State<_TeamLanePoolDialog> createState() => _TeamLanePoolDialogState();
 }
 
 class _TeamLanePoolDialogState extends State<_TeamLanePoolDialog> {
-  late final Set<int> _lanes = widget.initialLanes.toSet();
+  late final Map<int, int> _capacities = _initialCapacities();
+  late final Set<int> _invalidLanes = _initialInvalidLanes();
+
+  Map<int, int> _initialCapacities() {
+    final Map<int, List<int>> positions = <int, List<int>>{};
+    for (final slot in widget.initialSlots) {
+      positions.putIfAbsent(slot.laneNumber, () => <int>[]).add(slot.position);
+    }
+    return <int, int>{
+      for (final entry in positions.entries)
+        entry.key: (entry.value..sort()).last,
+    };
+  }
+
+  Set<int> _initialInvalidLanes() {
+    final Map<int, List<int>> positions = <int, List<int>>{};
+    for (final slot in widget.initialSlots) {
+      positions.putIfAbsent(slot.laneNumber, () => <int>[]).add(slot.position);
+    }
+    return <int>{
+      for (final entry in positions.entries)
+        if ((entry.value..sort()).asMap().entries.any(
+          (item) => item.value != item.key + 1,
+        ))
+          entry.key,
+    };
+  }
+
+  int get _selectedCount =>
+      _capacities.values.fold<int>(0, (sum, value) => sum + value);
+
+  void _setCapacity(int lane, int capacity) => setState(() {
+    _invalidLanes.remove(lane);
+    if (capacity == 0) {
+      _capacities.remove(lane);
+    } else {
+      _capacities[lane] = capacity;
+    }
+  });
+
+  String get _capacityStatus {
+    final int difference = _selectedCount - widget.participantCount;
+    if (difference == 0) return '배정 가능';
+    if (difference < 0) return '참가자보다 좌석이 ${-difference}개 부족합니다.';
+    return '좌석이 $difference개 여유 있습니다.';
+  }
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('사용 레인 설정'),
+    title: const Text('사용 레인/인원 설정'),
     content: SizedBox(
-      width: 420,
+      width: 520,
+      height: 560,
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text('팀 ${widget.teamCount}개의 참가자를 배치할 레인을 1개 이상 선택하세요.'),
-            const SizedBox(height: 12),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 6,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-              children: <Widget>[
-                for (int lane = 1; lane <= 24; lane++)
-                  FilterChip(
-                    key: Key('team-lane-option-$lane'),
-                    label: Text('$lane'),
-                    selected: _lanes.contains(lane),
-                    showCheckmark: false,
-                    onSelected: (selected) => setState(() {
-                      if (selected) {
-                        _lanes.add(lane);
-                      } else {
-                        _lanes.remove(lane);
-                      }
-                    }),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
             Text(
-              _lanes.isEmpty
-                  ? '선택된 레인이 없습니다.'
-                  : '선택: ${(_lanes.toList()..sort()).join(', ')}번',
+              '참가자 ${widget.participantCount}명 · 선택 좌석 $_selectedCount개',
               key: const Key('team-lane-selection-summary'),
             ),
+            Text(
+              _capacityStatus,
+              key: const Key('team-lane-capacity-status'),
+              style: TextStyle(
+                color: _selectedCount < widget.participantCount
+                    ? Theme.of(context).colorScheme.error
+                    : null,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (_invalidLanes.isNotEmpty)
+              Text(
+                '기존 ${(_invalidLanes.toList()..sort()).join(', ')}번 레인의 자리 번호가 1번부터 연속되지 않습니다. 해당 레인을 해제하거나 인원수를 조정해주세요.',
+                key: const Key('invalid-team-lane-capacity'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            const SizedBox(height: 8),
+            for (int lane = 1; lane <= 24; lane++)
+              CheckboxListTile(
+                key: Key('team-lane-option-$lane'),
+                value: _capacities.containsKey(lane),
+                onChanged: (selected) =>
+                    _setCapacity(lane, selected == true ? 3 : 0),
+                title: Text('$lane번 레인'),
+                subtitle: _invalidLanes.contains(lane)
+                    ? const Text('기존 설정 오류')
+                    : null,
+                secondary: SizedBox(
+                  width: 132,
+                  child: Row(
+                    children: <Widget>[
+                      IconButton(
+                        key: Key('decrease-team-lane-$lane'),
+                        onPressed: (_capacities[lane] ?? 0) > 1
+                            ? () => _setCapacity(lane, _capacities[lane]! - 1)
+                            : null,
+                        icon: const Icon(Icons.remove_circle_outline),
+                      ),
+                      SizedBox(
+                        width: 28,
+                        child: Text(
+                          '${_capacities[lane] ?? 0}명',
+                          key: Key('team-lane-capacity-$lane'),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      IconButton(
+                        key: Key('increase-team-lane-$lane'),
+                        onPressed:
+                            (_capacities[lane] ?? 0) > 0 &&
+                                (_capacities[lane] ?? 0) < 6
+                            ? () => _setCapacity(lane, _capacities[lane]! + 1)
+                            : null,
+                        icon: const Icon(Icons.add_circle_outline),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -1061,13 +1197,123 @@ class _TeamLanePoolDialogState extends State<_TeamLanePoolDialog> {
       ),
       FilledButton(
         key: const Key('save-team-lanes'),
-        onPressed: _lanes.isNotEmpty
-            ? () => Navigator.pop(context, Set<int>.from(_lanes))
+        onPressed: _capacities.isNotEmpty && _invalidLanes.isEmpty
+            ? () => Navigator.pop(context, Map<int, int>.from(_capacities))
             : null,
         child: const Text('저장'),
       ),
     ],
   );
+}
+
+class _TeamLaneAdjustmentDialog extends StatefulWidget {
+  const _TeamLaneAdjustmentDialog({required this.state});
+
+  final ClubTeamCompetitionState state;
+
+  @override
+  State<_TeamLaneAdjustmentDialog> createState() =>
+      _TeamLaneAdjustmentDialogState();
+}
+
+class _TeamLaneAdjustmentDialogState extends State<_TeamLaneAdjustmentDialog> {
+  late final List<ClubTeamCompetitionParticipant> _participants = widget
+      .state
+      .teams
+      .expand((team) => team.members)
+      .toList();
+  late final Map<String, String> _assignments = <String, String>{
+    for (final participant in _participants)
+      if (participant.laneSlot case final String label)
+        if (widget.state.laneSlots.any((slot) => slot.label == label))
+          participant.participantId: widget.state.laneSlots
+              .firstWhere((slot) => slot.label == label)
+              .id,
+  };
+
+  void _changeSlot(String participantId, String nextSlotId) => setState(() {
+    final String? previousSlotId = _assignments[participantId];
+    String? occupantId;
+    for (final entry in _assignments.entries) {
+      if (entry.key != participantId && entry.value == nextSlotId) {
+        occupantId = entry.key;
+        break;
+      }
+    }
+    _assignments[participantId] = nextSlotId;
+    if (occupantId != null && previousSlotId != null) {
+      _assignments[occupantId] = previousSlotId;
+    }
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool complete =
+        _assignments.length == _participants.length &&
+        _assignments.values.toSet().length == _participants.length;
+    return AlertDialog(
+      title: const Text('레인 배정 조정'),
+      content: SizedBox(
+        width: 520,
+        height: 560,
+        child: ListView(
+          children: <Widget>[
+            const Text('사용 중인 자리를 선택하면 두 참가자의 자리가 서로 바뀝니다.'),
+            const SizedBox(height: 8),
+            for (final team in widget.state.teams) ...<Widget>[
+              Text(
+                team.name,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              for (final participant in team.members)
+                Row(
+                  children: <Widget>[
+                    Expanded(child: Text(participant.name)),
+                    DropdownButton<String>(
+                      key: Key('lane-adjust-${participant.participantId}'),
+                      value: _assignments[participant.participantId],
+                      items: widget.state.laneSlots
+                          .map(
+                            (slot) => DropdownMenuItem<String>(
+                              value: slot.id,
+                              child: Text(slot.label),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          _changeSlot(participant.participantId, value);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 12),
+            ],
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          key: const Key('save-adjusted-team-lanes'),
+          onPressed: complete
+              ? () => Navigator.pop(context, <Map<String, String>>[
+                  for (final participant in _participants)
+                    <String, String>{
+                      'participantId': participant.participantId,
+                      'slotId': _assignments[participant.participantId]!,
+                    },
+                ])
+              : null,
+          child: const Text('다음'),
+        ),
+      ],
+    );
+  }
 }
 
 String _statusLabel(String status) => switch (status) {

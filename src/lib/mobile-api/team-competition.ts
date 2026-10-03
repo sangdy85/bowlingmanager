@@ -2,6 +2,7 @@ import { randomInt } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { enqueueMobileNotifications, MOBILE_NOTIFICATION_TYPES } from "@/lib/mobile-api/notifications";
+import { recordEventAdminAudit } from "@/lib/mobile-api/event-admin-audit";
 import {
     createSeasonPointPublication,
     getPublicationPointTable,
@@ -63,42 +64,9 @@ export function luckyDrawWins(consecutiveMisses: number, teamCount: number, pick
 export function allocateTeamLaneBlocks(teams: readonly LaneTeam[], slots: readonly LaneSlot[]) {
     const orderedTeams = [...teams].sort((a, b) => a.lanePriority - b.lanePriority || a.id.localeCompare(b.id));
     const orderedSlots = [...slots].sort((a, b) => a.laneNumber - b.laneNumber || a.position - b.position || a.id.localeCompare(b.id));
-    const slotsByLane = new Map<number, LaneSlot[]>();
-    for (const slot of orderedSlots) {
-        const laneSlots = slotsByLane.get(slot.laneNumber) ?? [];
-        laneSlots.push(slot);
-        slotsByLane.set(slot.laneNumber, laneSlots);
-    }
-    const configuredLanePool = [...slotsByLane.entries()]
-        .sort(([left], [right]) => left - right)
-        .filter(([, laneSlots]) => laneSlots.length === 6 && laneSlots.every((slot, index) => slot.position === index + 1));
-    if (configuredLanePool.length === slotsByLane.size && configuredLanePool.length > 0) {
-        const memberCount = orderedTeams.reduce((sum, team) => sum + team.memberIds.length, 0);
-        if (memberCount > configuredLanePool.length * 6) {
-            throw new TeamCompetitionError(
-                "TEAM_LANE_CAPACITY_EXCEEDED",
-                `참가자 ${memberCount}명을 선택한 레인 ${configuredLanePool.length}개에 배정할 수 없습니다.`,
-                409,
-            );
-        }
-        let participantIndex = 0;
-        return orderedTeams.map((team) => {
-            const assignments = team.memberIds.map((memberId) => {
-                const laneIndex = participantIndex % configuredLanePool.length;
-                const lanePosition = Math.floor(participantIndex / configuredLanePool.length);
-                participantIndex += 1;
-                return { memberId, slot: configuredLanePool[laneIndex][1][lanePosition] };
-            });
-            return {
-                competitionTeamId: team.id,
-                lanePriority: team.lanePriority,
-                assignments,
-            };
-        });
-    }
     const memberCount = orderedTeams.reduce((sum, team) => sum + team.memberIds.length, 0);
-    if (memberCount !== orderedSlots.length) {
-        throw new TeamCompetitionError("PARTICIPANT_SLOT_MISMATCH", `참가자(${memberCount}명)와 좌석(${orderedSlots.length}개) 수가 같아야 합니다.`, 409);
+    if (memberCount === 0 || orderedSlots.length < memberCount) {
+        throw new TeamCompetitionError("PARTICIPANT_SLOT_MISMATCH", `참가자(${memberCount}명)보다 선택 좌석(${orderedSlots.length}개)이 적습니다.`, 409);
     }
     let offset = 0;
     return orderedTeams.map((team) => {
@@ -157,6 +125,7 @@ export async function getTeamCompetitionState(actorUserId: string, teamId: strin
         } : null,
         plan,
         laneNumbers: [...new Set(event.laneSlots.map((slot) => slot.laneNumber))].sort((a, b) => a - b),
+        laneSlots: event.laneSlots.map((slot) => ({ id: slot.id, laneNumber: slot.laneNumber, position: slot.position })),
         teams: teams.map((team) => serializeTeam(team, event)),
         remainingParticipants: availableParticipants,
         history: history.map((item) => ({
@@ -193,6 +162,7 @@ export async function updateTeamCompetition(actorUserId: string, teamId: string,
         case "AUTO_ASSIGN_REMAINDER": return autoAssignRemainder(actorUserId, teamId, eventId);
         case "RESET": return resetDraft(actorUserId, teamId, eventId);
         case "ASSIGN_LANES": return assignTeamLanes(actorUserId, teamId, eventId, body.teams);
+        case "ADJUST_LANES": return adjustTeamLanes(actorUserId, teamId, eventId, body.assignments);
         case "SET_HANDICAP": return setTeamHandicap(actorUserId, teamId, eventId, body.competitionTeamId, body.teamHandicap);
         case "PUBLISH": return publishTeamCompetition(actorUserId, teamId, eventId, body.tieBreakPolicy);
         case "REOPEN": return reopenTeamCompetition(actorUserId, teamId, eventId);
@@ -515,6 +485,13 @@ async function resetDraft(actorUserId: string, teamId: string, eventId: string) 
     const event = await loadEvent(actorUserId, teamId, eventId); requireManager(event, actorUserId); requireTeamCompetition(event);
     if (event.competitionStatus === "ATTENDANCE_OPEN") throw stateError();
     await prisma.$transaction(async (tx) => {
+        if (await tx.score.count({ where: { teamEventId: eventId } }) > 0) {
+            throw new TeamCompetitionError(
+                "ADMIN_OPERATION_REQUIRED",
+                "점수 삭제 확인이 필요한 작업입니다. 관리자 운영 도구를 사용해주세요.",
+                409,
+            );
+        }
         await tx.teamEventLaneAssignment.deleteMany({ where: { eventId } });
         const reset = await tx.teamEvent.updateMany({ where: {
             id: eventId, draftGeneration: event.draftGeneration,
@@ -524,6 +501,12 @@ async function resetDraft(actorUserId: string, teamId: string, eventId: string) 
             laneDrawStatus: "NOT_STARTED",
         } });
         if (reset.count !== 1) throw new TeamCompetitionError("DRAFT_TURN_CONFLICT", "드래프트 상태가 변경되었습니다.", 409);
+        await recordEventAdminAudit(tx, {
+            eventId, eventTitle: event.title, teamId, actorUserId,
+            action: "RESET_TEAM_DRAFT", competitionType: "TEAM",
+            beforeStatus: event.competitionStatus, afterStatus: "ATTENDANCE_LOCKED",
+            details: { generation: event.draftGeneration + 1, legacyAction: true },
+        });
     });
     return { status: "ATTENDANCE_LOCKED", generation: event.draftGeneration + 1 };
 }
@@ -582,6 +565,88 @@ async function assignTeamLanes(actorUserId: string, teamId: string, eventId: str
     })) };
 }
 
+async function adjustTeamLanes(actorUserId: string, teamId: string, eventId: string, raw: unknown) {
+    if (!Array.isArray(raw) || raw.length === 0) {
+        throw new TeamCompetitionError("INVALID_LANE_ASSIGNMENTS", "모든 참가자의 레인 좌석을 확인해주세요.", 400);
+    }
+    const requested = raw.map((value) => {
+        const item = asRecord(value);
+        if (typeof item.participantId !== "string" || !item.participantId || typeof item.slotId !== "string" || !item.slotId) {
+            throw new TeamCompetitionError("INVALID_LANE_ASSIGNMENTS", "모든 참가자의 레인 좌석을 확인해주세요.", 400);
+        }
+        return { participantId: item.participantId, slotId: item.slotId };
+    });
+    try {
+        return await prisma.$transaction(async (tx) => {
+            const event = await tx.teamEvent.findFirst({ where: {
+                id: eventId, teamId, team: { isActive: true, members: { some: { userId: actorUserId } } },
+            }, include: competitionInclude });
+            if (!event) throw new TeamCompetitionError("EVENT_NOT_FOUND", "일정을 찾을 수 없습니다.", 404);
+            requireManager(event, actorUserId);
+            requireTeamCompetition(event);
+            if (event.competitionStatus === "PUBLISHED") {
+                throw new TeamCompetitionError("COMPETITION_PUBLISHED", "발표된 TEAM 결과의 레인 배정은 변경할 수 없습니다.", 409);
+            }
+            if (event.competitionStatus !== "LANES_ASSIGNED" || event.laneDrawStatus !== "COMPLETED") throw stateError();
+            if (await tx.score.count({ where: { teamEventId: eventId } }) > 0) {
+                throw new TeamCompetitionError("COMPETITION_SCORE_STARTED", "이미 경기 점수가 입력되어 레인 배정을 변경할 수 없습니다.", 409);
+            }
+
+            const participants = currentParticipants(event);
+            const participantIds = requested.map((item) => item.participantId);
+            const slotIds = requested.map((item) => item.slotId);
+            const expectedParticipants = new Set(participants.map((item) => item.id));
+            const configuredSlots = new Set(event.laneSlots.map((item) => item.id));
+            if (requested.length !== participants.length || new Set(participantIds).size !== participants.length ||
+                participantIds.some((id) => !expectedParticipants.has(id))) {
+                throw new TeamCompetitionError("INVALID_LANE_ASSIGNMENTS", "모든 현재 참가자를 정확히 한 번씩 배정해주세요.", 400);
+            }
+            if (new Set(slotIds).size !== slotIds.length) {
+                throw new TeamCompetitionError("DUPLICATE_LANE_SLOT", "한 좌석에는 한 명만 배정할 수 있습니다.", 400);
+            }
+            if (slotIds.some((id) => !configuredSlots.has(id))) {
+                throw new TeamCompetitionError("INVALID_LANE_SLOT", "현재 일정에 설정된 레인 좌석만 사용할 수 있습니다.", 400);
+            }
+
+            const claimed = await tx.teamEvent.updateMany({ where: {
+                id: eventId, teamId, draftGeneration: event.draftGeneration,
+                competitionStatus: "LANES_ASSIGNED", laneDrawStatus: "COMPLETED",
+            }, data: { currentPickNumber: event.currentPickNumber } });
+            if (claimed.count !== 1) {
+                throw new TeamCompetitionError("LANE_ASSIGNMENT_CONFLICT", "레인 배정 상태가 변경되었습니다.", 409);
+            }
+            const participantById = new Map(participants.map((item) => [item.id, item]));
+            const displayNameByParticipantId = new Map(participants.map((participant) => {
+                const existing = event.laneAssignments.find((assignment) => participant.memberId
+                    ? assignment.memberId === participant.memberId
+                    : assignment.guestId === participant.guestId);
+                return [participant.id, existing?.participantDisplayName ?? participantName(participant)];
+            }));
+            await tx.teamEventLaneAssignment.deleteMany({ where: { eventId } });
+            for (const item of requested) {
+                const participant = participantById.get(item.participantId)!;
+                await tx.teamEventLaneAssignment.create({ data: {
+                    eventId, slotId: item.slotId, memberId: participant.memberId, guestId: participant.guestId,
+                    participantKind: participant.memberId ? "MEMBER" : "GUEST",
+                    participantDisplayName: displayNameByParticipantId.get(item.participantId)!,
+                } });
+            }
+            await recordEventAdminAudit(tx, {
+                eventId, eventTitle: event.title, teamId, actorUserId,
+                action: "ADMIN_LANE_OVERRIDE", competitionType: "TEAM",
+                beforeStatus: "LANES_ASSIGNED", afterStatus: "LANES_ASSIGNED",
+                details: { assignmentCount: requested.length },
+            });
+            return { status: "LANES_ASSIGNED", assignments: requested };
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+        if ((error as { code?: unknown })?.code === "P2034") {
+            throw new TeamCompetitionError("LANE_ASSIGNMENT_CONFLICT", "레인 배정 상태가 변경되었습니다.", 409);
+        }
+        throw error;
+    }
+}
+
 async function publishTeamCompetition(actorUserId: string, teamId: string, eventId: string, _rawPolicy: unknown) {
     const existing = await loadEvent(actorUserId, teamId, eventId); requireManager(existing, actorUserId); requireTeamCompetition(existing);
     if (existing.competitionStatus === "PUBLISHED") return { status: "PUBLISHED", alreadyPublished: true };
@@ -631,6 +696,12 @@ async function reopenTeamCompetition(actorUserId: string, teamId: string, eventI
             competitionStatus: previousStatus, seasonPublicationRevision: { increment: 1 },
         } });
         if (updated.count !== 1) throw new TeamCompetitionError("PUBLICATION_CONFLICT", "TEAM 발표 상태가 변경되었습니다.", 409);
+        await recordEventAdminAudit(tx, {
+            eventId, eventTitle: event.title, teamId, actorUserId,
+            action: "REOPEN_PUBLICATION", competitionType: "TEAM",
+            beforeStatus: "PUBLISHED", afterStatus: previousStatus,
+            details: { publicationRevoked: true, legacyAction: true },
+        });
     });
     return { status: previousStatus, publicationRevoked: true };
 }
@@ -735,7 +806,7 @@ const competitionInclude = {
     } },
     competitionParticipants: { include: { member: { select: { id: true, userId: true, alias: true, user: { select: { name: true } } } }, guest: { select: { id: true, name: true } } } },
     competitionDraftPicks: { include: { competitionTeam: { select: { name: true } }, selectedParticipant: { select: { memberId: true, guestId: true } } }, orderBy: { pickNumber: "asc" as const } },
-    laneSlots: { orderBy: [{ laneNumber: "asc" as const }, { position: "asc" as const }] },
+    laneSlots: { orderBy: [{ laneNumber: "asc" as const }, { position: "asc" as const }, { id: "asc" as const }] },
     laneAssignments: { include: { slot: true } },
     seasonPublications: { where: { revokedAt: null }, orderBy: { revision: "desc" as const }, take: 1, select: { resultSnapshot: true, publishedAt: true } },
 } satisfies Prisma.TeamEventInclude;
@@ -839,11 +910,10 @@ async function calculateResults(event: CompetitionEvent, db: ScoreReader = prism
         if (!key) continue;
         const values = scoresByParticipant.get(key); if (values) values.push(row.score); else scoresByParticipant.set(key, [row.score]);
     }
-    const gameCount = event.competitionGameCount
-        ?? Math.max(0, ...participants.map((item) => scoresByParticipant.get(participantKey(item))?.length ?? 0));
+    const gameCount = event.competitionGameCount ?? 0;
     const complete = gameCount > 0 && participants.every((item) => (scoresByParticipant.get(participantKey(item))?.length ?? 0) === gameCount);
     const effectivePlayerCount = Math.min(...teams.map((team) => team.participants.length));
-    const gamePointTables = readTeamGamePointTables(event.rankPoints, gameCount);
+    const gamePointTables = gameCount > 0 ? readTeamGamePointTables(event.rankPoints, gameCount) : [];
     const teamTotals = new Map(teams.map((team) => [team.id, { points: 0, raw: 0, effective: 0, applied: 0 }]));
     const games = Array.from({ length: gameCount }, (_, gameIndex) => {
         const points = new Map(gamePointTables[gameIndex].points.map((item) => [item.rank, item.points]));

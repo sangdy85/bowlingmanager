@@ -1,5 +1,6 @@
 import 'package:bowlingmanager_mobile/features/club/data/club_events_api.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_competition_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_event_admin_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_team_competition_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_competition_score_models.dart';
@@ -14,6 +15,15 @@ class ClubEventsRepository {
   ) => _api.fetchEvents(teamId, scope);
   Future<ClubEvent> fetchEvent(String teamId, String eventId) =>
       _api.fetchEvent(teamId, eventId);
+  Future<ClubEventAdminState> fetchAdminOperations(
+    String teamId,
+    String eventId,
+  ) => _api.fetchAdminOperations(teamId, eventId);
+  Future<void> runAdminOperation(
+    String teamId,
+    String eventId,
+    Map<String, dynamic> body,
+  ) => _api.runAdminOperation(teamId, eventId, body);
   Future<ClubCompetitionResult> fetchCompetition(
     String teamId,
     String eventId,
@@ -77,8 +87,14 @@ class ClubEventsRepository {
   Future<void> replaceLaneSlots(
     String teamId,
     String eventId,
-    List<({int laneNumber, int position})> slots,
-  ) => _api.replaceLaneSlots(teamId, eventId, slots);
+    List<({int laneNumber, int position})> slots, {
+    bool resetAssignments = false,
+  }) => _api.replaceLaneSlots(
+    teamId,
+    eventId,
+    slots,
+    resetAssignments: resetAssignments,
+  );
   Future<void> startDraw(String teamId, String eventId) =>
       _api.startDraw(teamId, eventId);
   Future<ClubEventLaneAssignment> drawMine(String teamId, String eventId) =>

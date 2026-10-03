@@ -10,6 +10,7 @@ import {
     revokeSeasonPointPublication,
     seasonPointsForRank,
 } from "@/lib/mobile-api/unified-season";
+import { recordEventAdminAudit } from "@/lib/mobile-api/event-admin-audit";
 
 export const BOWLER_HIDDEN_COMPETITION_TYPES = ["INDIVIDUAL", "TEAM", "EVENT"] as const;
 export const BOWLER_HIDDEN_LIFECYCLE = [
@@ -523,8 +524,11 @@ async function publishIndividual(actorUserId: string, teamId: string, eventId: s
             const values = byParticipant.get(participant.participantId);
             if (values) values.push(row.score); else byParticipant.set(participant.participantId, [row.score]);
         }
-        const expectedGameCount = event!.competitionGameCount ?? Math.max(0, ...participants.map((item) => byParticipant.get(item.participantId)?.length ?? 0));
-        if (!expectedGameCount || participants.some((item) => (byParticipant.get(item.participantId)?.length ?? 0) !== expectedGameCount)) {
+        const expectedGameCount = event!.competitionGameCount;
+        if (!expectedGameCount) {
+            throw new BowlerHiddenError("GAME_COUNT_REQUIRED", "이 대회의 경기 게임 수를 먼저 설정해주세요.", 409);
+        }
+        if (participants.some((item) => (byParticipant.get(item.participantId)?.length ?? 0) !== expectedGameCount)) {
             throw new BowlerHiddenError("SCORES_INCOMPLETE", "모든 참가자의 경기 점수 입력을 완료해주세요.", 409);
         }
         const pointTable = await getPublicationPointTable(tx, event!);
@@ -552,11 +556,17 @@ async function reopenIndividual(actorUserId: string, teamId: string, eventId: st
     await prisma.$transaction(async (tx) => {
         await revokeSeasonPointPublication(tx, eventId, new Date(), event!.competitionMode === "OFFICIAL");
         const updated = await tx.teamEvent.updateMany({ where: { id: eventId, competitionStatus: "PUBLISHED" }, data: {
-            competitionStatus: "ATTENDANCE_OPEN", seasonPublicationRevision: { increment: 1 },
+            competitionStatus: "GROUPS_READY", seasonPublicationRevision: { increment: 1 },
         } });
         if (updated.count !== 1) throw new BowlerHiddenError("PUBLICATION_CONFLICT", "개인전 발표 상태가 변경되었습니다.", 409);
+        await recordEventAdminAudit(tx, {
+            eventId, eventTitle: event!.title, teamId, actorUserId,
+            action: "REOPEN_PUBLICATION", competitionType: "INDIVIDUAL",
+            beforeStatus: "PUBLISHED", afterStatus: "GROUPS_READY",
+            details: { publicationRevoked: true, legacyAction: true },
+        });
     });
-    return { status: "ATTENDANCE_OPEN", publicationRevoked: true };
+    return { status: "GROUPS_READY", publicationRevoked: true };
 }
 
 function requireIndividualManager(event: IndividualPublishEvent | null, actorUserId: string): asserts event is IndividualPublishEvent {

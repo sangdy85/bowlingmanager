@@ -59,21 +59,22 @@ test('competition score state uses exact event participant snapshot and linked s
   ]);
 });
 
-test('legacy individual score entry defaults to three games', async () => {
+test('legacy competition without a game count is blocked until an administrator configures it', async () => {
   const prisma = { teamEvent: { findFirst: async () => event({ competitionGameCount: null, scores: [] }) } };
   const service = loadTs('src/lib/mobile-api/competition-scores.ts', {
     '@/lib/prisma': prisma,
     '@/lib/mobile-api/bowler-hidden': { getBowlerHiddenCompetition: async () => ({ participantPreview: [] }) },
   });
-  assert.equal((await service.getCompetitionScoreEntry('owner', 'team-1', 'event-1')).gameCount, 3);
+  await assert.rejects(
+    () => service.getCompetitionScoreEntry('owner', 'team-1', 'event-1'),
+    error => error.code === 'GAME_COUNT_REQUIRED',
+  );
 });
 
-test('individual score save updates explicit official game count in the same transaction', async () => {
-  let updated = null;
+test('score save rejects game count changes outside the administrator operation', async () => {
   const tx = {
     teamEvent: {
       findFirst: async () => event({ competitionGameCount: 3, scores: [] }),
-      update: async args => { updated = args; return {}; },
     },
     score: { deleteMany: async () => ({ count: 0 }), createMany: async args => ({ count: args.data.length }) },
   };
@@ -81,15 +82,16 @@ test('individual score save updates explicit official game count in the same tra
     '@/lib/prisma': { $transaction: async callback => callback(tx) },
     '@/lib/mobile-api/bowler-hidden': { getBowlerHiddenCompetition: async () => ({ participantPreview: [] }) },
   });
-  const result = await service.saveCompetitionScores('owner', 'team-1', 'event-1', {
-    gameCount: 4,
-    participants: [
-      { participantId: 'member:member-a', scores: [201, 202, 203, 204] },
-      { participantId: 'guest:guest-a', scores: [181, 182, 183, 184] },
-    ],
-  });
-  assert.equal(result.gameCount, 4);
-  assert.deepEqual(updated, { where: { id: 'event-1' }, data: { competitionGameCount: 4 } });
+  await assert.rejects(
+    () => service.saveCompetitionScores('owner', 'team-1', 'event-1', {
+      gameCount: 4,
+      participants: [
+        { participantId: 'member:member-a', scores: [201, 202, 203, 204] },
+        { participantId: 'guest:guest-a', scores: [181, 182, 183, 184] },
+      ],
+    }),
+    error => error.code === 'GAME_COUNT_CHANGE_REQUIRES_ADMIN',
+  );
 });
 
 test('competition score save replaces exact event rows atomically with provenance', async () => {

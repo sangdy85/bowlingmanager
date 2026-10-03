@@ -2,6 +2,7 @@ import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.d
 import 'package:bowlingmanager_mobile/features/club/data/club_events_api.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_events_repository.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_competition_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_event_admin_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_team_competition_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_competition_score_models.dart';
@@ -34,6 +35,13 @@ final clubEventProvider = FutureProvider.autoDispose
       return ref
           .watch(clubEventsRepositoryProvider)
           .fetchEvent(request.teamId, request.eventId);
+    }, retry: (int retryCount, Object error) => null);
+
+final clubEventAdminProvider = FutureProvider.autoDispose
+    .family<ClubEventAdminState, ClubEventRequest>((Ref ref, request) {
+      return ref
+          .watch(clubEventsRepositoryProvider)
+          .fetchAdminOperations(request.teamId, request.eventId);
     }, retry: (int retryCount, Object error) => null);
 
 final clubCompetitionProvider = FutureProvider.autoDispose
@@ -102,6 +110,13 @@ void invalidateClubEvents(
     );
     ref.invalidate(
       clubCompetitionScoresProvider((
+        userId: userId,
+        teamId: teamId,
+        eventId: eventId,
+      )),
+    );
+    ref.invalidate(
+      clubEventAdminProvider((
         userId: userId,
         teamId: teamId,
         eventId: eventId,

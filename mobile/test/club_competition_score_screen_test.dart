@@ -10,7 +10,7 @@ import 'support/auth_fakes.dart';
 
 void main() {
   testWidgets(
-    'individual score screen follows and safely adjusts configured game count',
+    'score screen uses the configured game count without an inline override',
     (tester) async {
       final auth = FakeAuthRepository()..bootstrapResult = testUser;
       const entry = ClubCompetitionScoreEntry(
@@ -56,14 +56,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.byKey(const Key('competition-game-count-stepper')),
-        findsOneWidget,
+        findsNothing,
       );
       expect(find.text('4게임'), findsWidgets);
       expect(find.byType(TextFormField), findsNWidgets(4));
-      await tester.tap(find.byIcon(Icons.remove_circle_outline));
-      await tester.pump();
-      expect(find.byType(TextFormField), findsNWidgets(3));
-      expect(find.textContaining('공식 경기 수가 3게임'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

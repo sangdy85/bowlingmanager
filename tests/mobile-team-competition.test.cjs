@@ -64,7 +64,8 @@ function eventFixture({ incomplete = false, pointTie = false } = {}) {
     event: {
       id: 'event-1', teamId: 'team-1', eventDate: new Date('2026-09-22T00:00:00+09:00'),
       gameType: '정기전', competitionEnabled: true, competitionType: 'TEAM',
-      competitionStatus: 'TEAMS_FINALIZED', draftGeneration: 1, currentPickNumber: 4,
+      competitionStatus: 'TEAMS_FINALIZED', competitionGameCount: 2,
+      draftGeneration: 1, currentPickNumber: 4,
       rankPoints: JSON.stringify({ 1: 5, 2: 3 }),
       team: { ownerId: 'user-1', bowlerHiddenEnabled: true, User: [], members },
       attendances: members.map(item => ({ status: 'ATTENDING', member: item })),
@@ -243,7 +244,38 @@ test('official lane example allocates non-interleaved contiguous team blocks', (
   );
 });
 
-test('configured team lane pool distributes participants round-robin without changing team identity', () => {
+test('19-person operating fixture expands mixed capacities and assigns each team contiguously', () => {
+  const service = loadTs('src/lib/mobile-api/team-competition.ts', {
+    '@/lib/prisma': {}, '@/lib/mobile-api/bowler-hidden': { readRankPoints: () => [] },
+  });
+  const capacities = new Map([[8, 3], [9, 3], [10, 3], [11, 3], [12, 2], [13, 3], [14, 2]]);
+  const slots = [...capacities].flatMap(([laneNumber, count]) =>
+    Array.from({ length: count }, (_, index) => ({
+      id: `${laneNumber}-${index + 1}`, laneNumber, position: index + 1,
+    })),
+  );
+  assert.deepEqual(slots.map(item => item.id), [
+    '8-1', '8-2', '8-3', '9-1', '9-2', '9-3', '10-1', '10-2', '10-3',
+    '11-1', '11-2', '11-3', '12-1', '12-2', '13-1', '13-2', '13-3', '14-1', '14-2',
+  ]);
+  const orderedSizes = [4, 5, 5, 5];
+  const teams = [4, 1, 2, 3].map((teamNumber, index) => ({
+    id: `team-${teamNumber}`, lanePriority: index + 1,
+    memberIds: Array.from({ length: orderedSizes[index] }, (_, memberIndex) =>
+      `team-${teamNumber}-participant-${memberIndex + 1}`),
+  }));
+  const blocks = service.allocateTeamLaneBlocks(teams, slots);
+  assert.deepEqual(blocks.map(item => item.competitionTeamId), ['team-4', 'team-1', 'team-2', 'team-3']);
+  assert.deepEqual(blocks.map(item => item.assignments.map(assignment => assignment.slot.id)), [
+    ['8-1', '8-2', '8-3', '9-1'],
+    ['9-2', '9-3', '10-1', '10-2', '10-3'],
+    ['11-1', '11-2', '11-3', '12-1', '12-2'],
+    ['13-1', '13-2', '13-3', '14-1', '14-2'],
+  ]);
+  assert.equal(new Set(blocks.flatMap(item => item.assignments.map(assignment => assignment.slot.id))).size, 19);
+});
+
+test('configured full lane pool keeps each team contiguous and leaves extra slots unused', () => {
   const service = loadTs('src/lib/mobile-api/team-competition.ts', {
     '@/lib/prisma': {}, '@/lib/mobile-api/bowler-hidden': { readRankPoints: () => [] },
   });
@@ -256,17 +288,195 @@ test('configured team lane pool distributes participants round-robin without cha
   })));
   const blocks = service.allocateTeamLaneBlocks(teams, slots);
   assert.deepEqual(blocks.map(block => block.assignments.map(item => item.slot.id)), [
-    ['3-1', '4-1', '5-1', '6-1'],
-    ['3-2', '4-2', '5-2', '6-2', '3-3'],
-    ['4-3', '5-3', '6-3', '3-4'],
-    ['4-4', '5-4', '6-4', '3-5', '4-5'],
+    ['3-1', '3-2', '3-3', '3-4'],
+    ['3-5', '3-6', '4-1', '4-2', '4-3'],
+    ['4-4', '4-5', '4-6', '5-1'],
+    ['5-2', '5-3', '5-4', '5-5', '5-6'],
   ]);
   assert.deepEqual(blocks.map(block => block.competitionTeamId), ['team-1', 'team-2', 'team-3', 'team-4']);
   assert.equal(new Set(blocks.flatMap(block => block.assignments.map(item => item.slot.id))).size, 18);
   assert.throws(
     () => service.allocateTeamLaneBlocks(teams, slots.filter(slot => slot.laneNumber > 4)),
-    error => error.code === 'TEAM_LANE_CAPACITY_EXCEEDED',
+    error => error.code === 'PARTICIPANT_SLOT_MISMATCH',
   );
+});
+
+test('team lane allocation uses canonical sparse slot order, team priority and submitted member order', () => {
+  const service = loadTs('src/lib/mobile-api/team-competition.ts', {
+    '@/lib/prisma': {}, '@/lib/mobile-api/bowler-hidden': { readRankPoints: () => [] },
+  });
+  const teams = [
+    { id: 'team-2', lanePriority: 2, memberIds: ['c', 'd'] },
+    { id: 'team-1', lanePriority: 1, memberIds: ['b', 'a'] },
+    { id: 'team-3', lanePriority: 3, memberIds: ['e'] },
+  ];
+  const slots = [
+    { id: '2-3', laneNumber: 2, position: 3 },
+    { id: '1-5', laneNumber: 1, position: 5 },
+    { id: 'unused', laneNumber: 9, position: 1 },
+    { id: '1-1', laneNumber: 1, position: 1 },
+    { id: '2-2', laneNumber: 2, position: 2 },
+    { id: '1-2', laneNumber: 1, position: 2 },
+  ];
+  const blocks = service.allocateTeamLaneBlocks(teams, slots);
+  assert.deepEqual(blocks.map(block => ({
+    team: block.competitionTeamId,
+    members: block.assignments.map(item => item.memberId),
+    slots: block.assignments.map(item => item.slot.id),
+  })), [
+    { team: 'team-1', members: ['b', 'a'], slots: ['1-1', '1-2'] },
+    { team: 'team-2', members: ['c', 'd'], slots: ['1-5', '2-2'] },
+    { team: 'team-3', members: ['e'], slots: ['2-3'] },
+  ]);
+  assert.equal(blocks.flatMap(block => block.assignments).some(item => item.slot.id === 'unused'), false);
+});
+
+function laneAdjustmentHarness({ status = 'LANES_ASSIGNED', scoreCount = 0, failCreateAt = null } = {}) {
+  const members = [1, 2, 3].map(member);
+  const participants = members.map((item, index) => ({
+    id: `participant-${index + 1}`, eventId: 'event-adjust', generation: 2,
+    memberId: item.id, guestId: null, competitionTeamId: index < 2 ? 'competition-team-1' : 'competition-team-2',
+    assignmentType: index === 0 || index === 2 ? 'CAPTAIN' : 'DRAFT', assignmentOrder: index, member: item, guest: null,
+  }));
+  const laneSlots = [1, 2, 3, 4].map(position => ({ id: `slot-${position}`, eventId: 'event-adjust', laneNumber: 1, position }));
+  const event = {
+    id: 'event-adjust', teamId: 'team-1', title: '레인 조정', competitionEnabled: true, competitionType: 'TEAM',
+    competitionStatus: status, laneDrawStatus: 'COMPLETED', draftGeneration: 2, currentPickNumber: 2,
+    team: { ownerId: 'user-1', isActive: true, bowlerHiddenEnabled: true, User: [], members }, attendances: [], guests: [],
+    competitionParticipants: participants,
+    competitionTeams: [
+      { id: 'competition-team-1', generation: 2, draftOrder: 1, lanePriority: 1, participants: participants.slice(0, 2), captain: members[0] },
+      { id: 'competition-team-2', generation: 2, draftOrder: 2, lanePriority: 2, participants: participants.slice(2), captain: members[2] },
+    ],
+    competitionDraftPicks: [], laneSlots, laneAssignments: [], seasonPublications: [], rankPoints: '{}',
+  };
+  let assignments = participants.map((participant, index) => ({
+    id: `assignment-${index + 1}`, eventId: event.id, slotId: laneSlots[index].id,
+    memberId: participant.memberId, guestId: null, participantKind: 'MEMBER', participantDisplayName: participant.member.user.name,
+  }));
+  let createCount = 0;
+  const prisma = {
+    teamEvent: {
+      findFirst: async args => args.where.id === event.id && args.where.teamId === event.teamId ? event : null,
+      updateMany: async args => {
+        if (args.where.competitionStatus !== event.competitionStatus || args.where.laneDrawStatus !== event.laneDrawStatus ||
+            args.where.draftGeneration !== event.draftGeneration) return { count: 0 };
+        return { count: 1 };
+      },
+    },
+    score: { count: async () => scoreCount },
+    teamEventLaneAssignment: {
+      deleteMany: async () => { const count = assignments.length; assignments = []; return { count }; },
+      create: async ({ data }) => {
+        createCount += 1;
+        if (failCreateAt === createCount) throw new Error('synthetic create failure');
+        const row = { id: `new-${createCount}`, ...data };
+        assignments.push(row); return row;
+      },
+    },
+  };
+  prisma.$transaction = async callback => {
+    const snapshot = assignments.map(item => ({ ...item }));
+    try { return await callback(prisma); }
+    catch (error) { assignments = snapshot; throw error; }
+  };
+  const service = loadTs('src/lib/mobile-api/team-competition.ts', {
+    '@/lib/prisma': prisma,
+    '@/lib/mobile-api/bowler-hidden': { readRankPoints: () => [] },
+  });
+  return { service, event, get assignments() { return assignments; } };
+}
+
+test('ADJUST_LANES atomically supports occupied-slot swap and move to an empty configured slot', async () => {
+  const harness = laneAdjustmentHarness();
+  const result = await harness.service.updateTeamCompetition('user-1', 'team-1', 'event-adjust', {
+    action: 'ADJUST_LANES', assignments: [
+      { participantId: 'participant-1', slotId: 'slot-2' },
+      { participantId: 'participant-2', slotId: 'slot-1' },
+      { participantId: 'participant-3', slotId: 'slot-4' },
+    ],
+  });
+  assert.equal(result.status, 'LANES_ASSIGNED');
+  assert.deepEqual(harness.assignments.map(item => [item.memberId, item.slotId]), [
+    ['member-1', 'slot-2'], ['member-2', 'slot-1'], ['member-3', 'slot-4'],
+  ]);
+  assert.equal(harness.event.competitionStatus, 'LANES_ASSIGNED');
+});
+
+test('ADJUST_LANES validates complete current participants and event-owned unique slots', async () => {
+  const invalidCases = [
+    {
+      assignments: [
+        { participantId: 'participant-1', slotId: 'slot-1' },
+        { participantId: 'participant-2', slotId: 'slot-1' },
+        { participantId: 'participant-3', slotId: 'slot-3' },
+      ], code: 'DUPLICATE_LANE_SLOT',
+    },
+    {
+      assignments: [
+        { participantId: 'participant-1', slotId: 'slot-1' },
+        { participantId: 'participant-2', slotId: 'slot-2' },
+      ], code: 'INVALID_LANE_ASSIGNMENTS',
+    },
+    {
+      assignments: [
+        { participantId: 'participant-1', slotId: 'slot-1' },
+        { participantId: 'participant-2', slotId: 'slot-2' },
+        { participantId: 'participant-other-event', slotId: 'slot-3' },
+      ], code: 'INVALID_LANE_ASSIGNMENTS',
+    },
+    {
+      assignments: [
+        { participantId: 'participant-1', slotId: 'slot-1' },
+        { participantId: 'participant-2', slotId: 'slot-2' },
+        { participantId: 'participant-3', slotId: 'slot-other-event' },
+      ], code: 'INVALID_LANE_SLOT',
+    },
+  ];
+  for (const item of invalidCases) {
+    const harness = laneAdjustmentHarness();
+    await assert.rejects(
+      harness.service.updateTeamCompetition('user-1', 'team-1', 'event-adjust', { action: 'ADJUST_LANES', assignments: item.assignments }),
+      error => error.code === item.code,
+    );
+    assert.equal(harness.assignments.length, 3);
+  }
+});
+
+test('ADJUST_LANES rejects member actors, score-started and published events', async () => {
+  const assignments = [
+    { participantId: 'participant-1', slotId: 'slot-1' },
+    { participantId: 'participant-2', slotId: 'slot-2' },
+    { participantId: 'participant-3', slotId: 'slot-3' },
+  ];
+  await assert.rejects(
+    laneAdjustmentHarness().service.updateTeamCompetition('user-2', 'team-1', 'event-adjust', { action: 'ADJUST_LANES', assignments }),
+    error => error.code === 'FORBIDDEN',
+  );
+  await assert.rejects(
+    laneAdjustmentHarness({ scoreCount: 1 }).service.updateTeamCompetition('user-1', 'team-1', 'event-adjust', { action: 'ADJUST_LANES', assignments }),
+    error => error.code === 'COMPETITION_SCORE_STARTED' && error.message === '이미 경기 점수가 입력되어 레인 배정을 변경할 수 없습니다.',
+  );
+  await assert.rejects(
+    laneAdjustmentHarness({ status: 'PUBLISHED' }).service.updateTeamCompetition('user-1', 'team-1', 'event-adjust', { action: 'ADJUST_LANES', assignments }),
+    error => error.code === 'COMPETITION_PUBLISHED',
+  );
+});
+
+test('ADJUST_LANES rolls the full assignment snapshot back when recreation fails', async () => {
+  const harness = laneAdjustmentHarness({ failCreateAt: 2 });
+  const original = harness.assignments.map(item => ({ ...item }));
+  await assert.rejects(
+    harness.service.updateTeamCompetition('user-1', 'team-1', 'event-adjust', {
+      action: 'ADJUST_LANES', assignments: [
+        { participantId: 'participant-1', slotId: 'slot-2' },
+        { participantId: 'participant-2', slotId: 'slot-1' },
+        { participantId: 'participant-3', slotId: 'slot-4' },
+      ],
+    }),
+    /synthetic create failure/,
+  );
+  assert.deepEqual(harness.assignments, original);
 });
 
 test('team results drop each larger team game lowest score and are recalculated from source rows', async () => {

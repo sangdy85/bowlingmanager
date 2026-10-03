@@ -1,5 +1,6 @@
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_competition_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_event_admin_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_team_competition_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_competition_score_models.dart';
@@ -27,6 +28,32 @@ class ClubEventsApi {
     () async =>
         _event((await _dio.get<dynamic>(_eventPath(teamId, eventId))).data),
   );
+
+  Future<ClubEventAdminState> fetchAdminOperations(
+    String teamId,
+    String eventId,
+  ) => _request(
+    () async => ClubEventAdminState.fromJson(
+      _data(
+        (await _dio.get<dynamic>(
+          '${_eventPath(teamId, eventId)}/admin-operations',
+        )).data,
+      ),
+    ),
+  );
+
+  Future<void> runAdminOperation(
+    String teamId,
+    String eventId,
+    Map<String, dynamic> body,
+  ) => _request(() async {
+    _data(
+      (await _dio.post<dynamic>(
+        '${_eventPath(teamId, eventId)}/admin-operations',
+        data: body,
+      )).data,
+    );
+  });
 
   Future<ClubCompetitionResult> fetchCompetition(
     String teamId,
@@ -207,12 +234,14 @@ class ClubEventsApi {
   Future<void> replaceLaneSlots(
     String teamId,
     String eventId,
-    List<({int laneNumber, int position})> slots,
-  ) => _request(() async {
+    List<({int laneNumber, int position})> slots, {
+    bool resetAssignments = false,
+  }) => _request(() async {
     _data(
       (await _dio.put<dynamic>(
         '${_eventPath(teamId, eventId)}/lane-config',
         data: <String, dynamic>{
+          if (resetAssignments) 'resetAssignments': true,
           'slots': slots
               .map(
                 (slot) => <String, int>{

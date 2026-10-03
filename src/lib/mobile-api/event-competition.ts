@@ -2,6 +2,7 @@ import { randomInt } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { enqueueMobileNotifications, MOBILE_NOTIFICATION_TYPES } from "@/lib/mobile-api/notifications";
+import { recordEventAdminAudit } from "@/lib/mobile-api/event-admin-audit";
 import { readRankPoints } from "@/lib/mobile-api/bowler-hidden";
 import {
     createSeasonPointPublication,
@@ -146,8 +147,8 @@ export function validateVoteSelection(voterParticipantId: string, selectedPartic
     return values;
 }
 
-export function votingPhase(startAt: Date, durationMinutes: number, now = new Date()) {
-    const closeAt = new Date(startAt.getTime() + durationMinutes * 60_000);
+export function votingPhase(startAt: Date, durationMinutes: number, now = new Date(), deadlineOverride: Date | null = null) {
+    const closeAt = deadlineOverride ?? new Date(startAt.getTime() + durationMinutes * 60_000);
     // Participant finalization changes the persisted status to EVENT_READY.
     // From that point voting is open immediately, including before the scheduled
     // event time, and remains open until the configured deadline.
@@ -175,7 +176,9 @@ export async function getEventCompetitionState(actorUserId: string, teamId: stri
     if (role === "MEMBER" && event.competitionStatus !== "ATTENDANCE_OPEN" && !actorParticipant) {
         throw new EventCompetitionError("NOT_PARTICIPANT", "참석 확정 참가자만 EVENT 대회 상태를 확인할 수 있습니다.", 403);
     }
-    const phase = event.competitionStartAt ? votingPhase(event.competitionStartAt, event.votingDurationMinutes, now) : null;
+    const phase = event.competitionStartAt
+        ? votingPhase(event.competitionStartAt, event.votingDurationMinutes, now, event.eventVotingDeadlineAt)
+        : null;
     const status = effectiveStatus(event.competitionStatus, phase);
     if (event.competitionStatus === "PUBLISHED") return publishedState(event, role, actorParticipant?.id ?? null);
     const submitted = event.eventCompetitionBallots.length;
@@ -278,7 +281,8 @@ async function prepare(actorUserId: string, teamId: string, eventId: string, now
 
 async function submitVote(actorUserId: string, teamId: string, eventId: string, rawSelections: unknown, now: Date, proxyVoterId?: unknown) {
     const event = await loadEvent(actorUserId, teamId, eventId); requireEventCompetition(event);
-    if (event.competitionStatus !== "EVENT_READY" || !event.competitionStartAt || !votingPhase(event.competitionStartAt, event.votingDurationMinutes, now).open) {
+    if (event.competitionStatus !== "EVENT_READY" || !event.competitionStartAt ||
+        !votingPhase(event.competitionStartAt, event.votingDurationMinutes, now, event.eventVotingDeadlineAt).open) {
         throw new EventCompetitionError("VOTING_CLOSED", "현재 투표할 수 있는 시간이 아닙니다.", 409);
     }
     const proxy = proxyVoterId !== undefined;
@@ -293,8 +297,12 @@ async function submitVote(actorUserId: string, teamId: string, eventId: string, 
     const selections = validateVoteSelection(voter.id, rawSelections, new Set(event.eventCompetitionParticipants.map((item) => item.id)));
     try {
         await prisma.$transaction(async (tx) => {
-            const fresh = await tx.teamEvent.findFirst({ where: { id: eventId, teamId, competitionStatus: "EVENT_READY" }, select: { competitionStartAt: true, votingDurationMinutes: true } });
-            if (!fresh?.competitionStartAt || !votingPhase(fresh.competitionStartAt, fresh.votingDurationMinutes, now).open) throw new EventCompetitionError("VOTING_CLOSED", "투표가 마감되었습니다.", 409);
+            const fresh = await tx.teamEvent.findFirst({ where: { id: eventId, teamId, competitionStatus: "EVENT_READY" }, select: {
+                competitionStartAt: true, votingDurationMinutes: true, eventVotingDeadlineAt: true,
+            } });
+            if (!fresh?.competitionStartAt || !votingPhase(
+                fresh.competitionStartAt, fresh.votingDurationMinutes, now, fresh.eventVotingDeadlineAt,
+            ).open) throw new EventCompetitionError("VOTING_CLOSED", "투표가 마감되었습니다.", 409);
             const existing = await tx.eventCompetitionBallot.findUnique({ where: { voterParticipantId: voter.id }, select: { id: true } });
             if (existing) throw new EventCompetitionError("BALLOT_ALREADY_SUBMITTED", "이미 투표를 완료했습니다.", 409);
             const ballot = await tx.eventCompetitionBallot.create({
@@ -316,7 +324,8 @@ async function submitVote(actorUserId: string, teamId: string, eventId: string, 
 
 async function startReveal(actorUserId: string, teamId: string, eventId: string, rawNonVoter: unknown, rawTieBreak: unknown, now: Date) {
     const event = await loadEvent(actorUserId, teamId, eventId); requireManager(event, actorUserId); requireEventCompetition(event);
-    if (event.competitionStatus !== "EVENT_READY" || !event.competitionStartAt || !votingPhase(event.competitionStartAt, event.votingDurationMinutes, now).closed) throw stateError();
+    if (event.competitionStatus !== "EVENT_READY" || !event.competitionStartAt ||
+        !votingPhase(event.competitionStartAt, event.votingDurationMinutes, now, event.eventVotingDeadlineAt).closed) throw stateError();
     if (!NON_VOTER_POLICIES.includes(rawNonVoter as NonVoterPolicy) || !TIE_BREAK_POLICIES.includes(rawTieBreak as TieBreakPolicy)) {
         throw new EventCompetitionError("POLICY_REQUIRED", "미투표자와 동점 처리 정책을 선택해주세요.", 400);
     }
@@ -385,6 +394,12 @@ async function reopen(actorUserId: string, teamId: string, eventId: string) {
             },
         });
         if (updated.count !== 1) throw stateError();
+        await recordEventAdminAudit(tx, {
+            eventId, eventTitle: event.title, teamId, actorUserId,
+            action: "REOPEN_PUBLICATION", competitionType: "EVENT",
+            beforeStatus: "PUBLISHED", afterStatus: "FINAL_READY",
+            details: { publicationRevoked: true, legacyAction: true },
+        });
     });
     return { status: "FINAL_READY", publicationRevoked: true };
 }
