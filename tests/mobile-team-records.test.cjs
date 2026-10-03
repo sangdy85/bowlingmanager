@@ -410,10 +410,18 @@ test('query and pagination parsing are strict and bounded', () => {
     assert.equal(service.parseTeamActivitiesPagination(new URLSearchParams('page=0')), null);
 });
 
+let syntheticUuidSequence = 0;
+
+function nextSyntheticUuid() {
+    syntheticUuidSequence += 1;
+    return `00000000-0000-4000-8000-${syntheticUuidSequence.toString(16).padStart(12, '0')}`;
+}
+
 function routeOverrides(result, userId = 'user-a') {
     return {
         '@/lib/mobile-api/auth': { getMobileApiUserId: async () => userId },
         '@/lib/mobile-api/team-records': result,
+        uuid: { v4: nextSyntheticUuid },
     };
 }
 
