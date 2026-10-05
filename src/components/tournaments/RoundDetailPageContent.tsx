@@ -18,6 +18,7 @@ import RoundResultSummary from './RoundResultSummary';
 import RoundParticipantManager from '@/components/tournaments/RoundParticipantManager';
 import { getEffectiveRoundDate, formatLane } from '@/lib/tournament-utils';
 import GrandFinaleCumulativeManager from './GrandFinaleCumulativeManager';
+import { calculateGameLaneAssignments } from '@/lib/lane-movement';
 
 // --- Tab Components ---
 
@@ -202,7 +203,7 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
                 </div>
                 <div className="mt-3 text-xs text-gray-500 space-y-1 bg-white p-3 rounded border">
                     <p>• <strong>우측/좌측 이동</strong>: 지정된 테이블 수만큼 이동 (범위 초과 시 순환)</p>
-                    <p>• <strong>크로스 이동</strong>: 1게임 후 홀수 레인은 좌측, 짝수 레인은 우측으로 이동</p>
+                    <p>• <strong>크로스 이동</strong>: 홀수 레인은 우측, 짝수 레인은 좌측으로 지정 테이블 수만큼 이동하며, 끝 레인을 넘으면 반대편에서 이어집니다.</p>
                 </div>
             </div>
 
@@ -767,51 +768,19 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
 
         // Constants for lane movement
         const moveType = round.moveLaneType;
-        const moveCount = (round.moveLaneCount || 0);
-        const offset = moveCount * 2;
+        const moveCount = (round.moveLaneCount ?? 0);
 
         const allLanesFromParticipants = matchableParticipants.map((p: any) => p.lane ? Math.floor(p.lane / 10) : null).filter((l: any) => l !== null);
-        const detectedFirstLane = allLanesFromParticipants.length > 0 ? Math.min(...allLanesFromParticipants) : 1;
-        const detectedLastLane = allLanesFromParticipants.length > 0 ? Math.max(...allLanesFromParticipants) : 20;
+        const detectedFirstLane = allLanesFromParticipants.length > 0 ? Math.min(...allLanesFromParticipants) : null;
+        const detectedLastLane = allLanesFromParticipants.length > 0 ? Math.max(...allLanesFromParticipants) : null;
 
-        const firstLane = round.startLane || detectedFirstLane;
-        const lastLane = round.endLane || detectedLastLane;
-        const totalLanes = (lastLane - firstLane) + 1;
+        const firstLane = round.startLane ?? detectedFirstLane;
+        const lastLane = round.endLane ?? detectedLastLane;
+        if (firstLane === null || lastLane === null) {
+            throw new Error('회차의 시작·끝 레인을 설정하거나 참가자 레인을 먼저 배정해 주세요.');
+        }
 
-        console.log(`[LaneDebug] DETECTED RANGE: ${firstLane} ~ ${lastLane} (Total: ${totalLanes}), MOVE: ${moveType} (${moveCount} tables, offset: ${offset})`);
-
-        const calculateNextLane = (curr: number) => {
-            if (moveType === 'RIGHT') {
-                return ((curr - firstLane + offset) % totalLanes) + firstLane;
-            } else if (moveType === 'LEFT') {
-                return (((curr - firstLane - offset) % totalLanes + totalLanes) % totalLanes) + firstLane;
-            } else if (moveType === 'CROSS') {
-                const odds: number[] = [];
-                const evens: number[] = [];
-                for (let l = firstLane; l <= lastLane; l++) {
-                    if (l % 2 !== 0) {
-                        odds.push(l);
-                    } else {
-                        evens.push(l);
-                    }
-                }
-
-                if (curr % 2 !== 0) {
-                    // Odd lanes move left (index - moveCount)
-                    const idx = odds.indexOf(curr);
-                    if (idx === -1 || odds.length === 0) return curr;
-                    const nextIdx = ((idx - moveCount) % odds.length + odds.length) % odds.length;
-                    return odds[nextIdx];
-                } else {
-                    // Even lanes move right (index + moveCount)
-                    const idx = evens.indexOf(curr);
-                    if (idx === -1 || evens.length === 0) return curr;
-                    const nextIdx = (idx + moveCount) % evens.length;
-                    return evens[nextIdx];
-                }
-            }
-            return curr;
-        };
+        console.log(`[LaneDebug] DETECTED RANGE: ${firstLane} ~ ${lastLane}, MOVE: ${moveType} (${moveCount} tables)`);
 
         // For each matchable participant, match scores based on Lane & Slot
         matchableParticipants.forEach((p: any) => {
@@ -819,12 +788,18 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
             const startLane = Math.floor(p.lane / 10);
             const slot = p.lane % 10;
 
-            let currentLane = startLane;
             const participantScores: (string | null)[] = new Array(gameCount).fill(null);
+            const gameLanes = calculateGameLaneAssignments({
+                lane: startLane,
+                slot,
+                gameCount,
+                firstLane,
+                lastLane,
+                moveType,
+                tableCount: moveCount,
+            });
 
-            for (let g = 1; g <= gameCount; g++) {
-                if (g > 1) currentLane = calculateNextLane(currentLane);
-
+            gameLanes.forEach(({ gameNumber, lane: currentLane }) => {
                 // Find score from AI data matching (currentLane, slot)
                 const matched = rawApiData.find(r => {
                     const rLane = typeof r.lane === 'number' ? r.lane : parseInt(String(r.lane).replace(/[^0-9]/g, ''));
@@ -832,11 +807,11 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                 });
 
                 if (matched && matched.games) {
-                    if (matched.games[g - 1] !== undefined && matched.games[g - 1] !== null) {
-                        participantScores[g - 1] = matched.games[g - 1].toString();
+                    if (matched.games[gameNumber - 1] !== undefined && matched.games[gameNumber - 1] !== null) {
+                        participantScores[gameNumber - 1] = matched.games[gameNumber - 1].toString();
                     }
                 }
-            }
+            });
 
             if (participantScores.some(s => s !== null)) {
                 if (!newScoreMap[p.registrationId]) newScoreMap[p.registrationId] = {};

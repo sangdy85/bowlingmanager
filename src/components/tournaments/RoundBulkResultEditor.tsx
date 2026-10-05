@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { updateLeagueRoundResults } from '@/app/actions/league-actions';
 import * as XLSX from 'xlsx';
 import { uploadRawLaneScores } from '@/app/actions/raw-score-actions';
+import { calculateGameLaneAssignments } from '@/lib/lane-movement';
 
 interface User {
     id: string;
@@ -181,15 +182,16 @@ export default function RoundBulkResultEditor({
                         };
 
                         const allLanesFromMatchups = round.matchups.flatMap(mu => mu.lanes?.split('-').map(l => parseInt(l.trim())) || []).filter(l => !isNaN(l));
-                        const detectedFirstLane = allLanesFromMatchups.length > 0 ? Math.min(...allLanesFromMatchups) : 1;
-                        const detectedLastLane = allLanesFromMatchups.length > 0 ? Math.max(...allLanesFromMatchups) : 20;
+                        const detectedFirstLane = allLanesFromMatchups.length > 0 ? Math.min(...allLanesFromMatchups) : null;
+                        const detectedLastLane = allLanesFromMatchups.length > 0 ? Math.max(...allLanesFromMatchups) : null;
 
-                        const firstLane = round.startLane || detectedFirstLane;
-                        const lastLane = round.endLane || detectedLastLane;
-                        const totalLanesInRound = (lastLane - firstLane) + 1;
+                        const firstLane = round.startLane ?? detectedFirstLane;
+                        const lastLane = round.endLane ?? detectedLastLane;
+                        if (firstLane === null || lastLane === null) {
+                            throw new Error('회차의 시작·끝 레인을 설정하거나 매치업 레인을 먼저 배정해 주세요.');
+                        }
                         const moveType = round.moveLaneType;
-                        const moveCount = round.moveLaneCount || 0;
-                        const offset = moveCount * 2;
+                        const moveCount = round.moveLaneCount ?? 0;
 
                         currentMatchupScores.forEach((playerScore, pIdx) => {
                             const { lane: startLane, slot } = getStartInfo(pIdx);
@@ -204,43 +206,18 @@ export default function RoundBulkResultEditor({
                                 return (targetGame === 'game1' ? matched.game1 : targetGame === 'game2' ? matched.game2 : matched.game3) || 0;
                             };
 
-                            const calculateNextLane = (currLane: number) => {
-                                if (moveType === 'RIGHT') return ((currLane - firstLane + offset) % totalLanesInRound) + firstLane;
-                                if (moveType === 'LEFT') return (((currLane - firstLane - offset) % totalLanesInRound + totalLanesInRound) % totalLanesInRound) + firstLane;
-                                if (moveType === 'CROSS') {
-                                    const odds: number[] = [];
-                                    const evens: number[] = [];
-                                    const lastLane = firstLane + totalLanesInRound - 1;
-                                    for (let l = firstLane; l <= lastLane; l++) {
-                                        if (l % 2 !== 0) {
-                                            odds.push(l);
-                                        } else {
-                                            evens.push(l);
-                                        }
-                                    }
-
-                                    if (currLane % 2 !== 0) {
-                                        // Odd lanes move left (index - moveCount)
-                                        const idx = odds.indexOf(currLane);
-                                        if (idx === -1 || odds.length === 0) return currLane;
-                                        const nextIdx = ((idx - moveCount) % odds.length + odds.length) % odds.length;
-                                        return odds[nextIdx];
-                                    } else {
-                                        // Even lanes move right (index + moveCount)
-                                        const idx = evens.indexOf(currLane);
-                                        if (idx === -1 || evens.length === 0) return currLane;
-                                        const nextIdx = (idx + moveCount) % evens.length;
-                                        return evens[nextIdx];
-                                    }
-                                }
-                                return currLane;
-                            };
-
-                            const s1 = findScore(startLane, 'game1');
-                            const g2Lane = calculateNextLane(startLane);
-                            const s2 = findScore(g2Lane, 'game2');
-                            const g3Lane = calculateNextLane(g2Lane);
-                            const s3 = findScore(g3Lane, 'game3');
+                            const gameLanes = calculateGameLaneAssignments({
+                                lane: startLane,
+                                slot,
+                                gameCount: 3,
+                                firstLane,
+                                lastLane,
+                                moveType,
+                                tableCount: moveCount,
+                            });
+                            const s1 = findScore(gameLanes[0].lane, 'game1');
+                            const s2 = findScore(gameLanes[1].lane, 'game2');
+                            const s3 = findScore(gameLanes[2].lane, 'game3');
 
                             if (s1 || s2 || s3) {
                                 currentMatchupScores[pIdx] = { ...currentMatchupScores[pIdx], score1: s1, score2: s2, score3: s3 };
