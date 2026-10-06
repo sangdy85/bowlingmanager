@@ -91,6 +91,28 @@ void main() {
     },
   );
 
+  testWidgets('TEAM attendance lock exposes attendance reopen action', (
+    tester,
+  ) async {
+    final api = _AdminApi(
+      ClubEventAdminState.fromJson(
+        _stateJson(type: 'TEAM', status: 'ATTENDANCE_LOCKED'),
+      ),
+    );
+    await _pump(tester, api);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('admin-reopen-attendance')),
+    );
+    expect(find.text('참석자 마감 해제'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('admin-reopen-attendance')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '확인'));
+    await tester.pumpAndSettle();
+
+    expect(api.actions.single['action'], 'REOPEN_ATTENDANCE');
+  });
+
   testWidgets(
     'EVENT reveal state exposes voting reset choices and new duration',
     (tester) async {

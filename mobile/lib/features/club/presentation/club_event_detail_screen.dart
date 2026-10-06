@@ -82,6 +82,9 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
         ),
         data: (ClubEvent event) {
           _scheduleInitialSection();
+          final bool attendanceAtTop =
+              event.competition == null ||
+              event.competition!.status == 'ATTENDANCE_OPEN';
           return RefreshIndicator(
             onRefresh: () => ref.refresh(provider.future),
             child: ListView(
@@ -95,7 +98,7 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                   const SizedBox(height: 12),
                   _myLaneAction(event),
                 ],
-                if (event.attendanceEnabled) ...<Widget>[
+                if (event.attendanceEnabled && attendanceAtTop) ...<Widget>[
                   const SizedBox(height: 12),
                   KeyedSubtree(
                     key: _attendanceKey,
@@ -168,6 +171,13 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                   ),
                   const SizedBox(height: 12),
                   _adminCard(event, user.id),
+                ],
+                if (event.attendanceEnabled && !attendanceAtTop) ...<Widget>[
+                  const SizedBox(height: 12),
+                  KeyedSubtree(
+                    key: _attendanceKey,
+                    child: _attendanceCard(event, user.id),
+                  ),
                 ],
               ],
             ),
@@ -293,6 +303,7 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
   }
 
   Widget _attendanceCard(ClubEvent event, String userId) => Card(
+    key: const Key('event-attendance-card'),
     child: Padding(
       padding: const EdgeInsets.all(18),
       child: Column(

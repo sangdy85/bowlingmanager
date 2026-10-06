@@ -154,6 +154,54 @@ test('TEAM draft reset increments generation and preserves historical draft rows
   assert.equal(h.event.competitionTeams, oldTeams);
 });
 
+test('attendance lock reopens without changing saved attendance values', async () => {
+  const h = harness(fixture({
+    competitionType: 'TEAM', competitionStatus: 'ATTENDANCE_LOCKED', draftGeneration: 3,
+  }));
+  const result = await h.service.runEventAdminOperation('manager', 'team-1', 'event-1', {
+    action: 'REOPEN_ATTENDANCE',
+  });
+  assert.equal(result.status, 'ATTENDANCE_OPEN');
+  assert.equal(result.attendancePreserved, true);
+  assert.equal(h.event.draftGeneration, 3);
+  assert.equal(h.calls.some(call => call[0] === 'attendance.updateMany'), false);
+});
+
+test('reopening attendance after TEAM setup isolates stale draft data in a new generation', async () => {
+  const historicalParticipants = [{ id: 'p1', generation: 4 }];
+  const historicalTeams = [{ id: 't1', generation: 4 }];
+  const h = harness(fixture({
+    competitionType: 'TEAM', competitionStatus: 'DRAFT_READY', draftGeneration: 4,
+    competitionParticipants: historicalParticipants, competitionTeams: historicalTeams,
+    laneAssignments: [{ id: 'lane-1' }],
+  }));
+  const result = await h.service.runEventAdminOperation('owner', 'team-1', 'event-1', {
+    action: 'REOPEN_ATTENDANCE',
+  });
+  assert.equal(result.status, 'ATTENDANCE_OPEN');
+  assert.equal(result.teamDataReset, true);
+  assert.equal(h.event.draftGeneration, 5);
+  assert.equal(h.event.laneDrawStatus, 'NOT_STARTED');
+  assert.equal(h.event.competitionParticipants, historicalParticipants);
+  assert.equal(h.event.competitionTeams, historicalTeams);
+});
+
+test('reopening attendance never clears TEAM scores without explicit confirmation', async () => {
+  const h = harness(fixture({
+    competitionType: 'TEAM', competitionStatus: 'TEAMS_FINALIZED',
+    _count: { scores: 2, charges: 0 },
+  }));
+  await assert.rejects(
+    () => h.service.runEventAdminOperation('owner', 'team-1', 'event-1', { action: 'REOPEN_ATTENDANCE' }),
+    error => error.code === 'SCORE_CLEAR_CONFIRMATION_REQUIRED',
+  );
+  const result = await h.service.runEventAdminOperation('owner', 'team-1', 'event-1', {
+    action: 'REOPEN_ATTENDANCE', clearScores: true,
+  });
+  assert.equal(result.status, 'ATTENDANCE_OPEN');
+  assert.equal(result.scoresCleared, 2);
+});
+
 test('TEAM full manual assignment marks overrides, permits imbalance and clears lanes', async () => {
   const participants = [
     { id: 'p1', generation: 1, memberId: 'm1', competitionTeamId: 't1' },

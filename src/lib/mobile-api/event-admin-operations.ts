@@ -151,9 +151,34 @@ async function reopenAttendance(tx: AdminTx, event: AdminEvent, body: Record<str
         await tx.teamEvent.update({ where: { id: event.id }, data: { competitionStatus: "ATTENDANCE_OPEN" } });
         return { status: "ATTENDANCE_OPEN", manualGroupsPreserved: true };
     }
-    if (event.competitionType === "TEAM") return resetTeamDraft(tx, event, body);
+    if (event.competitionType === "TEAM") return reopenTeamAttendance(tx, event, body);
     if (event.competitionType === "EVENT") return resetEventParticipants(tx, event, body);
     throw new EventAdminOperationError("COMPETITION_NOT_AVAILABLE", "대회 일정에서만 사용할 수 있습니다.", 409);
+}
+
+async function reopenTeamAttendance(tx: AdminTx, event: AdminEvent, body: Record<string, unknown>) {
+    requireType(event, "TEAM");
+    if (!["ATTENDANCE_LOCKED", "DRAFT_READY", "DRAFT_IN_PROGRESS", "LUCKY_DRAW", "TEAMS_FINALIZED", "LANES_ASSIGNED"].includes(event.competitionStatus)) {
+        stateError();
+    }
+    const scoreCount = await requireScoreClear(tx, event, body);
+    const hasCurrentTeamData = event.competitionTeams.some((item) => item.generation === event.draftGeneration) ||
+        event.competitionParticipants.some((item) => item.generation === event.draftGeneration);
+    const teamDataReset = hasCurrentTeamData || event.laneAssignments.length > 0;
+    await tx.teamEventLaneAssignment.deleteMany({ where: { eventId: event.id } });
+    await tx.teamEvent.update({ where: { id: event.id }, data: {
+        ...(teamDataReset ? { draftGeneration: { increment: 1 } } : {}),
+        currentPickNumber: 1,
+        competitionStatus: "ATTENDANCE_OPEN",
+        laneDrawStatus: "NOT_STARTED",
+    } });
+    return {
+        status: "ATTENDANCE_OPEN",
+        attendancePreserved: true,
+        teamDataReset,
+        generation: event.draftGeneration + (teamDataReset ? 1 : 0),
+        scoresCleared: scoreCount,
+    };
 }
 
 async function clearIndividualGroups(tx: AdminTx, event: AdminEvent) {

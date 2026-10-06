@@ -85,6 +85,7 @@ class _ClubTeamCompetitionCardState
       if (mounted) _syncPolling(state.value?.polling == true);
     });
     return Card(
+      key: const Key('team-competition-card'),
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: state.when(
@@ -386,6 +387,16 @@ class _ClubTeamCompetitionCardState
             child: const Text('팀장과 드래프트 순서 지정'),
           ),
         );
+        actions.add(
+          OutlinedButton.icon(
+            key: const Key('manual-assign-all-teams'),
+            onPressed: _working
+                ? null
+                : () => _configureManualTeams(state),
+            icon: const Icon(Icons.groups_2_outlined),
+            label: const Text('전체 수동 편성'),
+          ),
+        );
       case 'DRAFT_READY':
         actions.add(
           FilledButton(
@@ -560,6 +571,18 @@ class _ClubTeamCompetitionCardState
           },
       ],
     });
+  }
+
+  Future<void> _configureManualTeams(ClubTeamCompetitionState state) async {
+    final Map<String, dynamic>? action =
+        await showDialog<Map<String, dynamic>>(
+          context: context,
+          builder: (BuildContext context) => _ManualTeamAssignmentDialog(
+            participants: state.remainingParticipants,
+          ),
+        );
+    if (action == null || !mounted) return;
+    await _run(action);
   }
 
   Future<void> _assignLanes(ClubTeamCompetitionState state) async {
@@ -923,6 +946,193 @@ class _ClubTeamCompetitionCardState
     } finally {
       if (mounted) setState(() => _working = false);
     }
+  }
+}
+
+class _ManualTeamAssignmentDialog extends StatefulWidget {
+  const _ManualTeamAssignmentDialog({required this.participants});
+
+  final List<ClubTeamCompetitionParticipant> participants;
+
+  @override
+  State<_ManualTeamAssignmentDialog> createState() =>
+      _ManualTeamAssignmentDialogState();
+}
+
+class _ManualTeamAssignmentDialogState
+    extends State<_ManualTeamAssignmentDialog> {
+  final List<String> _captainParticipantIds = <String>[];
+  final Map<String, int> _teamByParticipant = <String, int>{};
+  int _step = 0;
+
+  List<ClubTeamCompetitionParticipant> get _memberParticipants => widget
+      .participants
+      .where((participant) => participant.memberId != null)
+      .toList(growable: false);
+
+  void _toggleCaptain(String participantId, bool selected) => setState(() {
+    if (selected) {
+      _captainParticipantIds.add(participantId);
+    } else {
+      _captainParticipantIds.remove(participantId);
+    }
+  });
+
+  void _startAssignment() => setState(() {
+    _teamByParticipant.clear();
+    for (int index = 0; index < _captainParticipantIds.length; index++) {
+      _teamByParticipant[_captainParticipantIds[index]] = index + 1;
+    }
+    _step = 1;
+  });
+
+  Map<String, dynamic> _action() {
+    final participantsById = <String, ClubTeamCompetitionParticipant>{
+      for (final participant in widget.participants)
+        participant.participantId: participant,
+    };
+    return <String, dynamic>{
+      'action': 'MANUAL_ASSIGN_TEAMS',
+      'captains': <Map<String, dynamic>>[
+        for (int index = 0; index < _captainParticipantIds.length; index++)
+          <String, dynamic>{
+            'memberId':
+                participantsById[_captainParticipantIds[index]]!.memberId,
+            'draftOrder': index + 1,
+          },
+      ],
+      'assignments': <Map<String, dynamic>>[
+        for (final participant in widget.participants)
+          <String, dynamic>{
+            'participantKind': participant.participantKind,
+            if (participant.memberId != null) 'memberId': participant.memberId,
+            if (participant.guestId != null) 'guestId': participant.guestId,
+            'teamOrder': _teamByParticipant[participant.participantId],
+          },
+      ],
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool complete =
+        _teamByParticipant.length == widget.participants.length;
+    final Map<int, int> sizes = <int, int>{
+      for (int order = 1; order <= _captainParticipantIds.length; order++)
+        order: 0,
+    };
+    for (final order in _teamByParticipant.values) {
+      sizes[order] = (sizes[order] ?? 0) + 1;
+    }
+    final bool unbalanced =
+        sizes.isNotEmpty && sizes.values.toSet().length > 1;
+    return AlertDialog(
+      title: const Text('전체 수동 TEAM 편성'),
+      content: SizedBox(
+        width: 480,
+        child: SingleChildScrollView(
+          child: _step == 0
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    const Text('팀장을 선택한 순서대로 TEAM 1, TEAM 2…가 만들어집니다.'),
+                    const SizedBox(height: 8),
+                    for (final participant in _memberParticipants)
+                      CheckboxListTile(
+                        key: Key(
+                          'manual-captain-${participant.participantId}',
+                        ),
+                        value: _captainParticipantIds.contains(
+                          participant.participantId,
+                        ),
+                        title: Text(participant.name),
+                        subtitle: _captainParticipantIds.contains(
+                          participant.participantId,
+                        )
+                            ? Text(
+                                'TEAM ${_captainParticipantIds.indexOf(participant.participantId) + 1} 팀장',
+                              )
+                            : null,
+                        onChanged: (bool? value) => _toggleCaptain(
+                          participant.participantId,
+                          value == true,
+                        ),
+                      ),
+                  ],
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    const Text('모든 참가자를 하나의 TEAM에 지정해주세요.'),
+                    const SizedBox(height: 8),
+                    for (final participant in widget.participants)
+                      DropdownButtonFormField<int>(
+                        key: Key(
+                          'manual-team-${participant.participantId}',
+                        ),
+                        initialValue:
+                            _teamByParticipant[participant.participantId],
+                        decoration: InputDecoration(
+                          labelText: _captainParticipantIds.contains(
+                            participant.participantId,
+                          )
+                              ? '${participant.name} · 팀장'
+                              : participant.name,
+                        ),
+                        items: <DropdownMenuItem<int>>[
+                          for (
+                            int order = 1;
+                            order <= _captainParticipantIds.length;
+                            order++
+                          )
+                            DropdownMenuItem<int>(
+                              value: order,
+                              child: Text('TEAM $order'),
+                            ),
+                        ],
+                        onChanged: _captainParticipantIds.contains(
+                          participant.participantId,
+                        )
+                            ? null
+                            : (int? value) => setState(() {
+                                if (value != null) {
+                                  _teamByParticipant[participant.participantId] =
+                                      value;
+                                }
+                              }),
+                      ),
+                    if (unbalanced)
+                      const Text(
+                        'TEAM별 인원수가 동일하지 않습니다. 그대로 저장할 수 있습니다.',
+                        key: Key('manual-team-unbalanced-warning'),
+                      ),
+                  ],
+                ),
+        ),
+      ),
+      actions: <Widget>[
+        if (_step == 1)
+          TextButton(
+            onPressed: () => setState(() => _step = 0),
+            child: const Text('이전'),
+          ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          key: Key(_step == 0 ? 'manual-team-next' : 'save-manual-teams'),
+          onPressed: _step == 0
+              ? (_captainParticipantIds.length >= 2
+                    ? _startAssignment
+                    : null)
+              : (complete ? () => Navigator.pop(context, _action()) : null),
+          child: Text(_step == 0 ? '다음' : '저장'),
+        ),
+      ],
+    );
   }
 }
 

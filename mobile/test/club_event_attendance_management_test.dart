@@ -5,6 +5,7 @@ import 'package:bowlingmanager_mobile/features/club/data/club_events_api.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_events_repository.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_admin_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_team_competition_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_detail_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -56,8 +57,40 @@ void main() {
       await _pumpDetail(tester, _AttendanceApi(role: 'MEMBER', locked: true));
       expect(find.text('미응답 30'), findsOneWidget);
       expect(find.byKey(const Key('attendance-management')), findsNothing);
+      expect(find.byKey(const Key('admin-reopen-attendance')), findsNothing);
     },
   );
+
+  testWidgets('attendance card moves below active TEAM operations after lock', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(600, 2400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await _pumpDetail(
+      tester,
+      _AttendanceApi(role: 'MEMBER', competitionStatus: 'ATTENDANCE_OPEN'),
+      settle: false,
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const Key('event-attendance-card'))).dy,
+      lessThan(
+        tester.getTopLeft(find.byKey(const Key('team-competition-card'))).dy,
+      ),
+    );
+
+    await _pumpDetail(
+      tester,
+      _AttendanceApi(role: 'MEMBER', competitionStatus: 'ATTENDANCE_LOCKED'),
+      settle: false,
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const Key('event-attendance-card'))).dy,
+      greaterThan(
+        tester.getTopLeft(find.byKey(const Key('team-competition-card'))).dy,
+      ),
+    );
+  });
 
   testWidgets(
     'manager attendance failure keeps the sheet and shows safe error',
@@ -84,11 +117,16 @@ void main() {
   );
 }
 
-Future<void> _pumpDetail(WidgetTester tester, _AttendanceApi api) async {
+Future<void> _pumpDetail(
+  WidgetTester tester,
+  _AttendanceApi api, {
+  bool settle = true,
+}) async {
   final FakeAuthRepository auth = FakeAuthRepository()
     ..bootstrapResult = testUser;
   await tester.pumpWidget(
     ProviderScope(
+      key: UniqueKey(),
       overrides: [
         authRepositoryProvider.overrideWithValue(auth),
         clubEventsRepositoryProvider.overrideWithValue(
@@ -100,14 +138,25 @@ Future<void> _pumpDetail(WidgetTester tester, _AttendanceApi api) async {
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 }
 
 class _AttendanceApi extends ClubEventsApi {
-  _AttendanceApi({required this.role, this.locked = false}) : super(Dio());
+  _AttendanceApi({
+    required this.role,
+    this.locked = false,
+    this.competitionStatus,
+  }) : super(Dio());
 
   final String role;
   final bool locked;
+  final String? competitionStatus;
   final List<String> changes = <String>[];
   ApiException? error;
 
@@ -118,8 +167,8 @@ class _AttendanceApi extends ClubEventsApi {
   ) async => ClubEventAdminState.fromJson(<String, dynamic>{
     'eventId': eventId,
     'title': '10월 팀전',
-    'competitionType': null,
-    'competitionStatus': null,
+    'competitionType': competitionStatus == null ? null : 'TEAM',
+    'competitionStatus': competitionStatus,
     'laneDrawStatus': locked ? 'COMPLETED' : 'NOT_STARTED',
     'gameCount': null,
     'scoreCount': 0,
@@ -169,9 +218,43 @@ class _AttendanceApi extends ClubEventsApi {
               'status': 'UNANSWERED',
             },
         ],
-        'bowlerHiddenEnabled': false,
-        'competition': null,
+        'bowlerHiddenEnabled': competitionStatus != null,
+        'competition': competitionStatus == null
+            ? null
+            : <String, Object?>{
+                'enabled': true,
+                'type': 'TEAM',
+                'mode': 'OFFICIAL',
+                'status': competitionStatus,
+                'rankPoints': <Object>[],
+              },
       });
+
+  @override
+  Future<ClubTeamCompetitionState> fetchTeamCompetition(
+    String teamId,
+    String eventId,
+  ) async => ClubTeamCompetitionState.fromJson(<String, dynamic>{
+    'generation': 1,
+    'status': competitionStatus,
+    'canManage': role != 'MEMBER',
+    'isCurrentCaptain': false,
+    'currentTurn': null,
+    'laneNumbers': <int>[],
+    'laneSlots': <Object>[],
+    'teams': <Object>[],
+    'remainingParticipants': <Object>[],
+    'history': <Object>[],
+    'myTeam': null,
+    'results': <String, Object?>{
+      'complete': false,
+      'requiresPinTieBreakPolicy': false,
+      'effectivePlayerCount': null,
+      'individual': <Object>[],
+      'games': <Object>[],
+      'teams': <Object>[],
+    },
+  });
 
   @override
   Future<void> setMemberAttendance(

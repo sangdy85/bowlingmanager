@@ -160,6 +160,36 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.actions, hasLength(1));
   });
+
+  testWidgets('locked TEAM supports full manual assignment and reloads teams', (
+    WidgetTester tester,
+  ) async {
+    final _LateParticipantApi api = _LateParticipantApi();
+    await _pumpCard(
+      tester,
+      api: api,
+      status: 'ATTENDANCE_LOCKED',
+      stateBuilder: () =>
+          api.manualSaved ? _manualFinalizedState() : _manualLockedState(),
+    );
+
+    await tester.tap(find.byKey(const Key('manual-assign-all-teams')));
+    await tester.pumpAndSettle();
+    expect(find.text('전체 수동 TEAM 편성'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('manual-captain-member:member-1')));
+    await tester.tap(find.byKey(const Key('manual-captain-member:member-2')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('manual-team-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('save-manual-teams')));
+    await tester.pumpAndSettle();
+
+    expect(api.actions.single['action'], 'MANUAL_ASSIGN_TEAMS');
+    expect((api.actions.single['captains'] as List<Object?>), hasLength(2));
+    expect((api.actions.single['assignments'] as List<Object?>), hasLength(2));
+    expect(find.text('TEAM 1'), findsWidgets);
+    expect(find.text('TEAM 2'), findsWidgets);
+  });
 }
 
 Future<void> _pumpCard(
@@ -168,6 +198,7 @@ Future<void> _pumpCard(
   required String status,
   bool canManage = true,
   void Function()? onProviderLoad,
+  ClubTeamCompetitionState Function()? stateBuilder,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -176,7 +207,8 @@ Future<void> _pumpCard(
         clubEventsApiProvider.overrideWithValue(api),
         clubTeamCompetitionProvider.overrideWith((ref, request) async {
           onProviderLoad?.call();
-          return ClubTeamCompetitionState.fromJson(_state(status, canManage));
+          return stateBuilder?.call() ??
+              ClubTeamCompetitionState.fromJson(_state(status, canManage));
         }),
       ],
       child: MaterialApp(
@@ -228,12 +260,76 @@ Map<String, dynamic> _state(String status, bool canManage) => <String, dynamic>{
   },
 };
 
+ClubTeamCompetitionState _manualLockedState() =>
+    ClubTeamCompetitionState.fromJson(<String, dynamic>{
+      ..._state('ATTENDANCE_LOCKED', true),
+      'remainingParticipants': <Object>[
+        <String, Object?>{
+          'participantId': 'member:member-1',
+          'participantKind': 'MEMBER',
+          'memberId': 'member-1',
+          'guestId': null,
+          'name': '팀장 1',
+          'assignmentType': null,
+          'assignmentOrder': null,
+          'laneSlot': null,
+        },
+        <String, Object?>{
+          'participantId': 'member:member-2',
+          'participantKind': 'MEMBER',
+          'memberId': 'member-2',
+          'guestId': null,
+          'name': '팀장 2',
+          'assignmentType': null,
+          'assignmentOrder': null,
+          'laneSlot': null,
+        },
+      ],
+    });
+
+ClubTeamCompetitionState _manualFinalizedState() =>
+    ClubTeamCompetitionState.fromJson(<String, dynamic>{
+      ..._state('TEAMS_FINALIZED', true),
+      'teams': <Object>[
+        _manualTeam('competition-team-1', 'TEAM 1', 'member-1', '팀장 1'),
+        _manualTeam('competition-team-2', 'TEAM 2', 'member-2', '팀장 2'),
+      ],
+    });
+
+Map<String, Object?> _manualTeam(
+  String id,
+  String name,
+  String memberId,
+  String memberName,
+) => <String, Object?>{
+  'id': id,
+  'name': name,
+  'draftOrder': int.parse(id.substring(id.length - 1)),
+  'lanePriority': null,
+  'teamHandicap': 0,
+  'captainMemberId': memberId,
+  'captainName': memberName,
+  'members': <Object>[
+    <String, Object?>{
+      'participantId': 'participant-$memberId',
+      'participantKind': 'MEMBER',
+      'memberId': memberId,
+      'guestId': null,
+      'name': memberName,
+      'assignmentType': 'CAPTAIN',
+      'assignmentOrder': 0,
+      'laneSlot': null,
+    },
+  ],
+};
+
 class _LateParticipantApi extends ClubEventsApi {
   _LateParticipantApi() : super(Dio());
 
   final List<Map<String, dynamic>> actions = <Map<String, dynamic>>[];
   ApiException? error;
   Completer<void>? pending;
+  bool manualSaved = false;
 
   @override
   Future<void> teamCompetitionAction(
@@ -242,6 +338,7 @@ class _LateParticipantApi extends ClubEventsApi {
     Map<String, dynamic> action,
   ) async {
     actions.add(Map<String, dynamic>.from(action));
+    if (action['action'] == 'MANUAL_ASSIGN_TEAMS') manualSaved = true;
     if (error case final ApiException failure) throw failure;
     if (pending case final Completer<void> completer) await completer.future;
   }

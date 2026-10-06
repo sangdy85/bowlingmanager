@@ -19,6 +19,12 @@ type LaneTeam = { id: string; lanePriority: number; memberIds: string[] };
 type LateParticipantInput =
     | { participantKind: "MEMBER"; memberId: string }
     | { participantKind: "GUEST"; guestName: string };
+type ManualTeamAssignment = {
+    participantKind: "MEMBER" | "GUEST";
+    memberId: string | null;
+    guestId: string | null;
+    teamOrder: number;
+};
 export const LUCKY_DRAW_RANDOM_BOUND = 2;
 
 export class TeamCompetitionError extends Error {
@@ -156,6 +162,7 @@ export async function updateTeamCompetition(actorUserId: string, teamId: string,
     switch (body.action) {
         case "LOCK_ATTENDANCE": return lockAttendance(actorUserId, teamId, eventId);
         case "CONFIGURE_CAPTAINS": return configureCaptains(actorUserId, teamId, eventId, body.captains);
+        case "MANUAL_ASSIGN_TEAMS": return manualAssignTeams(actorUserId, teamId, eventId, body.captains, body.assignments);
         case "START_DRAFT": return startDraft(actorUserId, teamId, eventId);
         case "PICK": return pickParticipant(actorUserId, teamId, eventId, body.participantId ?? body.memberId);
         case "LUCKY_DRAW": return luckyDraw(actorUserId, teamId, eventId);
@@ -169,6 +176,82 @@ export async function updateTeamCompetition(actorUserId: string, teamId: string,
         case "ADD_LATE_PARTICIPANT": return addLateParticipant(actorUserId, teamId, eventId, body);
         default: throw new TeamCompetitionError("INVALID_ACTION", "TEAM 대회 작업을 확인해주세요.", 400);
     }
+}
+
+async function manualAssignTeams(
+    actorUserId: string,
+    teamId: string,
+    eventId: string,
+    rawCaptains: unknown,
+    rawAssignments: unknown,
+) {
+    const event = await loadEvent(actorUserId, teamId, eventId);
+    requireManager(event, actorUserId);
+    requireTeamCompetition(event);
+    if (event.competitionStatus !== "ATTENDANCE_LOCKED") throw stateError();
+    const captains = parseCaptains(rawCaptains);
+    const attending = attendingMembers(event);
+    validateCaptains(captains, attending, event.guests.length);
+    const assignments = parseManualAssignments(rawAssignments, captains.length);
+    const rosterKeys = new Set([
+        ...attending.map((item) => `MEMBER:${item.id}`),
+        ...event.guests.map((item) => `GUEST:${item.id}`),
+    ]);
+    const assignmentKeys = assignments.map(manualAssignmentKey);
+    if (assignments.length !== rosterKeys.size || new Set(assignmentKeys).size !== rosterKeys.size ||
+        assignmentKeys.some((key) => !rosterKeys.has(key))) {
+        throw new TeamCompetitionError("INVALID_TEAM_ASSIGNMENTS", "현재 참가자를 각각 하나의 TEAM에 배정해주세요.", 400);
+    }
+    for (const captain of captains) {
+        const assignment = assignments.find((item) => item.memberId === captain.memberId);
+        if (!assignment || assignment.teamOrder !== captain.draftOrder) {
+            throw new TeamCompetitionError("CAPTAIN_TEAM_REQUIRED", "각 팀장은 자신의 TEAM에 배정해주세요.", 400);
+        }
+    }
+    return prisma.$transaction(async (tx) => {
+        const claimed = await tx.teamEvent.updateMany({ where: {
+            id: eventId, teamId, competitionStatus: "ATTENDANCE_LOCKED", draftGeneration: event.draftGeneration,
+        }, data: {
+            competitionStatus: "TEAMS_FINALIZED", laneDrawStatus: "NOT_STARTED", currentPickNumber: 1,
+        } });
+        if (claimed.count !== 1) throw stateError();
+        const teamsByOrder = new Map<number, { id: string }>();
+        for (const captain of captains.sort((a, b) => a.draftOrder - b.draftOrder)) {
+            const team = await tx.teamCompetitionTeam.create({ data: {
+                eventId, generation: event.draftGeneration, name: `TEAM ${captain.draftOrder}`,
+                captainMemberId: captain.memberId, draftOrder: captain.draftOrder,
+            } });
+            teamsByOrder.set(captain.draftOrder, team);
+        }
+        const orderByTeam = new Map<number, number>();
+        for (const assignment of assignments) {
+            const captain = captains.find((item) => item.memberId === assignment.memberId);
+            const assignmentOrder = captain ? 0 : (orderByTeam.get(assignment.teamOrder) ?? 0) + 1;
+            if (!captain) orderByTeam.set(assignment.teamOrder, assignmentOrder);
+            await tx.teamCompetitionParticipant.create({ data: {
+                eventId,
+                generation: event.draftGeneration,
+                memberId: assignment.memberId,
+                guestId: assignment.guestId,
+                competitionTeamId: teamsByOrder.get(assignment.teamOrder)!.id,
+                assignmentType: captain ? "CAPTAIN" : "ADMIN_OVERRIDE",
+                assignmentOrder,
+            } });
+        }
+        await recordEventAdminAudit(tx, {
+            eventId, eventTitle: event.title, teamId, actorUserId,
+            action: "ADMIN_TEAM_OVERRIDE", competitionType: "TEAM",
+            beforeStatus: "ATTENDANCE_LOCKED", afterStatus: "TEAMS_FINALIZED",
+            details: { fullManualAssignment: true, teamCount: captains.length, participantCount: assignments.length },
+        });
+        const sizes = captains.map((captain) => assignments.filter((item) => item.teamOrder === captain.draftOrder).length);
+        return {
+            status: "TEAMS_FINALIZED",
+            assignmentsUpdated: assignments.length,
+            teamCount: captains.length,
+            unbalanced: new Set(sizes).size > 1,
+        };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 async function addLateParticipant(
@@ -287,26 +370,9 @@ async function lockAttendance(actorUserId: string, teamId: string, eventId: stri
 async function configureCaptains(actorUserId: string, teamId: string, eventId: string, raw: unknown) {
     const event = await loadEvent(actorUserId, teamId, eventId); requireManager(event, actorUserId); requireTeamCompetition(event);
     if (event.competitionStatus !== "ATTENDANCE_LOCKED") throw stateError();
-    if (!Array.isArray(raw) || raw.length < 2) throw new TeamCompetitionError("INVALID_CAPTAINS", "팀장을 2명 이상 지정해주세요.", 400);
-    const captains = raw.map((value) => {
-        const item = asRecord(value);
-        if (typeof item.memberId !== "string" || !Number.isSafeInteger(item.draftOrder) || (item.draftOrder as number) < 1) {
-            throw new TeamCompetitionError("INVALID_CAPTAINS", "팀장과 드래프트 순서를 확인해주세요.", 400);
-        }
-        return { memberId: item.memberId, draftOrder: item.draftOrder as number };
-    });
-    const memberIds = new Set(captains.map((item) => item.memberId));
-    const orders = new Set(captains.map((item) => item.draftOrder));
-    if (memberIds.size !== captains.length || orders.size !== captains.length ||
-        [...orders].some((order) => order < 1 || order > captains.length)) {
-        throw new TeamCompetitionError("INVALID_CAPTAINS", "팀장과 순서는 중복 없이 1부터 이어져야 합니다.", 400);
-    }
+    const captains = parseCaptains(raw);
     const attending = attendingMembers(event);
-    const attendingIds = new Set(attending.map((item) => item.id));
-    if (captains.some((item) => !attendingIds.has(item.memberId))) {
-        throw new TeamCompetitionError("CAPTAIN_NOT_ATTENDING", "참석 확정 회원만 팀장이 될 수 있습니다.", 409);
-    }
-    draftPlan(attending.length + event.guests.length, captains.length);
+    validateCaptains(captains, attending, event.guests.length);
     await prisma.$transaction(async (tx) => {
         const claimed = await tx.teamEvent.updateMany({
             where: { id: eventId, teamId, competitionStatus: "ATTENDANCE_LOCKED", draftGeneration: event.draftGeneration },
@@ -843,6 +909,53 @@ function serializeParticipant(item: ReturnType<typeof currentParticipants>[numbe
     assignmentType: item.assignmentType === "ADMIN_OVERRIDE" ? "DRAFT" : item.assignmentType,
     assignmentOrder: item.assignmentOrder,
 }; }
+function parseCaptains(raw: unknown) {
+    if (!Array.isArray(raw) || raw.length < 2) throw new TeamCompetitionError("INVALID_CAPTAINS", "팀장을 2명 이상 지정해주세요.", 400);
+    const captains = raw.map((value) => {
+        const item = asRecord(value);
+        if (typeof item.memberId !== "string" || !Number.isSafeInteger(item.draftOrder) || (item.draftOrder as number) < 1) {
+            throw new TeamCompetitionError("INVALID_CAPTAINS", "팀장과 드래프트 순서를 확인해주세요.", 400);
+        }
+        return { memberId: item.memberId, draftOrder: item.draftOrder as number };
+    });
+    const memberIds = new Set(captains.map((item) => item.memberId));
+    const orders = new Set(captains.map((item) => item.draftOrder));
+    if (memberIds.size !== captains.length || orders.size !== captains.length ||
+        [...orders].some((order) => order < 1 || order > captains.length)) {
+        throw new TeamCompetitionError("INVALID_CAPTAINS", "팀장과 순서는 중복 없이 1부터 이어져야 합니다.", 400);
+    }
+    return captains;
+}
+function validateCaptains(
+    captains: ReturnType<typeof parseCaptains>,
+    attending: ReturnType<typeof attendingMembers>,
+    guestCount: number,
+) {
+    const attendingIds = new Set(attending.map((item) => item.id));
+    if (captains.some((item) => !attendingIds.has(item.memberId))) {
+        throw new TeamCompetitionError("CAPTAIN_NOT_ATTENDING", "참석 확정 회원만 팀장이 될 수 있습니다.", 409);
+    }
+    draftPlan(attending.length + guestCount, captains.length);
+}
+function parseManualAssignments(raw: unknown, teamCount: number): ManualTeamAssignment[] {
+    if (!Array.isArray(raw)) throw new TeamCompetitionError("INVALID_TEAM_ASSIGNMENTS", "현재 참가자를 각각 하나의 TEAM에 배정해주세요.", 400);
+    return raw.map((value) => {
+        const item = asRecord(value);
+        if (!Number.isSafeInteger(item.teamOrder) || (item.teamOrder as number) < 1 || (item.teamOrder as number) > teamCount) {
+            throw new TeamCompetitionError("INVALID_TEAM_ASSIGNMENTS", "TEAM 배정 정보를 확인해주세요.", 400);
+        }
+        if (item.participantKind === "MEMBER" && typeof item.memberId === "string" && item.memberId && item.guestId == null) {
+            return { participantKind: "MEMBER", memberId: item.memberId, guestId: null, teamOrder: item.teamOrder as number };
+        }
+        if (item.participantKind === "GUEST" && typeof item.guestId === "string" && item.guestId && item.memberId == null) {
+            return { participantKind: "GUEST", memberId: null, guestId: item.guestId, teamOrder: item.teamOrder as number };
+        }
+        throw new TeamCompetitionError("INVALID_TEAM_ASSIGNMENTS", "참가자 TEAM 배정 정보를 확인해주세요.", 400);
+    });
+}
+function manualAssignmentKey(item: ManualTeamAssignment) {
+    return `${item.participantKind}:${item.memberId ?? item.guestId}`;
+}
 function serializeTeam(team: ReturnType<typeof currentTeams>[number], event: CompetitionEvent) {
     const assignments = new Map(event.laneAssignments.map((item) => [item.memberId ?? item.guestId!, `${item.slot.laneNumber}-${item.slot.position}`]));
     return { id: team.id, name: team.name, draftOrder: team.draftOrder, lanePriority: team.lanePriority,

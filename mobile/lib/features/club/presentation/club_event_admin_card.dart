@@ -82,6 +82,23 @@ class _ClubEventAdminCardState extends ConsumerState<ClubEventAdminCard> {
           'TEAMS_FINALIZED',
           'LANES_ASSIGNED',
         }.contains(status);
+    final canReopenAttendance = switch (type) {
+      'INDIVIDUAL' => status == 'GROUPS_READY',
+      'TEAM' => const <String>{
+        'ATTENDANCE_LOCKED',
+        'DRAFT_READY',
+        'DRAFT_IN_PROGRESS',
+        'LUCKY_DRAW',
+        'TEAMS_FINALIZED',
+        'LANES_ASSIGNED',
+      }.contains(status),
+      'EVENT' => const <String>{
+        'EVENT_READY',
+        'REVEALING',
+        'FINAL_READY',
+      }.contains(status),
+      _ => false,
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -138,19 +155,27 @@ class _ClubEventAdminCardState extends ConsumerState<ClubEventAdminCard> {
             ),
           )
         else ...<Widget>[
-          if (type == 'INDIVIDUAL' && status == 'GROUPS_READY') ...<Widget>[
+          if (canReopenAttendance)
             _operationButton(
               key: const Key('admin-reopen-attendance'),
               icon: Icons.undo_rounded,
-              label: '참가자 관리로 되돌리기',
+              label: '참석자 마감 해제',
               onPressed: () => _confirmedAction(
                 state,
                 action: 'REOPEN_ATTENDANCE',
-                title: '참가자 관리로 되돌리기',
-                description: '참석자와 수동 조 편성은 유지됩니다.',
+                title: '참석자 마감 해제',
+                description: type == 'TEAM' && status != 'ATTENDANCE_LOCKED'
+                    ? '현재 TEAM 편성과 레인 배정이 초기화됩니다. 참석 정보는 유지됩니다.'
+                    : type == 'EVENT'
+                    ? '현재 EVENT 참가자 확정과 투표 데이터가 초기화됩니다. 참석 정보는 유지됩니다.'
+                    : '참석 정보를 유지한 채 참석 조사를 다시 엽니다.',
+                requireTitle:
+                    (type == 'TEAM' && status != 'ATTENDANCE_LOCKED') ||
+                    type == 'EVENT',
                 clearScores: true,
               ),
             ),
+          if (type == 'INDIVIDUAL' && status == 'GROUPS_READY') ...<Widget>[
             _operationButton(
               key: const Key('admin-clear-groups'),
               icon: Icons.group_remove_outlined,
