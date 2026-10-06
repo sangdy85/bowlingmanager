@@ -88,6 +88,27 @@ test('guest scores affect activity denominator and team daily average but never 
     assert.equal(activities.find(item => item.date === '2026-03-12').dailyAverage, 150);
 });
 
+test('former participants keep member statistics while guests remain excluded', () => {
+    const rows = [
+        score('current-first', 200, '2026-01-10'),
+        score('current-second', 210, '2026-02-10'),
+        score('former-first', 190, '2026-02-10', {
+            userId: 'former-user', user: { name: '과거 회원' },
+        }),
+        score('guest-second', 180, '2026-02-10', {
+            userId: null, user: null, guestName: '손님',
+        }),
+    ];
+    const statistics = records.calculateTeamStatistics(rows, members, 'REGULAR');
+    const former = statistics.members.find(member => member.name === '과거 회원');
+    assert.deepEqual(
+        { rate: former.attendanceRate, attended: former.attended, activities: former.activityCount },
+        { rate: 100, attended: 1, activities: 1 },
+    );
+    assert.equal(former.id.startsWith('former-'), true);
+    assert.equal(statistics.members.some(member => member.name.includes('손님')), false);
+});
+
 test('activity grouping follows the web KST calendar date and date-only session rule', () => {
     const midnight = score('late', 200, '2026-01-10', { gameDate: new Date('2026-01-10T16:00:00Z') });
     const activities = records.createTeamActivities('team-1', [midnight], members, 'REGULAR');
@@ -194,6 +215,125 @@ test('team attendance averages raw member ratios before rounding like the web', 
     assert.equal(result.summary.attendanceRate, 21.4);
 });
 
+test('attendance uses each member first regular date and counts later absences by KST date', () => {
+    const attendanceMembers = [
+        { id: 'early-member', userId: 'early', name: '연초 회원' },
+        { id: 'mid-member', userId: 'mid', name: '중도 회원' },
+        { id: 'late-member', userId: 'late', name: '후반 회원' },
+        { id: 'once-member', userId: 'once', name: '1회 회원' },
+    ];
+    const dates = ['01-10', '02-10', '03-10', '04-10', '05-10', '06-10', '07-10', '08-10', '09-10', '10-10'];
+    const rows = dates.map((date, index) => score(`event-${index}`, 100, `2026-${date}`, {
+        userId: null, user: null, guestName: `게스트${index}`,
+    }));
+    for (const [index, date] of dates.entries()) {
+        if (index < 7 || index === 9) {
+            rows.push(score(`early-${index}`, 200, `2026-${date}`, { userId: 'early', user: { name: '연초 회원' } }));
+        }
+        if ([5, 6, 8, 9].includes(index)) {
+            rows.push(score(`mid-${index}`, 190, `2026-${date}`, { userId: 'mid', user: { name: '중도 회원' } }));
+        }
+        if ([7, 9].includes(index)) {
+            rows.push(score(`late-${index}`, 180, `2026-${date}`, { userId: 'late', user: { name: '후반 회원' } }));
+        }
+        if (index === 9) {
+            rows.push(score('once-9', 170, `2026-${date}`, { userId: 'once', user: { name: '1회 회원' } }));
+        }
+    }
+    rows.push(score('mid-extra-game', 210, '2026-06-10', { userId: 'mid', user: { name: '중도 회원' } }));
+    rows.push(score('mid-casual-before-regular', 210, '2026-01-10', {
+        userId: 'mid', user: { name: '중도 회원' }, gameType: '벙개',
+    }));
+    rows.push(score('mid-house-before-regular', 210, '2026-03-10', {
+        userId: 'mid', user: { name: '중도 회원' }, gameType: '상주',
+    }));
+
+    const regular = records.calculateTeamStatistics(rows, attendanceMembers, 'REGULAR');
+    const byName = new Map(regular.members.map(member => [member.name, member]));
+    assert.deepEqual(
+        ['연초 회원', '중도 회원', '후반 회원', '1회 회원'].map(name => ({
+            name,
+            rate: byName.get(name).attendanceRate,
+            attended: byName.get(name).attended,
+            activities: byName.get(name).activityCount,
+        })),
+        [
+            { name: '연초 회원', rate: 80, attended: 8, activities: 10 },
+            { name: '중도 회원', rate: 80, attended: 4, activities: 5 },
+            { name: '후반 회원', rate: 66.7, attended: 2, activities: 3 },
+            { name: '1회 회원', rate: 100, attended: 1, activities: 1 },
+        ],
+    );
+    assert.equal(byName.get('중도 회원').gameCount, 5); // Multiple games still mean one attended date.
+    assert.equal(regular.summary.attendanceRate, 81.7);
+
+    const all = records.calculateTeamStatistics(rows, attendanceMembers, 'ALL');
+    const midAll = all.members.find(member => member.name === '중도 회원');
+    assert.equal(midAll.activityCount, 5);
+    assert.equal(midAll.attended, 4);
+    assert.equal(midAll.attendanceRate, 80);
+});
+
+test('statistics uses all-time regular history, KST year bounds and corrected ACE eligibility', async () => {
+    const historicalMembers = [
+        { id: 'veteran-member', userId: 'veteran', alias: '전년도 회원', user: { name: '전년도 회원' } },
+        { id: 'new-member', userId: 'newcomer', alias: '신규 회원', user: { name: '신규 회원' } },
+    ];
+    const allRows = [
+        score('first-kst-day', 200, '2026-01-01', {
+            gameDate: new Date('2025-12-31T15:30:00.000Z'), userId: 'veteran', user: { name: '전년도 회원' },
+        }),
+        score('second-day-veteran', 200, '2026-04-01', { userId: 'veteran', user: { name: '전년도 회원' } }),
+        score('second-day-new', 220, '2026-04-01', { userId: 'newcomer', user: { name: '신규 회원' } }),
+        score('third-day-veteran', 200, '2026-07-01', { userId: 'veteran', user: { name: '전년도 회원' } }),
+        score('third-day-new', 220, '2026-07-01', { userId: 'newcomer', user: { name: '신규 회원' } }),
+        score('last-kst-day-veteran', 200, '2026-12-31', {
+            gameDate: new Date('2026-12-31T14:30:00.000Z'), userId: 'veteran', user: { name: '전년도 회원' },
+        }),
+        score('last-kst-day-new', 220, '2026-12-31', {
+            gameDate: new Date('2026-12-31T14:30:00.000Z'), userId: 'newcomer', user: { name: '신규 회원' },
+        }),
+        score('next-kst-year', 300, '2027-01-01', {
+            gameDate: new Date('2026-12-31T15:30:00.000Z'), userId: 'veteran', user: { name: '전년도 회원' },
+        }),
+    ];
+    let requestedRange;
+    const result = await service.getMobileTeamStatistics(
+        'veteran', 'team-1', { year: 2026, filter: 'REGULAR' }, dependencies({
+            listMembers: async () => historicalMembers,
+            listScores: async (_teamId, start, end) => {
+                requestedRange = [start, end];
+                return allRows
+                    .filter(item => item.gameDate >= start && item.gameDate <= end)
+                    .map(({ user, ...item }) => ({ ...item, User: user }));
+            },
+            listScoreDates: async () => [
+                { gameDate: new Date('2025-09-01T03:00:00.000Z'), userId: 'veteran', gameType: '정기전' },
+                { gameDate: new Date('2026-01-01T03:00:00.000Z'), userId: 'newcomer', gameType: '벙개' },
+                { gameDate: new Date('2026-04-01T03:00:00.000Z'), userId: 'newcomer', gameType: '정기전' },
+                ...allRows.map(item => ({ gameDate: item.gameDate, userId: item.userId, gameType: item.gameType })),
+            ],
+        }),
+    );
+
+    assert.deepEqual(requestedRange.map(value => value.toISOString()), [
+        '2025-12-31T15:00:00.000Z',
+        '2026-12-31T14:59:59.999Z',
+    ]);
+    const veteran = result.members.find(member => member.name === '전년도 회원');
+    const newcomer = result.members.find(member => member.name === '신규 회원');
+    assert.deepEqual(
+        { rate: veteran.attendanceRate, attended: veteran.attended, activities: veteran.activityCount },
+        { rate: 100, attended: 4, activities: 4 },
+    );
+    assert.deepEqual(
+        { rate: newcomer.attendanceRate, attended: newcomer.attended, activities: newcomer.activityCount },
+        { rate: 100, attended: 3, activities: 3 },
+    );
+    assert.equal(newcomer.aceRank, 1);
+    assert.equal(veteran.aceRank, 2);
+});
+
 function dependencies(changes = {}) {
     return {
         findAccessibleTeam: async () => ({ id: 'team-1' }),
@@ -202,7 +342,10 @@ function dependencies(changes = {}) {
             user: { name: `${member.name} 실명` },
         })),
         listScores: async () => fixture.map(({ user, ...item }) => ({ ...item, User: user })),
-        listScoreDates: async () => [{ gameDate: new Date('2024-01-01') }, { gameDate: new Date('2026-01-01') }],
+        listScoreDates: async () => [
+            { gameDate: new Date('2024-01-01'), userId: null, gameType: '정기전' },
+            ...fixture.map(item => ({ gameDate: item.gameDate, userId: item.userId, gameType: item.gameType })),
+        ],
         ...changes,
     };
 }
