@@ -5,8 +5,10 @@ import 'package:bowlingmanager_mobile/features/club/application/club_event_provi
 import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_team_competition_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_admin_card.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_team_competition_card.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_team_results_card.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_competition_card.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:flutter/material.dart';
@@ -82,17 +84,28 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
         ),
         data: (ClubEvent event) {
           _scheduleInitialSection();
+          final bool isTeam =
+              event.competition?.type == ClubCompetitionType.team;
           final bool attendanceAtTop =
-              event.competition == null ||
-              event.competition!.status == 'ATTENDANCE_OPEN';
+              !isTeam || event.competition!.status == 'ATTENDANCE_OPEN';
+          final AsyncValue<ClubTeamCompetitionState>? teamState = isTeam
+              ? ref.watch(clubTeamCompetitionProvider(request))
+              : null;
           return RefreshIndicator(
             onRefresh: () => ref.refresh(provider.future),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               children: <Widget>[
                 _eventCard(event),
+                if (isTeam && !attendanceAtTop) ...<Widget>[
+                  ..._teamResultWidgets(
+                    teamState!,
+                    event.competition!.mode,
+                    request,
+                  ),
+                ],
                 if (event.laneDrawEnabled &&
-                    event.competition?.type != ClubCompetitionType.team &&
+                    !isTeam &&
                     event.myAttendance ==
                         ClubEventAttendance.attending) ...<Widget>[
                   const SizedBox(height: 12),
@@ -104,17 +117,18 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                     key: _attendanceKey,
                     child: _attendanceCard(event, user.id),
                   ),
+                  const SizedBox(height: 12),
+                  _guestManagementCard(event, user.id),
                 ],
                 if (event.canManage &&
                     event.laneDrawEnabled &&
-                    event.competition?.type !=
-                        ClubCompetitionType.team) ...<Widget>[
+                    !isTeam) ...<Widget>[
                   const SizedBox(height: 12),
                   KeyedSubtree(key: _laneKey, child: _drawCard(event, user.id)),
                 ],
                 if (event.competition != null) ...<Widget>[
                   const SizedBox(height: 12),
-                  if (event.competition!.type == ClubCompetitionType.team)
+                  if (isTeam)
                     KeyedSubtree(
                       key: _competitionKey,
                       child: ClubTeamCompetitionCard(
@@ -155,9 +169,18 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                     label: const Text('경기 점수 입력'),
                   ),
                 ],
-                if (event.assignments.isNotEmpty) ...<Widget>[
+                if (!isTeam && event.assignments.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 12),
                   _resultsCard(event),
+                ],
+                if (event.attendanceEnabled && !attendanceAtTop) ...<Widget>[
+                  const SizedBox(height: 12),
+                  KeyedSubtree(
+                    key: _attendanceKey,
+                    child: _attendanceCard(event, user.id),
+                  ),
+                  const SizedBox(height: 12),
+                  _guestManagementCard(event, user.id),
                 ],
                 if (event.canManage) ...<Widget>[
                   const SizedBox(height: 12),
@@ -169,15 +192,6 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                       '/club/${Uri.encodeComponent(widget.teamId)}/events',
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  _adminCard(event, user.id),
-                ],
-                if (event.attendanceEnabled && !attendanceAtTop) ...<Widget>[
-                  const SizedBox(height: 12),
-                  KeyedSubtree(
-                    key: _attendanceKey,
-                    child: _attendanceCard(event, user.id),
-                  ),
                 ],
               ],
             ),
@@ -186,6 +200,49 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
       ),
     );
   }
+
+  List<Widget> _teamResultWidgets(
+    AsyncValue<ClubTeamCompetitionState> state,
+    ClubCompetitionMode? mode,
+    ClubEventRequest request,
+  ) => state.when(
+    loading: () => <Widget>[
+      const SizedBox(height: 12),
+      const Card(
+        key: Key('team-results-loading'),
+        child: Padding(
+          padding: EdgeInsets.all(18),
+          child: LinearProgressIndicator(),
+        ),
+      ),
+    ],
+    error: (Object error, StackTrace _) => <Widget>[
+      const SizedBox(height: 12),
+      Card(
+        key: const Key('team-results-error'),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(clubErrorMessage(error)),
+              TextButton(
+                onPressed: () =>
+                    ref.invalidate(clubTeamCompetitionProvider(request)),
+                child: const Text('다시 시도'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+    data: (ClubTeamCompetitionState value) => value.results.complete
+        ? <Widget>[
+            const SizedBox(height: 12),
+            ClubTeamResultsCard(state: value, competitionMode: mode),
+          ]
+        : const <Widget>[],
+  );
 
   bool _canEnterCompetitionScores(ClubEvent event) {
     final competition = event.competition;
@@ -229,6 +286,7 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
   }
 
   Widget _eventCard(ClubEvent event) => Card(
+    key: const Key('event-summary-card'),
     child: Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -671,58 +729,68 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
     );
   }
 
-  Widget _adminCard(ClubEvent event, String userId) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          const Text(
-            '기타 관리자 설정',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 10),
-          ...event.guests.map(
-            (guest) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text('게스트 · ${guest.name}'),
-              trailing:
-                  event.isLocked ||
-                      ((event.competition?.type == ClubCompetitionType.team ||
-                              event.competition?.type ==
-                                  ClubCompetitionType.event) &&
-                          event.competition?.status != 'ATTENDANCE_OPEN')
-                  ? null
-                  : IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded),
-                      onPressed: _working
-                          ? null
-                          : () => _action(
-                              userId,
-                              () => ref
-                                  .read(clubEventsRepositoryProvider)
-                                  .deleteGuest(
-                                    widget.teamId,
-                                    widget.eventId,
-                                    guest.id,
-                                  ),
-                            ),
-                    ),
+  Widget _guestManagementCard(ClubEvent event, String userId) {
+    final bool teamOrEventCompetition =
+        event.competition?.type == ClubCompetitionType.team ||
+        event.competition?.type == ClubCompetitionType.event;
+    final bool canEdit =
+        event.canManage &&
+        !event.isLocked &&
+        (!teamOrEventCompetition ||
+            event.competition?.status == 'ATTENDANCE_OPEN');
+    return Card(
+      key: const Key('guest-management-card'),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const Text(
+              '게스트 추가 및 관리',
+              style: TextStyle(fontWeight: FontWeight.w700),
             ),
-          ),
-          if (!event.isLocked &&
-              ((event.competition?.type != ClubCompetitionType.team &&
-                      event.competition?.type != ClubCompetitionType.event) ||
-                  event.competition?.status == 'ATTENDANCE_OPEN'))
-            OutlinedButton.icon(
-              onPressed: _working ? null : () => _addGuest(userId),
-              icon: const Icon(Icons.person_add_alt_1_rounded),
-              label: const Text('게스트 추가'),
+            const SizedBox(height: 10),
+            if (event.guests.isEmpty) const Text('등록된 게스트가 없습니다.'),
+            ...event.guests.map(
+              (guest) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(guest.name),
+                trailing: canEdit
+                    ? IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded),
+                        onPressed: _working
+                            ? null
+                            : () => _action(
+                                userId,
+                                () => ref
+                                    .read(clubEventsRepositoryProvider)
+                                    .deleteGuest(
+                                      widget.teamId,
+                                      widget.eventId,
+                                      guest.id,
+                                    ),
+                              ),
+                      )
+                    : null,
+              ),
             ),
-        ],
+            if (canEdit)
+              OutlinedButton.icon(
+                onPressed: _working ? null : () => _addGuest(userId),
+                icon: const Icon(Icons.person_add_alt_1_rounded),
+                label: const Text('게스트 추가'),
+              )
+            else
+              Text(
+                event.canManage
+                    ? '참석 마감 후에는 기존 게스트를 변경할 수 없습니다.'
+                    : '게스트 목록은 관리자만 변경할 수 있습니다.',
+              ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _drawCard(ClubEvent event, String userId) => Card(
     child: Padding(

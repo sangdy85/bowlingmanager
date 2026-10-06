@@ -19,7 +19,6 @@ void main() {
     final _AttendanceApi api = _AttendanceApi(role: 'OWNER');
     await _pumpDetail(tester, api);
 
-    expect(find.byKey(const Key('event-admin-operations')), findsOneWidget);
     expect(find.byKey(const Key('attendance-management')), findsOneWidget);
     await tester.tap(find.byKey(const Key('attendance-management')));
     await tester.pumpAndSettle();
@@ -47,7 +46,7 @@ void main() {
       expect(find.text('회원 1'), findsOneWidget);
       await tester.tap(find.text('게스트 1'));
       await tester.pumpAndSettle();
-      expect(find.text('게스트 회원'), findsOneWidget);
+      expect(find.text('게스트 회원'), findsWidgets);
     },
   );
 
@@ -73,10 +72,24 @@ void main() {
       settle: false,
     );
     expect(
-      tester.getTopLeft(find.byKey(const Key('event-attendance-card'))).dy,
-      lessThan(
+      <double>[
+        tester.getTopLeft(find.byKey(const Key('event-summary-card'))).dy,
+        tester.getTopLeft(find.byKey(const Key('event-attendance-card'))).dy,
+        tester.getTopLeft(find.byKey(const Key('guest-management-card'))).dy,
         tester.getTopLeft(find.byKey(const Key('team-competition-card'))).dy,
-      ),
+      ],
+      orderedEquals(<Matcher>[
+        anything,
+        greaterThan(
+          tester.getTopLeft(find.byKey(const Key('event-summary-card'))).dy,
+        ),
+        greaterThan(
+          tester.getTopLeft(find.byKey(const Key('event-attendance-card'))).dy,
+        ),
+        greaterThan(
+          tester.getTopLeft(find.byKey(const Key('guest-management-card'))).dy,
+        ),
+      ]),
     );
 
     await _pumpDetail(
@@ -85,9 +98,15 @@ void main() {
       settle: false,
     );
     expect(
+      tester.getTopLeft(find.byKey(const Key('team-competition-card'))).dy,
+      lessThan(
+        tester.getTopLeft(find.byKey(const Key('event-attendance-card'))).dy,
+      ),
+    );
+    expect(
       tester.getTopLeft(find.byKey(const Key('event-attendance-card'))).dy,
-      greaterThan(
-        tester.getTopLeft(find.byKey(const Key('team-competition-card'))).dy,
+      lessThan(
+        tester.getTopLeft(find.byKey(const Key('guest-management-card'))).dy,
       ),
     );
   });

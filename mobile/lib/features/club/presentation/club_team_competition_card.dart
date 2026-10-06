@@ -87,6 +87,7 @@ class _ClubTeamCompetitionCardState
     return Card(
       key: const Key('team-competition-card'),
       child: Padding(
+        key: const Key('team-info-card'),
         padding: const EdgeInsets.all(18),
         child: state.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -114,7 +115,7 @@ class _ClubTeamCompetitionCardState
         children: <Widget>[
           const Expanded(
             child: Text(
-              'Bowler Hidden · 팀전',
+              'TEAM 정보',
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
           ),
@@ -123,6 +124,7 @@ class _ClubTeamCompetitionCardState
       ),
       if (widget.competitionMode == ClubCompetitionMode.mini)
         const Text('미니 경기 · 시즌 포인트 미지급'),
+      const Text('Bowler Hidden · 팀전'),
       const SizedBox(height: 6),
       Text('진행 단계: ${_statusLabel(state.status)} · ${state.generation}차'),
       if (state.currentTurn case final ClubDraftTurn turn) ...<Widget>[
@@ -225,10 +227,6 @@ class _ClubTeamCompetitionCardState
               .toList(),
         ),
       ],
-      if (state.results.teams.isNotEmpty) ...<Widget>[
-        const Divider(height: 28),
-        ..._resultWidgets(state),
-      ],
       if (state.canManage && state.teams.isNotEmpty) ...<Widget>[
         const Divider(height: 28),
         const Text(
@@ -254,120 +252,6 @@ class _ClubTeamCompetitionCardState
     ],
   );
 
-  List<Widget> _resultWidgets(ClubTeamCompetitionState state) {
-    final results = state.results;
-    return <Widget>[
-      const Text('팀 결과', style: TextStyle(fontWeight: FontWeight.w700)),
-      if (!results.complete) const Text('일부 경기 점수가 없어 순위를 확정하지 않았습니다.'),
-      if (results.effectivePlayerCount != null)
-        Text('게임별 유효 인원 ${results.effectivePlayerCount}명'),
-      ...results.teams.expand((summary) {
-        final individuals = results.individual
-            .where((row) => row.competitionTeamId == summary.competitionTeamId)
-            .toList();
-        final int gameCount = individuals.fold<int>(
-          0,
-          (count, row) => row.scores.length > count ? row.scores.length : count,
-        );
-        final gameRows = results.games
-            .map(
-              (game) => (
-                game: game.gameNumber,
-                result: game.teams
-                    .where(
-                      (item) =>
-                          item.competitionTeamId == summary.competitionTeamId,
-                    )
-                    .firstOrNull,
-              ),
-            )
-            .where((item) => item.result != null)
-            .toList();
-        return <Widget>[
-          const SizedBox(height: 10),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: CircleAvatar(
-              child: Text(summary.finalRank?.toString() ?? '-'),
-            ),
-            title: Text(summary.name),
-            subtitle: Text(
-              'Raw ${summary.rawPins} · Effective ${summary.effectivePins} · '
-              '핸디 ${summary.teamHandicap} · 적용 ${summary.appliedPins}',
-            ),
-            trailing: Text(
-              '게임 ${summary.totalPoints}P'
-              '${widget.competitionMode == ClubCompetitionMode.mini
-                  ? '\n시즌 포인트 미지급'
-                  : summary.seasonPoint == null
-                  ? ''
-                  : '\n시즌 +${summary.seasonPoint}P'}',
-              textAlign: TextAlign.end,
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ),
-          ...gameRows.map((row) {
-            final game = row.result!;
-            final String excluded = game.excludedScores.isEmpty
-                ? ''
-                : ' · 제외 ${game.excludedScores.join(', ')}';
-            return Text(
-              '${row.game}G · Raw ${game.rawTeamTotal ?? '-'} · '
-              'Effective ${game.normalizedTeamTotal ?? '-'} · '
-              '핸디 ${game.teamHandicap ?? '-'} · 적용 ${game.handicapAppliedTotal ?? '-'}'
-              '$excluded · '
-              '${game.rank == null ? '미확정' : '${game.rank}위 / ${game.points}P'}',
-            );
-          }),
-          if (individuals.isNotEmpty)
-            ExpansionTile(
-              key: Key('team-player-results-${summary.competitionTeamId}'),
-              tilePadding: EdgeInsets.zero,
-              initiallyExpanded: false,
-              title: const Text('선수별 결과'),
-              children: <Widget>[
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columns: <DataColumn>[
-                      const DataColumn(label: Text('순위')),
-                      const DataColumn(label: Text('성명')),
-                      for (int index = 1; index <= gameCount; index++)
-                        DataColumn(label: Text('${index}G'), numeric: true),
-                      const DataColumn(label: Text('총점'), numeric: true),
-                      const DataColumn(label: Text('AVG'), numeric: true),
-                    ],
-                    rows: individuals
-                        .map(
-                          (row) => DataRow(
-                            cells: <DataCell>[
-                              DataCell(Text('${row.rank}')),
-                              DataCell(Text(row.name)),
-                              for (int index = 0; index < gameCount; index++)
-                                DataCell(
-                                  Text(
-                                    index < row.scores.length
-                                        ? '${row.scores[index]}'
-                                        : '-',
-                                  ),
-                                ),
-                              DataCell(Text('${row.total}')),
-                              DataCell(
-                                Text(row.average?.toStringAsFixed(1) ?? '-'),
-                              ),
-                            ],
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-              ],
-            ),
-        ];
-      }),
-    ];
-  }
-
   Widget _managerActions(ClubTeamCompetitionState state) {
     final List<Widget> actions = <Widget>[];
     switch (state.status) {
@@ -390,9 +274,7 @@ class _ClubTeamCompetitionCardState
         actions.add(
           OutlinedButton.icon(
             key: const Key('manual-assign-all-teams'),
-            onPressed: _working
-                ? null
-                : () => _configureManualTeams(state),
+            onPressed: _working ? null : () => _configureManualTeams(state),
             icon: const Icon(Icons.groups_2_outlined),
             label: const Text('전체 수동 편성'),
           ),
@@ -490,22 +372,60 @@ class _ClubTeamCompetitionCardState
         team.id ==
         ref.read(clubTeamCompetitionProvider(_request)).value?.myTeam;
     return ExpansionTile(
+      key: Key('team-info-team-${team.id}'),
       initiallyExpanded: mine,
       tilePadding: EdgeInsets.zero,
-      title: Text(mine ? '${team.name} · 내 팀' : team.name),
-      subtitle: Text(
-        '팀장 ${team.captainName} · 핸디 ${team.teamHandicap}'
-        '${team.lanePriority == null ? '' : ' · 레인 우선 ${team.lanePriority}'}',
-      ),
-      children: team.members
-          .map(
-            (member) => ListTile(
-              dense: true,
-              title: Text(member.name),
-              trailing: Text(member.laneSlot ?? '-'),
+      title: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              team.name,
+              style: const TextStyle(fontWeight: FontWeight.w800),
             ),
-          )
-          .toList(),
+          ),
+          if (mine) const Chip(label: Text('내 팀')),
+        ],
+      ),
+      subtitle: Text(
+        '팀장: ${team.captainName} · 핸디: ${team.teamHandicap}'
+        '${team.lanePriority == null ? '' : ' · 레인 우선순위: ${team.lanePriority}'}',
+      ),
+      children: <Widget>[
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 2),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  '선수명',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              Text('레인', style: TextStyle(fontWeight: FontWeight.w700)),
+            ],
+          ),
+        ),
+        ...team.members.map((member) {
+          final bool captain = member.memberId == team.captainMemberId;
+          return ListTile(
+            key: Key('team-info-member-${member.participantId}'),
+            dense: true,
+            title: Row(
+              children: <Widget>[
+                Flexible(child: Text(member.name)),
+                if (captain) ...<Widget>[
+                  const SizedBox(width: 6),
+                  const Chip(
+                    visualDensity: VisualDensity.compact,
+                    label: Text('팀장'),
+                  ),
+                ],
+              ],
+            ),
+            trailing: Text(member.laneSlot ?? '-'),
+          );
+        }),
+      ],
     );
   }
 
@@ -574,13 +494,12 @@ class _ClubTeamCompetitionCardState
   }
 
   Future<void> _configureManualTeams(ClubTeamCompetitionState state) async {
-    final Map<String, dynamic>? action =
-        await showDialog<Map<String, dynamic>>(
-          context: context,
-          builder: (BuildContext context) => _ManualTeamAssignmentDialog(
-            participants: state.remainingParticipants,
-          ),
-        );
+    final Map<String, dynamic>? action = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (BuildContext context) => _ManualTeamAssignmentDialog(
+        participants: state.remainingParticipants,
+      ),
+    );
     if (action == null || !mounted) return;
     await _run(action);
   }
@@ -1024,8 +943,7 @@ class _ManualTeamAssignmentDialogState
     for (final order in _teamByParticipant.values) {
       sizes[order] = (sizes[order] ?? 0) + 1;
     }
-    final bool unbalanced =
-        sizes.isNotEmpty && sizes.values.toSet().length > 1;
+    final bool unbalanced = sizes.isNotEmpty && sizes.values.toSet().length > 1;
     return AlertDialog(
       title: const Text('전체 수동 TEAM 편성'),
       content: SizedBox(
@@ -1040,16 +958,15 @@ class _ManualTeamAssignmentDialogState
                     const SizedBox(height: 8),
                     for (final participant in _memberParticipants)
                       CheckboxListTile(
-                        key: Key(
-                          'manual-captain-${participant.participantId}',
-                        ),
+                        key: Key('manual-captain-${participant.participantId}'),
                         value: _captainParticipantIds.contains(
                           participant.participantId,
                         ),
                         title: Text(participant.name),
-                        subtitle: _captainParticipantIds.contains(
-                          participant.participantId,
-                        )
+                        subtitle:
+                            _captainParticipantIds.contains(
+                              participant.participantId,
+                            )
                             ? Text(
                                 'TEAM ${_captainParticipantIds.indexOf(participant.participantId) + 1} 팀장',
                               )
@@ -1069,15 +986,14 @@ class _ManualTeamAssignmentDialogState
                     const SizedBox(height: 8),
                     for (final participant in widget.participants)
                       DropdownButtonFormField<int>(
-                        key: Key(
-                          'manual-team-${participant.participantId}',
-                        ),
+                        key: Key('manual-team-${participant.participantId}'),
                         initialValue:
                             _teamByParticipant[participant.participantId],
                         decoration: InputDecoration(
-                          labelText: _captainParticipantIds.contains(
-                            participant.participantId,
-                          )
+                          labelText:
+                              _captainParticipantIds.contains(
+                                participant.participantId,
+                              )
                               ? '${participant.name} · 팀장'
                               : participant.name,
                         ),
@@ -1092,13 +1008,15 @@ class _ManualTeamAssignmentDialogState
                               child: Text('TEAM $order'),
                             ),
                         ],
-                        onChanged: _captainParticipantIds.contains(
-                          participant.participantId,
-                        )
+                        onChanged:
+                            _captainParticipantIds.contains(
+                              participant.participantId,
+                            )
                             ? null
                             : (int? value) => setState(() {
                                 if (value != null) {
-                                  _teamByParticipant[participant.participantId] =
+                                  _teamByParticipant[participant
+                                          .participantId] =
                                       value;
                                 }
                               }),
@@ -1125,9 +1043,7 @@ class _ManualTeamAssignmentDialogState
         FilledButton(
           key: Key(_step == 0 ? 'manual-team-next' : 'save-manual-teams'),
           onPressed: _step == 0
-              ? (_captainParticipantIds.length >= 2
-                    ? _startAssignment
-                    : null)
+              ? (_captainParticipantIds.length >= 2 ? _startAssignment : null)
               : (complete ? () => Navigator.pop(context, _action()) : null),
           child: Text(_step == 0 ? '다음' : '저장'),
         ),
