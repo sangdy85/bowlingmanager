@@ -16,7 +16,26 @@ void main() {
       AppWebUrls.teamCreation.toString(),
       'https://www.bowlingmanager.co.kr/team/create',
     );
-    expect(AppWebUrls.teamCreation.scheme, 'https');
-    expect(AppWebUrls.teamCreation.host, 'www.bowlingmanager.co.kr');
+    expect(
+      AppWebUrls.privacyPolicy.toString(),
+      'https://www.bowlingmanager.co.kr/privacy',
+    );
+    expect(
+      AppWebUrls.terms.toString(),
+      'https://www.bowlingmanager.co.kr/terms',
+    );
+    expect(
+      AppWebUrls.inquiry.toString(),
+      'https://www.bowlingmanager.co.kr/inquiry',
+    );
+    for (final Uri uri in <Uri>[
+      AppWebUrls.teamCreation,
+      AppWebUrls.privacyPolicy,
+      AppWebUrls.terms,
+      AppWebUrls.inquiry,
+    ]) {
+      expect(uri.scheme, 'https');
+      expect(uri.host, 'www.bowlingmanager.co.kr');
+    }
   });
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bowlingmanager_mobile/app/app.dart';
+import 'package:bowlingmanager_mobile/core/config/app_web_urls.dart';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_state.dart';
@@ -9,6 +10,7 @@ import 'package:bowlingmanager_mobile/features/club/application/club_providers.d
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/onboarding/application/onboarding_providers.dart';
+import 'package:bowlingmanager_mobile/features/profile/presentation/profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,6 +39,66 @@ void main() {
     expect(find.text('두 번째 동호회'), findsOneWidget);
     expect(find.text('팀장 · 회원 3명'), findsOneWidget);
     expect(find.text('USER'), findsNothing);
+  });
+
+  testWidgets('MY opens centralized privacy, terms, and inquiry URLs', (
+    WidgetTester tester,
+  ) async {
+    final List<Uri> launchedUris = <Uri>[];
+    await _openProfile(
+      tester,
+      FakeAuthRepository()..bootstrapResult = testUser,
+      FakeClubRepository(),
+      webLauncher: (Uri uri) async {
+        launchedUris.add(uri);
+        return true;
+      },
+    );
+
+    for (final ({Key key, Uri uri}) item in <({Key key, Uri uri})>[
+      (key: const Key('profile-privacy-policy'), uri: AppWebUrls.privacyPolicy),
+      (key: const Key('profile-terms'), uri: AppWebUrls.terms),
+      (key: const Key('profile-inquiry'), uri: AppWebUrls.inquiry),
+    ]) {
+      final Finder link = find.byKey(item.key);
+      await tester.ensureVisible(link);
+      await tester.tap(link);
+      await tester.pump();
+    }
+
+    expect(launchedUris, <Uri>[
+      AppWebUrls.privacyPolicy,
+      AppWebUrls.terms,
+      AppWebUrls.inquiry,
+    ]);
+    expect(find.byKey(const Key('profile-notifications')), findsOneWidget);
+    expect(
+      find.byKey(const Key('profile-notification-permission')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('profile-logout')), findsOneWidget);
+  });
+
+  testWidgets('MY handles external URL launcher failures without crashing', (
+    WidgetTester tester,
+  ) async {
+    await _openProfile(
+      tester,
+      FakeAuthRepository()..bootstrapResult = testUser,
+      FakeClubRepository(),
+      webLauncher: (Uri uri) => Future<bool>.error(StateError('launch failed')),
+    );
+
+    final Finder inquiry = find.byKey(const Key('profile-inquiry'));
+    await tester.ensureVisible(inquiry);
+    await tester.tap(inquiry);
+    await tester.pump();
+
+    expect(
+      find.text('웹 페이지를 열지 못했습니다. 잠시 후 다시 시도해주세요.'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('MY renders null handicap and no-club state without zeroing it', (
@@ -367,6 +429,7 @@ Future<ProviderContainer> _openProfile(
   FakeAuthRepository authRepository,
   FakeClubRepository clubRepository, {
   bool settleClubs = true,
+  ProfileWebLauncher? webLauncher,
 }) async {
   await tester.binding.setSurfaceSize(const Size(600, 1200));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -381,6 +444,8 @@ Future<ProviderContainer> _openProfile(
         onboardingStorageProvider.overrideWithValue(
           MemoryOnboardingStorage(completed: true),
         ),
+        if (webLauncher != null)
+          profileWebLauncherProvider.overrideWithValue(webLauncher),
       ],
       child: const BowlingManagerApp(),
     ),

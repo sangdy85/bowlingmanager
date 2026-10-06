@@ -1,3 +1,4 @@
+import 'package:bowlingmanager_mobile/core/config/app_web_urls.dart';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_colors.dart';
 import 'package:bowlingmanager_mobile/core/theme/app_text_styles.dart';
@@ -10,6 +11,15 @@ import 'package:bowlingmanager_mobile/features/notifications/application/notific
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+typedef ProfileWebLauncher = Future<bool> Function(Uri uri);
+
+Future<bool> launchProfileWebPage(Uri uri) =>
+    launchUrl(uri, mode: LaunchMode.externalApplication);
+
+final Provider<ProfileWebLauncher> profileWebLauncherProvider =
+    Provider<ProfileWebLauncher>((Ref ref) => launchProfileWebPage);
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -113,6 +123,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                   onTap: () => _requestNotificationPermission(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: <Widget>[
+                ListTile(
+                  key: const Key('profile-privacy-policy'),
+                  leading: const Icon(Icons.privacy_tip_outlined),
+                  title: const Text('개인정보처리방침'),
+                  trailing: const Icon(Icons.open_in_new_rounded),
+                  onTap: () => _openWebPage(AppWebUrls.privacyPolicy),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  key: const Key('profile-terms'),
+                  leading: const Icon(Icons.description_outlined),
+                  title: const Text('이용약관'),
+                  trailing: const Icon(Icons.open_in_new_rounded),
+                  onTap: () => _openWebPage(AppWebUrls.terms),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  key: const Key('profile-inquiry'),
+                  leading: const Icon(Icons.support_agent_outlined),
+                  title: const Text('문의하기'),
+                  trailing: const Icon(Icons.open_in_new_rounded),
+                  onTap: () => _openWebPage(AppWebUrls.inquiry),
                 ),
               ],
             ),
@@ -223,6 +264,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
       if (mounted) setState(() {});
     }
+  }
+
+  Future<void> _openWebPage(Uri uri) async {
+    try {
+      final bool opened = await ref.read(profileWebLauncherProvider)(uri);
+      if (!opened && mounted) _showWebUrlError();
+    } on Object {
+      if (mounted) _showWebUrlError();
+    }
+  }
+
+  void _showWebUrlError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('웹 페이지를 열지 못했습니다. 잠시 후 다시 시도해주세요.'),
+      ),
+    );
   }
 }
 

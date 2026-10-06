@@ -6,4 +6,7 @@ abstract final class AppWebUrls {
     '$baseUrl/find-account/password',
   );
   static final Uri teamCreation = Uri.parse('$baseUrl/team/create');
+  static final Uri privacyPolicy = Uri.parse('$baseUrl/privacy');
+  static final Uri terms = Uri.parse('$baseUrl/terms');
+  static final Uri inquiry = Uri.parse('$baseUrl/inquiry');
 }
