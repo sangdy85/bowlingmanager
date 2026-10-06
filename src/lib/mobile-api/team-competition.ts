@@ -838,7 +838,10 @@ function participantName(item: ReturnType<typeof currentParticipants>[number]) {
 function serializeParticipant(item: ReturnType<typeof currentParticipants>[number]) { return {
     participantId: item.id, participantKind: item.memberId ? "MEMBER" : "GUEST",
     memberId: item.memberId, guestId: item.guestId, name: participantName(item),
-    assignmentType: item.assignmentType, assignmentOrder: item.assignmentOrder,
+    // Mobile 1.1.1 predates ADMIN_OVERRIDE and rejects unknown assignment enums.
+    // The canonical value remains stored and is still exposed by the admin state.
+    assignmentType: item.assignmentType === "ADMIN_OVERRIDE" ? "DRAFT" : item.assignmentType,
+    assignmentOrder: item.assignmentOrder,
 }; }
 function serializeTeam(team: ReturnType<typeof currentTeams>[number], event: CompetitionEvent) {
     const assignments = new Map(event.laneAssignments.map((item) => [item.memberId ?? item.guestId!, `${item.slot.laneNumber}-${item.slot.position}`]));
