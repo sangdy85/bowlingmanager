@@ -61,7 +61,6 @@ export function teamRecordFilterForGameType(value: string | null): TeamRecordSpe
     return TEAM_RECORD_SPECIFIC_FILTERS.find((filter) => filterTypes[filter].includes(normalized)) ?? null;
 }
 
-const utcDateKey = (value: Date) => value.toISOString().slice(0, 10);
 export const teamActivityDateKey = (value: Date) => new Date(value.getTime() + 9 * 60 * 60 * 1000)
     .toISOString().slice(0, 10);
 const oneDecimal = (value: number) => Number(value.toFixed(1));
@@ -70,11 +69,20 @@ export function calculateTeamStatistics(
     scores: TeamRecordScore[],
     members: TeamRecordMember[],
     filter: TeamRecordFilter,
+    allTimeRegularAttendanceStarts: ReadonlyMap<string, string> = new Map(),
 ) {
     const filteredScores = filterTeamRecordScores(scores, filter);
     const memberNames = new Map(members.map((member) => [member.userId, member.name]));
-    const activeDates = new Set(filteredScores.map((score) => utcDateKey(score.gameDate)));
+    const activeDates = new Set(filteredScores.map((score) => teamActivityDateKey(score.gameDate)));
+    const regularAttendanceStarts = new Map(allTimeRegularAttendanceStarts);
+    for (const score of scores) {
+        if (!score.userId || normalizeTeamGameType(score.gameType) !== "정기전") continue;
+        const date = teamActivityDateKey(score.gameDate);
+        const existing = regularAttendanceStarts.get(score.userId);
+        if (!existing || date < existing) regularAttendanceStarts.set(score.userId, date);
+    }
     const stats = new Map<string, {
+        userId: string;
         id: string;
         name: string;
         attendedDates: Set<string>;
@@ -89,6 +97,7 @@ export function calculateTeamStatistics(
         if (!stat) {
             const member = members.find((candidate) => candidate.userId === score.userId);
             stat = {
+                userId: score.userId,
                 id: member?.id ?? publicParticipantId("former", score.userId),
                 name: memberNames.get(score.userId) || score.user?.name || "알 수 없음",
                 attendedDates: new Set<string>(),
@@ -98,18 +107,26 @@ export function calculateTeamStatistics(
             };
             stats.set(score.userId, stat);
         }
-        stat.attendedDates.add(utcDateKey(score.gameDate));
+        stat.attendedDates.add(teamActivityDateKey(score.gameDate));
         stat.gameCount += 1;
         stat.total += score.score;
-        const month = score.gameDate.getMonth();
+        const month = Number(teamActivityDateKey(score.gameDate).slice(5, 7)) - 1;
         stat.months[month].total += score.score;
         stat.months[month].count += 1;
     }
 
     const activityCount = activeDates.size;
     const rawMemberRows = [...stats.values()].map((stat) => {
-        const attendanceRaw = activityCount > 0
-            ? stat.attendedDates.size / activityCount
+        const attendanceStart = regularAttendanceStarts.get(stat.userId);
+        const eligibleDates = attendanceStart
+            ? [...activeDates].filter((date) => date >= attendanceStart)
+            : [];
+        const attendedEligibleDates = attendanceStart
+            ? [...stat.attendedDates].filter((date) => date >= attendanceStart)
+            : [];
+        const memberActivityCount = eligibleDates.length;
+        const attendanceRaw = memberActivityCount > 0
+            ? attendedEligibleDates.length / memberActivityCount
             : 0;
         const averageRaw = stat.gameCount > 0 ? stat.total / stat.gameCount : 0;
         return {
@@ -117,8 +134,8 @@ export function calculateTeamStatistics(
             name: stat.name,
             attendanceRaw,
             attendanceRate: oneDecimal(attendanceRaw * 100),
-            attended: stat.attendedDates.size,
-            activityCount,
+            attended: attendedEligibleDates.length,
+            activityCount: memberActivityCount,
             gameCount: stat.gameCount,
             monthlyAverages: stat.months.map((month) => month.count > 0
                 ? Math.round(month.total / month.count)

@@ -6,6 +6,7 @@ import {
     createTeamActivityFeed,
     isTeamRecordFilter,
     parseTeamActivityId,
+    teamActivityDateKey,
     TEAM_RECORD_SPECIFIC_FILTERS,
     type TeamRecordFilter,
     type TeamRecordSpecificFilter,
@@ -23,12 +24,13 @@ type AccessRecord = {
 };
 type MemberRecord = { id: string; userId: string; alias: string | null; user: { name: string } };
 type ScoreRecord = Omit<TeamRecordScore, "user"> & { User: { name: string | null } | null };
+type ScoreDateRecord = Pick<TeamRecordScore, "gameDate" | "gameType" | "userId">;
 
 export type TeamRecordsDependencies = {
     findAccessibleTeam(userId: string, teamId: string): Promise<AccessRecord | null>;
     listMembers(teamId: string): Promise<MemberRecord[]>;
     listScores(teamId: string, start: Date, end: Date): Promise<ScoreRecord[]>;
-    listScoreDates(teamId: string): Promise<{ gameDate: Date }[]>;
+    listScoreDates(teamId: string): Promise<ScoreDateRecord[]>;
 };
 
 const defaultDependencies: TeamRecordsDependencies = {
@@ -79,7 +81,7 @@ const defaultDependencies: TeamRecordsDependencies = {
         return prisma.score.findMany({
             where: { teamId },
             orderBy: [{ gameDate: "desc" }, { id: "asc" }],
-            select: { gameDate: true },
+            select: { gameDate: true, gameType: true, userId: true },
         });
     },
 };
@@ -146,7 +148,12 @@ export async function getMobileTeamStatistics(
 ) {
     const data = await loadYearData(userId, teamId, query.year, dependencies, true);
     if (!data) return null;
-    const calculated = calculateTeamStatistics(data.scores, data.members, query.filter);
+    const calculated = calculateTeamStatistics(
+        data.scores,
+        data.members,
+        query.filter,
+        data.regularAttendanceStarts,
+    );
     const aceRanks = query.filter === "REGULAR"
         ? calculateAceRanks(calculated.members)
         : new Map<string, number>();
@@ -282,20 +289,30 @@ async function loadYearData(
 ) {
     const access = await dependencies.findAccessibleTeam(userId, teamId);
     if (!access) return null;
-    const start = new Date(`${year}-01-01T00:00:00.000Z`);
-    const end = new Date(`${year}-12-31T23:59:59.999Z`);
+    const start = new Date(`${year}-01-01T00:00:00+09:00`);
+    const end = new Date(`${year}-12-31T23:59:59.999+09:00`);
     const [memberRows, scoreRows, dateRows] = await Promise.all([
         dependencies.listMembers(teamId),
         dependencies.listScores(teamId, start, end),
-        includeYears ? dependencies.listScoreDates(teamId) : Promise.resolve([]),
+        includeYears
+            ? dependencies.listScoreDates(teamId)
+            : Promise.resolve([] as ScoreDateRecord[]),
     ]);
-    const years = [...new Set(dateRows.map((row) => row.gameDate.getFullYear()))]
+    const years = [...new Set(dateRows.map((row) => Number(teamActivityDateKey(row.gameDate).slice(0, 4))))]
         .sort((left, right) => right - left);
     if (!years.includes(year)) years.unshift(year);
+    const regularAttendanceStarts = new Map<string, string>();
+    for (const row of dateRows) {
+        if (!row.userId || row.gameType !== "정기전") continue;
+        const date = teamActivityDateKey(row.gameDate);
+        const existing = regularAttendanceStarts.get(row.userId);
+        if (!existing || date < existing) regularAttendanceStarts.set(row.userId, date);
+    }
     return {
         members: mapMembers(memberRows),
         scores: mapScores(scoreRows),
         availableYears: years,
+        regularAttendanceStarts,
     };
 }
 
