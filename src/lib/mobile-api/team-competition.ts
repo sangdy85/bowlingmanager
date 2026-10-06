@@ -111,7 +111,14 @@ export async function getTeamCompetitionState(actorUserId: string, teamId: strin
     const currentTeam = turn ? teams.find((item) => item.draftOrder === turn.draftOrder) ?? null : null;
     const actorMember = event.team.members.find((item) => item.userId === actorUserId)!;
     const isManager = event.team.ownerId === actorUserId || event.team.User.some((item) => item.id === actorUserId);
-    let result: Awaited<ReturnType<typeof calculateResults>> = event.competitionStatus === "PUBLISHED" ? publishedTeamResult(event) : await calculateResults(event);
+    let result: Awaited<ReturnType<typeof calculateResults>>;
+    if (event.competitionStatus !== "PUBLISHED") {
+        result = await calculateResults(event);
+    } else if (event.competitionMode === "MINI") {
+        result = publishedMiniTeamResult(await calculateResults(event));
+    } else {
+        result = publishedTeamResult(event);
+    }
     if (event.competitionStatus !== "PUBLISHED" && result.complete) {
         const seasonPoints = await getSeasonPointPreview(prisma, event);
         const ranked = rankFinalTeams(result.teams);
@@ -1000,6 +1007,16 @@ function publishedTeamResult(event: CompetitionEvent): Awaited<ReturnType<typeof
         if (snapshot.version !== 1 || snapshot.complete !== true || !Array.isArray(snapshot.teams) || !Array.isArray(snapshot.individual) || !Array.isArray(snapshot.games)) throw new Error("invalid snapshot");
         return snapshot as unknown as Awaited<ReturnType<typeof calculateResults>>;
     } catch { throw new TeamCompetitionError("INVALID_RESULT_SNAPSHOT", "발표된 TEAM 결과를 불러올 수 없습니다.", 500); }
+}
+
+function publishedMiniTeamResult(result: Awaited<ReturnType<typeof calculateResults>>): Awaited<ReturnType<typeof calculateResults>> {
+    if (!result.complete) {
+        throw new TeamCompetitionError("INVALID_RESULT_SNAPSHOT", "발표된 TEAM 결과를 불러올 수 없습니다.", 500);
+    }
+    return {
+        ...result,
+        teams: rankFinalTeams(result.teams).map((team) => ({ ...team, seasonPoint: 0 })),
+    } as Awaited<ReturnType<typeof calculateResults>>;
 }
 
 type ScoreReader = { score: { findMany: typeof prisma.score.findMany } };
