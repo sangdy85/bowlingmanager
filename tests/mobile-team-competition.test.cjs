@@ -219,6 +219,98 @@ test('lucky draw server policy supports wins, misses and forces a bounded win', 
   assert.equal(service.luckyDrawWins(3, 4, () => 1), true);
 });
 
+test('manager can finalize every TEAM assignment directly from attendance lock', async () => {
+  const members = [1, 2, 3, 4, 5].map(member);
+  const guests = [{ id: 'guest-1', name: '게스트1' }];
+  const event = {
+    id: 'event-manual', teamId: 'team-1', title: '전체 수동 편성',
+    competitionEnabled: true, competitionType: 'TEAM', competitionMode: 'OFFICIAL',
+    competitionStatus: 'ATTENDANCE_LOCKED', laneDrawStatus: 'NOT_STARTED',
+    competitionGameCount: 3, draftGeneration: 1, currentPickNumber: 1, rankPoints: '{}',
+    team: { ownerId: 'user-1', bowlerHiddenEnabled: true, User: [], members },
+    attendances: members.map(item => ({ status: 'ATTENDING', member: item })),
+    guests, competitionTeams: [], competitionParticipants: [], competitionDraftPicks: [],
+    laneSlots: [], laneAssignments: [], seasonPublications: [],
+  };
+  const prisma = {
+    teamEvent: {
+      findFirst: async args => args.where.id === event.id && args.where.teamId === event.teamId ? event : null,
+      updateMany: async args => {
+        if (args.where.competitionStatus && args.where.competitionStatus !== event.competitionStatus) return { count: 0 };
+        if (args.where.draftGeneration && args.where.draftGeneration !== event.draftGeneration) return { count: 0 };
+        Object.assign(event, args.data);
+        return { count: 1 };
+      },
+    },
+    teamCompetitionTeam: {
+      create: async ({ data }) => {
+        const captain = members.find(item => item.id === data.captainMemberId);
+        const team = { id: `competition-team-${event.competitionTeams.length + 1}`, ...data, captain, participants: [] };
+        event.competitionTeams.push(team);
+        return team;
+      },
+    },
+    teamCompetitionParticipant: {
+      create: async ({ data }) => {
+        const memberRow = data.memberId ? members.find(item => item.id === data.memberId) : null;
+        const guestRow = data.guestId ? guests.find(item => item.id === data.guestId) : null;
+        const participant = {
+          id: `participant-${event.competitionParticipants.length + 1}`,
+          ...data, member: memberRow, guest: guestRow,
+        };
+        event.competitionParticipants.push(participant);
+        event.competitionTeams.find(item => item.id === data.competitionTeamId).participants.push(participant);
+        return participant;
+      },
+    },
+    mobileNotification: { upsert: async ({ create }) => create },
+    mobilePushDevice: { findMany: async () => [] },
+    mobileNotificationDelivery: { upsert: async () => ({}) },
+    score: { findMany: async () => [] },
+  };
+  prisma.$transaction = async callback => callback(prisma);
+  const service = loadTs('src/lib/mobile-api/team-competition.ts', {
+    '@/lib/prisma': prisma,
+    '@/lib/mobile-api/bowler-hidden': { readRankPoints: () => [] },
+  });
+  const body = {
+    action: 'MANUAL_ASSIGN_TEAMS',
+    captains: [
+      { memberId: 'member-1', draftOrder: 1 },
+      { memberId: 'member-2', draftOrder: 2 },
+    ],
+    assignments: [
+      { participantKind: 'MEMBER', memberId: 'member-1', teamOrder: 1 },
+      { participantKind: 'MEMBER', memberId: 'member-2', teamOrder: 2 },
+      { participantKind: 'MEMBER', memberId: 'member-3', teamOrder: 1 },
+      { participantKind: 'MEMBER', memberId: 'member-4', teamOrder: 1 },
+      { participantKind: 'MEMBER', memberId: 'member-5', teamOrder: 1 },
+      { participantKind: 'GUEST', guestId: 'guest-1', teamOrder: 2 },
+    ],
+  };
+
+  await assert.rejects(
+    service.updateTeamCompetition('user-3', 'team-1', event.id, body),
+    error => error.code === 'FORBIDDEN',
+  );
+  const finalized = await service.updateTeamCompetition('user-1', 'team-1', event.id, body);
+  assert.equal(finalized.status, 'TEAMS_FINALIZED');
+  assert.equal(event.competitionStatus, 'TEAMS_FINALIZED');
+  assert.equal(event.laneDrawStatus, 'NOT_STARTED');
+  assert.deepEqual(event.competitionTeams.map(team => team.participants.length), [4, 2]);
+  assert.equal(event.competitionParticipants.filter(item => item.assignmentType === 'CAPTAIN').length, 2);
+  assert.equal(event.competitionParticipants.filter(item => item.assignmentType === 'ADMIN_OVERRIDE').length, 4);
+
+  const state = await service.getTeamCompetitionState('user-1', 'team-1', event.id);
+  assert.equal(state.status, 'TEAMS_FINALIZED');
+  assert.equal(state.remainingParticipants.length, 0);
+  assert.deepEqual(state.teams.map(team => team.members.length), [4, 2]);
+  assert.equal(state.teams[0].captainMemberId, 'member-1');
+  assert.equal(state.teams[1].captainMemberId, 'member-2');
+  assert.equal(state.teams.flatMap(team => team.members).every(item => item.assignmentType !== 'ADMIN_OVERRIDE'), true,
+    'mobile 1.1.1 compatibility serialization remains active');
+});
+
 test('official lane example allocates non-interleaved contiguous team blocks', () => {
   const service = loadTs('src/lib/mobile-api/team-competition.ts', {
     '@/lib/prisma': {}, '@/lib/mobile-api/bowler-hidden': { readRankPoints: () => [] },
