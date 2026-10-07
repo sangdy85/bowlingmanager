@@ -1,11 +1,105 @@
-.panel { border: 1px solid #dbeafe; border-radius: 1rem; background: #eff6ff; padding: 1rem; }
-.title { font-weight: 900; margin: 0 0 .25rem; color: #172554; }
-.hint { margin: 0 0 .8rem; color: #475569; font-size: .8rem; }
-.list { display: grid; gap: .65rem; }
-.item { background: white; border-radius: .75rem; padding: .75rem; display: flex; gap: .75rem; justify-content: space-between; align-items: center; }
-.meta { min-width: 0; font-size: .8rem; color: #64748b; }
-.name { display: block; color: #0f172a; font-weight: 800; margin-bottom: .2rem; }
-.badge { display: inline-block; margin-right: .35rem; padding: .15rem .45rem; border-radius: 999px; font-weight: 800; font-size: .7rem; }
-.SUCCESS { background: #dcfce7; color: #166534; } .FAILED { background: #fee2e2; color: #991b1b; } .PENDING { background: #fef3c7; color: #92400e; }
-.button { flex: 0 0 auto; border: 0; border-radius: .55rem; background: #1d4ed8; color: white; font-size: .75rem; font-weight: 800; padding: .55rem .7rem; cursor: pointer; }
-.button:disabled { opacity: .5; cursor: wait; }
+.panel {
+  border: 1px solid #cfe0f7;
+  border-radius: 0.95rem;
+  background: linear-gradient(180deg, #f8fbff, #eff6ff);
+  padding: 0.95rem;
+  color: #0f172a;
+  box-shadow: 0 7px 18px rgba(15, 23, 42, 0.06);
+}
+
+.title {
+  margin: 0 0 0.18rem;
+  color: #172554;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.hint {
+  margin: 0 0 0.75rem;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.7rem 0.75rem;
+}
+
+.meta {
+  min-width: 0;
+  flex: 1;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.name {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #0f172a;
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.badge {
+  display: inline-flex;
+  min-height: 1.35rem;
+  align-items: center;
+  margin-right: 0.35rem;
+  border-radius: 999px;
+  padding: 0.12rem 0.42rem;
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.SUCCESS { background: #dcfce7; color: #166534; }
+.FAILED { background: #fee2e2; color: #991b1b; }
+.PENDING { background: #fef3c7; color: #92400e; }
+
+.button {
+  min-height: 2.25rem;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 0.62rem;
+  background: #2563eb;
+  padding: 0.5rem 0.65rem;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (max-width: 560px) {
+  .item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .button {
+    width: 100%;
+  }
+}
