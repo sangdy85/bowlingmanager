@@ -52,8 +52,18 @@ test('토큰은 AES-GCM으로 왕복되고 변조되면 거부된다', () => {
   process.env.BAND_TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
   const crypto = loadTs('src/lib/band/token-crypto.ts');
   const encrypted = crypto.encryptBandToken('secret-access-token');
-  assert.notEqual(encrypted, 'secret-access-token'); assert.equal(crypto.decryptBandToken(encrypted), 'secret-access-token');
-  assert.throws(() => crypto.decryptBandToken(`${encrypted.slice(0, -1)}A`));
+
+  assert.notEqual(encrypted, 'secret-access-token');
+  assert.equal(crypto.decryptBandToken(encrypted), 'secret-access-token');
+
+  const parts = encrypted.split('.');
+  assert.equal(parts.length, 4);
+
+  const ciphertext = Buffer.from(parts[3], 'base64url');
+  ciphertext[0] ^= 0x01;
+  parts[3] = ciphertext.toString('base64url');
+
+  assert.throws(() => crypto.decryptBandToken(parts.join('.')));
 });
 
 test('posting 권한 API 요청과 권한 없는 결과를 구분할 수 있다', async () => {
