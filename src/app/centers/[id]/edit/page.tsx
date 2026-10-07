@@ -15,7 +15,6 @@ export default async function CenterEditPage({ params }: { params: Promise<{ id:
     const center = await prisma.bowlingCenter.findUnique({
         where: { id },
         include: { managers: true }
-        }
     });
 
     if (!center) notFound();
