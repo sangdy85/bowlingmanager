@@ -1,0 +1,214 @@
+.page {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 2.5rem;
+}
+
+.hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #2d3d57;
+  border-radius: 1.05rem;
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.08), transparent 52%),
+    linear-gradient(180deg, #162136, #111a2b);
+  padding: 1.25rem;
+  box-shadow: 0 14px 30px rgba(2, 6, 23, 0.16);
+}
+
+.heroMain {
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.55rem;
+}
+
+.title {
+  margin: 0;
+  color: #f8fafc;
+  font-size: clamp(1.55rem, 4vw, 2.2rem);
+  font-weight: 900;
+  line-height: 1.18;
+  letter-spacing: -0.04em;
+}
+
+.managerBadge {
+  display: inline-flex;
+  min-height: 1.6rem;
+  align-items: center;
+  border: 1px solid rgba(250, 204, 21, 0.28);
+  border-radius: 999px;
+  background: rgba(250, 204, 21, 0.1);
+  padding: 0.2rem 0.55rem;
+  color: #fde68a;
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.meta {
+  display: grid;
+  gap: 0.18rem;
+  color: #94a3b8;
+  font-size: 0.84rem;
+  font-weight: 620;
+}
+
+.meta p {
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.actionButton {
+  min-height: 2.6rem;
+  padding-inline: 0.9rem;
+  font-size: 0.8rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(17rem, 0.82fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.layoutFull {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.mainColumn {
+  display: grid;
+  min-width: 0;
+  gap: 1.5rem;
+}
+
+.sidebar {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+  position: sticky;
+  top: 5.2rem;
+}
+
+.introCard {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  border-style: dashed;
+  background: rgba(17, 26, 43, 0.62);
+}
+
+.sectionTitle {
+  margin: 0 0 0.65rem;
+  font-size: 1.1rem;
+  font-weight: 850;
+}
+
+.description {
+  margin: 0;
+  color: #b8c4d4;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.loginPrompt {
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  border-radius: 0.95rem;
+  background: rgba(30, 64, 175, 0.11);
+  padding: 1rem;
+  text-align: center;
+}
+
+.loginPrompt h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.9rem;
+}
+
+.loginPrompt p {
+  margin: 0 0 0.8rem;
+  color: #94a3b8;
+  font-size: 0.76rem;
+}
+
+.sideCard {
+  margin: 0;
+  padding: 1rem;
+}
+
+.sideCard h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+}
+
+.sideCard p {
+  margin: 0 0 0.8rem;
+  color: #aebdce;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.toolList {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.8rem;
+}
+
+.toolLink {
+  width: 100%;
+  min-height: 2.55rem;
+  justify-content: flex-start;
+  padding-inline: 0.85rem;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .page {
+    padding: 0.85rem 0.75rem 2rem;
+  }
+
+  .hero {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 1rem;
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .actionButton {
+    flex: 1 1 calc(50% - 0.5rem);
+  }
+
+  .sidebar {
+    grid-template-columns: 1fr;
+  }
+}

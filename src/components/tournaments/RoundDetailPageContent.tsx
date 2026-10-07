@@ -20,6 +20,7 @@ import { getEffectiveRoundDate, formatLane } from '@/lib/tournament-utils';
 import GrandFinaleCumulativeManager from './GrandFinaleCumulativeManager';
 import { calculateGameLaneAssignments } from '@/lib/lane-movement';
 import styles from './RoundDetailManagement.module.css';
+import ui from './ManagementUI.module.css';
 
 // --- Tab Components ---
 
@@ -539,19 +540,21 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
     const waitlistedParticipants = round.participants.filter((p: any) => waitlistedRegIds.has(p.registrationId));
 
     return (
-        <div className="space-y-8">
+        <div className={ui.surface}>
             {/* 1. Lane Configuration Section - Admin Only */}
             {isManager && (
-                <div className="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 className="font-bold text-lg mb-4 text-gray-800 flex items-center gap-2">
-                        <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-sm">Step 1</span>
-                        레인 운영 설정
+                <div className={ui.section}>
+                    <h3 className={ui.title}>
+                        <span className={ui.step}>Step 1</span>
+                        레인별 사용 슬롯 설정
                     </h3>
+                    <p className={ui.subtitle}>각 레인에서 사용할 테이블 슬롯을 선택합니다.</p>
 
-                    <div className="flex flex-wrap items-end gap-4 mb-6">
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">시작 레인</label>
+                    <div className={ui.toolbar}>
+                        <div className={ui.laneField}>
+                            <label htmlFor="lane-start">시작 레인</label>
                             <input
+                                id="lane-start"
                                 type="number"
                                 value={startLane}
                                 onChange={(e) => setStartLane(e.target.value)}
@@ -559,24 +562,25 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                             />
                         </div>
                         <span className="text-gray-400 font-bold pb-3">~</span>
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">종료 레인</label>
+                        <div className={ui.laneField}>
+                            <label htmlFor="lane-end">종료 레인</label>
                             <input
+                                id="lane-end"
                                 type="number"
                                 value={endLane}
                                 onChange={(e) => setEndLane(e.target.value)}
                                 className="input w-24 border-2 focus:border-blue-500 font-bold"
                             />
                         </div>
-                        <button
+                        <button type="button"
                             onClick={handleLaneSettings}
                             disabled={loading}
-                            className="btn btn-primary font-bold shadow-md px-6"
+                            className={ui.primary}
                         >
                             설정 저장
                         </button>
 
-                        <div className="ml-auto flex flex-wrap gap-2">
+                        <div className={ui.laneActions}>
                             <button
                                 type="button"
                                 onClick={setAllSelect}
@@ -598,7 +602,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                             >
                                 ❌ 모두 해제
                             </button>
-                            <button
+                            <button type="button"
                                 onClick={handleAutoAssign}
                                 disabled={loading || round.participants.length === 0}
                                 className="btn bg-white border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 shadow-sm text-[11px]"
@@ -608,16 +612,16 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                         </div>
                     </div>
 
-                    <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                    <div className={ui.section}>
                         <div className="flex justify-end items-center mb-4">
-                            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">총 설정 슬롯: {Object.values(laneConfig).reduce((s, a) => s + a.length, 0)}개</span>
+                            <span className={ui.badge}>총 설정 슬롯: {Object.values(laneConfig).reduce((s, a) => s + a.length, 0)}개</span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        <div className={ui.laneGrid}>
                             {lanes.map(lane => (
-                                <div key={lane} className="flex items-center gap-3 bg-white p-2 px-3 rounded-lg border border-gray-100 shadow-sm hover:border-blue-300 transition-all group">
+                                <div key={lane} className={ui.laneRow}>
                                     <span className="font-black text-gray-800 text-sm min-w-[55px] group-hover:text-blue-600">{lane} 레인</span>
-                                    <div className="flex gap-1">
+                                    <div className={ui.slots}>
                                         {[1, 2, 3, 4, 5, 6].map(slot => {
                                             const active = isSlotActive(lane, slot);
                                             return (
@@ -628,21 +632,10 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                                                         e.preventDefault();
                                                         toggleSlot(lane, slot);
                                                     }}
-                                                    className={`w-10 h-10 rounded-lg text-sm font-black transition-all border-2 flex items-center justify-center relative shadow-md ${active
-                                                        ? 'ring-2 ring-blue-400 z-10'
-                                                        : 'opacity-60'
-                                                        }`}
-                                                    style={{
-                                                        backgroundColor: active ? '#2563eb' : '#f3f4f6', // blue-600 vs gray-100
-                                                        color: active ? '#ffffff' : '#9ca3af', // white vs gray-400
-                                                        borderColor: active ? '#1e3a8a' : '#e5e7eb', // blue-900 vs gray-200
-                                                    }}
+                                                    className={ui.slot}
+                                                    aria-label={`${lane}레인 ${slot}번 슬롯`}
+                                                    aria-pressed={active}
                                                 >
-                                                    {active && (
-                                                        <div className="absolute -top-1 -right-1 bg-yellow-400 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center shadow-lg animate-bounce">
-                                                            <span className="text-[10px] text-blue-900 font-bold">✓</span>
-                                                        </div>
-                                                    )}
                                                     {slot}
                                                 </button>
                                             );
@@ -656,29 +649,29 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
             )}
 
             {/* 2. Assignment Results View */}
-            <div className="bg-white p-6 rounded-xl border shadow-sm">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
-                        {isManager && <span className="bg-green-100 text-green-600 px-2 py-1 rounded text-sm">Step 2</span>}
+            <div className={ui.section}>
+                <div className={ui.header}>
+                    <h3 className={ui.title}>
+                        {isManager && <span className={ui.step}>Step 2</span>}
                         배정 결과 확인
                     </h3>
+                    <p className={ui.subtitle}>선수 배정 결과를 레인별로 확인합니다.</p>
                 </div>
 
                 {round.participants.length === 0 ? (
-                    <div className="text-center py-10 text-gray-400 bg-gray-50 rounded-lg border border-dashed">
+                    <div className={ui.empty}>
                         참가자가 없습니다. 참가자 탭에서 인원을 등록해주세요.
                     </div>
                 ) : (
-                    <div className="space-y-2">
+                    <div className={ui.laneGrid}>
                         {lanes.map(lane => {
                             const ps = laneMap[lane] || [];
                             return (
-                                <div key={lane} className="flex items-stretch border rounded-xl overflow-hidden bg-white shadow-sm hover:border-blue-300 transition-all">
-                                    <div className={`w-16 sm:w-20 flex flex-col items-center justify-center py-2 ${ps.length > 0 ? 'bg-slate-900 text-white' : 'bg-gray-100 text-gray-400'}`}>
-                                        <span className="text-[10px] font-bold opacity-60">LANE</span>
-                                        <span className="text-xl font-black">{lane}</span>
+                                <div key={lane} className={ui.laneCard}>
+                                    <div className={ui.laneHeading}>
+                                        <span>Lane {lane}</span><span className={ui.badge}>{ps.length}명</span>
                                     </div>
-                                    <div className="flex-1 flex flex-wrap items-center p-3 gap-y-2 gap-x-6">
+                                    <div className={ui.lanePeople}>
                                         {ps.length > 0 ? ps.map((p: any) => (
                                             <div key={p.id} className="flex items-center gap-2">
                                                 <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-[10px] border border-blue-200">
@@ -699,7 +692,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                                                 </span>
                                             </div>
                                         )) : (
-                                            <span className="text-gray-300 text-xs italic">배정된 선수가 없습니다.</span>
+                                            <span className={ui.empty}>배정된 선수가 없습니다.</span>
                                         )}
                                     </div>
                                 </div>
@@ -707,7 +700,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                         })}
 
                         {matchableUnassigned.length > 0 && (
-                            <div className="mt-6 border-t pt-6">
+                            <div className={ui.fullRow}>
                                 <h4 className="font-bold text-sm text-red-500 mb-3 flex items-center gap-2">
                                     ⚠️ 미배정 참가자 ({matchableUnassigned.length})
                                 </h4>
@@ -723,7 +716,7 @@ function RoundLanesTab({ round, onUpdate, isManager }: { round: any, onUpdate: (
                         )}
 
                         {waitlistedParticipants.length > 0 && (
-                            <div className="mt-6 border-t pt-6 bg-amber-50/30 p-4 rounded-xl">
+                            <div className={ui.fullRow}>
                                 <h4 className="font-bold text-sm text-amber-600 mb-3 flex items-center gap-2">
                                     ⏳ 대기 참가자 ({waitlistedParticipants.length})
                                 </h4>
@@ -927,12 +920,13 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
     });
 
     return (
-        <div className="space-y-4">
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex flex-col gap-1 flex-1 w-full">
-                        <SmartExcelScoreUpload onDataParsed={handleExcelData} gameCount={gameCount} />
-                        <div className="mt-2 p-3 bg-blue-50/50 rounded-lg border border-blue-100/50">
+        <div className={ui.surface}>
+            <div className={ui.section}>
+                <div className={ui.header}><div><h3 className={ui.title}>점수 입력</h3><p className={ui.subtitle}>파일로 가져오거나 직접 입력한 뒤 점수를 저장하세요.</p></div></div>
+                <div className={ui.scoreHeader}>
+                    <div className={ui.scoreUpload}>
+                        <div className={ui.upload}><SmartExcelScoreUpload onDataParsed={handleExcelData} gameCount={gameCount} /></div>
+                        <div className={ui.info}>
                             <p className="text-xs font-bold text-blue-600 flex items-center gap-1.5 ml-1">
                                 <span className="text-base">✨</span> 스마트 AI 분석 가이드
                             </p>
@@ -943,7 +937,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                         </div>
                     </div>
                     <div className="flex gap-3 shrink-0">
-                        <button
+                        <button type="button"
                             onClick={() => handleSubmit()}
                             disabled={loading}
                             className="btn btn-primary h-14 px-8 font-black text-lg shadow-[0_4px_20px_rgba(37,99,235,0.2)] hover:shadow-none hover:translate-y-0.5 transition-all flex items-center gap-2 border-2 border-blue-700"
@@ -955,13 +949,13 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                 </div>
             </div>
 
-            <div className="table-responsive !p-0">
-                <table className="w-full text-sm border-collapse bg-white shadow-md rounded-xl overflow-hidden border border-gray-200" style={{ tableLayout: 'fixed', minWidth: '700px' }}>
+            <div className={ui.tableScroll} tabIndex={0} role="region" aria-label="게임별 점수 입력 표">
+                <table className={`${ui.table} ${ui.scoreTable}`} style={{ tableLayout: 'fixed', minWidth: `${520 + gameCount * 100}px` }}>
                     <thead>
                         <tr className="bg-gray-100 text-gray-600 uppercase text-[11px] font-bold tracking-tight">
                             <th className="py-3 px-2 border-b text-center" style={{ width: '60px', whiteSpace: 'nowrap' }}>레인</th>
                             <th className="py-3 px-2 border-b text-center" style={{ width: '90px', whiteSpace: 'nowrap' }}>팀</th>
-                            <th className="py-3 px-2 border-b text-center" style={{ width: '130px', whiteSpace: 'nowrap' }}>이름</th>
+                            <th className={ui.stickyName} style={{ width: '130px', whiteSpace: 'nowrap' }}>이름</th>
                             <th className="py-3 px-1 border-b text-center" style={{ width: 'auto', whiteSpace: 'nowrap' }}>
                                 점수(1-{gameCount}G)
                             </th>
@@ -1008,10 +1002,10 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                             <span className="text-[10px] text-amber-600 block">대기</span>
                                         ) : formatLane(p.lane, p.isManual)}
                                     </td>
-                                    <td className="p-2 text-center text-gray-600 truncate" style={{ width: '90px', whiteSpace: 'nowrap' }}>
+                                    <td className={ui.textCell} style={{ width: '90px' }}>
                                         {(p.registration.guestTeamName ?? p.registration.team?.name) || '-'}
                                     </td>
-                                    <td className="p-2 text-center font-bold text-gray-800 truncate" style={{ width: '130px', whiteSpace: 'nowrap' }}>
+                                    <td className={`${ui.textCell} ${ui.stickyName}`} style={{ width: '130px', fontWeight: 750 }}>
                                         <div className="flex flex-col items-center">
                                             <span className={isWaitlisted ? 'text-gray-400' : ''}>{p.registration.user?.name || p.registration.guestName}</span>
                                             {isTeamEvent && groupId && (
@@ -1025,8 +1019,10 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                         <div className="flex justify-center">
                                             <div className="flex items-center -space-x-px">
                                                 {Array.from({ length: gameCount }, (_, i) => i + 1).map(g => (
-                                                    <div key={g} className="relative group/input">
+                                                    <div key={g} className={ui.scoreField}>
+                                                        <span aria-hidden="true">{g}G</span>
                                                         <input
+                                                            aria-label={`${p.registration.user?.name || p.registration.guestName} ${g}게임 점수`}
                                                             type="number"
                                                             value={currentScores[g] || ''}
                                                             max={300}
@@ -1065,6 +1061,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                         <td className="p-2 text-center" style={{ width: '60px' }}>
                                             <input
                                                 type="checkbox"
+                                                aria-label={`${p.registration.user?.name || p.registration.guestName} 여자 챔피언`}
                                                 checked={femaleChampIds.includes(p.id)}
                                                 disabled={isWaitlisted}
                                                 onChange={(e) => {
@@ -2864,7 +2861,14 @@ export default function RoundDetailPageContent({
 
             {
                 isManager && (
+                    <>
                     <nav aria-label="대회 관리 메뉴" className={styles.managementNav}>
+                        <div className={styles.mobileNav}>
+                            <label htmlFor="round-management-section">관리 화면 이동</label>
+                            <select id="round-management-section" value={activeTab} onChange={event => handleTabChange(event.target.value)}>
+                                {tabs.map(tab => <option key={tab.id} value={tab.id}>{tab.label} · {tab.description}</option>)}
+                            </select>
+                        </div>
                         <div className={styles.navGrid}>
                         {tabs.map(tab => (
                             <button
@@ -2885,6 +2889,7 @@ export default function RoundDetailPageContent({
                         ))}
                         </div>
                     </nav>
+                    </>
                 )
             }
 
@@ -2959,12 +2964,13 @@ export default function RoundDetailPageContent({
                         {activeTab === 'lanes' && <RoundLanesTab round={round} onUpdate={refresh} isManager={isManager} />}
                         {activeTab === 'scoring' && <RoundScoringTab round={round} onUpdate={refresh} />}
                         {activeTab === 'sideGame' && (
-                            <div className="p-8 bg-slate-100/50">
+                            <div className={ui.surface}>
                                 <SideGameManager
                                     matchups={round.matchups}
                                     participants={round.participants}
                                     allIndividualScores={round.individualScores}
                                     roundId={round.id}
+                                    roundNumber={round.roundNumber}
                                     isManager={isManager}
                                     tournamentType={round.tournament.type}
                                     gameCount={settings.gameCount || 3}

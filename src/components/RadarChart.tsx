@@ -29,7 +29,14 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320 })
 
     return (
         <div className="relative flex flex-col items-center w-full h-full justify-center">
-            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible min-w-[300px]">
+            <svg
+                width={size}
+                height={size}
+                viewBox={`0 0 ${size} ${size}`}
+                className="w-full max-w-[500px] h-auto overflow-visible"
+                role="img"
+                aria-label="개인 기록 레이더 차트"
+            >
                 {/* Background Polygons (Grid) */}
                 {levels.map((level) => {
                     const points = labels.map((_, i) => {

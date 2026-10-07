@@ -1,0 +1,154 @@
+.page {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 2.5rem;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.45rem, 4vw, 1.9rem);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+}
+
+.subtitle {
+  margin: 0.3rem 0 0;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.backButton {
+  min-height: 2.55rem;
+  padding-inline: 0.8rem;
+  font-size: 0.78rem;
+}
+
+.card {
+  padding: 1rem;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid #2c3a52;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid #334155;
+  border-radius: 0.8rem;
+}
+
+.table {
+  width: 100%;
+  min-width: 650px;
+  border-collapse: collapse;
+  background: #111a2b;
+}
+
+.table th {
+  background: #172033;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+}
+
+.table th,
+.table td {
+  padding: 0.68rem 0.75rem;
+  border-right: 1px solid #2b3a52;
+  border-bottom: 1px solid #2b3a52;
+  text-align: center;
+}
+
+.table th:last-child,
+.table td:last-child {
+  border-right: 0;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr {
+  color: #dbe4f0;
+  transition: background-color 140ms ease;
+}
+
+.table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.07);
+}
+
+.rank {
+  font-weight: 900;
+}
+
+.avg {
+  color: #93c5fd;
+  font-weight: 900;
+}
+
+.high {
+  color: #c4b5fd;
+  font-weight: 800;
+}
+
+.empty {
+  padding: 2.5rem 1rem;
+  color: #94a3b8;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.comingSoon {
+  margin-top: 1rem;
+  padding: 1.2rem;
+  text-align: center;
+}
+
+.comingSoon h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.95rem;
+}
+
+.comingSoon p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 0.9rem 0.75rem 2rem;
+  }
+
+  .header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .backButton {
+    width: 100%;
+  }
+}

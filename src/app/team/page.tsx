@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import TeamCodeSection from "@/components/TeamCodeSection";
+import styles from "./TeamList.module.css";
 
 export const dynamic = 'force-dynamic';
 
@@ -40,10 +41,10 @@ export default async function TeamListPage() {
     if (user.teamMemberships.length === 0) {
         // Maybe redirect to dashboard or show a "Join a Team" message
         return (
-            <div className="container py-12 max-w-md mx-auto text-center">
-                <h1 className="text-2xl font-bold mb-6">소속된 팀이 없습니다</h1>
-                <p className="text-secondary-foreground mb-8">팀에 가입하거나 소속을 만들어보세요.</p>
-                <Link href="/dashboard" className="btn btn-primary w-full">
+            <div className={styles.empty}>
+                <h1 className={styles.emptyTitle}>소속된 팀이 없습니다</h1>
+                <p className={styles.emptyText}>팀에 가입하거나 소속을 만들어보세요.</p>
+                <Link href="/dashboard" className="btn btn-primary">
                     대시보드로 이동
                 </Link>
             </div>
@@ -51,41 +52,39 @@ export default async function TeamListPage() {
     }
 
     return (
-        <div className="container py-12 max-w-2xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-2xl font-bold">나의 팀 목록</h1>
-                <div className="flex gap-2">
-                    <Link href="/team/create" className="btn btn-primary text-sm px-3 py-1">
+        <div className={styles.page}>
+            <header className={styles.header}>
+                <h1 className={styles.title}>나의 팀 목록</h1>
+                <div className={styles.actions}>
+                    <Link href="/team/create" className={`btn btn-primary ${styles.actionButton}`}>
                         + 팀 만들기
                     </Link>
-                    <Link href="/team/join" className="btn btn-secondary text-sm px-3 py-1">
+                    <Link href="/team/join" className={`btn btn-secondary ${styles.actionButton}`}>
                         팀 가입하기
                     </Link>
                 </div>
-            </div>
-            <div className="grid gap-4">
+            </header>
+
+            <div className={styles.list}>
                 {user.teamMemberships.map(({ team }) => (
-                    <Link key={team.id} href={`/team/${team.id}`}>
-                        <div className="card hover:bg-muted/30 transition-colors p-6 flex justify-between items-center cursor-pointer">
-                            <div>
-                                <h2 className="text-xl font-bold mb-1">{team.name}</h2>
-                                <div className="flex flex-col gap-1">
-                                    <p className="text-sm text-secondary-foreground">
-                                        멤버 수: {team._count.members}명
-                                    </p>
+                    <Link key={team.id} href={`/team/${team.id}`} className={styles.teamLink}>
+                        <article className={`card ${styles.card}`}>
+                            <div className={styles.teamMain}>
+                                <h2 className={styles.teamName}>{team.name}</h2>
+                                <div className={styles.teamMeta}>
+                                    <span>멤버 수: {team._count.members}명</span>
                                     <TeamCodeSection code={team.code} />
                                 </div>
                             </div>
-                            <div className="text-accent font-semibold">
-                                입장하기 &rarr;
-                            </div>
-                        </div>
+                            <span className={styles.enter}>입장하기 →</span>
+                        </article>
                     </Link>
                 ))}
             </div>
-            <div className="mt-8 text-center">
-                <Link href="/dashboard" className="text-secondary-foreground hover:text-foreground text-sm">
-                    &larr; 메인으로 돌아가기
+
+            <div className={styles.footer}>
+                <Link href="/dashboard" className={styles.back}>
+                    ← 메인으로 돌아가기
                 </Link>
             </div>
         </div>

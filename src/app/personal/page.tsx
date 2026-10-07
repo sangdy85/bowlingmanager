@@ -8,6 +8,7 @@ import StatsDisplayRow from "@/components/StatsDisplayRow";
 import RadarChart from "@/components/RadarChart";
 import { getPersonalStatisticsData } from "@/lib/personal-statistics";
 import { calculatePersonalProfile } from "@/lib/personal-profile";
+import styles from "./PersonalPage.module.css";
 
 export const dynamic = 'force-dynamic';
 
@@ -304,20 +305,18 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     }));
 
     return (
-        <div className="container py-8 max-w-6xl mx-auto">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 text-[#0f172a]">
-                <div>
-                    <h1 className="page-title" style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: 900 }}>나의 기록실</h1>
-                    <p className="text-secondary-foreground text-sm font-bold">개인 기록과 통계를 확인합니다.</p>
-                </div>
-            </div>
+        <div className={styles.page}>
+            <header className={styles.header}>
+                <h1 className={styles.title}>나의 기록실</h1>
+                <p className={styles.subtitle}>개인 기록과 통계를 확인합니다.</p>
+            </header>
 
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
             {datasets.length > 0 && (
-                <div className="mb-12 flex flex-row items-center justify-center gap-4 lg:gap-12 relative max-w-full overflow-hidden">
+                <div className={styles.profileLayout}>
                     {/* 1. Left: Profile Info */}
-                    <div className="flex flex-col justify-center min-w-[320px]">
+                    <div className={styles.profileInfo}>
                         <div className="text-white/60 text-[10px] font-black tracking-widest mb-1 uppercase">PLAYER PROFILE</div>
                         <h2 className="text-4xl font-black text-white mb-6 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
                         
@@ -426,7 +425,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                     </div>
 
                     {/* 2. Center: Radar Chart */}
-                    <div className="flex flex-col items-center justify-center">
+                    <div className={styles.profileChart}>
                         <RadarChart 
                             datasets={datasets} 
                             labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
@@ -435,38 +434,29 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                     </div>
 
                     {/* 3. Right: Specialized Legend (Stacked vertically, aligned to bottom of chart area) */}
-                    <div className="flex flex-col justify-end self-end mb-8 pt-20">
-                        <div className="flex flex-col items-end gap-3 pr-4">
+                    <div className={styles.legend}>
                             {datasets.map((dataset, idx) => (
-                                <div key={idx} className="flex items-center gap-4">
-                                    <span className="text-[13px] font-black text-white/90 whitespace-nowrap tracking-tight">{dataset.label}</span>
-                                    <div 
-                                        style={{ 
-                                            width: '50px', 
-                                            height: '6px', 
+                                <div key={idx} className={styles.legendItem}>
+                                    <span className={styles.legendLabel}>{dataset.label}</span>
+                                    <div
+                                        className={styles.legendBar}
+                                        style={{
                                             backgroundColor: dataset.color,
-                                            borderRadius: '999px',
                                             boxShadow: '0 0 12px ' + dataset.color + '66'
-                                        }} 
+                                        }}
                                     />
                                 </div>
                             ))}
-                        </div>
                     </div>
                 </div>
             )}
 
             <div className="grid grid-cols-1 gap-8">
-                <div className="bg-[#1e293b] border border-[#334155] p-3 shadow-lg rounded-t-lg" style={{ borderBottom: '2px solid #3b82f6' }}>
-                    <div className="flex items-center gap-2">
-                        <span className="text-xl">📊</span>
-                        <h2 className="font-black text-white text-base tracking-tight">
-                            {currentYear}년 개인 통계 <span className="text-blue-400 ml-1 text-xs">STATISTICS</span>
-                        </h2>
-                    </div>
+                <div className={styles.sectionHeader}>
+                    <h2>📊 {currentYear}년 개인 통계 · <span className="text-blue-400">STATISTICS</span></h2>
                 </div>
 
-                <div className="bg-white p-0 overflow-hidden">
+                <div className={styles.statTables}>
                     {/* 1. 전체 종합 (모든 팀 합산) */}
                     <div className="table-responsive !p-0 !bg-white">
                         <table className="w-full text-[13px] border-collapse !bg-white !text-[#0f172a]" style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>

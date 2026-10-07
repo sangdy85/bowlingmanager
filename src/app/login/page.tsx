@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useActionState, Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { login, signInWithProvider } from '@/app/actions/auth';
+import styles from '../AuthPage.module.css';
 
 function LoginForm() {
     const [errorMessage, dispatch, isPending] = useActionState(login, undefined);
@@ -32,32 +33,35 @@ function LoginForm() {
     };
 
     return (
-        <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
-            <h1 className="text-center mb-4" style={{ fontSize: '1.5rem' }}>로그인</h1>
+        <section className={styles.card}>
+            <header className={styles.header}>
+                <h1 className={styles.title}>로그인</h1>
+                <p className={styles.subtitle}>BowlingManager 계정으로 계속합니다.</p>
+            </header>
 
             {message === 'verification-sent' && (
-                <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-md text-green-500 text-sm font-medium text-center">
+                <div className={[styles.notice, styles.success].join(' ')}>
                     인증 메일이 발송되었습니다.<br />
                     이메일을 확인해주세요.
                 </div>
             )}
 
             {message === 'check-email' && (
-                <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-md text-green-500 text-sm font-medium text-center">
+                <div className={[styles.notice, styles.success].join(' ')}>
                     인증 메일이 발송되었습니다.<br />
                     재발송을 원하시면 다시 가입을 시도해주세요.
                 </div>
             )}
 
             {message === 'registered' && (
-                <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-md text-blue-500 text-sm font-medium text-center">
+                <div className={[styles.notice, styles.info].join(' ')}>
                     가입이 완료되었습니다.<br />
                     로그인해주세요.
                 </div>
             )}
 
-            <form action={handleSubmit} className="flex flex-col gap-4">
-                <div>
+            <form action={handleSubmit} className={styles.form}>
+                <div className={styles.field}>
                     <label htmlFor="email" className="label">이메일</label>
                     <input
                         type="text"
@@ -70,12 +74,12 @@ function LoginForm() {
                         required
                     />
                 </div>
-                <div>
+                <div className={styles.field}>
                     <label htmlFor="password" className="label">비밀번호</label>
                     <input type="password" id="password" name="password" className="input" required />
                 </div>
 
-                <div className="flex items-center gap-2">
+                <label className={styles.remember}>
                     <input
                         type="checkbox"
                         id="rememberMe"
@@ -83,11 +87,11 @@ function LoginForm() {
                         onChange={(e) => setRememberMe(e.target.checked)}
                         style={{ cursor: 'pointer' }}
                     />
-                    <label htmlFor="rememberMe" style={{ fontSize: '0.875rem', cursor: 'pointer', userSelect: 'none' }}>이메일 저장</label>
-                </div>
+                    <span>이메일 저장</span>
+                </label>
 
                 {errorMessage && (
-                    <div className="text-destructive text-center" style={{ fontSize: '0.875rem' }}>{errorMessage}</div>
+                    <div className={[styles.notice, styles.error].join(' ')}>{errorMessage}</div>
                 )}
                 <button type="submit" className="btn btn-primary w-full" disabled={isPending}>
                     {isPending ? '로그인 중...' : '로그인'}
@@ -95,7 +99,7 @@ function LoginForm() {
             </form>
 
             <div className="social-login-divider">또는</div>
-            <div className="social-btn-container">
+            <div className={styles.social}>
                 <form action={() => signInWithProvider("google")}>
                     <button type="submit" className="btn btn-google w-full flex items-center justify-center">
                         <svg className="social-icon" width="18" height="18" viewBox="0 0 24 24">
@@ -115,21 +119,21 @@ function LoginForm() {
                 </form>
             </div>
 
-            <div className="text-center mt-4 flex flex-col gap-2" style={{ fontSize: '0.875rem', color: 'var(--secondary-foreground)' }}>
+            <div className={styles.footer}>
                 <div>
-                    계정이 없신가요? <Link href="/register" className="underline hover:text-primary">회원가입</Link>
+                    계정이 없으신가요? <Link href="/register" className="underline hover:text-primary">회원가입</Link>
                 </div>
                 <div>
                     <Link href="/find-account" className="text-xs text-muted-foreground hover:text-primary">아이디/비밀번호 찾기</Link>
                 </div>
             </div>
-        </div>
+        </section>
     );
 }
 
 export default function LoginPage() {
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '2rem' }}>
+        <div className={styles.page}>
             <Suspense fallback={<div className="text-center p-4">Loading...</div>}>
                 <LoginForm />
             </Suspense>

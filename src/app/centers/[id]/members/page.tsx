@@ -5,6 +5,7 @@ import Link from "next/link";
 import { removeCenterMember } from "@/app/actions/center-members";
 import MemberSearchModal from "@/components/tournaments/MemberSearchModal";
 import CenterGuestManager from "@/components/tournaments/CenterGuestManager";
+import styles from "../CenterAdmin.module.css";
 
 export default async function CenterMembersPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -39,62 +40,78 @@ export default async function CenterMembersPage({ params }: { params: Promise<{ 
     }));
 
     return (
-        <div className="max-w-4xl mx-auto py-8">
-            <div className="flex items-center gap-4 mb-8">
-                <Link href={`/centers/${id}`} className="btn btn-secondary h-10 px-4">← 뒤로가기</Link>
-                <h1 className="text-3xl font-bold">{center.name} - 상주 회원 관리</h1>
-            </div>
+        <div className={styles.page}>
+            <Link href={`/centers/${id}`} className={styles.back}>
+                <span className={styles.backIcon} aria-hidden="true">←</span>
+                <span>볼링장 정보로 돌아가기</span>
+            </Link>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="md:col-span-2">
-                    <section className="card p-6">
-                        <h2 className="text-xl font-bold mb-6">상주 회원 목록 ({members.length})</h2>
-                        {members.length === 0 ? (
-                            <p className="text-center text-secondary-foreground py-10">등록된 상주 회원이 없습니다.</p>
-                        ) : (
-                            <div className="space-y-3">
-                                {members.map((member: any) => (
-                                    <div key={member.id} className="flex items-center justify-between p-4 bg-secondary/10 rounded-lg hover:bg-secondary/20 transition-colors">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center font-bold text-primary">
-                                                {member.User.name.charAt(0)}
-                                            </div>
-                                            <div>
-                                                <div className="font-bold">{member.User.name} {member.alias && <span className="text-sm font-normal text-secondary-foreground">({member.alias})</span>}</div>
-                                                <div className="text-xs text-secondary-foreground">{member.User.email}</div>
-                                            </div>
-                                        </div>
-                                        <form action={removeCenterMember.bind(null, id, member.id)}>
-                                            <button className="text-destructive text-sm font-medium hover:underline">회원 탈퇴</button>
-                                        </form>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </section>
-
-                    <div className="mt-8">
-                        <CenterGuestManager
-                            centerId={id}
-                            members={guestManagerMembers}
-                        />
-                    </div>
-                </div>
-
+            <header className={styles.hero}>
                 <div>
-                    <section className="card p-6 sticky top-8">
-                        <h3 className="font-bold mb-4">회원 추가</h3>
-                        <p className="text-sm text-secondary-foreground mb-6">
-                            이름 또는 이메일로 회원을 검색하여 상주 회원으로 등록할 수 있습니다.
-                        </p>
-
-                        <MemberSearchModal centerId={id} />
-
-                        <p className="text-[10px] text-center text-secondary-foreground mt-4">
-                            ※ 회원이 이미 가입되어 있어야 검색이 가능합니다.
-                        </p>
-                    </section>
+                    <h1 className={styles.title}>{center.name} 회원 관리</h1>
+                    <p className={styles.subtitle}>상주 회원 추가·탈퇴와 비회원 기록 통합을 관리합니다.</p>
                 </div>
+                <div className={styles.count}>
+                    <span className={styles.countLabel}>상주 회원</span>
+                    <strong className={styles.countValue}>{members.length}명</strong>
+                </div>
+            </header>
+
+            <div className={styles.layout}>
+                <main className={styles.main}>
+                    <section className={styles.section}>
+                        <div className={styles.sectionHeader}>
+                            <div>
+                                <h2 className={styles.sectionTitle}>상주 회원 목록</h2>
+                                <p className={styles.sectionHint}>센터에 연결된 회원 계정을 확인합니다.</p>
+                            </div>
+                        </div>
+                        <div className={styles.sectionBody}>
+                            {members.length === 0 ? (
+                                <div className={styles.empty}>등록된 상주 회원이 없습니다.</div>
+                            ) : (
+                                <div className={styles.list}>
+                                    {members.map((member: any) => (
+                                        <div key={member.id} className={styles.row}>
+                                            <div className={styles.person}>
+                                                <div className={styles.avatar}>{member.User.name.charAt(0)}</div>
+                                                <div style={{ minWidth: 0 }}>
+                                                    <div className={styles.name}>
+                                                        {member.User.name}
+                                                        {member.alias && <span style={{ color: '#94a3b8', fontWeight: 650 }}> ({member.alias})</span>}
+                                                    </div>
+                                                    <div className={styles.meta}>{member.User.email}</div>
+                                                </div>
+                                            </div>
+                                            <form action={removeCenterMember.bind(null, id, member.id)}>
+                                                <button className={styles.dangerButton}>회원 탈퇴</button>
+                                            </form>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </section>
+
+                    <CenterGuestManager centerId={id} members={guestManagerMembers} />
+                </main>
+
+                <aside className={styles.sidebar}>
+                    <section className={styles.section}>
+                        <div className={styles.sectionHeader}>
+                            <div>
+                                <h3 className={styles.sectionTitle}>회원 추가</h3>
+                                <p className={styles.sectionHint}>이름 또는 이메일로 가입 회원을 검색합니다.</p>
+                            </div>
+                        </div>
+                        <div className={styles.sectionBody}>
+                            <MemberSearchModal centerId={id} />
+                            <p className={styles.meta} style={{ marginTop: '0.65rem', textAlign: 'center' }}>
+                                이미 BowlingManager에 가입된 회원만 검색할 수 있습니다.
+                            </p>
+                        </div>
+                    </section>
+                </aside>
             </div>
         </div>
     );

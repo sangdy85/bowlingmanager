@@ -1,7 +1,15 @@
 .page {
   display: grid;
-  gap: 1.25rem;
+  gap: 1rem;
+  min-width: 0;
 }
+
+.mobileNav { display: none; }
+.publishDetails { border: 1px solid #334155; border-radius: 14px; background: #162237; color: #e2e8f0; }
+.publishDetails > summary { cursor: pointer; padding: 16px 20px; font-size: 14px; font-weight: 750; line-height: 1.6; }
+.publishDetails > summary span:last-child { margin-left: 12px; color: #94a3b8; font-size: 12px; font-weight: 500; }
+.publishDetails > summary:focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; border-radius: 12px; }
+.publishDetails > div { margin: 0 12px 12px; }
 
 .overview {
   display: grid;
@@ -12,9 +20,9 @@
 
 .schedulePanel {
   border: 1px solid #e2e8f0;
-  border-radius: 1rem;
-  background: #f8fafc;
-  padding: 1.25rem;
+  border-radius: 0.9rem;
+  background: linear-gradient(180deg, #fbfdff, #f8fafc);
+  padding: 1.1rem;
 }
 
 .scheduleLayout {
@@ -68,9 +76,9 @@
 
 .metricCard {
   border: 1px solid;
-  border-radius: 1rem;
-  padding: 1.15rem;
-  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.05);
+  border-radius: 0.9rem;
+  padding: 1rem;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.045);
 }
 
 .metricBlue { background: #eff6ff; border-color: #bfdbfe; }
@@ -240,10 +248,12 @@
   justify-content: space-between;
   gap: 1.25rem;
   border: 1px solid #334155;
-  border-radius: 1rem;
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.98));
-  padding: 1.25rem;
-  box-shadow: 0 16px 32px rgba(2, 6, 23, 0.22);
+  border-radius: 0.95rem;
+  background:
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.16), transparent 18rem),
+    linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(11, 18, 32, 0.99));
+  padding: 1.1rem;
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.2);
 }
 
 .headerMain { min-width: 0; }
@@ -308,13 +318,14 @@
 
 .managementNav {
   position: sticky;
-  top: 0.5rem;
+  top: 4.75rem;
   z-index: 20;
   border: 1px solid #dbe4ee;
-  border-radius: 1rem;
+  border-radius: 0.9rem;
   background: rgba(255, 255, 255, 0.97);
-  padding: 0.5rem;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  padding: 0.42rem;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.13);
+  backdrop-filter: blur(12px);
 }
 
 .navGrid {
@@ -325,11 +336,11 @@
 
 .navButton {
   min-width: 0;
-  min-height: 4rem;
-  border: 0;
-  border-radius: 0.75rem;
+  min-height: 3.55rem;
+  border: 1px solid transparent;
+  border-radius: 0.68rem;
   background: #f1f5f9;
-  padding: 0.55rem 0.65rem;
+  padding: 0.5rem 0.6rem;
   color: #475569;
   text-align: left;
   cursor: pointer;
@@ -338,7 +349,7 @@
 
 .navButton:hover { background: #e2e8f0; color: #0f172a; }
 .navButton:focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }
-.navButtonActive { background: #2563eb; color: #fff; box-shadow: 0 5px 12px rgba(37, 99, 235, 0.24); }
+.navButtonActive { border-color: #2563eb; background: linear-gradient(180deg, #3b82f6, #2563eb); color: #fff; box-shadow: 0 5px 12px rgba(37, 99, 235, 0.22); }
 .navButtonActive:hover { background: #1d4ed8; color: #fff; }
 
 .navButtonTitle {
@@ -369,10 +380,10 @@
   min-height: 25rem;
   overflow: hidden;
   border: 1px solid #dbe4ee;
-  border-radius: 1rem;
+  border-radius: 0.95rem;
   background: #fff;
   color: #0f172a;
-  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.1);
 }
 
 .settingsForm {
@@ -397,8 +408,14 @@
   .metricsGrid { grid-template-columns: 1fr; }
   .headerActions { width: 100%; justify-content: stretch; }
   .nextActionButton { width: 100%; }
-  .navGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .managementNav { position: static; }
+  .navGrid { display: none; }
+  .managementNav { top: 4.5rem; padding: 12px; }
+  .mobileNav { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; }
+  .mobileNav label { color: #64748b; font-size: 12px; font-weight: 750; }
+  .mobileNav select { width: 100%; min-width: 0; min-height: 44px; padding: 8px; border: 1px solid #bfdbfe; border-radius: 10px; background: #eff6ff; color: #1e40af; font-size: 16px; font-weight: 700; }
+  .mobileNav select:focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }
+  .publishDetails > summary { padding: 12px 16px; }
+  .publishDetails > summary span:last-child { display: block; margin: 4px 0 0 18px; }
   .settingsForm { padding: 1rem; }
 }
 

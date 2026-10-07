@@ -10,6 +10,7 @@ import dynamic from 'next/dynamic';
 
 const ExcelUpload = dynamic(() => import("./ExcelUpload"), { ssr: false });
 import GeminiScoreUpload from "./GeminiScoreUpload";
+import styles from "./AddScoreForm.module.css";
 
 interface Team {
     id: string;
@@ -84,13 +85,16 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
     };
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '2rem' }}>
-            <div className="card" style={{ width: '100%', maxWidth: mode === 'ocr' ? '800px' : '500px', transition: 'max-width 0.3s' }}>
-                <h1 className="text-center mb-6" style={{ fontSize: '1.5rem' }}>점수 기록</h1>
+        <div className={styles.page}>
+            <section className={styles.shell}>
+                <header className={styles.header}>
+                    <h1 className={styles.title}>점수 기록</h1>
+                    <p className={styles.subtitle}>직접 입력, 엑셀 업로드 또는 AI 자동 분석으로 기록을 저장합니다.</p>
+                </header>
 
                 {/* Common Fields */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="flex flex-col gap-2">
+                <div className={styles.commonGrid}>
+                    <div className={styles.field}>
                         <label className="label">날짜</label>
                         <input
                             type="date"
@@ -100,7 +104,7 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                             required
                         />
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className={styles.field}>
                         <label className="label">게임 분류</label>
                         <select
                             className="input"
@@ -114,7 +118,7 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-2 mb-4">
+                <div className={styles.field + " " + styles.full}>
                     <label className="label">팀 선택</label>
                     <select
                         className="input"
@@ -127,7 +131,7 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                     </select>
                 </div>
 
-                <div className="flex flex-col gap-2 mb-6">
+                <div className={styles.field + " " + styles.full}>
                     <label className="label">메모 (선택)</label>
                     <input
                         type="text"
@@ -139,21 +143,24 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b mb-6">
+                <div className={styles.tabs}>
                     <button
-                        className={`flex-1 pb-2 text-sm font-bold ${mode === 'manual' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}
+                        type="button"
+                        className={[styles.tab, mode === 'manual' ? styles.tabActive : ''].filter(Boolean).join(' ')}
                         onClick={() => setMode('manual')}
                     >
                         직접 입력
                     </button>
                     <button
-                        className={`flex-1 pb-2 text-sm font-bold ${mode === 'excel' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}
+                        type="button"
+                        className={[styles.tab, mode === 'excel' ? styles.tabActive : ''].filter(Boolean).join(' ')}
                         onClick={() => setMode('excel')}
                     >
                         엑셀 업로드
                     </button>
                     <button
-                        className={`flex-1 pb-2 text-sm font-bold ${mode === 'ocr' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}
+                        type="button"
+                        className={[styles.tab, mode === 'ocr' ? styles.tabActive : ''].filter(Boolean).join(' ')}
                         onClick={() => setMode('ocr')}
                     >
                         ⚡ AI 자동 분석
@@ -162,9 +169,9 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
 
                 {/* Mode Specific Content */}
                 {mode === 'excel' ? (
-                    <ExcelUpload teamId={selectedTeamId} />
+                    <div className={styles.modePanel}><ExcelUpload teamId={selectedTeamId} /></div>
                 ) : mode === 'ocr' ? (
-                    <div className="flex flex-col gap-4">
+                    <div className={styles.modePanel}>
                         <GeminiScoreUpload
                             knownMembers={currentTeamMembers.map(m => m.name)}
                             rows={ocrRows}
@@ -172,12 +179,12 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                         />
 
                         {saveMessage && (
-                            <div className={`p-3 text-sm rounded-lg text-center font-bold ${saveMessage.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            <div className={[styles.message, saveMessage.success ? styles.success : styles.error].join(' ')}>
                                 {saveMessage.message}
                             </div>
                         )}
 
-                        <div className="flex gap-2 mt-4">
+                        <div className={styles.actions}>
                             <Link href="/dashboard" className="btn btn-secondary w-full">취소</Link>
                             <button
                                 onClick={handleBulkSave}
@@ -190,14 +197,14 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                     </div>
                 ) : (
                     /* Manual Input Form */
-                    <form action={dispatch} className="flex flex-col gap-4">
+                    <form action={dispatch} className={styles.modePanel}>
                         {/* Hidden inputs to pass common state to server action */}
                         <input type="hidden" name="date" value={date} />
                         <input type="hidden" name="gameType" value={gameType} />
                         <input type="hidden" name="teamId" value={selectedTeamId} />
                         <input type="hidden" name="memo" value={memo} />
 
-                        <div className="flex flex-col gap-2">
+                        <div className={styles.field}>
                             <label className="label">대상 멤버</label>
                             <select
                                 name="targetUserId"
@@ -215,7 +222,7 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                         </div>
 
                         {selectedUserId === 'guest' && (
-                            <div className="flex flex-col gap-2">
+                            <div className={styles.field}>
                                 <label className="label">비회원 이름</label>
                                 <input
                                     type="text"
@@ -242,9 +249,9 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                             </div>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className={styles.field}>
                             <label className="label">점수 입력</label>
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className={styles.scoreGrid}>
                                 {[...Array(gameCount)].map((_, i) => (
                                     <input
                                         key={i}
@@ -262,17 +269,17 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                         </div>
 
                         {state?.success && (
-                            <div className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-lg text-center font-bold">
+                            <div className={[styles.message, styles.success].join(" ")}>
                                 {state.message}
                             </div>
                         )}
                         {state?.success === false && (
-                            <div className="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded-lg text-center font-bold">
+                            <div className={[styles.message, styles.error].join(" ")}>
                                 {state.message}
                             </div>
                         )}
 
-                        <div className="flex gap-2 mt-4">
+                        <div className={styles.actions}>
                             <Link href="/dashboard" className="btn btn-secondary w-full">취소</Link>
                             <button type="submit" className="btn btn-primary w-full" disabled={isPending}>
                                 {isPending ? '저장 중...' : '저장'}
@@ -280,7 +287,7 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                         </div>
                     </form>
                 )}
-            </div>
+            </section>
         </div>
     );
 }
