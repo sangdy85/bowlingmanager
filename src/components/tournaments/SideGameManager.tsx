@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import ui from './ManagementUI.module.css';
 import { SummaryMetricCard } from './ManagementUI';
 import SideGameAnnouncementModal from './SideGameAnnouncementModal';
-import { buildSideGameAnnouncementGroups } from '@/lib/side-game-announcement';
+import { buildSideGameAnnouncementRows } from '@/lib/side-game-announcement';
 import * as XLSX from 'xlsx';
 import { updateSideGameParticipation } from '@/app/actions/champ-side-actions';
 
@@ -349,7 +349,7 @@ export default function SideGameManager({
                     <SummaryMetricCard label={`번외 (${gameCount}G)`} value={participationCounts.EXTRA} />
                 </div>
                 {announcementOpen && <SideGameAnnouncementModal
-                    groups={buildSideGameAnnouncementGroups(allPlayers, participation, gameCount)}
+                    rows={buildSideGameAnnouncementRows(allPlayers, participation)}
                     roundNumber={roundNumber}
                     onClose={() => setAnnouncementOpen(false)}
                 />}
