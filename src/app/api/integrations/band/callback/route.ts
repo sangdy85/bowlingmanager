@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
             ? new Date(Date.now() + token.expires_in * 1000)
             : null;
 
-        await prisma.bandConnection.upsert({
+        await (prisma as any).bandConnection.upsert({
             where: {
                 userId: session.user.id,
             },
