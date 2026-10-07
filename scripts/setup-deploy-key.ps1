@@ -94,7 +94,7 @@ $wrapper = @'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-case "\${SSH_ORIGINAL_COMMAND:-}" in
+case "${SSH_ORIGINAL_COMMAND:-}" in
   deploy-check)
     exec /bin/bash -lc '/home/user/deploy-bowling.sh --check'
     ;;
