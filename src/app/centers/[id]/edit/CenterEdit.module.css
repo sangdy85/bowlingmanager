@@ -1,0 +1,94 @@
+.page {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 2.5rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.headerMain {
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0 0 0.22rem;
+  color: #60a5fa;
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.45rem, 4vw, 1.9rem);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+}
+
+.cancelButton {
+  min-height: 2.6rem;
+  padding-inline: 0.85rem;
+  font-size: 0.8rem;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.field label {
+  color: #dbe4f0;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.required {
+  color: #f87171;
+}
+
+.field :global(.input) {
+  margin-bottom: 0;
+}
+
+.submitArea {
+  margin-top: 0.25rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid #2c3a52;
+}
+
+.submitButton {
+  width: 100%;
+  min-height: 3rem;
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 0.9rem 0.75rem 2rem;
+  }
+
+  .header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cancelButton {
+    width: 100%;
+  }
+
+  .form {
+    padding: 1rem;
+  }
+}
