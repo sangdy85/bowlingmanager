@@ -20,6 +20,7 @@ import EventManager from "@/components/tournaments/EventManager";
 import TournamentMemberView from "@/components/tournaments/TournamentMemberView";
 import { getLeagueLeaderboard, getIndividualLeaderboard } from "@/app/actions/league-leaderboard";
 import { getEffectiveRoundDate, calculateTournamentStatus } from "@/lib/tournament-utils";
+import BandPublishStatus from "@/components/tournaments/BandPublishStatus";
 
 export default async function TournamentDetailPage({ params }: { params: Promise<{ id: string, tournamentId: string }> }) {
     const { id: centerId, tournamentId } = await params;
@@ -29,8 +30,12 @@ export default async function TournamentDetailPage({ params }: { params: Promise
         where: { id: tournamentId },
         include: {
             center: {
-                include: { managers: true }
+                include: {
+                    managers: true,
+                    bandConnection: { select: { enabled: true, bandKey: true } }
+                }
             },
+            bandPosts: { orderBy: { createdAt: 'desc' } },
             attachments: {
                 orderBy: { createdAt: 'desc' }
             },
@@ -95,6 +100,7 @@ export default async function TournamentDetailPage({ params }: { params: Promise
 
     const statusMap: Record<string, { label: string, color: string }> = {
         PLANNING: { label: "준비 중", color: "bg-gray-500" },
+        OPEN: { label: "모집 중", color: "bg-green-500" },
         JOINING: { label: "모집 중", color: "bg-green-500" },
         ONGOING: { label: "진행 중", color: "bg-blue-500" },
         FINISHED: { label: "종료", color: "bg-red-600" },
@@ -247,6 +253,10 @@ export default async function TournamentDetailPage({ params }: { params: Promise
     };
 
     const safeTournament = JSON.parse(JSON.stringify(safeTournamentRaw));
+    const safeBandPosts = safeTournament.bandPosts.map((post: any) => ({
+        id: post.id, type: post.type, status: post.status, revision: post.revision,
+        createdAt: post.createdAt, postedAt: post.postedAt, errorMessage: post.errorMessage,
+    }));
 
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-10">
@@ -560,6 +570,13 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                     </div>
 
                     <div className="space-y-8">
+
+                        <BandPublishStatus
+                            centerId={centerId}
+                            tournamentId={tournamentId}
+                            connected={Boolean(safeTournament.center.bandConnection?.enabled && safeTournament.center.bandConnection?.bandKey)}
+                            posts={safeBandPosts}
+                        />
 
                         <div className="card p-6 border-2 border-black shadow-lg">
                             <h3 className="font-black text-lg mb-4">📍 참여 볼링장</h3>

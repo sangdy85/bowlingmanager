@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { parseKSTDate } from "@/lib/tournament-utils";
 import { redirect } from "next/navigation";
 import { verifyCenterAdmin } from "@/lib/auth-utils";
+import { publishTournamentFinalResult, publishTournamentRecruitment } from "@/lib/band/publisher";
 
 export async function createTournament(centerId: string, formData: FormData) {
     await verifyCenterAdmin(centerId);
@@ -122,9 +123,11 @@ export async function createTournament(centerId: string, formData: FormData) {
 }
 
 export async function updateTournamentStatus(tournamentId: string, status: string) {
+    const allowedStatuses = new Set(['PLANNING', 'OPEN', 'JOINING', 'ONGOING', 'FINISHED']);
+    if (!allowedStatuses.has(status)) throw new Error('Invalid tournament status');
     const tournament = await prisma.tournament.findUnique({
         where: { id: tournamentId },
-        select: { centerId: true }
+        select: { centerId: true, status: true }
     });
 
     if (!tournament) throw new Error("Tournament not found");
@@ -136,6 +139,18 @@ export async function updateTournamentStatus(tournamentId: string, status: strin
     });
 
     revalidatePath(`/centers/${tournament.centerId}/tournaments/${tournamentId}`);
+    revalidatePath(`/centers/${tournament.centerId}`);
+
+    let band = null;
+    try {
+        const opened = !['OPEN', 'JOINING'].includes(tournament.status) && ['OPEN', 'JOINING'].includes(status);
+        const finished = tournament.status !== 'FINISHED' && status === 'FINISHED';
+        if (opened) band = await publishTournamentRecruitment({ tournamentId });
+        if (finished) band = await publishTournamentFinalResult({ tournamentId });
+    } catch {
+        band = { status: 'FAILED' as const, message: '대회 상태는 변경했지만 BAND 게시를 처리하지 못했습니다.' };
+    }
+    return { success: true, band };
 }
 
 export async function deleteTournament(tournamentId: string) {
