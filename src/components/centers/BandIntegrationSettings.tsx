@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { disconnectCenterBand, selectCenterBand, sendBandTestPostAction, updateBandPreferences } from '@/app/actions/band-actions';
 import type { BandSummary } from '@/lib/band/types';
 import styles from './BandIntegrationSettings.module.css';
@@ -14,6 +15,7 @@ type SafeConnection = {
 export default function BandIntegrationSettings({ centerId, connection, oauthResult }: {
     centerId: string; connection: SafeConnection; oauthResult?: string;
 }) {
+    const router = useRouter();
     const [bands, setBands] = useState<BandSummary[]>([]);
     const [selected, setSelected] = useState(connection?.bandKey || '');
     const [prefs, setPrefs] = useState({
@@ -28,7 +30,12 @@ export default function BandIntegrationSettings({ centerId, connection, oauthRes
 
     const run = async (task: () => Promise<{ success: boolean; message: string }>) => {
         setBusy(true);
-        try { const result = await task(); setMessage(result.message); setIsError(!result.success); }
+        try {
+            const result = await task();
+            setMessage(result.message);
+            setIsError(!result.success);
+            if (result.success) router.refresh();
+        }
         catch { setMessage('요청을 처리하지 못했습니다. 로그인과 센터 관리 권한을 확인해주세요.'); setIsError(true); }
         finally { setBusy(false); }
     };
