@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { updateLuckyDrawResult } from '@/app/actions/round-actions';
 import { getRoundFinalResults } from '@/lib/round-final-results';
-import { getEligibleCandidates, participantName, randomCandidateIndex, type LotteryParticipant } from '@/lib/lottery-ui';
+import { getEligibleCandidates, getPrizeWinnerRegistrationIds, participantName, randomCandidateIndex, type LotteryParticipant } from '@/lib/lottery-ui';
 import LotteryWheel from './LotteryWheel';
 import styles from './LotteryAndLane.module.css';
 import ui from './ManagementUI.module.css';
@@ -40,9 +40,7 @@ export default function RoundLuckyDrawTab({ round }: { round: any }) {
     const maxParticipants = settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament?.maxParticipants ?? settings.maxParticipants ?? 0;
     const supported = ['CHAMP', 'EVENT'].includes(round.tournament?.type);
     const { sortedResults, isTeamEvent } = supported ? getRoundFinalResults(round) : { sortedResults: [], isTeamEvent: false };
-    // Only ranked people with recorded scores qualify as individual prize winners.
-    // Team/group results must not be silently reinterpreted as individual standings.
-    const topIds = isTeamEvent ? [] : sortedResults.filter((p: any) => p.scores.some((score: number) => score > 0)).slice(0, 3).map((p: any) => p.id as string);
+    const topIds = getPrizeWinnerRegistrationIds(sortedResults, isTeamEvent);
     const pool = getEligibleCandidates<LotteryParticipant>(round.participants, winners.map(p => p.registrationId), excludeRankers ? topIds : [], maxParticipants);
     const wheelPool = spin?.pool ?? pool;
     const locked = running || isSaving || isFinalized;
@@ -103,11 +101,11 @@ export default function RoundLuckyDrawTab({ round }: { round: any }) {
         {saved.error && <p className={styles.notice} role="alert">저장된 추첨 결과를 읽지 못했습니다. 기존 결과 보호를 위해 추첨이 잠겼습니다.</p>}
         <div className={styles.controls}>
             <label className={styles.countLabel}>추첨 인원<select value={winnerCount} disabled={locked || winners.length > 0} onChange={event => { setWinnerCount(Number(event.target.value)); setSpin(null); }}>{Array.from({ length: 20 }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}명</option>)}</select></label>
-            <label className={styles.checkLabel}><input type="checkbox" checked={excludeRankers} disabled={locked || winners.length > 0 || isTeamEvent} onChange={event => { setExcludeRankers(event.target.checked); setSpin(null); }} />입상자 제외 <span>현재 회차 상위 3명</span></label>
+            <label className={styles.checkLabel}><input type="checkbox" checked={excludeRankers} disabled={locked || winners.length > 0} onChange={event => { setExcludeRankers(event.target.checked); setSpin(null); }} />입상자 제외 <span>{isTeamEvent ? '현재 회차 상위 3팀 구성원' : '현재 회차 상위 3명'}</span></label>
             <div className={styles.poolStat}><strong>{pool.length}</strong><span>남은 후보</span></div>
         </div>
         <p className={styles.help}>대기자와 이미 당첨된 참가자는 후보에서 제외됩니다. 추첨을 시작한 뒤 설정을 바꾸려면 먼저 초기화하세요.</p>
-        {excludeRankers && <p className={styles.notice}>{isTeamEvent ? '이 회차 결과는 조별 순위로 표시되어 개인 입상자 3명을 자동으로 확인할 수 없습니다. 입상자 자동 제외는 적용되지 않습니다.' : topIds.length ? `이번 회차 입상자 ${topIds.length}명 제외: ${round.participants.filter((p: LotteryParticipant) => topIds.includes(p.registrationId)).map(participantName).join(', ')}` : '입력된 점수가 없어 현재 제외되는 입상자가 없습니다.'}</p>}
+        {excludeRankers && <p className={styles.notice}>{topIds.length ? `이번 회차 입상자 ${topIds.length}명 제외: ${round.participants.filter((p: LotteryParticipant) => topIds.includes(p.registrationId)).map(participantName).join(', ')}` : '입력된 점수가 없어 현재 제외되는 입상자가 없습니다.'}</p>}
         {!isFinalized && pool.length < winnerCount - winners.length && <p className={styles.notice}>남은 후보가 목표 인원보다 적습니다. 최대 {pool.length}명을 추가 추첨할 수 있습니다.</p>}
         <div className={styles.stage}>
             <LotteryWheel participants={wheelPool} selectedIndex={spin?.index ?? null} spinId={spin?.id ?? 0} running={running} onFinish={finishDraw} />
