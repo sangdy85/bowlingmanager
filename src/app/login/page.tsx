@@ -47,7 +47,7 @@ function LoginForm() {
             )}
 
             {message === 'check-email' && (
-                <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-md text-green-500 text-sm font-medium text-center">
+                <div className={[styles.notice, styles.success].join(' ')}>
                     인증 메일이 발송되었습니다.<br />
                     재발송을 원하시면 다시 가입을 시도해주세요.
                 </div>
@@ -120,10 +120,10 @@ function LoginForm() {
             </div>
 
             <div className={styles.footer}>
-                <div className={styles.field}>
-                    계정이 없신가요? <Link href="/register" className="underline hover:text-primary">회원가입</Link>
+                <div>
+                    계정이 없으신가요? <Link href="/register" className="underline hover:text-primary">회원가입</Link>
                 </div>
-                <div className={styles.field}>
+                <div>
                     <Link href="/find-account" className="text-xs text-muted-foreground hover:text-primary">아이디/비밀번호 찾기</Link>
                 </div>
             </div>
