@@ -13,7 +13,7 @@ param(
     [string]$DeployHost = "",
     [int]$DeployPort = 22,
     [string]$DeployIdentityFile = "",
-    [string]$PublicHealthUrl = "https://bowlingmanager.co.kr/api/mobile/v1/health"
+    [string]$PublicHealthUrl = "https://www.bowlingmanager.co.kr/api/mobile/v1/health"
 )
 
 $ErrorActionPreference = "Stop"
