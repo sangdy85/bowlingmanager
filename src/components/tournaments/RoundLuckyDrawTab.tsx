@@ -101,7 +101,7 @@ export default function RoundLuckyDrawTab({ round }: { round: any }) {
         {saved.error && <p className={styles.notice} role="alert">저장된 추첨 결과를 읽지 못했습니다. 기존 결과 보호를 위해 추첨이 잠겼습니다.</p>}
         <div className={styles.controls}>
             <label className={styles.countLabel}>추첨 인원<select value={winnerCount} disabled={locked || winners.length > 0} onChange={event => { setWinnerCount(Number(event.target.value)); setSpin(null); }}>{Array.from({ length: 20 }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}명</option>)}</select></label>
-            <label className={styles.checkLabel}><input type="checkbox" checked={excludeRankers} disabled={locked || winners.length > 0} onChange={event => { setExcludeRankers(event.target.checked); setSpin(null); }} />입상자 제외 <span>{isTeamEvent ? '현재 회차 상위 3팀 구성원' : '현재 회차 상위 3명'}</span></label>
+            <label className={styles.checkLabel}><input type="checkbox" checked={excludeRankers} disabled={locked || winners.length > 0} onChange={event => { setExcludeRankers(event.target.checked); setSpin(null); }} />입상자 제외 <span>현재 회차 결과 기준</span></label>
             <div className={styles.poolStat}><strong>{pool.length}</strong><span>남은 후보</span></div>
         </div>
         <p className={styles.help}>대기자와 이미 당첨된 참가자는 후보에서 제외됩니다. 추첨을 시작한 뒤 설정을 바꾸려면 먼저 초기화하세요.</p>
