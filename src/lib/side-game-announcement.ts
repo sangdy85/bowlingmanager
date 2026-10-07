@@ -3,7 +3,7 @@ export type AnnouncementCategory = 'STANDARD' | 'BALL' | 'EXTRA';
 export type SideGameAnnouncementRow = {
     regId: string;
     name: string;
-    standard: true;
+    standard: boolean;
     extra: boolean;
     ball: boolean;
 };
@@ -13,11 +13,11 @@ export function buildSideGameAnnouncementRows(
     participation: Readonly<Record<string, ReadonlySet<AnnouncementCategory>>>,
 ): SideGameAnnouncementRow[] {
     return players
-        .filter(player => participation[player.regId]?.has('STANDARD'))
+        .filter(player => (participation[player.regId]?.size || 0) > 0)
         .map(player => ({
             regId: player.regId,
             name: player.name,
-            standard: true,
+            standard: participation[player.regId]?.has('STANDARD') || false,
             extra: participation[player.regId]?.has('EXTRA') || false,
             ball: participation[player.regId]?.has('BALL') || false,
         }));
@@ -47,12 +47,12 @@ export function formatSideGameAnnouncement(
         const rightRow = right[index];
         const cells = [
             leftRow?.name || '',
-            leftRow ? 'O' : '',
+            leftRow?.standard ? 'O' : '',
             leftRow?.extra ? 'O' : '',
             leftRow?.ball ? 'O' : '',
             '',
             rightRow?.name || '',
-            rightRow ? 'O' : '',
+            rightRow?.standard ? 'O' : '',
             rightRow?.extra ? 'O' : '',
             rightRow?.ball ? 'O' : '',
         ];
