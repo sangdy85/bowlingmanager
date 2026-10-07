@@ -138,6 +138,26 @@ export default function RoundParticipantManager({
 
     const matchingParticipantIds = getParticipantSearchIds(roundParticipants, participantSearch);
 
+    const laneAnnouncementParticipants = useMemo(() => {
+        let currentMax = maxParticipants;
+        try {
+            const rawSettings = tournament?.settings ?? selectedRound?.tournament?.settings;
+            const settings = rawSettings
+                ? (typeof rawSettings === 'string' ? JSON.parse(rawSettings) : rawSettings)
+                : {};
+            currentMax = settings.roundMaxParticipants?.[selectedRound?.roundNumber]
+                ?? selectedRound?.tournament?.maxParticipants
+                ?? maxParticipants;
+        } catch {
+            currentMax = maxParticipants;
+        }
+
+        return currentMax > 0 ? roundParticipants.slice(0, currentMax) : roundParticipants;
+    }, [roundParticipants, selectedRound, tournament, maxParticipants]);
+
+    const isLaneAssignmentComplete = laneAnnouncementParticipants.length > 0
+        && laneAnnouncementParticipants.every(participant => Number.isInteger(participant.lane) && participant.lane >= 11);
+
     const openRegisterModal = () => {
         setIsEditMode(false);
         setManualName('');
@@ -526,7 +546,9 @@ export default function RoundParticipantManager({
               </div>
                 {isManager && (
                     <div className={ui.toolbar}>
-                        <button type="button" className={ui.secondary} onClick={() => setShowLanes(true)}>🎳 레인 배정 공개</button>
+                        {isLaneAssignmentComplete && (
+                            <button type="button" className={ui.secondary} onClick={() => setShowLanes(true)}>🎳 레인 배정 공개</button>
+                        )}
                         <input
                             type="file"
                             ref={fileInputRef}
@@ -572,7 +594,7 @@ export default function RoundParticipantManager({
                 )}
             </div>
 
-            {showLanes && <LaneAssignmentModal participants={roundParticipants} roundNumber={selectedRound?.roundNumber} onClose={() => setShowLanes(false)} />}
+            {showLanes && <LaneAssignmentModal participants={laneAnnouncementParticipants} roundNumber={selectedRound?.roundNumber} onClose={() => setShowLanes(false)} />}
 
             {/* Manual Register / Edit Form (Inline) */}
             {showModal && (
