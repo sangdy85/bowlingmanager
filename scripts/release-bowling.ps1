@@ -60,8 +60,9 @@ Write-Host "Node    : $nodeVersion"
 Write-Host "npm     : $((npm.cmd -v).Trim())"
 Write-Host "Flutter : $((flutter --version | Select-Object -First 1).Trim())"
 
-$repoRoot = GitOut @("rev-parse", "--show-toplevel")
-Set-Location $repoRoot
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = (Get-Item -LiteralPath $repoRoot).FullName
+Set-Location -LiteralPath $repoRoot
 
 Write-Host "Repo    : $repoRoot"
 
