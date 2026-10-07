@@ -2215,7 +2215,7 @@ export default function RoundDetailPageContent({
         { id: 'scoring', label: '점수 입력', description: `${scoredParticipantCount}/${participantCount}명`, icon: '✎' },
         { id: 'sideGame', label: '사이드게임', description: '선택 운영', icon: '◆' },
         { id: 'finalResults', label: '최종 결과', description: '순위 확인', icon: '★' },
-        ...(['CHAMP', 'EVENT'].includes(round.tournament.type) ? [{ id: 'luckyDraw', label: '행운권', description: '당첨자 추첨', icon: '♧' }] : []),
+        ...(isManager && ['CHAMP', 'EVENT'].includes(round.tournament.type) ? [{ id: 'luckyDraw', label: '행운권', description: '당첨자 추첨', icon: '♧' }] : []),
         ...(isManager && round.tournament.type === 'CHAMP' ? [{ id: 'points', label: '포인트', description: '누적 현황', icon: '▲' }] : []),
     ];
 
@@ -2474,7 +2474,7 @@ export default function RoundDetailPageContent({
                                 </div>
                             </div>
                         )}
-                        {activeTab === 'luckyDraw' && ['CHAMP', 'EVENT'].includes(round.tournament.type) && <RoundLuckyDrawTab key={round.id} round={round} />}
+                        {activeTab === 'luckyDraw' && isManager && ['CHAMP', 'EVENT'].includes(round.tournament.type) && <RoundLuckyDrawTab key={round.id} round={round} />}
                     </>
                 )}
             </div>
