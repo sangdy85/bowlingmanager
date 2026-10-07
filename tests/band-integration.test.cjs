@@ -155,3 +155,16 @@ test('모집 자동 게시 trigger는 PLANNING에서 OPEN 또는 JOINING으로 �
     /publishTournamentRecruitment\(\{ tournamentId, requestedById: actorId \}\)/,
   );
 });
+
+
+test('수동 재게시에서는 자동 게시 설정이 꺼져 있어도 연결된 BAND로 게시할 수 있다', () => {
+  const source = fs.readFileSync('src/lib/band/publisher.ts', 'utf8');
+  assert.match(
+    source,
+    /if \(!input\.forceRevision\) \{\s*const skipReason = bandAutoPublishSkipReason/,
+  );
+  assert.match(
+    source,
+    /if \(!connection\?\.enabled \|\| !connection\.bandKey\)/,
+  );
+});
