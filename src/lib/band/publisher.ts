@@ -31,9 +31,13 @@ async function publishBuiltContent(input: PublishInput & {
 }): Promise<BandPublishOutcome> {
     const db = prisma as any;
     const connection = await db.bandConnection.findUnique({ where: { centerId: input.centerId } });
-    const skipReason = bandAutoPublishSkipReason(connection, input.type);
-    if (skipReason) return { status: 'SKIPPED', message: skipReason };
-    if (!input.forceRevision && !connection[input.autoFlag]) return { status: 'SKIPPED', message: '해당 BAND 자동 게시 설정이 꺼져 있습니다.' };
+    if (!connection?.enabled || !connection.bandKey) {
+        return { status: 'SKIPPED', message: '연결된 BAND가 없어 게시하지 않았습니다.' };
+    }
+    if (!input.forceRevision) {
+        const skipReason = bandAutoPublishSkipReason(connection, input.type);
+        if (skipReason) return { status: 'SKIPPED', message: skipReason };
+    }
 
     const latest = await db.bandPost.findFirst({
         where: { tournamentId: input.tournamentId, roundId: input.roundId || null, type: input.type },
