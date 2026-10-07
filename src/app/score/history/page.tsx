@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import YearSelector from "@/components/YearSelector";
 import DailyScoreTable from "@/components/DailyScoreTable";
+import styles from "./HistoryPage.module.css";
 
 export const dynamic = 'force-dynamic';
 
@@ -127,61 +128,56 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
     // Let's rewrite the query.
 
     return (
-        <div className="container py-8 max-w-4xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
+        <div className={styles.page}>
+            <header className={styles.header}>
                 <div>
-                    <h1 style={{ fontSize: '2rem' }}>{currentTeam.name} 기록실</h1>
-                    <p className="text-secondary-foreground">팀 전체 기록을 확인합니다.</p>
+                    <h1 className={styles.title}>{currentTeam.name} 기록실</h1>
+                    <p className={styles.subtitle}>팀 전체 기록을 연도와 날짜별로 확인합니다.</p>
                 </div>
-                <Link href="/dashboard" className="btn btn-secondary">
-                    &larr; 대시보드
+                <Link href="/dashboard" className={`btn btn-secondary ${styles.backButton}`}>
+                    ← 대시보드
                 </Link>
-            </div>
+            </header>
 
             <YearSelector currentYear={currentYear} activeYears={activeYears} />
 
-            <div className="card mb-8 bg-muted/30">
-                <h3 className="text-center mb-4 font-semibold text-lg">{currentYear}년 팀 전체 통계</h3>
-                <div className="flex justify-around text-center">
-                    <div>
-                        <div className="text-secondary-foreground text-sm mb-1">총 게임 수</div>
-                        <div className="text-2xl font-bold">{yearlyGames}</div>
-                    </div>
-                    <div>
-                        <div className="text-secondary-foreground text-sm mb-1">총점</div>
-                        <div className="text-2xl font-bold text-primary">{yearlyTotal}</div>
-                    </div>
-                    <div>
-                        <div className="text-secondary-foreground text-sm mb-1">전체 평균</div>
-                        <div className="text-2xl font-bold text-accent">{yearlyAvg}</div>
-                    </div>
+            <section className={styles.summary} aria-label={`${currentYear}년 팀 전체 통계`}>
+                <div className={styles.metric}>
+                    <span className={styles.metricLabel}>총 게임 수</span>
+                    <strong className={styles.metricValue}>{yearlyGames}</strong>
                 </div>
-            </div>
+                <div className={styles.metric}>
+                    <span className={styles.metricLabel}>총점</span>
+                    <strong className={`${styles.metricValue} ${styles.metricPrimary}`}>{yearlyTotal.toLocaleString()}</strong>
+                </div>
+                <div className={styles.metric}>
+                    <span className={styles.metricLabel}>전체 평균</span>
+                    <strong className={`${styles.metricValue} ${styles.metricAccent}`}>{yearlyAvg}</strong>
+                </div>
+            </section>
 
-            <div className="space-y-12">
+            <div className={styles.list}>
                 {sortedDates.length === 0 ? (
-                    <div className="text-center py-12 card text-secondary-foreground">
+                    <div className={styles.empty}>
                         {currentYear}년에는 기록된 점수가 없습니다.
                     </div>
                 ) : (
                     sortedDates.map(date => (
-                        <div key={date} className="w-full">
-                            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                                <span className="bg-primary text-primary-foreground px-3 py-1 rounded text-sm">
-                                    {date} ({getDayName(date)})
-                                </span>
-                                <span className="text-muted-foreground text-sm font-normal">
-                                    {groupedScores[date].count}게임 / 총점 {groupedScores[date].total}
-                                </span>
-                            </h2>
+                        <section key={date} className={styles.dayCard}>
+                            <div className={styles.dayHeader}>
+                                <h2 className={styles.dayTitle}>{date} ({getDayName(date)})</h2>
+                                <div className={styles.dayMeta}>
+                                    {groupedScores[date].count}게임 · 총점 {groupedScores[date].total.toLocaleString()}
+                                </div>
+                            </div>
                             <DailyScoreTable
                                 scores={groupedScores[date].scores}
                                 date={date}
                                 teamId={currentTeam.id}
                                 isOwner={isOwner}
-                                isManager={false} // History page might not need manager features, or we assume false
+                                isManager={false}
                             />
-                        </div>
+                        </section>
                     ))
                 )}
             </div>

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useActionState, useState } from 'react';
 import { register, sendCode, signInWithProvider } from '@/app/actions/auth';
+import styles from '../AuthPage.module.css';
 
 export default function RegisterPage() {
     const [errorMessage, dispatch, isPending] = useActionState(register, undefined);
@@ -28,11 +29,14 @@ export default function RegisterPage() {
     };
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '2rem' }}>
-            <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
-                <h1 className="text-center mb-4" style={{ fontSize: '1.5rem' }}>회원가입</h1>
+        <div className={styles.page}>
+            <section className={styles.card}>
+                <header className={styles.header}>
+                    <h1 className={styles.title}>회원가입</h1>
+                    <p className={styles.subtitle}>간단한 계정 생성 후 BowlingManager를 시작하세요.</p>
+                </header>
                 
-                <div className="social-btn-container mb-4">
+                <div className={styles.social}>
                     <form action={() => signInWithProvider("google")}>
                         <button type="submit" className="btn btn-google w-full flex items-center justify-center">
                             <svg className="social-icon" width="18" height="18" viewBox="0 0 24 24">
@@ -54,8 +58,8 @@ export default function RegisterPage() {
 
                 <div className="social-login-divider">또는 일반 이메일 가입</div>
 
-                <form action={dispatch} className="flex flex-col gap-4">
-                    <div>
+                <form action={dispatch} className={styles.form}>
+                    <div className={styles.field}>
                         <label htmlFor="name" className="label">이름</label>
                         <input
                             type="text"
@@ -67,17 +71,17 @@ export default function RegisterPage() {
                             title="이름에 공백(띄어쓰기)을 포함할 수 없습니다."
                             required
                         />
-                        <p className="text-[10px] text-gray-500 mt-1">※ 이름에 공백(띄어쓰기)을 넣을 수 없습니다.</p>
+                        <p className={styles.help}>※ 이름에 공백(띄어쓰기)을 넣을 수 없습니다.</p>
                     </div>
 
-                    <div>
+                    <div className={styles.field}>
                         <label htmlFor="email" className="label">이메일</label>
-                        <div className="flex gap-2">
+                        <div className={styles.inline}>
                             <input
                                 type="email"
                                 id="email"
                                 name="email"
-                                className="input flex-1"
+                                className={"input " + styles.grow}
                                 placeholder="example@email.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -92,10 +96,10 @@ export default function RegisterPage() {
                                 {sendLoading ? "전송 중" : codeSent ? "재전송" : "인증요청"}
                             </button>
                         </div>
-                        {sendMsg && <p className={`text-xs mt-1 ${codeSent ? 'text-green-500' : 'text-destructive'}`}>{sendMsg}</p>}
+                        {sendMsg && <p className={[styles.notice, codeSent ? styles.success : styles.error].join(' ')}>{sendMsg}</p>}
                     </div>
 
-                    <div>
+                    <div className={styles.field}>
                         <label htmlFor="code" className="label">인증 코드</label>
                         <input
                             type="text"
@@ -108,22 +112,22 @@ export default function RegisterPage() {
                         />
                     </div>
 
-                    <div>
+                    <div className={styles.field}>
                         <label htmlFor="password" className="label">비밀번호</label>
                         <input type="password" id="password" name="password" className="input" required />
                     </div>
 
                     {errorMessage && (
-                        <div className="text-destructive text-center" style={{ fontSize: '0.875rem' }}>{errorMessage}</div>
+                        <div className={[styles.notice, styles.error].join(' ')}>{errorMessage}</div>
                     )}
                     <button type="submit" className="btn btn-primary w-full" disabled={isPending}>
                         {isPending ? '가입 중...' : '가입하기'}
                     </button>
                 </form>
-                <div className="text-center mt-4" style={{ fontSize: '0.875rem', color: 'var(--secondary-foreground)' }}>
+                <div className={styles.footer}>
                     이미 계정이 있으신가요? <Link href="/login">로그인</Link>
                 </div>
-            </div>
+            </section>
         </div>
     );
 }

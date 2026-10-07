@@ -26,6 +26,21 @@
 .table td { height: 64px; padding: 10px 12px !important; border: 0 !important; border-bottom: 1px solid #e8edf4 !important; vertical-align: middle; text-align: center; }
 .table tbody tr:hover td { background-color: #eff6ff; }
 .table td:global(.text-left) { text-align: left; }
+.table tr[hidden] { display: none; }
+.tableScroll:focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; }
+.searchBar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 20px; padding: 0 20px; }
+.searchField { display: grid; gap: 8px; flex: 1 1 260px; max-width: 460px; }
+.searchField label { color: #334155; font-size: 14px; font-weight: 750; }
+.searchField input { box-sizing: border-box; width: 100%; min-width: 0; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 12px; padding: 10px 14px; background: white; color: #0f172a; font: inherit; font-size: 16px; }
+.searchField input::placeholder { color: #64748b; }
+.searchCount { margin: 0; padding-bottom: 12px; color: #64748b; font-size: 14px; }
+.searchCount strong { color: #1d4ed8; }
+.tableHint { flex-basis: 100%; margin: 0; color: #64748b; font-size: 13px; line-height: 1.6; }
+.segmented { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 12px; }
+.segmented button { min-height: 42px; border: 1px solid transparent; border-radius: 8px; padding: 8px 12px; background: transparent; color: #475569; font: inherit; font-size: 14px; cursor: pointer; }
+.segmented button[aria-pressed=true] { background: white; border-color: #bfdbfe; color: #1d4ed8; font-weight: 750; box-shadow: 0 2px 5px #0f172a0a; }
+.rankingCaption { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.rankingTable { min-width: 540px; }
 .table select { min-height: 38px; border-radius: 8px; font-size: 12px; padding: 6px; max-width: 100%; }
 .table td > div { align-items: center; }
 .table button { min-width: 36px; min-height: 36px; display: inline-flex; justify-content: center; align-items: center; border-radius: 8px; vertical-align: middle; }
@@ -58,11 +73,17 @@
 .info p { font-size: 14px; line-height: 1.75; margin: 0; color: #475569; }
 .info p:first-child { color: #1d4ed8; font-weight: 800; margin-bottom: 6px; }
 .scoreTable { min-width: 820px; }
+.scoreField { display: grid; gap: 5px; }
+.scoreField > span { color: #64748b; font-size: 12px; font-weight: 750; }
 .scoreTable input[type=number] { height: 44px; font-size: 16px !important; }
 .scoreTable input[type=checkbox] { width: 18px; height: 18px; vertical-align: middle; }
 .sideTable { min-width: 530px; }
 .sideTable button { width: 40px; height: 40px; border: 1px solid #cbd5e1; background: #f8fafc; color: #64748b; transform: none; }
 .sideTable button[aria-pressed=true] { background: #2563eb; border-color: #2563eb; color: white; }
+.toolbar button:not(:disabled):hover, .button:not(:disabled):hover { filter: brightness(.96); }
+.toolbar button, .button { word-break: keep-all; }
+.table button[aria-label$="삭제"] { background: #fff1f2; border: 1px solid #fecdd3; color: #be123c; }
+.table button[aria-label$="수정"], .table button[aria-label="레인 수동 변경"] { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
 .back { display: inline-flex; align-items: center; gap: 10px; width: fit-content; margin-bottom: 20px; font-size: 14px; font-weight: 750; color: #64748b; text-decoration: none; }
 .back:hover { color: #2563eb; }
 .back span:first-child { display: inline-grid; place-items: center; width: 32px; height: 32px; border: 1px solid #e2e8f0; background: white; border-radius: 50%; }
@@ -77,9 +98,31 @@
 .modalFooter { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid #e2e8f0; background: white; }
 .feedback { flex-basis: 100%; color: #1d4ed8; font-size: 14px; margin: 0; }
 @media(max-width: 600px) {
+ .table .stickyName { position: sticky; left: 0; z-index: 1; background: #f8fafc; box-shadow: 3px 0 6px #0f172a0a; }
+ .table th.stickyName { z-index: 2; background: #edf2f8; }
+ .surface { gap: 18px; }
+ .searchBar { padding: 0 16px; gap: 10px; }
+ .searchField { flex-basis: 100%; max-width: none; }
+ .searchCount { padding: 0; margin-right: auto; }
+ .tableHint { font-size: 12px; }
+ .sideTable { min-width: 100%; table-layout: fixed; }
+ .sideTable th:first-child { width: 34%; }
+ .sideTable th { white-space: normal; line-height: 1.5; }
+ .sideTable th, .sideTable td { padding: 10px 4px !important; font-size: 12px; overflow-wrap: anywhere; }
+ .sideTable button { width: 42px; height: 42px; font-size: 18px; }
+ .rankingTable { min-width: 100%; table-layout: fixed; }
+ .rankingTable th:first-child { width: 14%; }
+ .rankingTable th:nth-child(2) { width: 30%; }
+ .rankingTable th { white-space: normal; line-height: 1.5; font-size: 12px; }
+ .rankingTable th, .rankingTable td { padding: 10px 4px !important; overflow-wrap: anywhere; }
+ .rankingTable td { font-size: 14px !important; }
+ .segmented { width: 100%; }
+ .segmented button { flex: 1 1 75px; }
  .header { align-items: stretch; } .header > * { min-width: 0; }
- .toolbar { padding: 12px; } .toolbar > button, .toolbar > label { flex: 1 1 140px; }
- .metrics { grid-template-columns: 1fr; gap: 10px; }
+ .toolbar { padding: 12px; } .toolbar > button, .toolbar > label { flex: 1 1 110px; }
+ .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+ .metrics .metric { display: grid; align-content: space-between; justify-content: stretch; padding: 14px 10px; }
+ .metrics .metricLabel { font-size: 12px; line-height: 1.5; word-break: keep-all; }
  .metric { display: flex; align-items: center; justify-content: space-between; padding: 16px; }
  .metricValue { font-size: 28px; } .announcementGroups { grid-template-columns: 1fr; }
  .names { grid-template-columns: repeat(2, minmax(0, 1fr)); }
