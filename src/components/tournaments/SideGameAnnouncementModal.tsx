@@ -25,7 +25,7 @@ function AnnouncementTable({ rows, label }: { rows: SideGameAnnouncementRow[]; l
                     {rows.length ? rows.map(row => (
                         <tr key={row.regId}>
                             <td>{row.name}</td>
-                            <td aria-label={`${row.name} 사이드 참여`}>O</td>
+                            <td aria-label={`${row.name} 사이드 ${row.standard ? '참여' : '미참여'}`}>{row.standard ? 'O' : ''}</td>
                             <td aria-label={`${row.name} 번외 ${row.extra ? '참여' : '미참여'}`}>{row.extra ? 'O' : ''}</td>
                             <td aria-label={`${row.name} 볼사이드 ${row.ball ? '참여' : '미참여'}`}>{row.ball ? 'O' : ''}</td>
                         </tr>
@@ -81,7 +81,7 @@ export default function SideGameAnnouncementModal({ rows, roundNumber, onClose }
                         <h2 id="side-announcement-title" className={ui.title}>사이드 게임 명단 발표</h2>
                         <p id="side-announcement-description" className={ui.subtitle}>
                             {roundNumber != null ? `${roundNumber}회차 · ` : ''}
-                            사이드 참가자 {rows.length}명을 기준으로 번외·볼사이드 참여 여부를 함께 표시합니다.
+                            사이드·번외·볼사이드 중 하나 이상 신청한 {rows.length}명을 표시합니다.
                         </p>
                     </div>
                     <button type="button" className={ui.button} onClick={onClose} aria-label="명단 발표 닫기">✕</button>
