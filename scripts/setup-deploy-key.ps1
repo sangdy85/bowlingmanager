@@ -110,6 +110,11 @@ esac
 
 $keyLine = 'command="/home/user/.local/bin/bowling-deploy-command",restrict ' + $pub
 
+# Windows PowerShell here-strings use CRLF. Normalize shell scripts to LF
+# before sending them to Ubuntu or encoding them into server-side files.
+$lf = [string][char]10
+$wrapper = $wrapper.Replace([Environment]::NewLine, $lf)
+
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $wrapperB64 = [Convert]::ToBase64String($utf8.GetBytes($wrapper))
 $keyLineB64 = [Convert]::ToBase64String($utf8.GetBytes($keyLine))
@@ -143,6 +148,7 @@ echo "BowlingManager restricted deploy key installed."
 
 $remoteSetup = $remoteSetup.Replace("__WRAPPER__", $wrapperB64)
 $remoteSetup = $remoteSetup.Replace("__KEYLINE__", $keyLineB64)
+$remoteSetup = $remoteSetup.Replace([Environment]::NewLine, $lf)
 
 $remoteSetup | & ssh.exe -p "$DeployPort" $DeployHost "bash -s"
 if ($LASTEXITCODE -ne 0) {
