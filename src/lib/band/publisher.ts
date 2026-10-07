@@ -2,7 +2,7 @@ import prisma from '@/lib/prisma';
 import { PUBLIC_ORIGIN } from '@/lib/public-web';
 import { getChampRoundResults } from '@/app/actions/champ-results';
 import { getIndividualLeaderboard } from '@/app/actions/league-leaderboard';
-import { BandApiError, bandErrorMessage, createPost } from './client';
+import { BandApiError, bandErrorMessage, createPost, getPermissions } from './client';
 import { decryptBandToken } from './token-crypto';
 import { buildFinalResultPost, buildRecruitmentPost } from './content';
 import type { BandPostType, BandPublishOutcome, FinalResultEntry } from './types';
@@ -61,8 +61,14 @@ async function publishBuiltContent(input: PublishInput & {
             },
         });
 
+        const accessToken = decryptBandToken(connection.accessTokenEncrypted);
+        const permissions = await getPermissions(accessToken, connection.bandKey);
+        if (!permissions.includes('posting')) {
+            throw new BandApiError('BAND posting permission denied.', 'POSTING_PERMISSION_DENIED', 403);
+        }
+
         const posted = await createPost({
-            accessToken: decryptBandToken(connection.accessTokenEncrypted),
+            accessToken,
             bandKey: connection.bandKey,
             content: input.content,
             doPush: connection.doPush,
@@ -218,8 +224,14 @@ export async function sendBandTestPost(centerId: string): Promise<BandPublishOut
     });
     if (!connection?.enabled || !connection.bandKey) return { status: 'SKIPPED', message: '게시할 BAND를 먼저 선택해주세요.' };
     try {
+        const accessToken = decryptBandToken(connection.accessTokenEncrypted);
+        const permissions = await getPermissions(accessToken, connection.bandKey);
+        if (!permissions.includes('posting')) {
+            throw new BandApiError('BAND posting permission denied.', 'POSTING_PERMISSION_DENIED', 403);
+        }
+
         const posted = await createPost({
-            accessToken: decryptBandToken(connection.accessTokenEncrypted),
+            accessToken,
             bandKey: connection.bandKey,
             content: `🎳 BowlingManager BAND 연동 테스트\n\n${connection.center.name}와 NAVER BAND 연결이 정상적으로 완료되었습니다.\n\nBowlingManager`,
             doPush: false,
