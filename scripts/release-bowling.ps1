@@ -6,6 +6,7 @@ param(
     [int]$BuildNumber = 0,
     [switch]$Deploy,
     [switch]$DeployOnly,
+    [switch]$TagOnly,
     [switch]$SkipTag,
     [string]$DevelopBranch = "codex/develop-1.2.0",
     [string]$MainBranch = "main",
@@ -133,10 +134,11 @@ function Ensure-ReleaseTag {
     $tagName = "v$ReleaseVersion"
     $tagRef = "refs/tags/$tagName"
 
-    $direct = (& git ls-remote --tags origin $tagRef).Trim()
+    $directLines = @(& git ls-remote --tags origin $tagRef)
     if ($LASTEXITCODE -ne 0) {
         throw "Unable to query remote tag $tagName."
     }
+    $direct = ($directLines -join [Environment]::NewLine).Trim()
 
     if ([string]::IsNullOrWhiteSpace($direct)) {
         Invoke-Checked "git" @(
@@ -153,10 +155,11 @@ function Ensure-ReleaseTag {
     }
 
     $peeledRef = $tagRef + "^{}"
-    $peeled = (& git ls-remote --tags origin $peeledRef).Trim()
+    $peeledLines = @(& git ls-remote --tags origin $peeledRef)
     if ($LASTEXITCODE -ne 0) {
         throw "Unable to query peeled remote tag $tagName."
     }
+    $peeled = ($peeledLines -join [Environment]::NewLine).Trim()
 
     if (-not [string]::IsNullOrWhiteSpace($peeled)) {
         $tagTarget = ($peeled -split "\s+")[0]
@@ -175,6 +178,25 @@ function Ensure-ReleaseTag {
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $repoRoot = (Get-Item -LiteralPath $repoRoot).FullName
 Set-Location -LiteralPath $repoRoot
+
+if ($TagOnly) {
+    Write-Step "TAG-ONLY RESUME"
+
+    Assert-Command "git"
+    Invoke-Checked "git" @("fetch", "origin", "--prune")
+
+    $release = Get-OriginMainRelease -Branch $MainBranch -RequestedVersion $Version -RequestedBuild $BuildNumber
+
+    Write-Host "Main    : $($release.ShortSha)"
+    Write-Host "Version : $($release.Version)+$($release.Build)"
+
+    Ensure-ReleaseTag -ReleaseVersion $Version -ReleaseSha $release.Sha
+
+    Write-Step "TAG-ONLY COMPLETE"
+    Write-Host "Version : $($release.Version)+$($release.Build)"
+    Write-Host "Commit  : $($release.ShortSha)"
+    exit 0
+}
 
 if ($DeployOnly) {
     Write-Step "DEPLOY-ONLY RESUME"
