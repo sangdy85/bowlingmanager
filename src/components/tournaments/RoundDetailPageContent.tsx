@@ -19,67 +19,111 @@ import RoundParticipantManager from '@/components/tournaments/RoundParticipantMa
 import { getEffectiveRoundDate, formatLane } from '@/lib/tournament-utils';
 import GrandFinaleCumulativeManager from './GrandFinaleCumulativeManager';
 import { calculateGameLaneAssignments } from '@/lib/lane-movement';
+import styles from './RoundDetailManagement.module.css';
 
 // --- Tab Components ---
 
 // --- Tab Components ---
 
 // 0. Overview Tab
-function RoundOverviewTab({ round }: { round: any }) {
+function RoundOverviewTab({ round, isManager, onNavigate }: { round: any, isManager: boolean, onNavigate: (tabId: string) => void }) {
     const participantCount = round.participants.length;
     const assignedLanesCount = round.participants.filter((p: any) => p.lane).length;
-
-    // Count unique registrations that have scores
-    const scoredIds = new Set(round.individualScores.filter((s: any) => s.score > 0).map((s: any) => s.registrationId));
+    const scoredIds = new Set((round.individualScores || []).filter((s: any) => s.score > 0).map((s: any) => s.registrationId));
     const scoredCount = scoredIds.size;
+    const settings = (() => {
+        try {
+            return round.tournament?.settings
+                ? (typeof round.tournament.settings === 'string' ? JSON.parse(round.tournament.settings) : round.tournament.settings)
+                : {};
+        } catch {
+            return {};
+        }
+    })();
+    const maxParticipants = settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament?.maxParticipants ?? 0;
+    const participantProgress = maxParticipants > 0 ? Math.min(100, (participantCount / maxParticipants) * 100) : (participantCount > 0 ? 100 : 0);
+    const laneProgress = participantCount > 0 ? Math.min(100, (assignedLanesCount / participantCount) * 100) : 0;
+    const scoreProgress = participantCount > 0 ? Math.min(100, (scoredCount / participantCount) * 100) : 0;
+    const nextAction = participantCount === 0
+        ? { tab: 'participants', icon: '👥', title: '참가자를 먼저 등록하세요', description: '신청자 선택 또는 수동 등록으로 이번 회차 명단을 구성합니다.', button: '참가자 관리 열기' }
+        : assignedLanesCount < participantCount
+            ? { tab: 'lanes', icon: '🎳', title: `레인 미배정 ${participantCount - assignedLanesCount}명`, description: '참가자 전원의 레인을 배정해야 경기 운영과 점수 매칭이 쉬워집니다.', button: '레인 배정 열기' }
+            : scoredCount < participantCount
+                ? { tab: 'scoring', icon: '✍️', title: `점수 미입력 ${participantCount - scoredCount}명`, description: '수동 입력 또는 파일 가져오기로 경기 점수를 기록합니다.', button: '점수 입력 열기' }
+                : { tab: 'finalResults', icon: '🏆', title: '결과 확인 준비 완료', description: '입력된 점수와 최종 순위를 확인하고 누락된 기록이 없는지 검수합니다.', button: '최종 결과 열기' };
+
+    const cards = [
+        {
+            label: '참가자', value: `${participantCount}${maxParticipants > 0 ? ` / ${maxParticipants}` : ''}명`,
+            detail: maxParticipants > 0 ? `잔여 ${Math.max(0, maxParticipants - participantCount)}자리` : '정원 제한 없음',
+            progress: participantProgress, barClass: styles.barBlue, cardClass: styles.metricBlue, icon: '👥'
+        },
+        {
+            label: '레인 배정', value: `${assignedLanesCount} / ${participantCount}명`,
+            detail: assignedLanesCount === participantCount && participantCount > 0 ? '전원 배정 완료' : `미배정 ${Math.max(0, participantCount - assignedLanesCount)}명`,
+            progress: laneProgress, barClass: styles.barGreen, cardClass: styles.metricGreen, icon: '🎳'
+        },
+        {
+            label: '점수 입력', value: `${scoredCount} / ${participantCount}명`,
+            detail: scoredCount === participantCount && participantCount > 0 ? '전원 입력 완료' : `미입력 ${Math.max(0, participantCount - scoredCount)}명`,
+            progress: scoreProgress, barClass: styles.barAmber, cardClass: styles.metricAmber, icon: '✍️'
+        },
+    ];
 
     return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 shadow-sm">
-                    <h4 className="text-gray-500 text-sm font-bold mb-2 uppercase tracking-wide">대회 일정</h4>
-                    <p className="text-2xl font-black text-gray-800">
-                        {formatKSTDayLabel(round.date || round.tournament.startDate)}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-2 font-medium">
-                        접수: {(() => {
-                            const settings = round.tournament.settings ? (typeof round.tournament.settings === 'string' ? JSON.parse(round.tournament.settings) : round.tournament.settings) : {};
-                            const regStart = round.registrationStart || round.tournament.registrationStart || settings.registrationStart || round.tournament.startDate;
-                            return formatKSTDate(regStart);
-                        })()}
-                    </p>
-                </div>
-                <div className="bg-green-50 p-6 rounded-xl border border-green-100 shadow-sm">
-                    <h4 className="text-gray-500 text-sm font-bold mb-2 uppercase tracking-wide">참가자 현황</h4>
-                    <p className="text-2xl font-black text-gray-800">{participantCount}명</p>
-                    <div className="w-full bg-green-200 rounded-full h-2.5 mt-3 mb-1">
-                        <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${Math.min(100, (participantCount / 50) * 100)}%` }}></div>
+        <div className={styles.overview}>
+            <section className={styles.schedulePanel}>
+                <div className={styles.scheduleLayout}>
+                    <div>
+                        <p className={styles.eyebrow}>Round schedule</p>
+                        <h2 className={styles.scheduleTitle}>{formatKSTDayLabel(round.date || round.tournament.startDate)}</h2>
+                        <p className={styles.scheduleMeta}>
+                            접수 시작 {formatKSTDate(round.registrationStart || round.tournament.registrationStart || settings.registrationStart || round.tournament.startDate)}
+                        </p>
                     </div>
-                    <p className="text-sm text-gray-500 font-medium">
-                        레인 배정: {assignedLanesCount}명 완료
+                    <p className={styles.scheduleHint}>
+                        회차 준비 현황을 확인하고 필요한 작업으로 바로 이동하세요.
                     </p>
                 </div>
-                <div className="bg-yellow-50 p-6 rounded-xl border border-yellow-100 shadow-sm">
-                    <h4 className="text-gray-500 text-sm font-bold mb-2 uppercase tracking-wide">경기 진행</h4>
-                    <p className="text-2xl font-black text-gray-800">{scoredCount}명</p>
-                    <div className="w-full bg-yellow-200 rounded-full h-2.5 mt-3 mb-1">
-                        <div className="bg-yellow-500 h-2.5 rounded-full" style={{ width: `${participantCount > 0 ? (scoredCount / participantCount) * 100 : 0}%` }}></div>
+            </section>
+
+            <div className={styles.metricsGrid}>
+                {cards.map(card => (
+                    <div key={card.label} className={`${styles.metricCard} ${card.cardClass}`}>
+                        <div className={styles.metricHeader}>
+                            <div>
+                                <p className={styles.metricLabel}>{card.label}</p>
+                                <p className={styles.metricValue}>{card.value}</p>
+                            </div>
+                            <span className={styles.metricIcon} aria-hidden="true">{card.icon}</span>
+                        </div>
+                        <div className={styles.progressTrack}>
+                            <div className={`${styles.progressBar} ${card.barClass}`} style={{ width: `${card.progress}%` }} />
+                        </div>
+                        <p className={styles.metricDetail}>{card.detail}</p>
                     </div>
-                    <p className="text-sm text-gray-500 font-medium">
-                        점수 입력 진행 중
-                    </p>
-                </div>
+                ))}
             </div>
 
-            <div className="card border p-6 bg-white shadow-sm rounded-xl">
-                <h3 className="font-bold text-lg mb-4 text-gray-800">📌 빠른 도움말</h3>
-                <ul className="list-disc list-inside text-sm text-gray-600 space-y-2">
-                    <li><strong>[설정]</strong> 탭에서 대회 날짜와 접수 시작 시간을 수정할 수 있습니다.</li>
-                    <li><strong>[참가자]</strong> 탭에서 이번 회차에 참가하는 인원을 선택하거나 <strong>수동 등록</strong>할 수 있습니다.</li>
-                    <li>참가자 선택 후 <strong>[레인 배정]</strong> 탭에서 레인을 지정할 수 있습니다.</li>
-                    <li>모든 준비가 끝나면 <strong>[점수 입력]</strong> 탭에서 경기 결과를 기록하세요.</li>
-                </ul>
-            </div>
+            {isManager && (
+                <section className={styles.nextAction}>
+                    <div className={styles.nextActionLead}>
+                        <span className={styles.nextActionIcon} aria-hidden="true">{nextAction.icon}</span>
+                        <div>
+                            <p className={styles.nextActionEyebrow}>다음 권장 작업</p>
+                            <h3 className={styles.nextActionTitle}>{nextAction.title}</h3>
+                            <p className={styles.nextActionDescription}>{nextAction.description}</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => onNavigate(nextAction.tab)}
+                        className={styles.nextActionButton}
+                    >
+                        {nextAction.button} →
+                    </button>
+                </section>
+            )}
         </div>
     );
 }
@@ -127,7 +171,7 @@ function RoundSettingsTab({ round, onUpdate }: { round: any, onUpdate: () => voi
     }
 
     return (
-        <form action={handleSubmit} className="space-y-6 max-w-lg">
+        <form action={handleSubmit} className={styles.settingsForm}>
             <div>
                 <label className="block text-sm font-bold mb-2 text-gray-700">대회 일시</label>
                 <input
@@ -2645,19 +2689,17 @@ export default function RoundDetailPageContent({
         }
     }, [round.laneConfig, round.tournament?.status]);
 
-    const statusMap: Record<string, { label: string, color: string }> = {
-        UPCOMING: { label: STATUS_LABELS.UPCOMING, color: "bg-slate-500" },
-        OPEN: { label: STATUS_LABELS.OPEN, color: "bg-green-500" },
-        CLOSED: { label: STATUS_LABELS.CLOSED, color: "bg-red-500" },
-        ONGOING: { label: STATUS_LABELS.ONGOING, color: "bg-blue-600" },
-        FINISHED: { label: STATUS_LABELS.FINISHED, color: "bg-red-600" },
+    const statusMap: Record<string, { label: string, color: string, badgeColor: string }> = {
+        UPCOMING: { label: STATUS_LABELS.UPCOMING, color: "bg-slate-500", badgeColor: "#64748b" },
+        OPEN: { label: STATUS_LABELS.OPEN, color: "bg-green-500", badgeColor: "#22c55e" },
+        CLOSED: { label: STATUS_LABELS.CLOSED, color: "bg-red-500", badgeColor: "#ef4444" },
+        ONGOING: { label: STATUS_LABELS.ONGOING, color: "bg-blue-600", badgeColor: "#2563eb" },
+        FINISHED: { label: STATUS_LABELS.FINISHED, color: "bg-red-600", badgeColor: "#dc2626" },
     };
 
     useEffect(() => {
         const tab = searchParams.get('tab');
-        if (tab && tab !== activeTab) {
-            setActiveTab(tab);
-        }
+        if (tab) setActiveTab(currentTab => tab === currentTab ? currentTab : tab);
     }, [searchParams]);
 
     const settings = useMemo(() => {
@@ -2693,16 +2735,19 @@ export default function RoundDetailPageContent({
         return false;
     });
 
+    const participantCount = round.participants.length;
+    const assignedLaneCount = round.participants.filter((p: any) => p.lane).length;
+    const scoredParticipantCount = new Set((round.individualScores || []).filter((s: any) => s.score > 0).map((s: any) => s.registrationId)).size;
     const tabs = [
-        { id: 'overview', label: '대시보드' },
-        ...(isManager ? [{ id: 'settings', label: '대회 설정' }] : []),
-        { id: 'participants', label: '참가자' },
-        { id: 'lanes', label: isManager ? '레인 배정' : '레인 현황' },
-        { id: 'scoring', label: '점수 입력' },
-        { id: 'sideGame', label: '사이드게임' },
-        { id: 'finalResults', label: '최종결과' },
-        { id: 'luckyDraw', label: '행운권 추첨' },
-        ...(isManager && round.tournament.type === 'CHAMP' ? [{ id: 'points', label: '포인트 현황' }] : []),
+        { id: 'overview', label: '현황', description: '진행 요약', icon: '▦' },
+        ...(isManager ? [{ id: 'settings', label: '설정', description: '일정·운영', icon: '⚙' }] : []),
+        { id: 'participants', label: '참가자', description: `${participantCount}명`, icon: '♟' },
+        { id: 'lanes', label: isManager ? '레인 배정' : '레인 현황', description: `${assignedLaneCount}/${participantCount}명`, icon: '◉' },
+        { id: 'scoring', label: '점수 입력', description: `${scoredParticipantCount}/${participantCount}명`, icon: '✎' },
+        { id: 'sideGame', label: '사이드게임', description: '선택 운영', icon: '◆' },
+        { id: 'finalResults', label: '최종 결과', description: '순위 확인', icon: '★' },
+        { id: 'luckyDraw', label: '행운권', description: '당첨자 추첨', icon: '♧' },
+        ...(isManager && round.tournament.type === 'CHAMP' ? [{ id: 'points', label: '포인트', description: '누적 현황', icon: '▲' }] : []),
     ];
 
     const refresh = () => {
@@ -2720,7 +2765,7 @@ export default function RoundDetailPageContent({
     };
 
     return (
-        <div className="space-y-6">
+        <div className={styles.page}>
             {showEditModal && (
                 <TournamentEditModal
                     tournament={round.tournament}
@@ -2728,7 +2773,7 @@ export default function RoundDetailPageContent({
                     onUpdate={refresh}
                 />
             )}
-            <div className="mb-6">
+            <div>
                 <Link
                     href={(() => {
                         const fromRecruit = searchParams.get('from') === 'recruit';
@@ -2737,53 +2782,51 @@ export default function RoundDetailPageContent({
                             : `/centers/${round.tournament.centerId}/tournaments/${round.tournament.id}`;
                         return fromRecruit ? `${baseUrl}?mode=recruit` : baseUrl;
                     })()}
-                    className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors mb-2 w-fit group"
+                    className={styles.backLink}
                 >
-                    <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center group-hover:bg-gray-700 transition-colors border border-gray-700">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span className={styles.backIcon}>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                         </svg>
-                    </div>
-                    <span className="text-sm font-medium">
+                    </span>
+                    <span>
                         {round.tournament.type === 'EVENT' ? '대회 목록으로 돌아가기' : '대회 정보로 돌아가기'}
                     </span>
                 </Link>
 
-                <div className="flex justify-between items-end">
-                    <div>
-                        <h1 className="text-2xl font-black text-white flex items-center gap-3">
-                            <span className="bg-yellow-500 text-black text-xs px-2 py-1 rounded-md shadow uppercase tracking-wider leading-none">{round.tournament.name}</span>
-                            <div className="flex flex-col md:flex-row md:items-center gap-2">
-                                <span className="leading-tight">
+                <div className={styles.managementHeader}>
+                    <div className={styles.headerMain}>
+                        <div className={styles.headerBadges}>
+                            <span className={styles.tournamentBadge}>{round.tournament.name}</span>
+                            {(() => {
+                                const status = round.calculatedStatus || 'UPCOMING';
+                                const config = statusMap[status as any] || statusMap['UPCOMING'];
+                                return (
+                                    <span className={styles.statusBadge} style={{ backgroundColor: config.badgeColor }}>
+                                        {config.label}
+                                    </span>
+                                );
+                            })()}
+                            {isManager && <span className={styles.managerBadge}>관리자 화면</span>}
+                        </div>
+                        <h1 className={styles.headerTitle}>
                                     {isManager
                                         ? (round.tournament.type === 'EVENT' ? '대회 상세 관리' : `${round.roundNumber}회차 상세 관리`)
                                         : (round.tournament.type === 'EVENT' ? '대회 상세 정보' : (shouldShowSimplifiedResults ? '대회 결과 및 정보' : `${round.roundNumber}회차 상세 정보`))}
-                                </span>
-                                {(() => {
-                                    const effectiveDate = round.effectiveDateStr ? new Date(round.effectiveDateStr) : (round.date ? new Date(round.date) : null);
-                                    const status = round.calculatedStatus || 'UPCOMING';
-                                    const config = statusMap[status as any] || statusMap['UPCOMING'];
-                                    return (
-                                        <span className={`${config.color} text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm w-fit`}>
-                                            {config.label}
-                                        </span>
-                                    );
-                                })()}
-                            </div>
                         </h1>
-                        <p className="text-gray-400 text-sm mt-1 flex items-center gap-2">
+                        <p className={styles.headerMeta}>
                             <span>📅 {formatKSTDate(round.effectiveDateStr || round.date || round.tournament.startDate)}</span>
-                            <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
                             <span>👥 참가 {round.participants.length}명</span>
+                            <span>🎳 레인 {assignedLaneCount}명 배정</span>
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className={styles.headerActions}>
                         {isManager && round.tournament.type === 'EVENT' && (
                             <>
                                 <button
                                     onClick={() => setShowEditModal(true)}
-                                    className="btn btn-sm bg-white hover:bg-slate-100 text-slate-900 border-none font-black px-4"
+                                    className="btn btn-sm min-h-10 flex-1 border-none bg-white px-4 font-black text-slate-900 hover:bg-slate-100 sm:flex-none"
                                 >
                                     🔧 대회 정보 수정
                                 </button>
@@ -2821,24 +2864,31 @@ export default function RoundDetailPageContent({
 
             {
                 isManager && (
-                    <div className="flex border-b overflow-x-auto pb-1 scrollbar-hide">
+                    <nav aria-label="대회 관리 메뉴" className={styles.managementNav}>
+                        <div className={styles.navGrid}>
                         {tabs.map(tab => (
                             <button
                                 key={tab.id}
+                                type="button"
                                 onClick={() => handleTabChange(tab.id)}
-                                className={`px-5 py-3 font-bold border-b-2 transition-all whitespace-nowrap text-sm md:text-base ${activeTab === tab.id
-                                    ? 'border-blue-600 text-blue-600'
-                                    : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-200'
-                                    }`}
+                                aria-current={activeTab === tab.id ? 'page' : undefined}
+                                className={`${styles.navButton} ${activeTab === tab.id ? styles.navButtonActive : ''}`}
                             >
-                                {tab.label}
+                                <span className={styles.navButtonTitle}>
+                                    <span aria-hidden="true">{tab.icon}</span>
+                                    {tab.label}
+                                </span>
+                                <span className={`${styles.navButtonDescription} ${activeTab === tab.id ? styles.navDescriptionActive : ''}`}>
+                                    {tab.description}
+                                </span>
                             </button>
                         ))}
-                    </div>
+                        </div>
+                    </nav>
                 )
             }
 
-            <div className="bg-white min-h-[400px]">
+            <div className={styles.contentPanel}>
                 {/* Simplified Result View for CHAMP Members in Closed Rounds */}
                 {shouldShowSimplifiedResults ? (
                     <div className="space-y-8 animate-in fade-in duration-500">
@@ -2888,7 +2938,7 @@ export default function RoundDetailPageContent({
                     </div>
                 ) : (
                     <>
-                        {activeTab === 'overview' && <RoundOverviewTab round={round} />}
+                        {activeTab === 'overview' && <RoundOverviewTab round={round} isManager={isManager} onNavigate={handleTabChange} />}
                         {activeTab === 'settings' && isManager && <RoundSettingsTab round={round} onUpdate={refresh} />}
                         {activeTab === 'participants' && (
                             <RoundParticipantManager
