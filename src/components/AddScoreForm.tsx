@@ -145,18 +145,21 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                 {/* Tabs */}
                 <div className={styles.tabs}>
                     <button
+                        type="button"
                         className={[styles.tab, mode === 'manual' ? styles.tabActive : ''].filter(Boolean).join(' ')}
                         onClick={() => setMode('manual')}
                     >
                         직접 입력
                     </button>
                     <button
+                        type="button"
                         className={[styles.tab, mode === 'excel' ? styles.tabActive : ''].filter(Boolean).join(' ')}
                         onClick={() => setMode('excel')}
                     >
                         엑셀 업로드
                     </button>
                     <button
+                        type="button"
                         className={[styles.tab, mode === 'ocr' ? styles.tabActive : ''].filter(Boolean).join(' ')}
                         onClick={() => setMode('ocr')}
                     >
