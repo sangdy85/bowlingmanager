@@ -21,6 +21,7 @@ import TournamentMemberView from "@/components/tournaments/TournamentMemberView"
 import { getLeagueLeaderboard, getIndividualLeaderboard } from "@/app/actions/league-leaderboard";
 import { getEffectiveRoundDate, calculateTournamentStatus } from "@/lib/tournament-utils";
 import BandPublishStatus from "@/components/tournaments/BandPublishStatus";
+import styles from "./TournamentDetail.module.css";
 
 export default async function TournamentDetailPage({ params }: { params: Promise<{ id: string, tournamentId: string }> }) {
     const { id: centerId, tournamentId } = await params;
@@ -259,55 +260,41 @@ export default async function TournamentDetailPage({ params }: { params: Promise
     }));
 
     return (
-        <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-10">
-            {/* Back Button */}
-            <div className="flex justify-start">
-                <Link
-                    href={`/centers/${centerId}`}
-                    className="flex items-center gap-2 text-sm font-bold text-secondary-foreground hover:text-primary transition-colors group"
-                >
-                    <span className="text-lg group-hover:-translate-x-1 transition-transform">←</span>
-                    대회 목록으로 돌아가기
-                </Link>
-            </div>
+        <div className={styles.page}>
+            <Link href={`/centers/${centerId}`} className={styles.back}>
+                <span className={styles.backIcon} aria-hidden="true">←</span>
+                <span>볼링장 · 대회로 돌아가기</span>
+            </Link>
 
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b-2 border-primary/20">
-                <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                        <span className={`px-3 py-1 text-white text-xs font-bold rounded-full uppercase tracking-wider ${typeMap[safeTournament.type]?.color || 'bg-gray-500'}`}>
+            <header className={styles.hero}>
+                <div className={styles.heroMain}>
+                    <div className={styles.badges}>
+                        <span className={`${styles.typeBadge} ${typeMap[safeTournament.type]?.color || 'bg-gray-500'}`}>
                             {typeMap[safeTournament.type]?.label || safeTournament.type}
                         </span>
-                        <span className="text-secondary-foreground font-medium flex items-center gap-1.5">
-                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${currentStatus === 'FINISHED' ? 'bg-red-500' :
-                                (currentStatus === 'ONGOING' || hasStarted) ? 'bg-blue-500' : 'bg-green-500'
-                                }`}></span>
+                        <span className={styles.statusBadge}>
+                            <span className={`${styles.statusDot} ${currentStatus === 'FINISHED' ? styles.statusDotFinished :
+                                (currentStatus === 'ONGOING' || hasStarted) ? styles.statusDotOngoing : ''
+                                }`} />
                             {currentStatus === 'FINISHED' ? '종료' :
                                 (currentStatus === 'ONGOING' || hasStarted ? '진행 중' : (currentStatus === 'OPEN' ? '모집 중' : (currentStatus === 'CLOSED' ? '마감' : (statusMap[currentStatus]?.label || currentStatus))))}
                         </span>
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-black tracking-tight">
+
+                    <h1 className={styles.title}>
                         {displayName}
                         {safeTournament.type === 'EVENT' && ' (이벤트전)'}
                     </h1>
-                    <div className="flex flex-wrap items-center gap-6 text-sm text-secondary-foreground font-medium">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl">📅</span>
-                            {new Date(safeTournament.startDate).toLocaleDateString('ko-KR')} ~ {new Date(safeTournament.endDate).toLocaleDateString('ko-KR')}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl">💰</span>
-                            {safeTournament.entryFee.toLocaleString()}원
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl">🏠</span>
-                            {safeTournament.center.name}
-                        </div>
+
+                    <div className={styles.meta}>
+                        <span className={styles.metaItem}>📅 {new Date(safeTournament.startDate).toLocaleDateString('ko-KR')} ~ {new Date(safeTournament.endDate).toLocaleDateString('ko-KR')}</span>
+                        <span className={styles.metaItem}>💰 {safeTournament.entryFee.toLocaleString()}원</span>
+                        <span className={styles.metaItem}>🏠 {safeTournament.center.name}</span>
                     </div>
                 </div>
 
                 {isManager && (
-                    <div className="flex items-center gap-3">
+                    <div className={styles.heroActions}>
                         <DeleteTournamentButton tournamentId={safeTournament.id} />
                         <TournamentStatusDropdown
                             tournamentId={safeTournament.id}
@@ -316,7 +303,7 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                         />
                     </div>
                 )}
-            </div>
+            </header>
 
             {/* Content Logic: Manager vs Member */}
             {!isManager ? (
@@ -334,16 +321,17 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                     userProfile={userProfile}
                 />
             ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-10">
+                <div className={styles.managerGrid}>
+                    <div className={styles.mainColumn}>
                         {/* 대회 개요 (Overview) section at the TOP */}
-                        <section className="card p-0 overflow-hidden shadow-xl border-2 border-black">
-                            <div className="p-6 bg-primary text-primary-foreground">
-                                <h2 className="text-xl font-bold flex items-center gap-2">
-                                    📝 대회 요강 및 개요
-                                </h2>
+                        <section className={styles.section}>
+                            <div className={styles.sectionHeader}>
+                                <div>
+                                    <h2 className={styles.sectionTitle}>📝 대회 요강 및 개요</h2>
+                                    <p className={styles.sectionHint}>대회 안내와 세부 설정을 한곳에서 확인합니다.</p>
+                                </div>
                             </div>
-                            <div className="p-8 space-y-8">
+                            <div className={styles.sectionBody}>
                                 <TournamentDescriptionEditor
                                     tournamentId={safeTournament.id}
                                     initialDescription={safeTournament.description}
@@ -351,11 +339,9 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                                 />
 
                                 {(safeTournament.type === 'CHAMP' || safeTournament.type === 'EVENT') && safeTournament.settings && (
-                                    <div className="mt-8 pt-8 border-t-2 border-dashed border-gray-100">
-                                        <h3 className="text-xl font-black mb-6 flex items-center gap-2">
-                                            <span className="text-2xl">📋</span> 상세 요강 안내
-                                        </h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
+                                    <div style={{ marginTop: '1rem' }}>
+                                        <h3 className={styles.sectionTitle}>📋 상세 요강 안내</h3>
+                                        <div className={styles.infoGrid}>
                                             {(() => {
                                                 const s = tournamentSettings; // use the safe parsed settings
                                                 const items = [
@@ -399,11 +385,9 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                                                     },
                                                 ];
                                                 return items.filter(item => item.value).map((item, idx) => (
-                                                    <div key={idx} className="flex items-start gap-4 border-b border-gray-100 pb-3">
-                                                        <div className="text-sm font-bold text-gray-400 flex items-center gap-2 uppercase tracking-tight min-w-[100px] shrink-0">
-                                                            <span>{item.icon}</span> {item.label}
-                                                        </div>
-                                                        <div className="font-black text-gray-800 break-all">{item.value}</div>
+                                                    <div key={idx} className={styles.infoItem}>
+                                                        <div className={styles.infoLabel}><span>{item.icon}</span> {item.label}</div>
+                                                        <div className={styles.infoValue}>{item.value}</div>
                                                     </div>
                                                 ));
                                             })()}
@@ -420,10 +404,14 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                         </section>
 
                         {/* 🏆 Leaderboard (Grand Finale) section moved UP for consistency */}
-                        <div className="card p-6 border-l-8 border-primary shadow-lg bg-primary/5">
-                            <h3 className="font-black text-lg mb-4 flex items-center gap-2">🏆 리더보드 (왕중왕전)</h3>
-                            <p className="text-sm text-secondary-foreground mb-6 font-medium">대회가 진행됨에 따라 실시간 순위 데이터가 집계됩니다.</p>
-                            <div className="flex flex-col">
+                        <section className={`${styles.section} ${styles.leaderboardCard}`}>
+                            <div className={styles.sectionHeader}>
+                                <div>
+                                    <h3 className={styles.sectionTitle}>🏆 리더보드 · 왕중왕전</h3>
+                                    <p className={styles.sectionHint}>대회 진행에 따라 실시간 순위 데이터가 집계됩니다.</p>
+                                </div>
+                            </div>
+                            <div className={`${styles.sectionBody} ${styles.linkStack}`}>
                                 {(() => {
                                     const s = tournamentSettings;
 
@@ -470,7 +458,7 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                                     </>
                                 )}
                             </div>
-                        </div>
+                        </section>
 
                         {safeTournament.type === 'LEAGUE' && isManager && (
                             <div className="space-y-4">
