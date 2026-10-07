@@ -34,3 +34,29 @@ export function randomCandidateIndex(count: number) {
     do { crypto.getRandomValues(values); } while (values[0] >= limit);
     return values[0] % count;
 }
+
+
+export function getPrizeWinnerRegistrationIds(
+    sortedResults: ReadonlyArray<{ id: string; scores?: number[]; registrationIds?: string[] }>,
+    isTeamEvent: boolean,
+): string[] {
+    const podium = sortedResults
+        .filter(result => (result.scores || []).some(score => score > 0))
+        .slice(0, 3);
+
+    if (!isTeamEvent) {
+        return podium.map(result => result.id);
+    }
+
+    const seen = new Set<string>();
+    const ids: string[] = [];
+    podium.forEach(result => {
+        (result.registrationIds || []).forEach(id => {
+            if (!seen.has(id)) {
+                seen.add(id);
+                ids.push(id);
+            }
+        });
+    });
+    return ids;
+}
