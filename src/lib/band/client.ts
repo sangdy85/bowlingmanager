@@ -76,15 +76,13 @@ function assertBandSuccess<T>(payload: BandApiEnvelope<T>): T {
     return payload.result_data;
 }
 
-export function buildBandAuthorizationUrl(state: string): string {
+export function buildBandAuthorizationUrl(): string {
     const { clientId, redirectUri } = requireBandClientConfig();
 
     const url = new URL("/oauth2/authorize", BAND_AUTH_BASE);
     url.searchParams.set("response_type", "code");
     url.searchParams.set("client_id", clientId);
     url.searchParams.set("redirect_uri", redirectUri);
-    url.searchParams.set("state", state);
-
     return url.toString();
 }
 
