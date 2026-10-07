@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import { getLeagueLeaderboard, getIndividualLeaderboard } from '@/app/actions/league-leaderboard';
+import BandLeagueSharePanel from '@/components/tournaments/BandLeagueSharePanel';
 
 interface WeeklyResultDownloaderProps {
     tournamentId: string;
@@ -272,6 +273,12 @@ export default function WeeklyResultDownloader({
                     {isGenerating === 'ALL' ? '전체 생성 중...' : '📥 4종 전체 다운로드'}
                 </button>
             </div>
+
+            <BandLeagueSharePanel
+                tournamentId={tournamentId}
+                tournamentName={tournamentName}
+                selectedRound={selectedRound}
+            />
 
             {/* Hidden Templates for Image Generation */}
             <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', pointerEvents: 'none' }}>
