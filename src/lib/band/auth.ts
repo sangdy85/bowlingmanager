@@ -36,12 +36,11 @@ export async function verifyBandOAuthState(state: string): Promise<{ centerId: s
     return { centerId: payload.centerId, userId: payload.userId };
 }
 
-export async function buildBandAuthorizationUrl(centerId: string, userId: string): Promise<string> {
+export function buildBandAuthorizationUrl(): string {
     const url = new URL(BAND_AUTHORIZE_URL);
     url.searchParams.set('response_type', 'code');
     url.searchParams.set('client_id', required('BAND_CLIENT_ID'));
     url.searchParams.set('redirect_uri', required('BAND_REDIRECT_URI'));
-    url.searchParams.set('state', await createBandOAuthState(centerId, userId));
     return url.toString();
 }
 
@@ -56,7 +55,6 @@ export async function exchangeBandAuthorizationCode(code: string): Promise<{
     const url = new URL(BAND_TOKEN_URL);
     url.searchParams.set('grant_type', 'authorization_code');
     url.searchParams.set('code', code);
-    url.searchParams.set('redirect_uri', required('BAND_REDIRECT_URI'));
 
     const response = await fetch(url, {
         headers: { authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}` },
