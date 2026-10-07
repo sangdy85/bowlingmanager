@@ -10,7 +10,7 @@ function load(name) {
     new Function('require', 'module', 'exports', code)(require, module, module.exports);
     return module.exports;
 }
-const { getEligibleCandidates, getSpinRotation, randomCandidateIndex } = load('lottery-ui');
+const { getEligibleCandidates, getPrizeWinnerRegistrationIds, getSpinRotation, randomCandidateIndex } = load('lottery-ui');
 const { getLaneAnnouncement } = load('lane-announcement');
 const { getRoundFinalResults } = load('round-final-results');
 const person = (id, extras = {}) => ({ id: 'p-' + id, registrationId: id, createdAt: '2026-10-01', registration: { guestName: '동명이인', guestTeamName: '테스트팀' }, ...extras });
@@ -71,4 +71,32 @@ test('existing result totals retain 300 cap and previous winner penalty behavior
     round.prevRoundWinners = { rank1: { name: '동명이인', team: '테스트팀' } };
     const winner = getRoundFinalResults(round).sortedResults.find(p => p.id === 'd');
     assert.equal(winner.total, 880);
+});
+
+
+test('prize exclusion uses current round results for both individual and team formats', () => {
+    const individual = [
+        { id: 'a', scores: [200, 200, 200] },
+        { id: 'b', scores: [190, 190, 190] },
+        { id: 'c', scores: [180, 180, 180] },
+        { id: 'd', scores: [170, 170, 170] },
+    ];
+    assert.deepEqual(getPrizeWinnerRegistrationIds(individual, false), ['a', 'b', 'c']);
+
+    const team = [
+        { id: 'group_1', scores: [600, 610, 620], registrationIds: ['a', 'b'] },
+        { id: 'group_2', scores: [590, 600, 610], registrationIds: ['c', 'd'] },
+        { id: 'group_3', scores: [580, 590, 600], registrationIds: ['e', 'f'] },
+        { id: 'group_4', scores: [570, 580, 590], registrationIds: ['g', 'h'] },
+    ];
+    assert.deepEqual(getPrizeWinnerRegistrationIds(team, true), ['a', 'b', 'c', 'd', 'e', 'f']);
+});
+
+test('team podium exclusions de-duplicate registration IDs', () => {
+    const team = [
+        { id: 'group_1', scores: [600], registrationIds: ['a', 'b'] },
+        { id: 'group_2', scores: [590], registrationIds: ['b', 'c'] },
+        { id: 'group_3', scores: [580], registrationIds: ['d'] },
+    ];
+    assert.deepEqual(getPrizeWinnerRegistrationIds(team, true), ['a', 'b', 'c', 'd']);
 });
