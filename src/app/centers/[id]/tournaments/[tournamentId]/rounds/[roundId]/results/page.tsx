@@ -5,7 +5,7 @@ import LeagueRoundResultTabs from "@/components/tournaments/LeagueRoundResultTab
 import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
-import Link from "next/link";
+import { ManagementBackLink } from "@/components/tournaments/ManagementUI";
 
 export default async function ResultsPage({ params, searchParams }: any) {
     const { id: centerId, tournamentId, roundId } = await params;
@@ -36,12 +36,7 @@ export default async function ResultsPage({ params, searchParams }: any) {
             return (
                 <div className="container mx-auto py-8 space-y-4 max-w-7xl">
                     <div className="flex justify-start px-4">
-                        <Link
-                            href={backUrl}
-                            className="btn bg-white border-2 border-black text-black flex items-center gap-2 font-black shadow-lg hover:bg-slate-50"
-                        >
-                            <span>←</span> 대회 상세페이지로 돌아가기
-                        </Link>
+                        <ManagementBackLink href={backUrl} />
                     </div>
 
                     <LeagueRoundResultTabs
@@ -54,12 +49,7 @@ export default async function ResultsPage({ params, searchParams }: any) {
                     />
 
                     <div className="flex justify-center pb-8 pt-6">
-                        <Link
-                            href={backUrl}
-                            className="btn btn-secondary px-12 h-14 text-lg font-black shadow-xl border-2 border-black bg-slate-100 hover:bg-slate-200"
-                        >
-                            대회 상세페이지로 돌아가기
-                        </Link>
+                        <ManagementBackLink href={backUrl} />
                     </div>
                 </div>
             );
@@ -69,12 +59,7 @@ export default async function ResultsPage({ params, searchParams }: any) {
             return (
                 <div className="container mx-auto py-8 space-y-4 max-w-7xl">
                     <div className="flex justify-start px-4">
-                        <Link
-                            href={backUrl}
-                            className="btn bg-white border-2 border-black text-black flex items-center gap-2 font-black shadow-lg hover:bg-slate-50"
-                        >
-                            <span>←</span> 대회 상세페이지로 돌아가기
-                        </Link>
+                        <ManagementBackLink href={backUrl} />
                     </div>
 
                     <RoundResultLeaderboard
@@ -83,12 +68,7 @@ export default async function ResultsPage({ params, searchParams }: any) {
                     />
 
                     <div className="flex justify-center pb-8 pt-6">
-                        <Link
-                            href={backUrl}
-                            className="btn btn-secondary px-12 h-14 text-lg font-black shadow-xl border-2 border-black bg-slate-100 hover:bg-slate-200"
-                        >
-                            대회 상세페이지로 돌아가기
-                        </Link>
+                        <ManagementBackLink href={backUrl} />
                     </div>
                 </div>
             );
@@ -98,12 +78,7 @@ export default async function ResultsPage({ params, searchParams }: any) {
             <div className="container mx-auto py-8 text-center bg-white rounded-3xl border-2 border-black p-10 m-4">
                 <h1 className="text-3xl font-black text-red-600 mb-4">결과를 불러오는 중 오류가 발생했습니다.</h1>
                 <p className="font-bold text-gray-500">{error.message}</p>
-                <Link
-                    href={backUrl}
-                    className="btn btn-primary mt-8 px-10 border-2 border-black font-black"
-                >
-                    대회 페이지로 돌아가기
-                </Link>
+                <ManagementBackLink href={backUrl} />
             </div>
         );
     }

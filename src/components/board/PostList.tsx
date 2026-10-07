@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getPosts } from '@/app/actions/board';
 import { format } from 'date-fns';
+import styles from './Board.module.css';
 
 interface PostListProps {
     teamId: string;
@@ -44,44 +45,36 @@ export default function PostList({ teamId, onWriteClick, onPostClick }: PostList
     };
 
     return (
-        <div className="space-y-4">
+        <div>
 
 
-            <div className="space-y-2">
+            <div className={styles.list}>
                 {posts.length === 0 && !loading ? (
-                    <div className="text-center py-8 text-muted-foreground bg-muted/10 rounded-lg">
-                        게시글이 없습니다. 첫 글을 작성해보세요!
-                    </div>
+                    <div className={styles.empty}>게시글이 없습니다. 첫 글을 작성해보세요!</div>
                 ) : (
                     posts.map(post => (
-                        <div
+                        <button
+                            type="button"
                             key={post.id}
                             onClick={() => onPostClick(post.id)}
-                            className="group flex justify-between items-center p-3 hover:bg-muted/50 rounded-lg cursor-pointer transition-all border border-transparent hover:border-border/50"
+                            className={styles.postRow}
                         >
-                            <span className="font-medium text-sm group-hover:text-primary transition-colors truncate flex-1 mr-4">
-                                {post.title}
+                            <span className={styles.postTitle}>{post.title}</span>
+                            <span className={styles.postMeta}>
+                                <span className={styles.author}>{post.author.name}</span>
+                                <span>{format(new Date(post.createdAt), 'yyyy.MM.dd')}</span>
                             </span>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground whitespace-nowrap">
-                                <span className="font-medium text-foreground/80">{post.author.name}</span>
-                                <span className="opacity-70">{format(new Date(post.createdAt), 'yyyy.MM.dd')}</span>
-                            </div>
-                        </div>
+                        </button>
                     ))
                 )}
 
                 {loading && (
-                    <div className="text-center py-4">
-                        <span className="loading-spinner">Loading...</span>
-                    </div>
+                    <div className={styles.loading}>Loading...</div>
                 )}
 
                 {!loading && hasMore && (
-                    <div className="text-center pt-2">
-                        <button
-                            onClick={handleLoadMore}
-                            className="text-sm text-primary hover:underline"
-                        >
+                    <div className={styles.center}>
+                        <button type="button" onClick={handleLoadMore} className={styles.linkButton}>
                             더 보기
                         </button>
                     </div>

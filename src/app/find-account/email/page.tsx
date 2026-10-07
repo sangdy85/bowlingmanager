@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { findEmail } from '@/app/actions/auth';
 import Link from 'next/link';
+import styles from '../../AuthPage.module.css';
 
 export default function FindEmailPage() {
     const [name, setName] = useState("");
@@ -19,13 +20,16 @@ export default function FindEmailPage() {
     };
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '2rem' }}>
-            <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
-                <h1 className="text-center mb-6" style={{ fontSize: '1.5rem' }}>이메일 찾기</h1>
+        <div className={styles.page}>
+            <section className={styles.card}>
+                <header className={styles.header}>
+                    <h1 className={styles.title}>이메일 찾기</h1>
+                    <p className={styles.subtitle}>가입할 때 사용한 이름으로 등록 계정을 확인합니다.</p>
+                </header>
 
                 {!result?.success ? (
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                        <div>
+                    <form onSubmit={handleSubmit} className={styles.form}>
+                        <div className={styles.field}>
                             <label htmlFor="name" className="label">이름</label>
                             <input
                                 type="text"
@@ -37,20 +41,20 @@ export default function FindEmailPage() {
                                 required
                             />
                         </div>
-                        {result?.message && <p className="text-destructive text-sm text-center">{result.message}</p>}
+                        {result?.message && <p className={[styles.notice, styles.error].join(' ')}>{result.message}</p>}
                         <button type="submit" className="btn btn-primary w-full" disabled={loading}>
                             {loading ? "찾는 중..." : "이메일 찾기"}
                         </button>
                     </form>
                 ) : (
-                    <div className="flex flex-col gap-4">
-                        <div className="bg-secondary/50 p-4 rounded-lg">
-                            <p className="text-sm text-muted-foreground mb-2">입력하신 이름으로 가입된 계정입니다:</p>
-                            <ul className="space-y-2">
+                    <div className={styles.centerActions}>
+                        <div className={styles.resultBox}>
+                            <p className={styles.resultLead}>입력하신 이름으로 가입된 계정입니다.</p>
+                            <ul className={styles.resultList}>
                                 {result.data?.map((item, idx) => (
-                                    <li key={idx} className="font-mono font-bold text-center border-b border-border pb-1 last:border-0 last:pb-0">
+                                    <li key={idx} className={styles.resultItem}>
                                         {item.email}
-                                        <div className="text-[10px] text-muted-foreground font-normal">
+                                        <div className={styles.resultMeta}>
                                             가입일: {new Date(item.createdAt).toLocaleDateString()}
                                         </div>
                                     </li>
@@ -62,10 +66,10 @@ export default function FindEmailPage() {
                     </div>
                 )}
 
-                <div className="text-center mt-6" style={{ fontSize: '0.875rem', color: 'var(--secondary-foreground)' }}>
-                    <Link href="/find-account">이전으로</Link>
+                <div className={styles.footer}>
+                    <Link href="/find-account">← 이전으로</Link>
                 </div>
-            </div>
+            </section>
         </div>
     );
 }

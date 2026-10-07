@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { deleteTeam, setTeamBowlerHiddenEnabled } from "@/app/actions/admin";
 import Link from 'next/link';
+import styles from "../AdminUI.module.css";
 
 export default async function AdminTeamsPage() {
     const teams = await prisma.team.findMany({
@@ -15,49 +16,41 @@ export default async function AdminTeamsPage() {
 
     return (
         <div>
-            <h1 className="page-title mb-8">팀 관리</h1>
+            <header className={styles.pageHeader}>
+                <div>
+                    <h1 className={styles.pageTitle}>팀 관리</h1>
+                    <p className={styles.pageSubtitle}>활성 팀과 고급 기능 상태를 관리합니다.</p>
+                </div>
+            </header>
 
-            <div className="grid gap-4">
+            <div className={styles.list}>
                 {teams.length === 0 ? (
-                    <div className="card p-12 text-center text-secondary-foreground">
-                        등록된 팀이 없습니다.
-                    </div>
+                    <div className={styles.empty}>등록된 팀이 없습니다.</div>
                 ) : (
                     teams.map((team) => (
-                        <div key={team.id} className="card p-6 flex justify-between items-center">
-                            <div>
-                                <div className="flex items-center gap-3 mb-1">
-                                    <h3 className="text-xl font-bold">{team.name}</h3>
-                                    <span className="text-xs px-2 py-0.5 bg-secondary text-secondary-foreground rounded-full">
-                                        코드: {team.code}
-                                    </span>
-                                </div>
-                                <p className="text-secondary-foreground text-sm">
-                                    팀원 {team._count.members}명 · 생성일 {team.createdAt.toLocaleDateString('ko-KR')}
+                        <article key={team.id} className={`card ${styles.listCard}`}>
+                            <div className={styles.listMain}>
+                                <h3 className={styles.listTitle}>{team.name}</h3>
+                                <p className={styles.listMeta}>
+                                    코드 {team.code} · 팀원 {team._count.members}명 · 생성일 {team.createdAt.toLocaleDateString('ko-KR')}
                                 </p>
-                                <p className="mt-2 text-sm font-medium">
-                                    Bowler Hidden: {team.bowlerHiddenEnabled ? "ON" : "OFF"}
-                                </p>
+                                <p className={styles.listMeta}>Bowler Hidden: {team.bowlerHiddenEnabled ? "ON" : "OFF"}</p>
                             </div>
-                            <div className="flex gap-2">
+
+                            <div className={styles.listActions}>
                                 <form action={setTeamBowlerHiddenEnabled.bind(null, team.id, !team.bowlerHiddenEnabled)}>
-                                    <button className="btn btn-secondary text-xs px-3 h-8">
+                                    <button className={`btn btn-secondary ${styles.smallButton}`}>
                                         {team.bowlerHiddenEnabled ? "고급 기능 끄기" : "고급 기능 켜기"}
                                     </button>
                                 </form>
-                                <Link
-                                    href={`/team/${team.id}`}
-                                    className="btn btn-secondary text-xs px-3 h-8 flex items-center"
-                                >
+                                <Link href={`/team/${team.id}`} className={`btn btn-secondary ${styles.smallButton}`}>
                                     기록 보기
                                 </Link>
                                 <form action={deleteTeam.bind(null, team.id)}>
-                                    <button className="btn btn-secondary text-destructive hover:bg-destructive/10 text-xs px-3 h-8">
-                                        팀 삭제
-                                    </button>
+                                    <button className={`btn btn-secondary ${styles.smallButton}`}>팀 삭제</button>
                                 </form>
                             </div>
-                        </div>
+                        </article>
                     ))
                 )}
             </div>

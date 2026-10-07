@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { requestPasswordReset } from '@/app/actions/auth';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import styles from '../../AuthPage.module.css';
 
 export default function RequestResetPage() {
     const [email, setEmail] = useState("");
@@ -33,12 +34,15 @@ export default function RequestResetPage() {
     };
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '2rem' }}>
-            <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
-                <h1 className="text-center mb-6" style={{ fontSize: '1.5rem' }}>비밀번호 찾기</h1>
+        <div className={styles.page}>
+            <section className={styles.card}>
+                <header className={styles.header}>
+                    <h1 className={styles.title}>비밀번호 찾기</h1>
+                    <p className={styles.subtitle}>가입 이메일로 인증 코드를 받아 비밀번호를 재설정합니다.</p>
+                </header>
 
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                    <div>
+                <form onSubmit={handleSubmit} className={styles.form}>
+                    <div className={styles.field}>
                         <label htmlFor="email" className="label">이메일</label>
                         <input
                             type="email"
@@ -51,21 +55,19 @@ export default function RequestResetPage() {
                         />
                     </div>
 
-                    <div className="text-xs text-muted-foreground">
-                        가입된 이메일로 인증 코드가 발송됩니다.
-                    </div>
+                    <div className={[styles.notice, styles.info].join(' ')}>가입된 이메일로 인증 코드가 발송됩니다.</div>
 
-                    {error && <p className="text-destructive text-sm text-center">{error}</p>}
+                    {error && <p className={[styles.notice, styles.error].join(' ')}>{error}</p>}
 
                     <button type="submit" className="btn btn-primary w-full" disabled={loading}>
                         {loading ? "인증 코드 전송" : "다음"}
                     </button>
                 </form>
 
-                <div className="text-center mt-6" style={{ fontSize: '0.875rem', color: 'var(--secondary-foreground)' }}>
-                    <Link href="/find-account">이전으로</Link>
+                <div className={styles.footer}>
+                    <Link href="/find-account">← 이전으로</Link>
                 </div>
-            </div>
+            </section>
         </div>
     );
 }

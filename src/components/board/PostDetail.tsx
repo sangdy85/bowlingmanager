@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { deletePost, getPost } from '@/app/actions/board';
+import styles from './Board.module.css';
 
 interface PostDetailProps {
     postId: string;
@@ -32,32 +33,32 @@ export default function PostDetail({ postId, teamId, onBack }: PostDetailProps) 
         return () => { isMounted = false; };
     }, [postId]);
 
-    if (loading) return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
-    if (!post) return <div className="text-center py-12 text-muted-foreground">게시글을 찾을 수 없습니다.</div>;
+    if (loading) return <div className={styles.loading}>Loading...</div>;
+    if (!post) return <div className={styles.empty}>게시글을 찾을 수 없습니다.</div>;
 
     return (
-        <article className="animate-in fade-in slide-in-from-top-4 duration-300">
-            <h3 className="text-xl font-bold mb-4 border-b border-border/50 pb-2">{post.title}</h3>
+        <article>
+            <h3 className={styles.detailTitle}>{post.title}</h3>
 
-            <div className="whitespace-pre-wrap min-h-[100px] text-sm leading-relaxed text-foreground/90 mb-6">
+            <div className={styles.detailContent}>
                 {post.content}
             </div>
 
             {post.images && post.images.length > 0 && (
-                <div className="flex flex-col gap-4 mb-6">
+                <div className={styles.images}>
                     {post.images.map((img: any) => (
-                        <div key={img.id} className="relative rounded-lg overflow-hidden border border-border/50 bg-muted/20 group">
+                        <div key={img.id} className={styles.imageFrame}>
                             <a 
                                 href={img.url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="block cursor-pointer hover:opacity-90 transition-opacity"
+                                className={styles.imageLink}
                                 title="이미지 크게 보기"
                             >
                                 <img
                                     src={img.url}
                                     alt="첨부 이미지"
-                                    className="w-full h-auto object-contain max-h-[600px]"
+                                    className={styles.image}
                                     loading="lazy"
                                     onError={(e) => {
                                         const target = e.target as HTMLImageElement;
@@ -74,8 +75,8 @@ export default function PostDetail({ postId, teamId, onBack }: PostDetailProps) 
                 </div>
             )}
 
-            <div className="flex justify-between items-center text-xs text-muted-foreground border-t border-border/50 pt-4 mb-6">
-                <div className="flex gap-3">
+            <div className={styles.detailMeta}>
+                <div className={styles.detailMetaLeft}>
                     <span className="font-semibold text-foreground/80">{post.author.name}</span>
                     <span className="opacity-70">{format(new Date(post.createdAt), 'yyyy.MM.dd HH:mm')}</span>
                 </div>
@@ -87,16 +88,16 @@ export default function PostDetail({ postId, teamId, onBack }: PostDetailProps) 
                             onBack();
                         }
                     }}
-                    className="text-red-500 hover:text-red-600 hover:underline transition-colors"
+                    className={styles.deleteButton}
                 >
                     삭제
                 </button>
             </div>
 
-            <div className="flex justify-center">
+            <div className={styles.backArea}>
                 <button
                     onClick={onBack}
-                    className="btn btn-secondary w-full sm:w-auto px-8"
+                    className="btn btn-secondary"
                 >
                     목록으로
                 </button>

@@ -1,0 +1,315 @@
+.layout {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  min-height: calc(100vh - 64px);
+  background: var(--background);
+}
+
+.sidebar {
+  position: sticky;
+  top: 4.1rem;
+  height: calc(100vh - 4.1rem);
+  overflow-y: auto;
+  border-right: 1px solid #2c3a52;
+  background: rgba(17, 26, 43, 0.78);
+  padding: 1rem;
+}
+
+.sidebarTitle {
+  margin: 0 0 0.75rem;
+  color: #93c5fd;
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.nav {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.navLink {
+  display: flex;
+  min-height: 2.55rem;
+  align-items: center;
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.7rem;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.navLink:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #fff;
+  text-decoration: none;
+}
+
+.main {
+  min-width: 0;
+  padding: 1.5rem;
+}
+
+.content {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto 3rem;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: clamp(1.4rem, 4vw, 1.85rem);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+}
+
+.pageSubtitle {
+  margin: 0.25rem 0 0;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-bottom: 1rem;
+}
+
+.metric {
+  border: 1px solid #2f405a;
+  border-radius: 0.85rem;
+  background: linear-gradient(180deg, #172033, #121b2c);
+  padding: 0.9rem 1rem;
+}
+
+.metricLabel {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.metricValue {
+  margin-top: 0.15rem;
+  color: #f8fafc;
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.cardLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardLink:hover {
+  text-decoration: none;
+}
+
+.actionCard {
+  min-height: 9rem;
+  padding: 1rem;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.actionCard:hover {
+  transform: translateY(-1px);
+  border-color: #4f79b8;
+  box-shadow: 0 12px 26px rgba(2, 6, 23, 0.18);
+}
+
+.cardIcon {
+  font-size: 1.55rem;
+}
+
+.cardTitle {
+  margin: 0.45rem 0 0.25rem;
+  font-size: 0.98rem;
+  font-weight: 850;
+}
+
+.cardText {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.listCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.listMain {
+  min-width: 0;
+}
+
+.listTitle {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 0.92rem;
+  font-weight: 850;
+}
+
+.listMeta {
+  margin: 0.25rem 0 0;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.listActions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.smallButton {
+  min-height: 2.25rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.7rem;
+  box-shadow: none;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid #334155;
+  border-radius: 0.85rem;
+}
+
+.table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  background: #111a2b;
+}
+
+.table th,
+.table td {
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid #2c3a52;
+}
+
+.table th {
+  background: #172033;
+  color: #cbd5e1;
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-align: left;
+}
+
+.table td {
+  color: #dbe4f0;
+  font-size: 0.76rem;
+}
+
+.table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.empty {
+  border: 1px dashed #3b4a62;
+  border-radius: 0.85rem;
+  padding: 2.5rem 1rem;
+  color: #94a3b8;
+  text-align: center;
+  font-size: 0.78rem;
+}
+
+.info {
+  margin-top: 1rem;
+  padding: 1rem;
+}
+
+.info h2 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+}
+
+.info p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.76rem;
+  line-height: 1.65;
+}
+
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid #2c3a52;
+  }
+
+  .nav {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .navLink {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .metrics,
+  .cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .main {
+    padding: 0.9rem 0.75rem 2rem;
+  }
+
+  .nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pageHeader,
+  .listCard {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .listActions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .smallButton {
+    flex: 1 1 auto;
+  }
+}

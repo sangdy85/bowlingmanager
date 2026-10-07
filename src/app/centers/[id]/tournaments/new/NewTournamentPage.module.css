@@ -1,0 +1,101 @@
+.page {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 2.5rem;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  margin-bottom: .8rem;
+  color: #94a3b8;
+  font-size: .78rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.back:hover { color: #fff; text-decoration: none; }
+
+.backIcon {
+  display: inline-grid;
+  width: 1.9rem;
+  height: 1.9rem;
+  place-items: center;
+  border: 1px solid #3b4a62;
+  border-radius: 999px;
+  background: #172033;
+}
+
+.hero {
+  margin-bottom: 1rem;
+  border: 1px solid #30425d;
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at top right, rgba(59,130,246,.15), transparent 18rem),
+    linear-gradient(145deg,#19263d,#101827);
+  padding: 1.15rem;
+  box-shadow: 0 12px 26px rgba(2,6,23,.16);
+}
+
+.title { margin: 0; color: #f8fafc; font-size: clamp(1.45rem,4vw,1.95rem); font-weight: 900; letter-spacing: -.035em; }
+.subtitle { margin: .3rem 0 0; color: #9fb0c5; font-size: .78rem; font-weight: 650; }
+
+.formShell {
+  overflow: hidden;
+  border: 1px solid #2f405a;
+  border-radius: .95rem;
+  background: linear-gradient(180deg,#172238,#111a2b);
+  padding: 1rem;
+  box-shadow: 0 9px 22px rgba(2,6,23,.13);
+}
+
+.formShell :global(form) {
+  display: grid;
+  gap: 1rem;
+}
+
+.formShell :global(.label) {
+  padding-bottom: .3rem;
+  color: #cbd5e1;
+  font-size: .74rem;
+  font-weight: 800;
+}
+
+.formShell :global(.input) {
+  min-height: 2.7rem;
+  margin-bottom: 0;
+  border-color: #3a4c68;
+  background: #111a2b;
+  color: #f8fafc;
+}
+
+.formShell :global(.input::placeholder) {
+  color: #64748b;
+}
+
+.formShell :global(textarea.input) {
+  line-height: 1.55;
+}
+
+.formShell :global(.border-t) {
+  border-color: #2f405a !important;
+}
+
+.formShell :global(.text-secondary-foreground),
+.formShell :global(.text-gray-500) {
+  color: #94a3b8 !important;
+}
+
+.formShell :global(.btn) {
+  min-height: 2.7rem;
+  border-radius: .7rem;
+  box-shadow: none;
+}
+
+@media(max-width:600px){
+  .page{padding:.8rem .75rem 2rem}
+  .hero{padding:1rem}
+  .formShell{padding:.85rem}
+}

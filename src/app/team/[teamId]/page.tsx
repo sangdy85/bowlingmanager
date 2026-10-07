@@ -12,6 +12,7 @@ import TeamStatsContainer from "@/components/TeamStatsContainer";
 
 import TeamMemberManager from "@/components/TeamMemberManager";
 import TeamGuestManager from "@/components/TeamGuestManager";
+import styles from "./TeamDetail.module.css";
 
 interface TeamPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -127,35 +128,34 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
     const manageTab = resolvedSearchParams.tab || 'members'; // 'members' or 'guests'
 
     return (
-        <div className="container py-8 max-w-4xl mx-auto">
-            <div className="flex justify-between items-start mb-8">
-                <div>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{team.name} 팀 관리</h1>
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="text-secondary-foreground">초대 코드: <code className="font-bold text-foreground">{team.code}</code></span>
+        <div className={styles.page}>
+            <header className={styles.hero}>
+                <div className={styles.heroMain}>
+                    <h1 className={styles.title}>{team.name} 팀 관리</h1>
+                    <div className={styles.codeRow}>
+                        <span>초대 코드: <code className={styles.code}>{team.code}</code></span>
                         <CopyButton text={team.code} />
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Link href={isSuperAdmin ? "/admin/teams" : "/team"} className="btn btn-secondary h-10 px-4 min-w-[100px] text-sm flex items-center justify-center">
-                        &larr; 팀 목록
+
+                <div className={styles.actions}>
+                    <Link
+                        href={isSuperAdmin ? "/admin/teams" : "/team"}
+                        className={`btn btn-secondary ${styles.actionButton}`}
+                    >
+                        ← 팀 목록
                     </Link>
                     {(isOwner || isManager) && (
                         <>
                             <Link
                                 href={`/score/add?teamId=${teamId}`}
-                                className="btn btn-primary h-10 px-4 min-w-[100px] text-sm flex items-center justify-center shadow-sm"
+                                className={`btn btn-primary ${styles.actionButton}`}
                             >
                                 점수 기록하기
                             </Link>
                             <Link
                                 href={isManageMode ? `/team/${teamId}` : `/team/${teamId}?view=manage`}
-                                className="btn h-10 px-4 min-w-[100px] text-sm flex items-center justify-center shadow-sm"
-                                style={{
-                                    backgroundColor: '#ffffff',
-                                    color: '#000000',
-                                    border: '1px solid #d1d5db'
-                                }}
+                                className={`btn btn-secondary ${styles.actionButton}`}
                             >
                                 {isManageMode ? '대시보드' : '팀원 관리'}
                             </Link>
@@ -163,20 +163,20 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
                     )}
                     <LeaveTeamButton onLeave={leaveTeam.bind(null, teamId)} />
                 </div>
-            </div>
+            </header>
 
             {isManageMode ? (
-                <div className="flex flex-col gap-6">
-                    <div className="flex gap-2 p-1 bg-secondary/20 rounded-lg">
+                <div className={styles.manageContent}>
+                    <div className={styles.manageTabs}>
                         <Link
                             href={`/team/${teamId}?view=manage&tab=members`}
-                            className={`flex-1 btn btn-sm h-10 ${manageTab === 'members' ? 'btn-primary' : 'btn-secondary'}`}
+                            className={`btn ${styles.tab} ${manageTab === 'members' ? 'btn-primary' : 'btn-secondary'}`}
                         >
                             팀원 목록
                         </Link>
                         <Link
                             href={`/team/${teamId}?view=manage&tab=guests`}
-                            className={`flex-1 btn btn-sm h-10 ${manageTab === 'guests' ? 'btn-primary' : 'btn-secondary'}`}
+                            className={`btn ${styles.tab} ${manageTab === 'guests' ? 'btn-primary' : 'btn-secondary'}`}
                         >
                             기록 관리 (비회원/탈퇴)
                         </Link>

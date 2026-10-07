@@ -5,6 +5,7 @@ import { useState, Suspense } from 'react';
 import { resetPassword } from '@/app/actions/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import styles from '../AuthPage.module.css';
 
 function ResetPasswordForm() {
     const searchParams = useSearchParams();
@@ -34,23 +35,28 @@ function ResetPasswordForm() {
 
     if (result?.success) {
         return (
-            <div className="card text-center" style={{ width: '100%', maxWidth: '400px' }}>
-                <h1 className="text-green-500 mb-4 font-bold text-xl">비밀번호 변경 완료 🎉</h1>
-                <p className="mb-6 text-muted-foreground">
-                    비밀번호가 성공적으로 변경되었습니다.<br />
-                    새 비밀번호로 로그인해주세요.
-                </p>
-                <Link href="/login" className="btn btn-primary w-full">로그인하러 가기</Link>
-            </div>
+            <section className={styles.card}>
+                <div className={styles.form}>
+                    <h1 className={styles.successTitle}>비밀번호 변경 완료 🎉</h1>
+                    <p className={styles.successText}>
+                        비밀번호가 성공적으로 변경되었습니다.<br />
+                        새 비밀번호로 로그인해주세요.
+                    </p>
+                    <Link href="/login" className="btn btn-primary w-full">로그인하러 가기</Link>
+                </div>
+            </section>
         );
     }
 
     return (
-        <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
-            <h1 className="text-center mb-6" style={{ fontSize: '1.5rem' }}>비밀번호 재설정</h1>
+        <section className={styles.card}>
+            <header className={styles.header}>
+                <h1 className={styles.title}>비밀번호 재설정</h1>
+                <p className={styles.subtitle}>인증 코드와 새 비밀번호를 입력해주세요.</p>
+            </header>
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <div>
+            <form onSubmit={handleSubmit} className={styles.form}>
+                <div className={styles.field}>
                     <label htmlFor="email" className="label">이메일</label>
                     <input
                         type="email"
@@ -63,7 +69,7 @@ function ResetPasswordForm() {
                     />
                 </div>
 
-                <div>
+                <div className={styles.field}>
                     <label htmlFor="code" className="label">인증 코드</label>
                     <input
                         type="text"
@@ -77,7 +83,7 @@ function ResetPasswordForm() {
                     />
                 </div>
 
-                <div>
+                <div className={styles.field}>
                     <label htmlFor="password" className="label">새 비밀번호</label>
                     <input
                         type="password"
@@ -90,7 +96,7 @@ function ResetPasswordForm() {
                     />
                 </div>
 
-                <div>
+                <div className={styles.field}>
                     <label htmlFor="confirmPassword" className="label">비밀번호 확인</label>
                     <input
                         type="password"
@@ -104,21 +110,21 @@ function ResetPasswordForm() {
                 </div>
 
                 {result && !result.success && (
-                    <p className="text-destructive text-sm text-center">{result.message}</p>
+                    <p className={[styles.notice, styles.error].join(' ')}>{result.message}</p>
                 )}
 
                 <button type="submit" className="btn btn-primary w-full" disabled={loading}>
                     {loading ? "변경 중..." : "비밀번호 변경하기"}
                 </button>
             </form>
-        </div>
+        </section>
     );
 }
 
 export default function ResetPasswordPage() {
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '2rem' }}>
-            <Suspense fallback={<div>Loading...</div>}>
+        <div className={styles.page}>
+            <Suspense fallback={<div className={styles.subtitle}>Loading...</div>}>
                 <ResetPasswordForm />
             </Suspense>
         </div>
