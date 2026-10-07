@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getEffectiveRoundDate, calculateTournamentStatus, formatKSTDate, parseKSTDate } from "@/lib/tournament-utils";
 import TournamentListManager from "@/components/tournaments/TournamentListManager";
 import JoinCenterSection from "@/components/centers/JoinCenterSection";
+import styles from "./CenterDetail.module.css";
 
 // ... (existing code, ensure imports are correct)
 
@@ -265,40 +266,40 @@ export default async function CenterDetailPage({ params }: { params: Promise<{ i
     });
 
     return (
-        <div className="max-w-5xl mx-auto">
-            <div className="flex justify-between items-start mb-8">
-                <div>
-                    <div className="flex items-center gap-3 mb-2">
-                        <h1 className="text-4xl font-bold">{center.name}</h1>
-                        {isManager && (
-                            <span className="px-2 py-1 bg-yellow-500/10 text-yellow-500 text-xs font-bold rounded border border-yellow-500/20">
-                                관리 중
-                            </span>
-                        )}
+        <div className={styles.page}>
+            <header className={styles.hero}>
+                <div className={styles.heroMain}>
+                    <div className={styles.titleRow}>
+                        <h1 className={styles.title}>{center.name}</h1>
+                        {isManager && <span className={styles.managerBadge}>관리 중</span>}
                     </div>
-                    <p className="text-secondary-foreground">{center.address}</p>
-                    {center.phone && <p className="text-secondary-foreground text-sm mt-1">📞 {center.phone}</p>}
+                    <div className={styles.meta}>
+                        <p>{center.address}</p>
+                        {center.phone && <p>📞 {center.phone}</p>}
+                    </div>
                 </div>
 
                 {isManager && (
-                    <div className="flex gap-2">
-                        <Link href={`/centers/${id}/edit`} className="btn btn-secondary text-sm h-10">정보 수정</Link>
-                        <Link href={`/centers/${id}/tournaments/new`} className="btn btn-primary text-sm h-10">+ 새 대회 개최</Link>
+                    <div className={styles.actions}>
+                        <Link href={`/centers/${id}/edit`} className={`btn btn-secondary ${styles.actionButton}`}>
+                            정보 수정
+                        </Link>
+                        <Link href={`/centers/${id}/tournaments/new`} className={`btn btn-primary ${styles.actionButton}`}>
+                            + 새 대회 개최
+                        </Link>
                     </div>
                 )}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                <div className="md:col-span-2 mb-24 md:mb-0">
+            </header>
 
-
-                    <section className="card p-8 mb-8">
-                        <h2 className="text-2xl font-bold mb-4">볼링장 소개</h2>
-                        <p className="text-secondary-foreground whitespace-pre-wrap">
+            <div className={styles.layout}>
+                <main className={styles.mainColumn}>
+                    <section className={`card ${styles.introCard}`}>
+                        <h2 className={styles.sectionTitle}>볼링장 소개</h2>
+                        <p className={styles.description}>
                             {center.description || "등록된 소개 내용이 없습니다."}
                         </p>
                     </section>
 
-                    {/* Active Tournaments Section (Recruiting + Ongoing) */}
                     {activeTournaments.length > 0 && (
                         <ActiveTournaments
                             tournaments={activeTournaments}
@@ -307,7 +308,6 @@ export default async function CenterDetailPage({ params }: { params: Promise<{ i
                         />
                     )}
 
-                    {/* Publicly Viewable Tournament List */}
                     <TournamentListManager
                         tournaments={formattedTournaments}
                         centerId={id}
@@ -315,21 +315,15 @@ export default async function CenterDetailPage({ params }: { params: Promise<{ i
                     />
 
                     {!session?.user?.id && (
-                        <div className="card p-6 mt-8 bg-blue-950/30 border-blue-800/30 text-center">
-                            <h3 className="text-base font-bold text-white mb-1">💡 대회 참가 신청 및 스코어 기록 서비스</h3>
-                            <p className="text-slate-400 text-xs mb-4">
-                                센터 대회 및 상주리그 참가 신청과 실시간 스코어 저장은 회원 로그인 후 이용하실 수 있습니다.
-                            </p>
-                            <Link href="/login" className="btn btn-primary text-xs px-6 py-2">
-                                로그인하고 대회 참가하기
-                            </Link>
-                        </div>
+                        <section className={styles.loginPrompt}>
+                            <h3>💡 대회 참가 신청 및 스코어 기록 서비스</h3>
+                            <p>센터 대회 및 상주리그 참가 신청과 실시간 스코어 저장은 회원 로그인 후 이용하실 수 있습니다.</p>
+                            <Link href="/login" className="btn btn-primary">로그인하고 대회 참가하기</Link>
+                        </section>
                     )}
-                    {/* Mobile Spacer */}
-                    <div className="h-24 md:h-0" />
-                </div>
+                </main>
 
-                <div className="space-y-6">
+                <aside className={styles.sidebar}>
                     {session?.user?.id && !isManager && (
                         <JoinCenterSection
                             centerId={id}
@@ -342,26 +336,28 @@ export default async function CenterDetailPage({ params }: { params: Promise<{ i
                     )}
 
                     {!isManager && (isMember || !session?.user?.id) && (
-                        <div className="card p-6 bg-primary/5 border-primary/20">
-                            <h3 className="font-bold mb-2">방문 및 예약</h3>
-                            <p className="text-sm text-secondary-foreground mb-4">
-                                센터에 직접 방문하시거나 전화로 레인을 예약하실 수 있습니다.
-                            </p>
+                        <section className={`card ${styles.sideCard}`}>
+                            <h3>방문 및 예약</h3>
+                            <p>센터에 직접 방문하시거나 전화로 레인을 예약하실 수 있습니다.</p>
                             <button className="btn btn-primary w-full" disabled>센터 연락하기</button>
-                        </div>
+                        </section>
                     )}
 
                     {isManager && (
-                        <div className="card p-6 bg-secondary/20">
-                            <h3 className="font-bold mb-2">관리자 도구</h3>
-                            <div className="flex flex-col gap-2 mt-4">
-                                <Link href={`/centers/${id}/teams`} className="btn btn-secondary text-xs h-9 justify-start">클럽 관리</Link>
-                                <Link href={`/centers/${id}/members`} className="btn btn-secondary text-xs h-9 justify-start">회원 관리</Link>
+                        <section className={`card ${styles.sideCard}`}>
+                            <h3>관리자 도구</h3>
+                            <div className={styles.toolList}>
+                                <Link href={`/centers/${id}/teams`} className={`btn btn-secondary ${styles.toolLink}`}>
+                                    클럽 관리
+                                </Link>
+                                <Link href={`/centers/${id}/members`} className={`btn btn-secondary ${styles.toolLink}`}>
+                                    회원 관리
+                                </Link>
                             </div>
-                        </div>
+                        </section>
                     )}
-                </div>
+                </aside>
             </div>
-        </div >
+        </div>
     );
 }
