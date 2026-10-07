@@ -229,6 +229,26 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $repoRoot = (Get-Item -LiteralPath $repoRoot).FullName
 Set-Location -LiteralPath $repoRoot
 
+if ([string]::IsNullOrWhiteSpace($DeployHost) -and -not [string]::IsNullOrWhiteSpace($env:BOWLING_DEPLOY_HOST)) {
+    $DeployHost = $env:BOWLING_DEPLOY_HOST
+}
+
+if (-not [string]::IsNullOrWhiteSpace($env:BOWLING_DEPLOY_PORT)) {
+    $parsedPort = 0
+    if (-not [int]::TryParse($env:BOWLING_DEPLOY_PORT, [ref]$parsedPort)) {
+        throw "BOWLING_DEPLOY_PORT must be an integer."
+    }
+    $DeployPort = $parsedPort
+}
+
+if ([string]::IsNullOrWhiteSpace($DeployIdentityFile) -and -not [string]::IsNullOrWhiteSpace($env:BOWLING_DEPLOY_KEY)) {
+    $DeployIdentityFile = $env:BOWLING_DEPLOY_KEY
+}
+
+if (-not [string]::IsNullOrWhiteSpace($env:BOWLING_PUBLIC_HEALTH_URL)) {
+    $PublicHealthUrl = $env:BOWLING_PUBLIC_HEALTH_URL
+}
+
 if ($TagOnly) {
     Write-Step "TAG-ONLY RESUME"
 
