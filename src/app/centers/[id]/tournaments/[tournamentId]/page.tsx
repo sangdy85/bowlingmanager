@@ -426,7 +426,7 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                                             {s.hasGrandFinale === 'CUMULATIVE' && (
                                                 <Link
                                                     href={`/centers/${centerId}/tournaments/${tournamentId}/grand-finale-leaderboard`}
-                                                    className="btn btn-primary w-full text-sm font-black h-12 shadow-md flex items-center justify-center border-2 border-black bg-indigo-600 hover:bg-indigo-700 text-white mb-3"
+                                                    className={`btn btn-primary ${styles.compactButton}`}
                                                 >
                                                     🎖️ 왕중왕전 포인트 현황
                                                 </Link>
@@ -439,19 +439,19 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                                     <>
                                         <Link
                                             href={`/centers/${centerId}/tournaments/${tournamentId}/leaderboard`}
-                                            className="btn btn-primary w-full text-sm font-black h-12 shadow-md flex items-center justify-center border-2 border-black mb-3"
+                                            className={`btn btn-primary ${styles.compactButton}`}
                                         >
                                             순위표 열기
                                         </Link>
                                         <Link
                                             href={`/centers/${centerId}/tournaments/${tournamentId}/individual-leaderboard`}
-                                            className="btn btn-primary w-full text-sm font-black h-12 shadow-md flex items-center justify-center border-2 border-black mb-3"
+                                            className={`btn btn-primary ${styles.compactButton}`}
                                         >
                                             개인 순위표
                                         </Link>
                                         <Link
                                             href={`/centers/${centerId}/tournaments/${tournamentId}/top30`}
-                                            className="btn btn-primary w-full text-sm font-black h-12 shadow-md flex items-center justify-center border-2 border-black"
+                                            className={`btn btn-primary ${styles.compactButton}`}
                                         >
                                             개인 평균 Top
                                         </Link>
@@ -521,11 +521,14 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                         )}
 
                         {safeTournament.type !== 'LEAGUE' && (
-                            <section className="card p-8 border-2 border-black">
-                                <div className="flex flex-col items-start gap-4 mb-8 border-b-2 border-slate-100 pb-6">
-                                    <h2 className="text-2xl font-bold italic flex items-center gap-2">
-                                        <span className="text-3xl">👥</span> 참가자 명단 ({safeTournament.registrations.length}/{safeTournament.maxParticipants})
-                                    </h2>
+                            <section className={styles.section}>
+                                <div className={styles.sectionHeader}>
+                                    <div>
+                                        <h2 className={styles.sectionTitle}>👥 참가자 명단</h2>
+                                        <p className={styles.sectionHint}>
+                                            현재 {safeTournament.registrations.length}명 / 정원 {safeTournament.maxParticipants}명
+                                        </p>
+                                    </div>
                                     {!isManager && (
                                         <div className="w-full">
                                             <TournamentRegButton
@@ -557,7 +560,7 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                         )}
                     </div>
 
-                    <div className="space-y-8">
+                    <aside className={styles.sidebar}>
 
                         <BandPublishStatus
                             centerId={centerId}
@@ -566,21 +569,20 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                             posts={safeBandPosts}
                         />
 
-                        <div className="card p-6 border-2 border-black shadow-lg">
-                            <h3 className="font-black text-lg mb-4">📍 참여 볼링장</h3>
-                            <div className="space-y-2 mb-6">
-                                <p className="font-black text-xl">{safeTournament.center.name}</p>
-                                <p className="text-xs text-secondary-foreground font-medium">{safeTournament.center.address}</p>
-                            </div>
+                        <section className={`card ${styles.sideCard}`}>
+                            <h3 className={styles.sideTitle}>📍 참여 볼링장</h3>
+                            <p className={styles.sideText}>{safeTournament.center.name}</p>
+                            <p className={styles.sideText}>{safeTournament.center.address}</p>
                             <Link
                                 href={`/centers/${centerId}`}
-                                className="btn btn-secondary w-full font-bold border-2"
+                                className={`btn btn-secondary ${styles.compactButton}`}
+                                style={{ marginTop: '0.75rem' }}
                             >
                                 볼링장 정보 더보기
                             </Link>
-                        </div>
+                        </section>
 
-                    </div>
+                    </aside>
                 </div>
             )
             }
