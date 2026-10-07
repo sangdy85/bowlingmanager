@@ -131,7 +131,7 @@ export async function updateTournamentStatus(tournamentId: string, status: strin
     });
 
     if (!tournament) throw new Error("Tournament not found");
-    await verifyCenterAdmin(tournament.centerId);
+    const actorId = await verifyCenterAdmin(tournament.centerId);
 
     await prisma.tournament.update({
         where: { id: tournamentId },
@@ -143,10 +143,10 @@ export async function updateTournamentStatus(tournamentId: string, status: strin
 
     let band = null;
     try {
-        const opened = !['OPEN', 'JOINING'].includes(tournament.status) && ['OPEN', 'JOINING'].includes(status);
+        const opened = tournament.status === 'PLANNING' && ['OPEN', 'JOINING'].includes(status);
         const finished = tournament.status !== 'FINISHED' && status === 'FINISHED';
-        if (opened) band = await publishTournamentRecruitment({ tournamentId });
-        if (finished) band = await publishTournamentFinalResult({ tournamentId });
+        if (opened) band = await publishTournamentRecruitment({ tournamentId, requestedById: actorId });
+        if (finished) band = await publishTournamentFinalResult({ tournamentId, requestedById: actorId });
     } catch {
         band = { status: 'FAILED' as const, message: '대회 상태는 변경했지만 BAND 게시를 처리하지 못했습니다.' };
     }
