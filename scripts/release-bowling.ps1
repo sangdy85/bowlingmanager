@@ -16,32 +16,160 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-function Step([string]$Message) {
+function Write-Step {
+    param([string]$Message)
+
     Write-Host ""
     Write-Host "============================================================"
     Write-Host $Message
     Write-Host "============================================================"
 }
 
-function Need([string]$Name) {
+function Assert-Command {
+    param([string]$Name)
+
     if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
         throw "Required command not found: $Name"
     }
 }
 
-function Run([string]$Command, [string[]]$Arguments) {
+function Invoke-Checked {
+    param(
+        [string]$Command,
+        [string[]]$Arguments
+    )
+
     & $Command @Arguments
     if ($LASTEXITCODE -ne 0) {
         throw "Command failed ($LASTEXITCODE): $Command $($Arguments -join ' ')"
     }
 }
 
-function GitOut([string[]]$Arguments) {
+function Get-GitOutput {
+    param([string[]]$Arguments)
+
     $result = & git @Arguments
     if ($LASTEXITCODE -ne 0) {
         throw "Git command failed: git $($Arguments -join ' ')"
     }
+
     return ($result -join [Environment]::NewLine).Trim()
+}
+
+function Get-OriginMainRelease {
+    param(
+        [string]$Branch,
+        [string]$RequestedVersion,
+        [int]$RequestedBuild
+    )
+
+    $sha = Get-GitOutput @("rev-parse", "origin/$Branch")
+    $shortSha = Get-GitOutput @("rev-parse", "--short", "origin/$Branch")
+
+    $spec = "origin/$Branch" + ":mobile/pubspec.yaml"
+    $pubspecLines = & git show $spec
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to read mobile/pubspec.yaml from origin/$Branch."
+    }
+
+    $pubspec = $pubspecLines -join [Environment]::NewLine
+    $match = [regex]::Match(
+        $pubspec,
+        '(?m)^version:[ \t]*(\d+\.\d+\.\d+)\+(\d+)[ \t]*$'
+    )
+
+    if (-not $match.Success) {
+        throw "Unable to parse release version from origin/$Branch."
+    }
+
+    $foundVersion = $match.Groups[1].Value
+    $foundBuild = [int]$match.Groups[2].Value
+
+    if ($foundVersion -ne $RequestedVersion) {
+        throw "origin/$Branch is version $foundVersion+$foundBuild, not requested $RequestedVersion."
+    }
+
+    if (($RequestedBuild -gt 0) -and ($foundBuild -ne $RequestedBuild)) {
+        throw "origin/$Branch build is $foundBuild, not requested $RequestedBuild."
+    }
+
+    return [PSCustomObject]@{
+        Sha = $sha
+        ShortSha = $shortSha
+        Version = $foundVersion
+        Build = $foundBuild
+    }
+}
+
+function Invoke-ProductionDeploy {
+    param(
+        [string]$HostName,
+        [int]$Port
+    )
+
+    if ([string]::IsNullOrWhiteSpace($HostName)) {
+        throw "DeployHost is required."
+    }
+
+    Assert-Command "ssh"
+
+    Write-Host "Host : $HostName"
+    Write-Host "Port : $Port"
+
+    Invoke-Checked "ssh" @(
+        "-p",
+        "$Port",
+        $HostName,
+        "~/deploy-bowling.sh --check && ~/deploy-bowling.sh"
+    )
+}
+
+function Ensure-ReleaseTag {
+    param(
+        [string]$ReleaseVersion,
+        [string]$ReleaseSha
+    )
+
+    $tagName = "v$ReleaseVersion"
+    $tagRef = "refs/tags/$tagName"
+
+    $direct = (& git ls-remote --tags origin $tagRef).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to query remote tag $tagName."
+    }
+
+    if ([string]::IsNullOrWhiteSpace($direct)) {
+        Invoke-Checked "git" @(
+            "tag",
+            "-a",
+            $tagName,
+            $ReleaseSha,
+            "-m",
+            "BowlingManager $ReleaseVersion"
+        )
+        Invoke-Checked "git" @("push", "origin", $tagName)
+        Write-Host "Tag pushed: $tagName"
+        return
+    }
+
+    $peeledRef = $tagRef + "^{}"
+    $peeled = (& git ls-remote --tags origin $peeledRef).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to query peeled remote tag $tagName."
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($peeled)) {
+        $tagTarget = ($peeled -split "\s+")[0]
+    }
+    else {
+        $tagTarget = ($direct -split "\s+")[0]
+    }
+
+    if ($tagTarget -ne $ReleaseSha) {
+        throw "Remote tag '$tagName' already exists on another commit."
+    }
+
+    Write-Host "Tag already exists and matches: $tagName"
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -49,352 +177,35 @@ $repoRoot = (Get-Item -LiteralPath $repoRoot).FullName
 Set-Location -LiteralPath $repoRoot
 
 if ($DeployOnly) {
-    Step "DEPLOY-ONLY RESUME"
+    Write-Step "DEPLOY-ONLY RESUME"
 
-    Need "git"
-    Need "ssh"
+    Assert-Command "git"
+    Invoke-Checked "git" @("fetch", "origin", "--prune")
 
-    if ([string]::IsNullOrWhiteSpace($DeployHost)) {
-        throw "DeployHost is required for -DeployOnly."
-    }
+    $release = Get-OriginMainRelease -Branch $MainBranch -RequestedVersion $Version -RequestedBuild $BuildNumber
 
-    Run "git" @("fetch", "origin", "--prune")
+    Write-Host "Main    : $($release.ShortSha)"
+    Write-Host "Version : $($release.Version)+$($release.Build)"
 
-    $releaseSha = GitOut @("rev-parse", "origin/$MainBranch")
-    $releaseShortSha = GitOut @("rev-parse", "--short", "origin/$MainBranch")
-
-    $mainPubspecSpec = "origin/$MainBranch" + ":mobile/pubspec.yaml"
-    $mainPubspec = (& git show $mainPubspecSpec) -join [Environment]::NewLine
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to read mobile/pubspec.yaml from origin/$MainBranch."
-    }
-
-    $releaseVersionMatch = [regex]::Match(
-        $mainPubspec,
-        '(?m)^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*
-
-$nodeVersion = (node -v).Trim()
-$nodeMajor = [int](node -p "process.versions.node.split('.')[0]")
-
-if ($nodeMajor -ne 20) {
-    throw "Node 20.x is required. Current: $nodeVersion"
-}
-
-Write-Host "Node    : $nodeVersion"
-Write-Host "npm     : $((npm.cmd -v).Trim())"
-Write-Host "Flutter : $((flutter --version | Select-Object -First 1).Trim())"
-
-Write-Host "Repo    : $repoRoot"
-
-Step "2. DEVELOP BRANCH CHECK"
-
-$currentBranch = GitOut @("branch", "--show-current")
-if ($currentBranch -ne $DevelopBranch) {
-    throw "Run this script from '$DevelopBranch'. Current: '$currentBranch'"
-}
-
-$initialStatus = @(git status --porcelain)
-if ($LASTEXITCODE -ne 0) {
-    throw "Unable to read git status."
-}
-
-if ($initialStatus.Count -gt 0) {
-    Write-Host ($initialStatus -join [Environment]::NewLine)
-    throw "Working tree must be clean before release automation starts."
-}
-
-Run "git" @("fetch", "origin", "--prune")
-
-$remoteDevelop = "origin/$DevelopBranch"
-$remoteMain = "origin/$MainBranch"
-
-Run "git" @("rev-parse", "--verify", $remoteDevelop)
-Run "git" @("rev-parse", "--verify", $remoteMain)
-
-$remoteAhead = [int](GitOut @("rev-list", "--count", "HEAD..$remoteDevelop"))
-if ($remoteAhead -gt 0) {
-    throw "Remote develop has commits not present locally. Run git pull --ff-only first."
-}
-
-Write-Host "Develop : $DevelopBranch"
-Write-Host "Main    : $MainBranch"
-Write-Host "HEAD    : $(GitOut @('rev-parse', '--short', 'HEAD'))"
-
-Step "3. SYNC MAIN INTO DEVELOP"
-
-& git merge-base --is-ancestor $remoteMain HEAD
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "origin/$MainBranch is already included."
-}
-else {
-    Write-Host "Merging origin/$MainBranch into $DevelopBranch..."
-    & git merge --no-edit $remoteMain
-    if ($LASTEXITCODE -ne 0) {
-        & git merge --abort 2>$null
-        throw "Automatic main -> develop merge failed. Resolve it manually."
-    }
-}
-
-Step "4. VERSION BUMP"
-
-$pubspecPath = Join-Path $repoRoot "mobile\pubspec.yaml"
-if (-not (Test-Path $pubspecPath)) {
-    throw "mobile/pubspec.yaml not found."
-}
-
-$pubspec = [System.IO.File]::ReadAllText($pubspecPath)
-$versionMatch = [regex]::Match($pubspec, '(?m)^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$')
-
-if (-not $versionMatch.Success) {
-    throw "Unable to parse Flutter version."
-}
-
-$currentVersion = $versionMatch.Groups[1].Value
-$currentBuild = [int]$versionMatch.Groups[2].Value
-
-if ($BuildNumber -le 0) {
-    $BuildNumber = $currentBuild + 1
-}
-
-if ($BuildNumber -le $currentBuild) {
-    throw "BuildNumber must be greater than current build number $currentBuild."
-}
-
-$newVersionLine = "version: $Version+$BuildNumber"
-$updated = [regex]::Replace(
-    $pubspec,
-    '(?m)^version:\s*\d+\.\d+\.\d+\+\d+\s*$',
-    $newVersionLine,
-    1
-)
-
-[System.IO.File]::WriteAllText(
-    $pubspecPath,
-    $updated,
-    [System.Text.UTF8Encoding]::new($false)
-)
-
-Write-Host "Current : $currentVersion+$currentBuild"
-Write-Host "Release : $Version+$BuildNumber"
-
-Step "5. NODE TEST AND BUILD"
-
-Set-Location $repoRoot
-Run "npm.cmd" @("ci")
-
-$nodeTests = @(
-    Get-ChildItem (Join-Path $repoRoot "tests") -Filter "*.test.cjs" -File |
-    Sort-Object FullName |
-    ForEach-Object { $_.FullName }
-)
-
-if ($nodeTests.Count -eq 0) {
-    throw "No tests/*.test.cjs files found."
-}
-
-Write-Host "Node test files: $($nodeTests.Count)"
-& node --test @nodeTests
-if ($LASTEXITCODE -ne 0) {
-    throw "Node tests failed."
-}
-
-Run "npm.cmd" @("run", "build")
-
-Step "6. FLUTTER RELEASE GATE"
-
-$mobileDir = Join-Path $repoRoot "mobile"
-Set-Location $mobileDir
-
-Run "flutter" @("pub", "get")
-Run "flutter" @("analyze")
-Run "flutter" @("test")
-
-Set-Location $repoRoot
-
-Step "7. CHANGE SAFETY CHECK"
-
-Run "git" @("diff", "--check")
-
-$dirty = @(git status --porcelain)
-if ($LASTEXITCODE -ne 0) {
-    throw "Unable to inspect release changes."
-}
-
-$unexpected = @()
-foreach ($line in $dirty) {
-    if ($line.Length -lt 4) {
-        $unexpected += $line
-        continue
-    }
-
-    $path = $line.Substring(3).Trim()
-    if ($path -ne "mobile/pubspec.yaml") {
-        $unexpected += $line
-    }
-}
-
-if ($unexpected.Count -gt 0) {
-    Write-Host "Unexpected changes:"
-    Write-Host ($unexpected -join [Environment]::NewLine)
-    throw "Only mobile/pubspec.yaml may change during automated release."
-}
-
-Step "8. VERSION COMMIT"
-
-Run "git" @("add", "--", "mobile/pubspec.yaml")
-$staged = GitOut @("diff", "--cached", "--name-only")
-
-if ([string]::IsNullOrWhiteSpace($staged)) {
-    throw "Nothing staged for release commit."
-}
-
-$commitMessage = "chore: bump mobile version to $Version+$BuildNumber"
-Run "git" @("commit", "-m", $commitMessage)
-
-$releaseSha = GitOut @("rev-parse", "HEAD")
-$releaseShortSha = GitOut @("rev-parse", "--short", "HEAD")
-
-Write-Host "Release commit: $releaseShortSha"
-
-Step "9. PUSH DEVELOP"
-
-Run "git" @("push", "origin", "HEAD:$DevelopBranch")
-Run "git" @("fetch", "origin", "--prune")
-
-& git merge-base --is-ancestor "origin/$MainBranch" HEAD
-if ($LASTEXITCODE -ne 0) {
-    throw "origin/$MainBranch is not an ancestor of this release. Main update refused."
-}
-
-Step "10. FAST-FORWARD MAIN"
-
-Run "git" @("push", "origin", "HEAD:$MainBranch")
-Write-Host "origin/$MainBranch -> $releaseShortSha"
-
-if ($Deploy) {
-    Step "11. PRODUCTION DEPLOY"
-
-    Need "ssh"
-
-    if ([string]::IsNullOrWhiteSpace($DeployHost)) {
-        throw "DeployHost is required when -Deploy is used."
-    }
-
-    Write-Host "Host: $DeployHost"
-    Write-Host "Port: $DeployPort"
-
-    Run "ssh" @(
-        "-p",
-        "$DeployPort",
-        $DeployHost,
-        "~/deploy-bowling.sh --check && ~/deploy-bowling.sh"
-    )
+    Invoke-ProductionDeploy -HostName $DeployHost -Port $DeployPort
 
     if (-not $SkipTag) {
-        Step "12. RELEASE TAG"
-
-        $tagName = "v$Version"
-        $remoteTag = (& git ls-remote --tags origin "refs/tags/$tagName").Trim()
-
-        if ($LASTEXITCODE -ne 0) {
-            throw "Unable to check remote tag $tagName."
-        }
-
-        if (-not [string]::IsNullOrWhiteSpace($remoteTag)) {
-            throw "Remote tag '$tagName' already exists."
-        }
-
-        Run "git" @("tag", "-a", $tagName, $releaseSha, "-m", "BowlingManager $Version")
-        Run "git" @("push", "origin", $tagName)
-
-        Write-Host "Tag: $tagName"
-    }
-}
-else {
-    Step "11. PRODUCTION DEPLOY SKIPPED"
-    Write-Host "main was updated but SSH deployment was not requested."
-    Write-Host "Run production deployment separately with -DeployOnly and the correct SSH host/port."
-}
-
-Step "RELEASE AUTOMATION COMPLETE"
-
-Write-Host "Version : $Version+$BuildNumber"
-Write-Host "Commit  : $releaseShortSha"
-Write-Host "Develop : $DevelopBranch"
-Write-Host "Main    : $MainBranch"
-Write-Host "Deploy  : $Deploy"
-
-    )
-
-    if (-not $releaseVersionMatch.Success) {
-        throw "Unable to parse release version from origin/$MainBranch."
+        Write-Step "RELEASE TAG"
+        Ensure-ReleaseTag -ReleaseVersion $Version -ReleaseSha $release.Sha
     }
 
-    $mainVersion = $releaseVersionMatch.Groups[1].Value
-    $mainBuild = [int]$releaseVersionMatch.Groups[2].Value
-
-    if ($mainVersion -ne $Version) {
-        throw "origin/$MainBranch is version $mainVersion+$mainBuild, not requested $Version."
-    }
-
-    if (($BuildNumber -gt 0) -and ($mainBuild -ne $BuildNumber)) {
-        throw "origin/$MainBranch build is $mainBuild, not requested $BuildNumber."
-    }
-
-    Write-Host "Main    : $releaseShortSha"
-    Write-Host "Version : $mainVersion+$mainBuild"
-    Write-Host "Host    : $DeployHost"
-    Write-Host "Port    : $DeployPort"
-
-    Run "ssh" @(
-        "-p",
-        "$DeployPort",
-        $DeployHost,
-        "~/deploy-bowling.sh --check && ~/deploy-bowling.sh"
-    )
-
-    if (-not $SkipTag) {
-        Step "RELEASE TAG"
-
-        $tagName = "v$Version"
-        $remoteTagLine = (& git ls-remote --tags origin "refs/tags/$tagName").Trim()
-
-        if ($LASTEXITCODE -ne 0) {
-            throw "Unable to check remote tag $tagName."
-        }
-
-        if ([string]::IsNullOrWhiteSpace($remoteTagLine)) {
-            Run "git" @("tag", "-a", $tagName, $releaseSha, "-m", "BowlingManager $Version")
-            Run "git" @("push", "origin", $tagName)
-            Write-Host "Tag: $tagName"
-        }
-        else {
-            $remoteTagSha = ($remoteTagLine -split "\s+")[0]
-            $peeled = (& git ls-remote --tags origin "refs/tags/$tagName^{}").Trim()
-            if (-not [string]::IsNullOrWhiteSpace($peeled)) {
-                $remoteTagSha = ($peeled -split "\s+")[0]
-            }
-
-            if ($remoteTagSha -ne $releaseSha) {
-                throw "Remote tag '$tagName' exists but does not point to origin/$MainBranch."
-            }
-
-            Write-Host "Tag already exists and matches: $tagName"
-        }
-    }
-
-    Step "DEPLOY-ONLY COMPLETE"
-    Write-Host "Version : $mainVersion+$mainBuild"
-    Write-Host "Commit  : $releaseShortSha"
+    Write-Step "DEPLOY-ONLY COMPLETE"
+    Write-Host "Version : $($release.Version)+$($release.Build)"
+    Write-Host "Commit  : $($release.ShortSha)"
     exit 0
 }
 
-Step "1. RELEASE ENVIRONMENT CHECK"
+Write-Step "1. RELEASE ENVIRONMENT CHECK"
 
-Need "git"
-Need "node"
-Need "npm.cmd"
-Need "flutter"
+Assert-Command "git"
+Assert-Command "node"
+Assert-Command "npm.cmd"
+Assert-Command "flutter"
 
 $nodeVersion = (node -v).Trim()
 $nodeMajor = [int](node -p "process.versions.node.split('.')[0]")
@@ -406,16 +217,11 @@ if ($nodeMajor -ne 20) {
 Write-Host "Node    : $nodeVersion"
 Write-Host "npm     : $((npm.cmd -v).Trim())"
 Write-Host "Flutter : $((flutter --version | Select-Object -First 1).Trim())"
-
-$repoRoot = Split-Path -Parent $PSScriptRoot
-$repoRoot = (Get-Item -LiteralPath $repoRoot).FullName
-Set-Location -LiteralPath $repoRoot
-
 Write-Host "Repo    : $repoRoot"
 
-Step "2. DEVELOP BRANCH CHECK"
+Write-Step "2. DEVELOP BRANCH CHECK"
 
-$currentBranch = GitOut @("branch", "--show-current")
+$currentBranch = Get-GitOutput @("branch", "--show-current")
 if ($currentBranch -ne $DevelopBranch) {
     throw "Run this script from '$DevelopBranch'. Current: '$currentBranch'"
 }
@@ -430,24 +236,24 @@ if ($initialStatus.Count -gt 0) {
     throw "Working tree must be clean before release automation starts."
 }
 
-Run "git" @("fetch", "origin", "--prune")
+Invoke-Checked "git" @("fetch", "origin", "--prune")
 
 $remoteDevelop = "origin/$DevelopBranch"
 $remoteMain = "origin/$MainBranch"
 
-Run "git" @("rev-parse", "--verify", $remoteDevelop)
-Run "git" @("rev-parse", "--verify", $remoteMain)
+Invoke-Checked "git" @("rev-parse", "--verify", $remoteDevelop)
+Invoke-Checked "git" @("rev-parse", "--verify", $remoteMain)
 
-$remoteAhead = [int](GitOut @("rev-list", "--count", "HEAD..$remoteDevelop"))
+$remoteAhead = [int](Get-GitOutput @("rev-list", "--count", "HEAD..$remoteDevelop"))
 if ($remoteAhead -gt 0) {
     throw "Remote develop has commits not present locally. Run git pull --ff-only first."
 }
 
 Write-Host "Develop : $DevelopBranch"
 Write-Host "Main    : $MainBranch"
-Write-Host "HEAD    : $(GitOut @('rev-parse', '--short', 'HEAD'))"
+Write-Host "HEAD    : $(Get-GitOutput @('rev-parse', '--short', 'HEAD'))"
 
-Step "3. SYNC MAIN INTO DEVELOP"
+Write-Step "3. SYNC MAIN INTO DEVELOP"
 
 & git merge-base --is-ancestor $remoteMain HEAD
 if ($LASTEXITCODE -eq 0) {
@@ -455,22 +261,26 @@ if ($LASTEXITCODE -eq 0) {
 }
 else {
     Write-Host "Merging origin/$MainBranch into $DevelopBranch..."
+
     & git merge --no-edit $remoteMain
     if ($LASTEXITCODE -ne 0) {
         & git merge --abort 2>$null
-        throw "Automatic main -> develop merge failed. Resolve it manually."
+        throw "Automatic main to develop merge failed. Resolve it manually."
     }
 }
 
-Step "4. VERSION BUMP"
+Write-Step "4. VERSION BUMP"
 
 $pubspecPath = Join-Path $repoRoot "mobile\pubspec.yaml"
-if (-not (Test-Path $pubspecPath)) {
+if (-not (Test-Path -LiteralPath $pubspecPath)) {
     throw "mobile/pubspec.yaml not found."
 }
 
 $pubspec = [System.IO.File]::ReadAllText($pubspecPath)
-$versionMatch = [regex]::Match($pubspec, '(?m)^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$')
+$versionMatch = [regex]::Match(
+    $pubspec,
+    '(?m)^version:[ \t]*(\d+\.\d+\.\d+)\+(\d+)[ \t]*$'
+)
 
 if (-not $versionMatch.Success) {
     throw "Unable to parse Flutter version."
@@ -488,26 +298,26 @@ if ($BuildNumber -le $currentBuild) {
 }
 
 $newVersionLine = "version: $Version+$BuildNumber"
-$updated = [regex]::Replace(
+$updatedPubspec = [regex]::Replace(
     $pubspec,
-    '(?m)^version:\s*\d+\.\d+\.\d+\+\d+\s*$',
+    '(?m)^version:[ \t]*\d+\.\d+\.\d+\+\d+[ \t]*$',
     $newVersionLine,
     1
 )
 
 [System.IO.File]::WriteAllText(
     $pubspecPath,
-    $updated,
+    $updatedPubspec,
     [System.Text.UTF8Encoding]::new($false)
 )
 
 Write-Host "Current : $currentVersion+$currentBuild"
 Write-Host "Release : $Version+$BuildNumber"
 
-Step "5. NODE TEST AND BUILD"
+Write-Step "5. NODE TEST AND BUILD"
 
-Set-Location $repoRoot
-Run "npm.cmd" @("ci")
+Set-Location -LiteralPath $repoRoot
+Invoke-Checked "npm.cmd" @("ci")
 
 $nodeTests = @(
     Get-ChildItem (Join-Path $repoRoot "tests") -Filter "*.test.cjs" -File |
@@ -520,27 +330,28 @@ if ($nodeTests.Count -eq 0) {
 }
 
 Write-Host "Node test files: $($nodeTests.Count)"
+
 & node --test @nodeTests
 if ($LASTEXITCODE -ne 0) {
     throw "Node tests failed."
 }
 
-Run "npm.cmd" @("run", "build")
+Invoke-Checked "npm.cmd" @("run", "build")
 
-Step "6. FLUTTER RELEASE GATE"
+Write-Step "6. FLUTTER RELEASE GATE"
 
 $mobileDir = Join-Path $repoRoot "mobile"
-Set-Location $mobileDir
+Set-Location -LiteralPath $mobileDir
 
-Run "flutter" @("pub", "get")
-Run "flutter" @("analyze")
-Run "flutter" @("test")
+Invoke-Checked "flutter" @("pub", "get")
+Invoke-Checked "flutter" @("analyze")
+Invoke-Checked "flutter" @("test")
 
-Set-Location $repoRoot
+Set-Location -LiteralPath $repoRoot
 
-Step "7. CHANGE SAFETY CHECK"
+Write-Step "7. CHANGE SAFETY CHECK"
 
-Run "git" @("diff", "--check")
+Invoke-Checked "git" @("diff", "--check")
 
 $dirty = @(git status --porcelain)
 if ($LASTEXITCODE -ne 0) {
@@ -548,6 +359,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $unexpected = @()
+
 foreach ($line in $dirty) {
     if ($line.Length -lt 4) {
         $unexpected += $line
@@ -555,6 +367,7 @@ foreach ($line in $dirty) {
     }
 
     $path = $line.Substring(3).Trim()
+
     if ($path -ne "mobile/pubspec.yaml") {
         $unexpected += $line
     }
@@ -566,77 +379,55 @@ if ($unexpected.Count -gt 0) {
     throw "Only mobile/pubspec.yaml may change during automated release."
 }
 
-Step "8. VERSION COMMIT"
+Write-Step "8. VERSION COMMIT"
 
-Run "git" @("add", "--", "mobile/pubspec.yaml")
-$staged = GitOut @("diff", "--cached", "--name-only")
+Invoke-Checked "git" @("add", "--", "mobile/pubspec.yaml")
 
+$staged = Get-GitOutput @("diff", "--cached", "--name-only")
 if ([string]::IsNullOrWhiteSpace($staged)) {
     throw "Nothing staged for release commit."
 }
 
 $commitMessage = "chore: bump mobile version to $Version+$BuildNumber"
-Run "git" @("commit", "-m", $commitMessage)
+Invoke-Checked "git" @("commit", "-m", $commitMessage)
 
-$releaseSha = GitOut @("rev-parse", "HEAD")
-$releaseShortSha = GitOut @("rev-parse", "--short", "HEAD")
+$releaseSha = Get-GitOutput @("rev-parse", "HEAD")
+$releaseShortSha = Get-GitOutput @("rev-parse", "--short", "HEAD")
 
 Write-Host "Release commit: $releaseShortSha"
 
-Step "9. PUSH DEVELOP"
+Write-Step "9. PUSH DEVELOP"
 
-Run "git" @("push", "origin", "HEAD:$DevelopBranch")
-Run "git" @("fetch", "origin", "--prune")
+Invoke-Checked "git" @("push", "origin", "HEAD:$DevelopBranch")
+Invoke-Checked "git" @("fetch", "origin", "--prune")
 
 & git merge-base --is-ancestor "origin/$MainBranch" HEAD
 if ($LASTEXITCODE -ne 0) {
     throw "origin/$MainBranch is not an ancestor of this release. Main update refused."
 }
 
-Step "10. FAST-FORWARD MAIN"
+Write-Step "10. FAST-FORWARD MAIN"
 
-Run "git" @("push", "origin", "HEAD:$MainBranch")
+Invoke-Checked "git" @("push", "origin", "HEAD:$MainBranch")
 Write-Host "origin/$MainBranch -> $releaseShortSha"
 
 if ($Deploy) {
-    Step "11. PRODUCTION DEPLOY"
+    Write-Step "11. PRODUCTION DEPLOY"
 
-    Need "ssh"
-    Write-Host "Host: $DeployHost"
-
-    Run "ssh" @(
-        $DeployHost,
-        "~/deploy-bowling.sh --check && ~/deploy-bowling.sh"
-    )
+    Invoke-ProductionDeploy -HostName $DeployHost -Port $DeployPort
 
     if (-not $SkipTag) {
-        Step "12. RELEASE TAG"
-
-        $tagName = "v$Version"
-        $remoteTag = (& git ls-remote --tags origin "refs/tags/$tagName").Trim()
-
-        if ($LASTEXITCODE -ne 0) {
-            throw "Unable to check remote tag $tagName."
-        }
-
-        if (-not [string]::IsNullOrWhiteSpace($remoteTag)) {
-            throw "Remote tag '$tagName' already exists."
-        }
-
-        Run "git" @("tag", "-a", $tagName, $releaseSha, "-m", "BowlingManager $Version")
-        Run "git" @("push", "origin", $tagName)
-
-        Write-Host "Tag: $tagName"
+        Write-Step "12. RELEASE TAG"
+        Ensure-ReleaseTag -ReleaseVersion $Version -ReleaseSha $releaseSha
     }
 }
 else {
-    Step "11. PRODUCTION DEPLOY SKIPPED"
-    Write-Host "main was updated but SSH deployment was not requested."
-    Write-Host "Run production deployment separately:"
-    Write-Host "ssh $DeployHost '~/deploy-bowling.sh --check && ~/deploy-bowling.sh'"
+    Write-Step "11. PRODUCTION DEPLOY SKIPPED"
+    Write-Host "main was updated but production deployment was not requested."
+    Write-Host "Use -DeployOnly with the correct DeployHost and DeployPort to resume deployment."
 }
 
-Step "RELEASE AUTOMATION COMPLETE"
+Write-Step "RELEASE AUTOMATION COMPLETE"
 
 Write-Host "Version : $Version+$BuildNumber"
 Write-Host "Commit  : $releaseShortSha"
