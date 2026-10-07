@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createPost } from '@/app/actions/board';
+import styles from './Board.module.css';
 
 interface PostFormProps {
     teamId: string;
@@ -77,9 +78,9 @@ export default function PostForm({ teamId, onCancel, onSuccess }: PostFormProps)
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-                <label className="block text-sm font-medium mb-1">제목</label>
+        <form onSubmit={handleSubmit} className={styles.form}>
+            <div className={styles.field}>
+                <label>제목</label>
                 <input
                     type="text"
                     value={title}
@@ -89,8 +90,8 @@ export default function PostForm({ teamId, onCancel, onSuccess }: PostFormProps)
                     required
                 />
             </div>
-            <div>
-                <label className="block text-sm font-medium mb-1">내용</label>
+            <div className={styles.field}>
+                <label>내용</label>
                 <textarea
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
@@ -100,28 +101,23 @@ export default function PostForm({ teamId, onCancel, onSuccess }: PostFormProps)
                 />
             </div>
 
-            <div>
-                <label className="block text-sm font-medium mb-1">이미지 첨부</label>
+            <div className={styles.field}>
+                <label>이미지 첨부</label>
                 <input
                     type="file"
                     multiple
                     accept="image/*"
                     onChange={handleFileChange}
-                    className="block w-full text-sm text-slate-500
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-full file:border-0
-                        file:text-sm file:font-semibold
-                        file:bg-violet-50 file:text-violet-700
-                        hover:file:bg-violet-100"
+                    className={styles.fileInput}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className={styles.help}>
                     {selectedFiles.length > 0 ? `${selectedFiles.length}개의 파일 선택됨` : '선택된 파일 없음'}
                 </p>
             </div>
 
-            {error && <p className="text-red-500 text-sm">{error}</p>}
+            {error && <p className={styles.error}>{error}</p>}
 
-            <div className="flex gap-2 justify-end pt-2">
+            <div className={styles.formActions}>
                 <button
                     type="button"
                     onClick={onCancel}
