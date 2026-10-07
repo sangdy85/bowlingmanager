@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     response.cookies.set(COOKIE_NAME, payload, {
         httpOnly: true,
         sameSite: "lax",
-        secure: request.nextUrl.protocol === "https:",
+        secure: process.env.NODE_ENV === "production",
         path: "/",
         maxAge: 10 * 60,
     });
