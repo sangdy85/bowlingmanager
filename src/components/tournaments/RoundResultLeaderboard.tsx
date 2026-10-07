@@ -125,16 +125,17 @@ export default function RoundResultLeaderboard({ data, title }: { data: RoundRes
                     >
                         <div style={{ width: '100%', padding: '0 0 20px 0' }}>
                             <div style={{ 
-                                backgroundColor: '#FFFF00', 
+                                background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
                                 border: '1px solid black', 
                                 borderBottomWidth: '2px', 
-                                padding: '12px 20px', 
+                                padding: '18px 20px',
                                 width: '100%', 
                                 display: 'flex', 
                                 justifyContent: 'center', 
                                 alignItems: 'center' 
                             }}>
-                                <h2 style={{ textAlign: 'center', fontSize: '20px', fontWeight: '900', color: 'black', margin: '0' }}>
+                                <div style={{ color: '#1d4ed8', fontSize: '11px', fontWeight: '900', letterSpacing: '0.12em', marginBottom: '5px' }}>FINAL RESULT</div>
+                                <h2 style={{ textAlign: 'center', fontSize: '22px', lineHeight: '1.3', fontWeight: '900', color: '#0f172a', margin: '0' }}>
                                     {title} {roundNumber}회차 결과 {totalPages > 1 ? `(${pageIndex + 1}/${totalPages} 페이지)` : ''}
                                 </h2>
                             </div>

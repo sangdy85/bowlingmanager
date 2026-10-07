@@ -1,16 +1,16 @@
 'use client';
+import controls from './CenterControls.module.css';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { calculateTournamentStatus, STATUS_LABELS, formatDateForInput, formatKSTDate, formatKSTDayLabel } from '@/lib/tournament-utils';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { updateRoundSettings, updateRoundParticipants, updateRoundLanes, updateRoundScores, manualRegister, updateLaneSettings, autoAssignRemaining, updatePaymentStatus, deleteRegistration, updateRegistration, updateLaneConfig, updateFemaleChampParticipants, updateLuckyDrawResult } from '@/app/actions/round-actions';
+import { updateRoundSettings, updateRoundParticipants, updateRoundLanes, updateRoundScores, manualRegister, updateLaneSettings, autoAssignRemaining, updatePaymentStatus, deleteRegistration, updateRegistration, updateLaneConfig, updateFemaleChampParticipants } from '@/app/actions/round-actions';
 import { updateTournamentBasicInfo } from '@/app/actions/tournament-center';
 import Link from "next/link";
 import TournamentStatusDropdown from './TournamentStatusDropdown';
 import DeleteTournamentButton from './DeleteTournamentButton';
 import SmartExcelScoreUpload from "@/components/SmartExcelScoreUpload";
 import { GeminiParsedRow } from "@/app/actions/gemini-score";
-import confetti from 'canvas-confetti';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import SideGameManager from './SideGameManager';
@@ -21,6 +21,10 @@ import GrandFinaleCumulativeManager from './GrandFinaleCumulativeManager';
 import { calculateGameLaneAssignments } from '@/lib/lane-movement';
 import styles from './RoundDetailManagement.module.css';
 import ui from './ManagementUI.module.css';
+import RoundLuckyDrawTab from './RoundLuckyDrawTab';
+import { getRoundFinalResults } from '@/lib/round-final-results';
+import LuckyDrawWinners from './LuckyDrawWinners';
+import resultStyles from './ResultVisibility.module.css';
 
 // --- Tab Components ---
 
@@ -1005,7 +1009,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                     <td className={ui.textCell} style={{ width: '90px' }}>
                                         {(p.registration.guestTeamName ?? p.registration.team?.name) || '-'}
                                     </td>
-                                    <td className={`${ui.textCell} ${ui.stickyName}`} style={{ width: '130px', fontWeight: 750 }}>
+                                    <td className={`${ui.centerTextCell} ${ui.stickyName}`} style={{ width: '130px', fontWeight: 750 }}>
                                         <div className="flex flex-col items-center">
                                             <span className={isWaitlisted ? 'text-gray-400' : ''}>{p.registration.user?.name || p.registration.guestName}</span>
                                             {isTeamEvent && groupId && (
@@ -1017,7 +1021,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                     </td>
                                     <td className="p-2 text-center">
                                         <div className="flex justify-center">
-                                            <div className="flex items-center -space-x-px">
+                                            <div className={ui.scoreInputs}>
                                                 {Array.from({ length: gameCount }, (_, i) => i + 1).map(g => (
                                                     <div key={g} className={ui.scoreField}>
                                                         <span aria-hidden="true">{g}G</span>
@@ -1039,11 +1043,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                                             style={{
                                                                 width: `${pxWidth}px`,
                                                                 fontSize: fontSize,
-                                                                borderLeftWidth: g === 1 ? '1px' : '0px',
-                                                                borderTopLeftRadius: g === 1 ? '6px' : '0px',
-                                                                borderBottomLeftRadius: g === 1 ? '6px' : '0px',
-                                                                borderTopRightRadius: g === gameCount ? '6px' : '0px',
-                                                                borderBottomRightRadius: g === gameCount ? '6px' : '0px',
+                                                                borderRadius: '10px',
                                                             }}
                                                         />
                                                     </div>
@@ -1226,202 +1226,7 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
             />
         );
     }
-    const settings = round.tournament?.settings ? JSON.parse(round.tournament.settings) : {};
-    const gameCount = settings.gameCount || 3;
-    const isEvent = round.tournament?.type === 'EVENT';
-    const maxParticipants = settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament?.maxParticipants ?? settings.maxParticipants ?? 0;
-
-    // Identify waitlisted participants to exclude from results
-    // We strictly apply this only for EVENT tournaments to prevent missing data in CHAMP rounds
-    const waitlistedRegIds = new Set(
-        ((isEvent || round.tournament?.type === 'CHAMP') && maxParticipants > 0)
-            ? [...round.participants]
-                .sort((a, b) => {
-                    const dateA = new Date(a.createdAt || 0).getTime();
-                    const dateB = new Date(b.createdAt || 0).getTime();
-                    return dateA - dateB;
-                })
-                .slice(maxParticipants)
-                .map(p => p.registrationId)
-            : []
-    );
-
-    // 1. Prepare and Sort Data
-    const gameMode = settings.gameMode || 'INDIVIDUAL';
-    const isTeamEvent = gameMode && gameMode.startsWith('TEAM_');
-
-    let results = [];
-
-    if (isTeamEvent) {
-        // Aggregate by entryGroupId
-        const groups: Record<string, any> = {};
-        round.participants
-            .filter((p: any) => !waitlistedRegIds.has(p.registrationId))
-            .forEach((p: any) => {
-                const groupId = p.registration.entryGroupId || p.id; // Fallback to p.id if no group
-                if (!groups[groupId]) {
-                    const groupNamePart = p.registration.entryGroupId?.includes('_name_') ? p.registration.entryGroupId.split('_name_')[1] : null;
-                    const groupNumPart = p.registration.entryGroupId?.startsWith('group_') ? p.registration.entryGroupId.replace('group_', '') : null;
-
-                    groups[groupId] = {
-                        id: groupId,
-                        members: [],
-                        totalRaw: 0,
-                        totalHandicap: 0,
-                        gameScores: new Array(gameCount).fill(0),
-                        teamName: groupNamePart || (groupNumPart ? `조: ${groupNumPart}` : (p.registration.guestTeamName ?? p.registration.team?.name) || '팀'),
-                        handicapSum: 0
-                    };
-                }
-                const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
-                const handicap = p.handicap ?? p.registration?.handicap ?? 0;
-                let pTotalCapped = 0;
-                for (let g = 1; g <= gameCount; g++) {
-                    const s = pScores.find((sc: any) => sc.gameNumber === g)?.score || 0;
-                    if (s > 0) {
-                        const capped = Math.min(s + handicap, 300);
-                        groups[groupId].gameScores[g - 1] += capped;
-                        pTotalCapped += capped;
-                    }
-                }
-                groups[groupId].totalRaw += pTotalCapped; // Using totalRaw as capped total in this context
-                groups[groupId].handicapSum += handicap;
-                groups[groupId].members.push(p.registration.guestName ?? p.registration.user?.name ?? 'Unknown');
-            });
-
-        results = Object.values(groups).map((g: any) => {
-            const validScores = g.gameScores.filter((s: number) => s > 0);
-            const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
-            return {
-                id: g.id,
-                name: g.members.join(', '),
-                team: g.teamName,
-                scores: g.gameScores,
-                total: g.totalRaw, // totalRaw now contains capped sum
-                handicapEach: g.handicapSum,
-                totalHandicap: g.handicapSum * validScores.length,
-                hiLow: hiLow,
-                isTeam: true
-            };
-        });
-    } else {
-        const prevWinners = round.prevRoundWinners || {};
-        const roundHandicaps = settings.roundMinusHandicaps?.[round.roundNumber] || {
-            rank1: settings.minusHandicapRank1 || 0,
-            rank2: settings.minusHandicapRank2 || 0,
-            rank3: settings.minusHandicapRank3 || 0,
-            female: settings.minusHandicapFemale || 0
-        };
-        const mRank1 = roundHandicaps.rank1;
-        const mRank2 = roundHandicaps.rank2;
-        const mRank3 = roundHandicaps.rank3;
-        const mRankFemale = roundHandicaps.female;
-
-        results = round.participants
-            .filter((p: any) => !waitlistedRegIds.has(p.registrationId))
-            .map((p: any) => {
-                const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
-
-                const handicap = p.handicap ?? p.registration?.handicap ?? 0;
-                const pName = p.registration.guestName ?? p.registration.user?.name ?? 'Unknown';
-                const pTeam = (p.registration.guestTeamName ?? p.registration.team?.name) || '개인회원';
-
-                const scores: number[] = [];
-                let totalRaw = 0;
-                let gamesPlayed = 0;
-
-                for (let g = 1; g <= gameCount; g++) {
-                    const sRecord = pScores.find((s: any) => s.gameNumber === g);
-                    const score = sRecord?.score || 0;
-                    scores.push(score);
-                    if (sRecord && score > 0) {
-                        totalRaw += Math.min(score + handicap, 300);
-                        gamesPlayed++;
-                    } else if (sRecord) {
-                        gamesPlayed++;
-                    }
-                }
-
-                // 1. Calculate system penalty from previous round (minusApplied)
-                let minusApplied = 0;
-                let rankCap = 0; // The limit/cap based on the rank setting
-
-                if (gamesPlayed === gameCount) {
-                    const matchWinner = (winner: any) => winner && winner.name === pName && winner.team === pTeam;
-
-                    if (matchWinner(prevWinners.rank1)) {
-                        minusApplied += Math.abs(mRank1);
-                        rankCap = Math.abs(mRank1);
-                    } else if (matchWinner(prevWinners.rank2)) {
-                        minusApplied += Math.abs(mRank2);
-                        rankCap = Math.abs(mRank2);
-                    } else if (matchWinner(prevWinners.rank3)) {
-                        minusApplied += Math.abs(mRank3);
-                        rankCap = Math.abs(mRank3);
-                    }
-
-                    if (matchWinner(prevWinners.femaleChamp)) {
-                        minusApplied += Math.abs(mRankFemale);
-                        // If no rankCap was set (not a top 3 winner but female champ), cap by female champ setting itself
-                        if (rankCap === 0) rankCap = Math.abs(mRankFemale);
-                    }
-
-                    // [AUTO CAP] Limit the total system penalty by the rankCap (or highest of applied penalties)
-                    // This ensures if rank1 is -20, the total minus won't exceed 20 even with female champ bonus.
-                    if (minusApplied > rankCap && rankCap > 0) {
-                        minusApplied = rankCap;
-                    }
-                }
-
-                const validScores = scores.filter(s => s > 0);
-                const hiLow = validScores.length > 1 ? (Math.max(...validScores) - Math.min(...validScores)) : 0;
-
-                // Penalty Calculation (Non-cumulative vs Manual)
-                // 1. Manual Penalty: From registration.handicap (if negative)
-                // 2. System Penalty: From previous round result (minusApplied - now capped)
-                const manualPenaltyTotal = handicap < 0 ? Math.abs(handicap) : 0;
-                const systemPenaltyTotal = minusApplied;
-
-                // Use the LARGER of the two penalties (Don't sum them up)
-                const finalPenaltyTotal = Math.max(manualPenaltyTotal, systemPenaltyTotal);
-
-                // Positive handicap is multiplied by games played, 
-                // while Negative handicap is a fixed total subtraction from the final sum.
-                const positiveHandicapTotal = (handicap > 0 ? handicap : 0) * gamesPlayed;
-                const finalHandicapValue = positiveHandicapTotal - finalPenaltyTotal;
-
-                const total = totalRaw - (finalPenaltyTotal > 0 ? finalPenaltyTotal : 0);
-
-                return {
-                    id: p.registrationId,
-                    name: pName,
-                    team: pTeam,
-                    scores: scores,
-                    handicapEach: handicap,
-                    totalHandicap: finalHandicapValue, // Display adjusted handicap
-                    total,
-                    hiLow,
-                    hasMinusHandicap: minusApplied > 0
-                };
-            });
-    }
-
-    const sortedResults = results.map((r: any) => {
-        const participant = round.participants.find((p: any) => p.registrationId === r.id);
-        return { ...r, isFemaleChamp: participant?.isFemaleChamp || false };
-    }).sort((a: any, b: any) => {
-        if (b.total !== a.total) return b.total - a.total;
-        
-        // 1. 비핸디 점수(Scratch Score) 우선 정렬 (높은 순)
-        const scratchA = a.total - (a.totalHandicap || 0);
-        const scratchB = b.total - (b.totalHandicap || 0);
-        if (scratchB !== scratchA) return scratchB - scratchA;
-        
-        // 2. 게임 하이로우 편차 정렬 (낮은 순)
-        const hiLowA = a.hiLow || 0;
-        const hiLowB = b.hiLow || 0;
-        return hiLowA - hiLowB;
-    });
+    const { sortedResults, settings, gameCount, isTeamEvent } = getRoundFinalResults(round);
 
     const handleExcelDownload = async () => {
         const workbook = new ExcelJS.Workbook();
@@ -1819,16 +1624,21 @@ function RoundFinalResultsTab({ round, isManager }: { round: any, isManager: boo
                             }}
                         >
                             <div style={{
-                                backgroundColor: '#FFFF00',
+                                background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
                                 border: '1.5px solid black',
                                 borderBottom: 'none',
-                                padding: '12px',
+                                padding: isMobile
+                                    ? '16px 12px'
+                                    : isManager && pageIndex === 0
+                                        ? '20px 140px 20px 24px'
+                                        : '20px 24px',
                                 textAlign: 'center',
                                 position: 'relative',
                                 width: '100%',
                                 boxSizing: 'border-box'
                             }}>
-                                <h2 style={{ textAlign: 'center', fontSize: '20px', fontWeight: '900', color: 'black', margin: '0' }}>
+                                <div style={{ color: '#1d4ed8', fontSize: '11px', fontWeight: '900', letterSpacing: '0.12em', marginBottom: '5px' }}>FINAL RESULT</div>
+                                <h2 style={{ textAlign: 'center', fontSize: isMobile ? '18px' : '22px', fontWeight: '900', lineHeight: '1.3', color: '#0f172a', margin: '0' }}>
                                     {round.tournament.type === 'EVENT' ? round.tournament.name : `${round.tournament.name} ${round.roundNumber}회차`} 결과 {totalPages > 1 ? `(${pageIndex + 1}/${totalPages} 페이지)` : ''}
                                 </h2>
                                 {pageIndex === 0 && (
@@ -1981,8 +1791,8 @@ function TournamentEditModal({ tournament, onClose, onUpdate }: { tournament: an
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-white/20">
+        <div className={controls.overlay}>
+            <div className={controls.dialog} role="dialog" aria-modal="true" aria-label="대회 기본 정보 수정">
                 <div className="p-8 text-left">
                     <div className="flex justify-between items-center mb-8 pb-4 border-b border-gray-100">
                         <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3">
@@ -2309,344 +2119,6 @@ function RoundPointsTab({ round }: { round: any }) {
     );
 }
 
-// 8. Lucky Draw Tab
-function RoundLuckyDrawTab({ round }: { round: any }) {
-    const [winnerCount, setWinnerCount] = useState(1);
-    const [excludeRankers, setExcludeRankers] = useState(true);
-    const [winners, setWinners] = useState<any[]>([]);
-    const [isRunning, setIsRunning] = useState(false);
-    const [currentCandidate, setCurrentCandidate] = useState<string | null>(null);
-    const [isFinalized, setIsFinalized] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-
-    // Initial load from round data
-    useEffect(() => {
-        if (round.luckyDrawResult) {
-            try {
-                // Defensive parsing to handle malformed JSON gracefully
-                const cleanResult = round.luckyDrawResult.trim();
-                let data: any = {};
-                try {
-                    data = JSON.parse(cleanResult);
-                } catch (e) {
-                    console.error("Failed to parse GPT response", e);
-                    throw new Error("결과 분석 중 오류가 발생했습니다. (JSON 파싱 실패)");
-                }
-
-                if (data.winners) setWinners(data.winners);
-                if (data.winnerCount) setWinnerCount(data.winnerCount);
-                if (data.excludeRankers !== undefined) setExcludeRankers(data.excludeRankers);
-                if (data.isFinalized) setIsFinalized(true);
-                if (data.winners && data.winners.length > 0) {
-                    const lastWinner = data.winners[data.winners.length - 1];
-                    setCurrentCandidate(lastWinner.registration.guestName ?? lastWinner.registration.user?.name);
-                }
-            } catch (e) {
-                console.error("Failed to parse lucky draw result. Malformed JSON:", e);
-            }
-        }
-    }, [round.luckyDrawResult]);
-
-    const settings = round.tournament?.settings ? (typeof round.tournament.settings === 'string' ? JSON.parse(round.tournament.settings) : round.tournament.settings) : {};
-    const maxParticipants = settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament?.maxParticipants ?? settings.maxParticipants ?? 0;
-    const waitlistedRegIds = new Set(
-        [...round.participants]
-            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-            .filter((_, idx) => maxParticipants > 0 && idx + 1 > maxParticipants)
-            .map(p => p.registrationId)
-    );
-
-    // 1. Calculate Ranks once to handle exclusion
-    const sortedResults = [...round.participants]
-        .filter((p: any) => !waitlistedRegIds.has(p.registrationId))
-        .map((p: any) => {
-            const pScores = round.individualScores.filter((s: any) => s.registrationId === p.registrationId);
-            const pHandicap = p.handicap ?? p.registration?.handicap ?? 0;
-            const total = pScores.reduce((sum: number, s: any) => sum + s.score, 0) + (pHandicap * pScores.length);
-            return { ...p, total };
-        }).sort((a: any, b: any) => b.total - a.total);
-
-    const topRankerIds = sortedResults.slice(0, 3).map((p: any) => p.registrationId);
-    const femaleChampIds = round.participants.filter((p: any) => p.isFemaleChamp).map((p: any) => p.registrationId);
-    const excludedIds = [...new Set([...topRankerIds, ...femaleChampIds])];
-
-    const getEligibleList = () => {
-        let list = round.participants.filter((p: any) => !winners.find(w => w.registrationId === p.registrationId) && !waitlistedRegIds.has(p.registrationId));
-        if (excludeRankers) {
-            list = list.filter((p: any) => !excludedIds.includes(p.registrationId));
-        }
-        return list;
-    };
-
-    const handleDraw = async () => {
-        const pool = getEligibleList();
-        if (pool.length === 0) {
-            alert('추첨 가능한 인원이 없습니다.');
-            return;
-        }
-
-        setIsRunning(true);
-        const startTime = Date.now();
-        const duration = 2000; // 2 seconds animation
-
-        const interval = setInterval(() => {
-            const randomIndex = Math.floor(Math.random() * pool.length);
-            const candidate = pool[randomIndex];
-            setCurrentCandidate(candidate.registration.guestName ?? candidate.registration.user?.name);
-
-            if (Date.now() - startTime > duration) {
-                clearInterval(interval);
-
-                // Final selection
-                const winnerIndex = Math.floor(Math.random() * pool.length);
-                const winner = pool[winnerIndex];
-                const winnerName = winner.registration.guestName ?? winner.registration.user?.name;
-
-                setCurrentCandidate(winnerName);
-                setWinners(prev => [...prev, winner]);
-                setIsRunning(false);
-
-                // Celebrate
-                confetti({
-                    particleCount: 150,
-                    spread: 70,
-                    origin: { y: 0.6 },
-                    colors: ['#FFD700', '#FFA500', '#FF4500']
-                });
-            }
-        }, 80);
-    };
-
-    const resetDraw = () => {
-        if (isFinalized) return;
-        if (confirm('추첨 내역을 초기화하시겠습니까?')) {
-            setWinners([]);
-            setCurrentCandidate(null);
-        }
-    };
-
-    const handleSave = async () => {
-        if (winners.length === 0) return;
-        if (!confirm("결과를 저장하시겠습니까? 저장 후에는 수정이나 초기화가 불가능합니다.")) return;
-
-        setIsSaving(true);
-        try {
-            const resultData = {
-                winners,
-                winnerCount,
-                excludeRankers,
-                isFinalized: true
-            };
-            // Assuming updateLuckyDrawResult is imported or defined elsewhere
-            await updateLuckyDrawResult(round.id, JSON.stringify(resultData));
-            setIsFinalized(true);
-            alert("성공적으로 저장되었습니다.");
-        } catch (e: any) {
-            alert(e.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    return (
-        <div className="p-4 space-y-6">
-            <div className="bg-gray-50 p-10 rounded-[3rem] border-4 border-dashed border-gray-200 text-center w-full shadow-sm">
-                <h3 className="text-3xl font-black text-gray-800 mb-8 flex items-center justify-center gap-3">
-                    <span className="text-4xl">🎡</span> 행운권 추첨 설정
-                </h3>
-
-                <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 mb-16 px-6 py-4 bg-white rounded-2xl shadow-sm border max-w-5xl mx-auto">
-                    <div className="flex items-center gap-4">
-                        <label className="font-black text-xl text-gray-700 whitespace-nowrap">추첨 인원:</label>
-                        <select
-                            value={winnerCount}
-                            onChange={(e) => setWinnerCount(parseInt(e.target.value))}
-                            className="select select-bordered select-lg font-black text-xl w-36 h-14"
-                            disabled={isRunning || winners.length > 0 || isFinalized}
-                        >
-                            {[1, 2, 3, 4, 5, 10, 15, 20].map(n => (
-                                <option key={n} value={n}>{n}명</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div
-                        className={`flex items-center gap-4 select-none group ${isFinalized ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
-                        onClick={() => !isRunning && winners.length === 0 && !isFinalized && setExcludeRankers(!excludeRankers)}
-                    >
-                        <input
-                            type="checkbox"
-                            checked={excludeRankers}
-                            readOnly
-                            className="checkbox checkbox-primary checkbox-lg w-8 h-8"
-                            disabled={isRunning || winners.length > 0 || isFinalized}
-                        />
-                        <span className="font-black text-xl text-gray-700 group-hover:text-blue-600 transition-colors">입상자 제외 (1~3위 & 여챔)</span>
-                    </div>
-                </div>
-
-                {/* Roulette Area - REFINED LARGE SCALE */}
-                <div className="relative h-[500px] md:h-[650px] flex items-center justify-center bg-black rounded-[60px] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.9)] mb-14 border-[20px] border-yellow-400 w-full">
-                    <div className="absolute inset-0 bg-gradient-to-b from-blue-900/40 via-transparent to-black pointer-events-none"></div>
-
-                    <div className="text-center z-10 transition-all px-10 w-full max-w-full overflow-hidden">
-                        {isRunning ? (
-                            <div
-                                className="font-black text-yellow-400 animate-pulse tracking-tighter drop-shadow-[0_0_60px_rgba(250,204,21,0.8)] leading-tight whitespace-nowrap"
-                                style={{ fontSize: 'min(12vw, 200px)' }}
-                            >
-                                {currentCandidate}
-                            </div>
-                        ) : winners.length > 0 && currentCandidate ? (
-                            <div className="animate-bounce-slow">
-                                <p
-                                    className="text-yellow-400 font-black mb-8 tracking-[1em] drop-shadow-lg uppercase"
-                                    style={{ fontSize: 'min(3vw, 40px)' }}
-                                >
-                                    🎊 Winner 🎊
-                                </p>
-                                <div
-                                    className="font-black text-white drop-shadow-[0_0_80px_rgba(255,255,255,0.9)] leading-none py-12 whitespace-nowrap"
-                                    style={{ fontSize: 'min(16vw, 260px)' }}
-                                >
-                                    {currentCandidate}
-                                </div>
-                            </div>
-                        ) : (
-                            <div
-                                className="text-gray-400 font-black animate-pulse tracking-[0.3em] leading-tight"
-                                style={{ fontSize: 'min(7vw, 100px)' }}
-                            >
-                                READY TO DRAW
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Decorative Side Lights - REFINED SCALE */}
-                    <div className="absolute left-8 top-0 bottom-0 flex flex-col justify-around py-16 w-10">
-                        {[1, 2, 3, 4, 5, 6].map(i => (
-                            <div key={i} className={`w-8 h-8 rounded-full ${isRunning ? 'bg-yellow-400 shadow-[0_0_30px_#facc15] animate-pulse scale-125' : 'bg-gray-800'}`} style={{ animationDelay: `${i * 0.1}s` }}></div>
-                        ))}
-                    </div>
-                    <div className="absolute right-8 top-0 bottom-0 flex flex-col justify-around py-16 w-10">
-                        {[1, 2, 3, 4, 5, 6].map(i => (
-                            <div key={i} className={`w-8 h-8 rounded-full ${isRunning ? 'bg-yellow-400 shadow-[0_0_30px_#facc15] animate-pulse scale-125' : 'bg-gray-800'}`} style={{ animationDelay: `${i * 0.15}s` }}></div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="flex flex-col justify-center items-center gap-10 mb-8">
-                    <button
-                        onClick={handleDraw}
-                        disabled={isRunning || winners.length >= winnerCount || isFinalized}
-                        className="btn btn-lg min-h-[130px] w-full max-w-3xl bg-red-600 hover:bg-red-700 text-white font-black text-[3.5rem] rounded-[4rem] shadow-[0_25px_60px_rgba(220,38,38,0.4)] transform hover:scale-105 active:scale-95 transition-all border-0 disabled:bg-gray-400 disabled:shadow-none mb-2"
-                    >
-                        {isFinalized ? '추첨 완료 (잠금)' : winners.length >= winnerCount ? '추첨 완료' : `제 ${winners.length + 1}차 추첨하기`}
-                    </button>
-                    {!isFinalized && winners.length > 0 && !isRunning && (
-                        <div className="w-full max-w-3xl flex flex-col gap-4 mt-4">
-                            <button
-                                onClick={handleSave}
-                                disabled={isSaving}
-                                className="btn btn-lg h-24 w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-4xl rounded-3xl shadow-xl transform active:scale-95 transition-all border-0"
-                            >
-                                {isSaving ? '저장 중...' : '💾 결과 저장하기 (잠금)'}
-                            </button>
-                            <p className="text-gray-400 text-base font-bold">⚠️ 저장 후에는 추첨 결과를 수정하거나 초기화할 수 없습니다.</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Winner List - ROBUST INLINE STYLE REDESIGN */}
-            {winners.length > 0 && (
-                <div className="w-full mx-auto mt-24 mb-32 relative max-w-[900px]">
-                    {/* Header Section */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-8 sm:mb-12 px-4 border-b-4 border-[#0f172a] pb-6 gap-4">
-                        <div>
-                            <h4 style={{ margin: 0, fontWeight: 900, color: '#0f172a', fontSize: 'clamp(2rem, 8vw, 3.5rem)', letterSpacing: '-0.05em', lineHeight: 1 }}>
-                                당첨자 명단
-                            </h4>
-                            <p style={{ margin: '0.5rem 0 0', color: '#94a3b8', fontWeight: 700, fontSize: 'clamp(0.875rem, 3vw, 1.25rem)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>WINNERS LIST</p>
-                        </div>
-                        <div className="w-full sm:w-auto text-right">
-                            <div className="inline-flex bg-white border border-slate-100 rounded-2xl px-6 py-3 shadow-sm items-center gap-4">
-                                <span style={{ color: '#2563eb', fontWeight: 900, fontSize: 'clamp(1.25rem, 5vw, 2rem)' }}>{winners.length}</span>
-                                <span style={{ color: '#e2e8f0', fontSize: 'clamp(1rem, 4vw, 1.5rem)', fontWeight: 300 }}>/</span>
-                                <span style={{ color: '#64748b', fontWeight: 900, fontSize: 'clamp(1rem, 4vw, 1.5rem)' }}>{winnerCount}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Table Section */}
-                    <div className="table-responsive !p-0 bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '500px' }}>
-                            <thead className="bg-slate-50 border-b-2 border-slate-100">
-                                <tr>
-                                    <th style={{ padding: 'clamp(1rem, 2vw, 2rem)', color: '#64748b', fontWeight: 800, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.1em', width: '80px', textAlign: 'center' }}>순번</th>
-                                    <th style={{ padding: 'clamp(1rem, 2vw, 2rem)', color: '#64748b', fontWeight: 800, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.1em', width: '40%' }}>소속 / 팀</th>
-                                    <th style={{ padding: 'clamp(1rem, 2vw, 2rem)', color: '#64748b', fontWeight: 800, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>당첨자 성함</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {winners.map((winner, idx) => (
-                                    <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                        <td style={{ padding: 'clamp(1.5rem, 3vw, 2.5rem) 1rem', textAlign: 'center' }}>
-                                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 'clamp(3rem, 6vw, 4.5rem)', height: 'clamp(3rem, 6vw, 4.5rem)', backgroundColor: '#2563eb', color: '#ffffff', borderRadius: '1rem', fontWeight: 900, fontSize: 'clamp(1.25rem, 3vw, 1.75rem)', fontStyle: 'italic', boxShadow: '0 10px 15px -3px rgba(37,99,235,0.4)' }}>
-                                                #{idx + 1}
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: 'clamp(1.5rem, 3vw, 2.5rem) 1rem' }}>
-                                            <span style={{ fontWeight: 700, color: '#64748b', fontSize: 'clamp(1.125rem, 3vw, 1.75rem)', letterSpacing: '-0.025em' }}>
-                                                {(winner.registration.guestTeamName ?? winner.registration.team?.name) || '개인'}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: 'clamp(1.5rem, 3vw, 2.5rem) 1rem' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                <div 
-                                                    style={{ 
-                                                        backgroundColor: '#0f172a', 
-                                                        padding: '0.5rem 1.5rem', 
-                                                        borderRadius: '1.5rem',
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)'
-                                                    }}
-                                                >
-                                                    <span style={{ fontWeight: 900, color: '#ffffff', fontSize: 'clamp(1.5rem, 5vw, 3rem)', letterSpacing: '-0.05em' }}>
-                                                        {winner.registration.guestName ?? winner.registration.user?.name}
-                                                    </span>
-                                                </div>
-                                                {idx === winners.length - 1 && !isRunning && (
-                                                    <span className="bg-yellow-400 text-black px-2 py-0.5 rounded-lg font-black text-[10px] hidden sm:inline-block animate-bounce-slow h-fit">
-                                                        NEW!
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Reset Button Section */}
-                    {!isFinalized && winners.length > 0 && !isRunning && (
-                        <div className="mt-12 sm:mt-24 text-center">
-                            <button
-                                onClick={resetDraw}
-                                className="text-slate-400 hover:text-red-500 font-bold text-sm transition-colors border-b border-dashed border-slate-300 hover:border-red-300"
-                            >
-                                🔄 추첨 데이터 초기화
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-}
-
 export default function RoundDetailPageContent({
     round,
     userId,
@@ -2743,7 +2215,7 @@ export default function RoundDetailPageContent({
         { id: 'scoring', label: '점수 입력', description: `${scoredParticipantCount}/${participantCount}명`, icon: '✎' },
         { id: 'sideGame', label: '사이드게임', description: '선택 운영', icon: '◆' },
         { id: 'finalResults', label: '최종 결과', description: '순위 확인', icon: '★' },
-        { id: 'luckyDraw', label: '행운권', description: '당첨자 추첨', icon: '♧' },
+        ...(isManager && ['CHAMP', 'EVENT'].includes(round.tournament.type) ? [{ id: 'luckyDraw', label: '행운권', description: '당첨자 추첨', icon: '♧' }] : []),
         ...(isManager && round.tournament.type === 'CHAMP' ? [{ id: 'points', label: '포인트', description: '누적 현황', icon: '▲' }] : []),
     ];
 
@@ -2898,10 +2370,14 @@ export default function RoundDetailPageContent({
                 {shouldShowSimplifiedResults ? (
                     <div className="space-y-8 animate-in fade-in duration-500">
                         {/* 1. Final Results Table */}
-                        <div className="p-4 md:p-8">
-                            <div className="flex items-center gap-3 mb-6 px-2">
-                                <span className="text-2xl">📊</span>
-                                <h3 className="text-xl font-black italic">최종 경기 결과</h3>
+                        <div className={resultStyles.resultSection}>
+                            <div className={resultStyles.resultHeading}>
+                                <span className={resultStyles.resultHeadingIcon} aria-hidden="true">📊</span>
+                                <div>
+                                    <span className={resultStyles.resultEyebrow}>RESULTS</span>
+                                    <h3>최종 경기 결과</h3>
+                                    <p>{round.tournament.name} · {round.roundNumber}회차 순위와 게임별 점수를 확인하세요.</p>
+                                </div>
                             </div>
                             <RoundFinalResultsTab round={round} isManager={false} />
                         </div>
@@ -2915,24 +2391,17 @@ export default function RoundDetailPageContent({
                                 } catch (e) { return null; }
                                 if (result.winners && result.winners.length > 0) {
                                     return (
-                                        <div className="p-4 md:p-8 pt-0">
-                                            <div className="flex items-center gap-3 mb-6 px-2">
-                                                <span className="text-2xl">🎁</span>
-                                                <h3 className="text-xl font-black italic">행운권 추첨 당첨자</h3>
-                                            </div>
-                                            <div className="bg-slate-50 rounded-[2.5rem] p-8 border-2 border-slate-200 shadow-inner">
-                                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                                    {result.winners.map((winner: any, idx: number) => (
-                                                        <div key={idx} className="bg-slate-900 p-4 rounded-2xl shadow-lg border border-slate-800 flex flex-col items-center gap-1">
-                                                            <span className="text-white font-black text-lg">
-                                                                {winner.registration?.guestName ?? winner.registration?.user?.name}
-                                                            </span>
-                                                            <span className="text-[10px] font-bold text-slate-400">
-                                                                {(winner.registration?.guestTeamName ?? winner.registration?.team?.name) || '개인회원'}
-                                                            </span>
-                                                        </div>
-                                                    ))}
+                                        <div className={resultStyles.winnerSection}>
+                                            <div className={resultStyles.resultHeading}>
+                                                <span className={resultStyles.resultHeadingIcon} aria-hidden="true">🎁</span>
+                                                <div>
+                                                    <span className={resultStyles.resultEyebrow}>LUCKY DRAW</span>
+                                                    <h3>행운권 추첨 당첨자</h3>
+                                                    <p>추첨 순서와 당첨자 이름을 확인하세요.</p>
                                                 </div>
+                                            </div>
+                                            <div className={resultStyles.winnerPanel}>
+                                                <LuckyDrawWinners winners={result.winners} />
                                             </div>
                                         </div>
                                     );
@@ -3005,7 +2474,7 @@ export default function RoundDetailPageContent({
                                 </div>
                             </div>
                         )}
-                        {activeTab === 'luckyDraw' && <RoundLuckyDrawTab round={round} />}
+                        {activeTab === 'luckyDraw' && isManager && ['CHAMP', 'EVENT'].includes(round.tournament.type) && <RoundLuckyDrawTab key={round.id} round={round} />}
                     </>
                 )}
             </div>

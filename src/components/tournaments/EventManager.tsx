@@ -1,4 +1,5 @@
 'use client';
+import controls from './CenterControls.module.css';
 
 import Link from 'next/link';
 import { useState } from 'react';
@@ -151,8 +152,8 @@ export default function EventManager({ tournament, centerId, isManager }: EventM
 
             {/* Edit Modal */}
             {showEditModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-white/20">
+                <div className={controls.overlay}>
+                    <div className={controls.dialog} role="dialog" aria-modal="true" aria-label="대회 기본 정보 수정">
                         <div className="p-8">
                             <div className="flex justify-between items-center mb-8 pb-4 border-b border-gray-100">
                                 <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3">

@@ -1,20 +1,63 @@
 export type AnnouncementCategory = 'STANDARD' | 'BALL' | 'EXTRA';
-export type AnnouncementGroup = { category: AnnouncementCategory; label: string; names: string[] };
 
-// A read-only projection of the current selection. It never writes participation.
-export function buildSideGameAnnouncementGroups(
+export type SideGameAnnouncementRow = {
+    regId: string;
+    name: string;
+    standard: boolean;
+    extra: boolean;
+    ball: boolean;
+};
+
+export function buildSideGameAnnouncementRows(
     players: ReadonlyArray<{ regId: string; name: string }>,
     participation: Readonly<Record<string, ReadonlySet<AnnouncementCategory>>>,
-    gameCount = 3,
-): AnnouncementGroup[] {
-    const categories: { category: AnnouncementCategory; label: string }[] = [
-        { category: 'STANDARD', label: '기본 사이드' },
-        { category: 'BALL', label: '볼사이드 (2G)' },
-        { category: 'EXTRA', label: `번외 (${gameCount}G)` },
-    ];
-    return categories.map(group => ({ ...group, names: players.filter(player => participation[player.regId]?.has(group.category)).map(player => player.name) }));
+): SideGameAnnouncementRow[] {
+    return players
+        .filter(player => (participation[player.regId]?.size || 0) > 0)
+        .map(player => ({
+            regId: player.regId,
+            name: player.name,
+            standard: participation[player.regId]?.has('STANDARD') || false,
+            extra: participation[player.regId]?.has('EXTRA') || false,
+            ball: participation[player.regId]?.has('BALL') || false,
+        }));
 }
 
-export function formatSideGameAnnouncement(groups: readonly AnnouncementGroup[], roundNumber?: number): string {
-    return [`[${roundNumber == null ? '' : `${roundNumber}회차 `}사이드 게임 명단]`, ...groups.map(group => `■ ${group.label} (${group.names.length}명)\n${group.names.length ? group.names.join('\n') : '참여자가 없습니다.'}`)].join('\n\n');
+export function splitSideGameAnnouncementRows(
+    rows: readonly SideGameAnnouncementRow[],
+): [SideGameAnnouncementRow[], SideGameAnnouncementRow[]] {
+    const midpoint = Math.ceil(rows.length / 2);
+    return [rows.slice(0, midpoint), rows.slice(midpoint)];
+}
+
+export function formatSideGameAnnouncement(
+    rows: readonly SideGameAnnouncementRow[],
+    roundNumber?: number,
+): string {
+    const [left, right] = splitSideGameAnnouncementRows(rows);
+    const header = ['이름', '사이드', '번외', '볼사이드'];
+    const lines = [
+        `[${roundNumber == null ? '' : `${roundNumber}회차 `}사이드 게임 명단]`,
+        [...header, '', ...header].join('\t'),
+    ];
+
+    const rowCount = Math.max(left.length, right.length);
+    for (let index = 0; index < rowCount; index++) {
+        const leftRow = left[index];
+        const rightRow = right[index];
+        const cells = [
+            leftRow?.name || '',
+            leftRow?.standard ? 'O' : '',
+            leftRow?.extra ? 'O' : '',
+            leftRow?.ball ? 'O' : '',
+            '',
+            rightRow?.name || '',
+            rightRow?.standard ? 'O' : '',
+            rightRow?.extra ? 'O' : '',
+            rightRow?.ball ? 'O' : '',
+        ];
+        lines.push(cells.join('\t'));
+    }
+
+    return lines.join('\n');
 }

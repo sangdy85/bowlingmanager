@@ -4,6 +4,7 @@ import Link from "next/link";
 import GrandFinalePointSettings from "@/components/tournaments/GrandFinalePointSettings";
 import GrandFinaleWinnersManager from "@/components/tournaments/GrandFinaleWinnersManager";
 import { auth } from "@/auth";
+import controls from '@/components/tournaments/CenterControls.module.css';
 
 export default async function GrandFinalePage({ params }: { params: Promise<{ id: string, tournamentId: string }> }) {
     const { id: centerId, tournamentId } = await params;
@@ -78,7 +79,7 @@ export default async function GrandFinalePage({ params }: { params: Promise<{ id
     });
 
     return (
-        <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-10">
+        <div className={controls.settingsPage}>
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b-2 border-primary/20">
                 <div className="space-y-4">
