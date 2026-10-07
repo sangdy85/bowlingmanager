@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import styles from "./YearSelector.module.css";
 
 export default function YearSelector({ currentYear, activeYears }: { currentYear: number, activeYears?: number[] }) {
     const router = useRouter();
@@ -28,13 +28,12 @@ export default function YearSelector({ currentYear, activeYears }: { currentYear
     };
 
     return (
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-6">
+        <div className={styles.wrap}>
             {years.map((year) => (
                 <button
                     key={year}
                     onClick={() => handleYearChange(year)}
-                    className={`btn ${currentYear === year ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ whiteSpace: 'nowrap' }}
+                    className={`btn ${styles.button} ${currentYear === year ? 'btn-primary' : styles.inactive}`}
                 >
                     {year}년
                 </button>
