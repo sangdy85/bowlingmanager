@@ -63,11 +63,26 @@ test('posting 권한 API 요청과 권한 없는 결과를 구분할 수 있다'
   finally { global.fetch = originalFetch; }
 });
 
-test('OAuth state는 서명, nonce, 10분 만료와 callback 사용자 검증을 적용한다', () => {
+test('OAuth pending context는 서명 쿠키, nonce, 10분 만료와 callback 사용자 검증을 적용한다', () => {
   const authSource = fs.readFileSync('src/lib/band/auth.ts', 'utf8');
+  const connectSource = fs.readFileSync('src/app/api/integrations/band/connect/route.ts', 'utf8');
   const callbackSource = fs.readFileSync('src/app/api/integrations/band/callback/route.ts', 'utf8');
-  assert.match(authSource, /SignJWT/); assert.match(authSource, /nonce: randomUUID\(\)/); assert.match(authSource, /setExpirationTime\('10m'\)/);
-  assert.match(callbackSource, /stateData\.userId !== session\.user\.id/); assert.match(callbackSource, /verifyCenterAdmin\(stateData\.centerId\)/);
+
+  assert.match(authSource, /SignJWT/);
+  assert.match(authSource, /nonce: randomUUID\(\)/);
+  assert.match(authSource, /setExpirationTime\('10m'\)/);
+  assert.doesNotMatch(authSource, /searchParams\.set\('state'/);
+
+  assert.match(connectSource, /createBandOAuthState/);
+  assert.match(connectSource, /response\.cookies\.set\(COOKIE_NAME/);
+  assert.match(connectSource, /httpOnly:\s*true/);
+  assert.match(connectSource, /sameSite:\s*'lax'/);
+  assert.match(connectSource, /secure:\s*process\.env\.NODE_ENV === 'production'/);
+
+  assert.match(callbackSource, /request\.cookies\.get\(COOKIE_NAME\)/);
+  assert.match(callbackSource, /stateData\.userId !== session\.user\.id/);
+  assert.match(callbackSource, /verifyCenterAdmin\(stateData\.centerId\)/);
+  assert.doesNotMatch(callbackSource, /searchParams\.get\('state'\)/);
 });
 
 test('다른 센터 관리자가 아니면 공통 권한 검사가 차단한다', async () => {
@@ -104,4 +119,39 @@ test('명시적으로 OPEN된 리그 대회는 기존 참가 신청 흐름을 �
 test('토큰과 client secret은 클라이언트 컴포넌트로 전달되지 않는다', () => {
   const ui = fs.readFileSync('src/components/centers/BandIntegrationSettings.tsx', 'utf8');
   assert.doesNotMatch(ui, /accessToken|refreshToken|CLIENT_SECRET/);
+});
+
+
+test('BAND OAuth token 교환은 공식 문서의 code와 grant_type만 전송한다', () => {
+  const source = fs.readFileSync('src/lib/band/auth.ts', 'utf8');
+  const exchangeStart = source.indexOf('export async function exchangeBandAuthorizationCode');
+  const exchangeSource = source.slice(exchangeStart);
+
+  assert.match(exchangeSource, /grant_type/);
+  assert.match(exchangeSource, /authorization_code/);
+  assert.match(exchangeSource, /url\.searchParams\.set\('code', code\)/);
+  assert.doesNotMatch(exchangeSource, /url\.searchParams\.set\('redirect_uri'/);
+});
+
+test('실제 BAND 게시 직전에 posting 권한을 다시 검사한다', () => {
+  const source = fs.readFileSync('src/lib/band/publisher.ts', 'utf8');
+  const permissionIndex = source.indexOf('getPermissions(accessToken, connection.bandKey)');
+  const createIndex = source.indexOf('createPost({');
+
+  assert.ok(permissionIndex >= 0);
+  assert.ok(createIndex >= 0);
+  assert.ok(permissionIndex < createIndex);
+  assert.match(source, /permissions\.includes\('posting'\)/);
+});
+
+test('모집 자동 게시 trigger는 PLANNING에서 OPEN 또는 JOINING으로 갈 때만 동작한다', () => {
+  const source = fs.readFileSync('src/app/actions/tournament-center.ts', 'utf8');
+  assert.match(
+    source,
+    /tournament\.status === 'PLANNING' && \['OPEN', 'JOINING'\]\.includes\(status\)/,
+  );
+  assert.match(
+    source,
+    /publishTournamentRecruitment\(\{ tournamentId, requestedById: actorId \}\)/,
+  );
 });
