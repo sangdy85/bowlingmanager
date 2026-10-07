@@ -1,5 +1,8 @@
 'use client';
 
+import ui from './ManagementUI.module.css';
+import { SummaryMetricCard } from './ManagementUI';
+
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -476,14 +479,14 @@ export default function RoundParticipantManager({
     if (!rounds || rounds.length === 0) return null;
 
     return (
-        <div className="space-y-6">
+        <div className={ui.surface}>
             {/* Round Selection Tabs */}
             {!hideRoundTabs && (
                 <div className="flex flex-wrap gap-2 pb-2 border-b-2 border-primary/10">
                     {rounds.map((r) => {
                         const isActive = r.id === selectedRoundId;
                         return (
-                            <button
+                            <button type="button"
                                 key={r.id}
                                 onClick={() => setSelectedRoundId(r.id)}
                                 className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all shadow-sm ${isActive
@@ -498,22 +501,23 @@ export default function RoundParticipantManager({
                 </div>
             )}
 
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50 p-5 rounded-2xl border-2 border-slate-200 gap-4 mt-6">
+            <div className={ui.section}>
+              <div className={ui.header}>
                 <div>
                     {(!hideRoundTabs || isManager) && (
-                        <h3 className="text-xl font-black text-slate-800">
+                        <h3 className={ui.title}>
                             {isManager ? (isEvent ? '참가자 명단' : '참가자 명단 관리') : '참가자 명단'}
                             {tournamentType !== 'EVENT' && (
                                 <span className="text-primary text-base ml-2">({selectedRound?.roundNumber}회차)</span>
                             )}
                         </h3>
                     )}
-                    <p className="text-xs font-bold text-slate-500 mt-1">
-                        현재 참여 인원: <span className="text-slate-900">{roundParticipants.length}명</span>
-                    </p>
+                    <p className={ui.subtitle}>참가자 정보, 입금 현황과 레인 배정을 관리합니다.</p>
                 </div>
+                <SummaryMetricCard label="현재 참여 인원" value={roundParticipants.length} />
+              </div>
                 {isManager && (
-                    <div className="flex flex-wrap gap-2">
+                    <div className={ui.toolbar}>
                         <input
                             type="file"
                             ref={fileInputRef}
@@ -521,37 +525,37 @@ export default function RoundParticipantManager({
                             accept=".xlsx, .xls"
                             className="hidden"
                         />
-                        <button
+                        <button type="button"
                             onClick={downloadTemplate}
                             className="btn bg-white border-2 border-slate-300 text-slate-600 h-12 px-4 font-black hover:bg-slate-50 transition-all text-xs"
                             title="양식 다운로드"
                         >
                             📄 양식
                         </button>
-                        <button
+                        <button type="button"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={loading}
-                            className="btn bg-white border-2 border-green-600 text-green-600 h-12 px-5 font-black hover:bg-green-50 transition-all text-xs flex items-center gap-1"
+                            className={ui.secondary}
                         >
                             📊 엑셀 업로드
                         </button>
-                        <button
+                        <button type="button"
                             onClick={downloadExcel}
                             className="btn bg-white border-2 border-slate-900 text-slate-900 h-12 px-5 font-black hover:bg-slate-50 transition-all text-xs flex items-center gap-1"
                         >
                             📥 엑셀 다운로드
                         </button>
                         {!isIndividualMode && (
-                            <button
+                            <button type="button"
                                 onClick={handleAutoGroup}
                                 className="btn bg-purple-600 text-white h-12 px-5 font-black hover:bg-purple-700 shadow-lg shadow-purple-600/20 text-xs flex items-center gap-1"
                             >
                                 🔄 팀 자동 편성
                             </button>
                         )}
-                        <button
+                        <button type="button"
                             onClick={openRegisterModal}
-                            className="btn btn-primary h-12 px-6 font-black shadow-lg shadow-primary/20 flex items-center gap-2"
+                            className={ui.primary}
                         >
                             <span className="text-lg">+</span> 수동 등록
                         </button>
@@ -568,20 +572,20 @@ export default function RoundParticipantManager({
                         <h3 className="font-bold text-sm text-white uppercase tracking-wider">
                             {isEditMode ? '참가자 정보 수정' : '신규 참가자 수동 등록'}
                         </h3>
-                        <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white text-2xl font-light">×</button>
+                        <button type="button" aria-label="참가자 편집 닫기" onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white text-2xl font-light">×</button>
                     </div>
 
                     <div className="p-6">
                         <div className="flex flex-col lg:flex-row items-end gap-4">
                             {!isEditMode && (
                                 <div className="flex bg-white p-1 rounded-xl border border-slate-200 h-[52px]">
-                                    <button
+                                    <button type="button"
                                         onClick={() => setManualType('MEMBER')}
                                         className={`px-4 text-[11px] font-black rounded-lg transition-all ${manualType === 'MEMBER' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500'}`}
                                     >
                                         회원 검색
                                     </button>
-                                    <button
+                                    <button type="button"
                                         onClick={() => setManualType('GUEST')}
                                         className={`px-4 text-[11px] font-black rounded-lg transition-all ${manualType === 'GUEST' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500'}`}
                                     >
@@ -602,7 +606,7 @@ export default function RoundParticipantManager({
                                             className="flex-1 h-[52px] border-2 border-slate-200 rounded-xl px-4 text-sm font-bold outline-none focus:border-primary transition-all text-black bg-white"
                                             placeholder="회원 이름을 입력하세요"
                                         />
-                                        <button
+                                        <button type="button"
                                             onClick={handleSearchMembers}
                                             disabled={isSearching}
                                             className="px-6 h-[52px] bg-slate-900 text-white rounded-xl font-black text-sm hover:bg-slate-800 transition-all disabled:bg-slate-400"
@@ -614,7 +618,7 @@ export default function RoundParticipantManager({
                                     {searchResults.length > 0 && (
                                         <div className="absolute top-[100%] left-0 right-0 mt-2 bg-white border-2 border-slate-900 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto overflow-x-hidden">
                                             {searchResults.map((user: any, index: number) => (
-                                                <button
+                                                <button type="button"
                                                     key={`${user.id}-${index}`}
                                                     onClick={() => selectMember(user)}
                                                     className="w-full px-4 py-3 text-left hover:bg-slate-50 border-b border-slate-100 last:border-0 flex justify-between items-center group transition-colors"
@@ -675,7 +679,7 @@ export default function RoundParticipantManager({
                                             placeholder="0"
                                         />
                                     </div>
-                                    <button
+                                    <button type="button"
                                         onClick={handleSaveParticipant}
                                         className="w-full lg:w-40 h-[52px] bg-blue-600 text-white rounded-xl font-black text-sm shadow-xl shadow-blue-600/20 hover:scale-[1.02] active:scale-95 transition-all outline-none"
                                     >
@@ -688,15 +692,15 @@ export default function RoundParticipantManager({
                 </div>
             )}
 
-            <div ref={tableRef} className="bg-white p-2 border-2 border-slate-900 rounded-2xl shadow-2xl min-h-[400px] overflow-hidden">
+            <div ref={tableRef} className={ui.tableScroll}>
                 <div className="overflow-x-auto">
                     {roundParticipants.length === 0 ? (
-                        <div className="text-center text-slate-400 font-bold py-20 w-full italic">
+                        <div className={ui.empty}>
                             (해당 회차에 등록된 참가자가 없습니다)
                         </div>
                     ) : (
                         <table
-                            className="w-full text-sm border-collapse"
+                            className={ui.table}
                             style={{
                                 color: 'black',
                                 tableLayout: 'fixed',
@@ -712,7 +716,7 @@ export default function RoundParticipantManager({
                                     <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '80px' }}>핸디</th>
                                     <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '110px' }}>현황</th>
                                     <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '180px' }}>레인</th>
-                                    <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '70px' }}>관리</th>
+                                    <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '100px' }}>관리</th>
                                 </tr>
                             </thead>
                             <tbody className="font-bold">
@@ -753,11 +757,11 @@ export default function RoundParticipantManager({
                                             <td className={`border-2 border-slate-900 p-1 font-black ${isWaitlisted ? 'text-amber-600' : ''}`}>
                                                 {isWaitlisted ? `대기 ${waitNumber}` : idx + 1}
                                             </td>
-                                            <td className="border-2 border-slate-900 p-1 truncate px-4">
+                                            <td className={ui.textCell}>
                                                 {(reg.guestTeamName ?? reg.team?.name) || '개인'}
                                             </td>
-                                            <td className="border-2 border-slate-900 p-1 truncate px-4 font-black">
-                                                <div className="flex flex-col items-center gap-0.5">
+                                            <td className={ui.textCell}>
+                                                <div className="flex flex-col gap-0.5">
                                                     <div className="flex items-center gap-1">
                                                         <span>{reg.guestName ?? reg.user?.name}</span>
                                                         {reg.isFemaleChamp && <span className="text-[9px] text-pink-500 font-black">(여챔)</span>}
@@ -775,6 +779,7 @@ export default function RoundParticipantManager({
                                             <td className="border-2 border-slate-900 p-1">
                                                 {isManager ? (
                                                     <select
+                                                        aria-label={`${reg.guestName || reg.user?.name} 입금 현황`}
                                                         value={reg.paymentStatus}
                                                         onChange={(e) => handleUpdatePayment(reg.id, e.target.value)}
                                                         className={`text-[11px] px-2 py-1.5 rounded-lg font-black border transition-all cursor-pointer outline-none h-8 w-full text-center appearance-none ${isPaid
@@ -798,6 +803,7 @@ export default function RoundParticipantManager({
                                                     {editingLaneId === reg.participantId ? (
                                                         <div className="flex items-center gap-1">
                                                             <select
+                                                                aria-label="변경할 레인"
                                                                 value={tempLaneValue}
                                                                 onChange={(e) => setTempLaneValue(e.target.value)}
                                                                 className="w-24 h-8 text-center border-2 border-blue-400 rounded-md text-[11px] font-black outline-none bg-white"
@@ -846,14 +852,15 @@ export default function RoundParticipantManager({
                                                                     return options;
                                                                 })()}
                                                             </select>
-                                                            <button
+                                                            <button type="button"
+                                                                aria-label={`${reg.guestName || reg.user?.name || '참가자'} 레인 저장`}
                                                                 onClick={() => handleManualLaneSave(reg.participantId)}
                                                                 className="w-8 h-8 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700 transition-colors"
                                                             >
                                                                 💾
                                                             </button>
-                                                            <button
-                                                                onClick={() => setEditingLaneId(null)}
+                                                            <button type="button"
+                                                                aria-label="레인 수정 취소" onClick={() => setEditingLaneId(null)}
                                                                 className="w-8 h-8 bg-slate-200 text-slate-600 rounded-md text-xs hover:bg-slate-300 transition-colors"
                                                             >
                                                                 ✕
@@ -862,7 +869,7 @@ export default function RoundParticipantManager({
                                                     ) : (
                                                         <div className="flex items-center justify-center gap-2">
                                                             {reg?.lane ? (
-                                                                <span className="text-primary">{formatLane(reg.lane, reg?.isManual)}</span>
+                                                                <span className={ui.badge}>{formatLane(reg.lane, reg?.isManual)}</span>
                                                             ) : (
                                                                 (() => {
                                                                     let canDraw = false;
@@ -880,18 +887,18 @@ export default function RoundParticipantManager({
                                                                             🎰 레인 추첨
                                                                         </Link>
                                                                     ) : (
-                                                                        <span className="text-slate-300 font-normal italic text-xs">미배정</span>
+                                                                        <span className={ui.badge}>미배정</span>
                                                                     );
                                                                 })()
                                                             )}
                                                             {isManager && reg.participantId && !isWaitlisted && (
-                                                                <button
+                                                                <button type="button"
                                                                     onClick={() => {
                                                                         setEditingLaneId(reg.participantId);
                                                                         setTempLaneValue(reg.lane ? formatLane(reg.lane).replace('(수동)', '').trim() : '');
                                                                     }}
                                                                     className="w-6 h-6 flex items-center justify-center bg-slate-100 text-slate-400 rounded-md hover:bg-blue-50 hover:text-blue-500 transition-colors"
-                                                                    title="레인 수동 변경"
+                                                                    title="레인 수동 변경" aria-label="레인 수동 변경"
                                                                 >
                                                                     ✏️
                                                                 </button>
@@ -904,17 +911,17 @@ export default function RoundParticipantManager({
                                                 <div className="flex items-center justify-center gap-2">
                                                     {isManager ? (
                                                         <>
-                                                            <button
+                                                            <button type="button"
                                                                 onClick={() => openEditModal(reg)}
                                                                 className="w-10 h-8 flex items-center justify-center bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-600 hover:text-white transition-all"
-                                                                title="수정"
+                                                                title="수정" aria-label={`${reg.guestName || reg.user?.name || '참가자'} 수정`}
                                                             >
                                                                 ✏️
                                                             </button>
-                                                            <button
+                                                            <button type="button"
                                                                 onClick={() => handleDelete(reg.id)}
                                                                 className="w-10 h-8 flex items-center justify-center bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-600 hover:text-white transition-all"
-                                                                title="삭제"
+                                                                title="삭제" aria-label={`${reg.guestName || reg.user?.name || '참가자'} 삭제`}
                                                             >
                                                                 🗑️
                                                             </button>

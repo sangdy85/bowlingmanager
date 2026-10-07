@@ -1,6 +1,10 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import ui from './ManagementUI.module.css';
+import { SummaryMetricCard } from './ManagementUI';
+import SideGameAnnouncementModal from './SideGameAnnouncementModal';
+import { buildSideGameAnnouncementGroups } from '@/lib/side-game-announcement';
 import * as XLSX from 'xlsx';
 import { updateSideGameParticipation } from '@/app/actions/champ-side-actions';
 
@@ -22,6 +26,7 @@ interface SideGameManagerProps {
     participants?: any[];
     allIndividualScores?: any[];
     roundId?: string;
+    roundNumber?: number;
     isManager?: boolean;
     tournamentType?: string;
     gameCount?: number;
@@ -36,12 +41,15 @@ export default function SideGameManager({
     participants,
     allIndividualScores,
     roundId,
+    roundNumber,
     isManager,
     tournamentType,
     gameCount = 3,
     tournamentRegistrations,
     maxParticipants = 0
 }: SideGameManagerProps) {
+    const [announcementOpen, setAnnouncementOpen] = useState(false);
+    const uploadInput = useRef<HTMLInputElement>(null);
     const isChamp = tournamentType === 'CHAMP';
 
     // Internal state for participation
@@ -299,65 +307,52 @@ export default function SideGameManager({
     let lastRank = 0;
 
     return (
-        <div className="space-y-8">
-            <div className="bg-white p-6 rounded-2xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 border-b-2 border-black/5 pb-6">
+        <div className={ui.surface}>
+            <div className={ui.section}>
+                <div className={ui.header}>
                     <div>
-                        <h2 className="text-2xl font-black italic uppercase">
+                        <h2 className={ui.title}>
                             {isManager ? '사이드 게임 참가자 관리' : '사이드 게임 참여 현황'}
                         </h2>
-                        <p className="text-slate-500 text-sm font-bold">
+                        <p className={ui.subtitle}>
                             {isManager
                                 ? `진행 중인 ${gameCount}개 게임의 사이드 참가자를 확정하세요.`
                                 : `현재 ${gameCount}개 게임의 사이드 게임 참여자 명단입니다.`}
                         </p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className={ui.toolbar}>
                         {isManager && (
                             <>
-                                <button
+                                <button type="button"
                                     onClick={handleSave}
                                     disabled={saving}
-                                    className="btn btn-sm btn-success border-2 border-black font-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                                    className={ui.primary}
                                 >
                                     {saving ? '저장 중...' : '💾 현재 명단 저장'}
                                 </button>
-                                <button onClick={downloadTemplate} className="btn btn-sm bg-yellow-400 hover:bg-yellow-500 text-black border-2 border-black font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all">
+                                <button type="button" onClick={downloadTemplate} className={ui.button}>
                                     📊 양식 다운로드
                                 </button>
-                                <label className="btn btn-sm btn-primary border-2 border-black font-black cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all">
+                                <button type="button" className={ui.secondary} onClick={() => uploadInput.current?.click()}>
                                     📝 명단 업로드 ↑
-                                    <input type="file" className="hidden" onChange={handleBulkExcelUpload} accept=".xlsx, .xls" />
-                                </label>
+                                </button>
+                                <input ref={uploadInput} type="file" className="hidden" onChange={handleBulkExcelUpload} accept=".xlsx, .xls" />
+                                <button type="button" className={ui.secondary} onClick={() => setAnnouncementOpen(true)}>📢 사이드 게임 명단 발표</button>
                             </>
                         )}
                     </div>
                 </div>
 
-                {/* Participation Summary Board */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                    <div className="bg-blue-50 border-2 border-blue-600 p-4 rounded-xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] flex items-center justify-between">
-                        <div>
-                            <span className="text-xs font-black text-blue-600 uppercase tracking-widest block mb-1">기본 사이드</span>
-                            <span className="text-3xl font-black text-blue-900">{participationCounts.STANDARD} <span className="text-sm font-bold text-blue-400">명</span></span>
-                        </div>
-                        <div className="text-3xl opacity-40">🎯</div>
-                    </div>
-                    <div className="bg-orange-50 border-2 border-orange-500 p-4 rounded-xl shadow-[4px_4px_0px_0px_rgba(249,115,22,1)] flex items-center justify-between">
-                        <div>
-                            <span className="text-xs font-black text-orange-500 uppercase tracking-widest block mb-1">볼사이드 (2G)</span>
-                            <span className="text-3xl font-black text-orange-900">{participationCounts.BALL} <span className="text-sm font-bold text-orange-400">명</span></span>
-                        </div>
-                        <div className="text-3xl opacity-40">🔮</div>
-                    </div>
-                    <div className="bg-purple-50 border-2 border-purple-600 p-4 rounded-xl shadow-[4px_4px_0px_0px_rgba(147,51,234,1)] flex items-center justify-between">
-                        <div>
-                            <span className="text-xs font-black text-purple-600 uppercase tracking-widest block mb-1">번외 ({gameCount}G)</span>
-                            <span className="text-3xl font-black text-purple-900">{participationCounts.EXTRA} <span className="text-sm font-bold text-purple-400">명</span></span>
-                        </div>
-                        <div className="text-3xl opacity-40">🎲</div>
-                    </div>
+                <div className={ui.metrics}>
+                    <SummaryMetricCard label="기본 사이드" value={participationCounts.STANDARD} />
+                    <SummaryMetricCard label="볼사이드 (2G)" value={participationCounts.BALL} />
+                    <SummaryMetricCard label={`번외 (${gameCount}G)`} value={participationCounts.EXTRA} />
                 </div>
+                {announcementOpen && <SideGameAnnouncementModal
+                    groups={buildSideGameAnnouncementGroups(allPlayers, participation, gameCount)}
+                    roundNumber={roundNumber}
+                    onClose={() => setAnnouncementOpen(false)}
+                />}
 
                 {!isManager && !hasBeenSaved ? (
                     <div className="py-20 text-center bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
@@ -366,8 +361,8 @@ export default function SideGameManager({
                         <p className="text-slate-500 font-bold mt-2">관리자가 참여 명단을 확인하고 있습니다. 잠시만 기다려주세요.</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
+                    <div className={ui.tableScroll}>
+                        <table className={`${ui.table} ${ui.sideTable}`}>
                             <thead>
                                 <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400">
                                     <th className="p-3 text-left border-b-2 border-black">선수명</th>
@@ -386,7 +381,9 @@ export default function SideGameManager({
                                         <td className="p-3 font-bold text-lg">{p.name}</td>
                                         {isManager && (['STANDARD', 'BALL', 'EXTRA'] as SideCategory[]).map(cat => (
                                             <td key={cat} className="p-3 text-center">
-                                                <button
+                                                <button type="button"
+                                                    aria-label={`${p.name} ${cat === 'STANDARD' ? '기본 사이드' : cat === 'BALL' ? '볼사이드' : '번외'} 참여`}
+                                                    aria-pressed={participation[p.regId]?.has(cat) || false}
                                                     onClick={() => toggleParticipation(p.regId, cat)}
                                                     className={`w-10 h-10 rounded-lg border-2 font-black transition-all ${participation[p.regId]?.has(cat)
                                                         ? 'bg-black text-white border-black rotate-3 scale-110'
@@ -410,7 +407,7 @@ export default function SideGameManager({
                 )}
             </div>
 
-            <div className="bg-white p-8 rounded-2xl border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <div className={ui.section}>
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 mb-8">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-yellow-400 border-2 border-black rounded-full flex items-center justify-center text-2xl rotate-12 shadow-md">🏆</div>
