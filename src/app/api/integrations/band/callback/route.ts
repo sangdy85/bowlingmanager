@@ -12,7 +12,13 @@ function redirectAndClear(
     target: URL,
 ) {
     const response = NextResponse.redirect(target);
-    response.cookies.delete(COOKIE_NAME);
+    response.cookies.set(COOKIE_NAME, '', {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/api/integrations/band',
+        maxAge: 0,
+    });
     return response;
 }
 
