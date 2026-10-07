@@ -1,7 +1,7 @@
-import { randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { buildBandAuthorizationUrl } from "@/lib/band/client";
+import { encodeBandOAuthPending } from "@/lib/band/oauth-cookie";
 
 export const dynamic = "force-dynamic";
 
@@ -27,29 +27,24 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(loginUrl);
     }
 
-    const state = randomBytes(24).toString("base64url");
     const returnTo = safeReturnTo(
         request.nextUrl.searchParams.get("returnTo"),
     );
 
     let authorizeUrl: string;
     try {
-        authorizeUrl = buildBandAuthorizationUrl(state);
+        authorizeUrl = buildBandAuthorizationUrl();
     } catch {
         const target = new URL(returnTo, request.url);
         target.searchParams.set("band", "not_configured");
         return NextResponse.redirect(target);
     }
 
-    const payload = Buffer.from(
-        JSON.stringify({
-            state,
-            returnTo,
-            userId: session.user.id,
-            createdAt: Date.now(),
-        }),
-        "utf8",
-    ).toString("base64url");
+    const payload = encodeBandOAuthPending({
+        returnTo,
+        userId: session.user.id,
+        createdAt: Date.now(),
+    });
 
     const response = NextResponse.redirect(authorizeUrl);
     response.cookies.set(COOKIE_NAME, payload, {
