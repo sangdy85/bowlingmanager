@@ -111,8 +111,8 @@ export async function GET(request: NextRequest) {
             pending.returnTo,
             "connected",
         );
-    } catch (error) {
-        console.error("BAND OAuth callback failed:", error);
+    } catch {
+        console.error("BAND OAuth callback failed.");
 
         return redirectWithStatus(
             request,
