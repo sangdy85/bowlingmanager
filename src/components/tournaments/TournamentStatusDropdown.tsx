@@ -28,9 +28,8 @@ export default function TournamentStatusDropdown({
 
         try {
             setBusy(true);
-            const result = await updateTournamentStatus(tournamentId, status);
+            await updateTournamentStatus(tournamentId, status);
             setIsOpen(false);
-            if (result.band?.status === 'FAILED') alert(`대회 상태는 변경되었습니다.\n${result.band.message}`);
         } catch (error) {
             console.error("Failed to update status:", error);
             alert("상태 변경에 실패했습니다.");
@@ -42,11 +41,12 @@ export default function TournamentStatusDropdown({
     return (
         <div className={styles.root}>
             <button
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 disabled={busy}
                 className={`btn btn-primary ${styles.trigger}`}
             >
-                상태 변경 ▼
+                {busy ? '변경 중...' : '상태 변경 ▼'}
             </button>
 
             {isOpen && (
@@ -56,16 +56,12 @@ export default function TournamentStatusDropdown({
                         onClick={() => setIsOpen(false)}
                     />
                     <div className={styles.menu}>
-                        {currentStatus === 'PLANNING' && (
-                            <button
-                                onClick={() => handleStatusChange('OPEN')}
-                                className={styles.menuButton}
-                            >모집 공개 및 BAND 게시</button>
-                        )}
                         {currentStatus !== 'FINISHED' && (
                             <button
+                                type="button"
                                 onClick={() => handleStatusChange('FINISHED')}
                                 className={styles.menuButton}
+                                disabled={busy}
                             >
                                 {statusMap['FINISHED'].label} 단계로 이동
                             </button>
