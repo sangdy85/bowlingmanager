@@ -86,7 +86,6 @@ export default async function CenterDetailPage({ params }: { params: Promise<{ i
             include: { Team: { select: { name: true } } }
         });
     }
-    const isMember = !!member;
 
     // 1. Map to include registrationStart (as Date object)
     const now = new Date();
@@ -291,15 +290,8 @@ export default async function CenterDetailPage({ params }: { params: Promise<{ i
                 )}
             </header>
 
-            <div className={styles.layout}>
+            <div className={`${styles.layout} ${!session?.user?.id ? styles.layoutFull : ''}`}>
                 <main className={styles.mainColumn}>
-                    <section className={`card ${styles.introCard}`}>
-                        <h2 className={styles.sectionTitle}>볼링장 소개</h2>
-                        <p className={styles.description}>
-                            {center.description || "등록된 소개 내용이 없습니다."}
-                        </p>
-                    </section>
-
                     {activeTournaments.length > 0 && (
                         <ActiveTournaments
                             tournaments={activeTournaments}
@@ -314,49 +306,51 @@ export default async function CenterDetailPage({ params }: { params: Promise<{ i
                         isManager={isManager}
                     />
 
+                    <section className={`card ${styles.introCard}`}>
+                        <h2 className={styles.sectionTitle}>볼링장 안내</h2>
+                        <p className={styles.description}>
+                            {center.description || "등록된 소개 내용이 없습니다."}
+                        </p>
+                    </section>
+
                     {!session?.user?.id && (
                         <section className={styles.loginPrompt}>
-                            <h3>💡 대회 참가 신청 및 스코어 기록 서비스</h3>
-                            <p>센터 대회 및 상주리그 참가 신청과 실시간 스코어 저장은 회원 로그인 후 이용하실 수 있습니다.</p>
+                            <h3>대회 참가 · 결과 확인을 더 편하게</h3>
+                            <p>로그인하면 센터 대회 참가 신청과 개인 참가 현황을 함께 관리할 수 있습니다.</p>
                             <Link href="/login" className="btn btn-primary">로그인하고 대회 참가하기</Link>
                         </section>
                     )}
                 </main>
 
-                <aside className={styles.sidebar}>
-                    {session?.user?.id && !isManager && (
-                        <JoinCenterSection
-                            centerId={id}
-                            centerName={center.name}
-                            teams={center.teams}
-                            userId={session.user.id}
-                            userName={session.user.name || "회원"}
-                            currentMember={member}
-                        />
-                    )}
+                {session?.user?.id && (
+                    <aside className={styles.sidebar}>
+                        {!isManager && (
+                            <JoinCenterSection
+                                centerId={id}
+                                centerName={center.name}
+                                teams={center.teams}
+                                userId={session.user.id}
+                                userName={session.user.name || "회원"}
+                                currentMember={member}
+                            />
+                        )}
 
-                    {!isManager && (isMember || !session?.user?.id) && (
-                        <section className={`card ${styles.sideCard}`}>
-                            <h3>방문 및 예약</h3>
-                            <p>센터에 직접 방문하시거나 전화로 레인을 예약하실 수 있습니다.</p>
-                            <button className="btn btn-primary w-full" disabled>센터 연락하기</button>
-                        </section>
-                    )}
-
-                    {isManager && (
-                        <section className={`card ${styles.sideCard}`}>
-                            <h3>관리자 도구</h3>
-                            <div className={styles.toolList}>
-                                <Link href={`/centers/${id}/teams`} className={`btn btn-secondary ${styles.toolLink}`}>
-                                    클럽 관리
-                                </Link>
-                                <Link href={`/centers/${id}/members`} className={`btn btn-secondary ${styles.toolLink}`}>
-                                    회원 관리
-                                </Link>
-                            </div>
-                        </section>
-                    )}
-                </aside>
+                        {isManager && (
+                            <section className={`card ${styles.sideCard}`}>
+                                <h3>대회 운영 관리</h3>
+                                <p>대회 운영에 필요한 센터 회원과 상주 클럽을 관리합니다.</p>
+                                <div className={styles.toolList}>
+                                    <Link href={`/centers/${id}/teams`} className={`btn btn-secondary ${styles.toolLink}`}>
+                                        클럽 관리
+                                    </Link>
+                                    <Link href={`/centers/${id}/members`} className={`btn btn-secondary ${styles.toolLink}`}>
+                                        회원 관리
+                                    </Link>
+                                </div>
+                            </section>
+                        )}
+                    </aside>
+                )}
             </div>
         </div>
     );
