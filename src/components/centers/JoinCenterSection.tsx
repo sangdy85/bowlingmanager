@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { joinCenter } from '@/app/actions/center-members';
+import styles from './JoinCenterSection.module.css';
 
 interface Team {
     id: string;
@@ -58,63 +59,63 @@ export default function JoinCenterSection({
     };
 
     return (
-        <div className="card p-6 bg-primary/5 border-primary/20 mb-6">
-            <h3 className="font-bold mb-2 text-lg">
+        <div className={`card ${styles.card}`}>
+            <h3 className={styles.title}>
                 {currentMember ? "소속 정보 관리" : "볼링장 가입하기"}
             </h3>
             {currentMember ? (
-                <div className="mb-4">
-                    <p className="text-sm text-secondary-foreground mb-1">현재 대표 소속:</p>
-                    <p className="font-bold text-primary">
+                <div className={styles.current}>
+                    <p className={styles.currentLabel}>현재 대표 소속:</p>
+                    <p className={styles.currentTeam}>
                         {currentMember.Team?.name || "개인 (소속 없음)"}
                     </p>
                 </div>
             ) : (
-                <p className="text-sm text-secondary-foreground mb-4">
+                <p className={styles.description}>
                     {centerName}의 회원이 되어 활동해보세요! 소속된 팀(클럽)이 있다면 함께 등록할 수 있습니다.
                 </p>
             )}
             <button
                 onClick={() => setIsModalOpen(true)}
-                className="btn btn-primary w-full py-3 text-base"
+                className={`btn btn-primary ${styles.openButton}`}
             >
                 {currentMember ? "소속 팀 변경하기" : "센터 가입하기"}
             </button>
 
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-background rounded-lg shadow-xl w-full max-w-md p-6 relative">
+                <div className={styles.overlay}>
+                    <div className={styles.modal}>
                         <button
                             onClick={() => setIsModalOpen(false)}
-                            className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+                            className={styles.close}
                         >
                             ✕
                         </button>
 
-                        <h2 className="text-xl font-bold mb-6">가입 정보 입력</h2>
+                        <h2 className={styles.modalTitle}>가입 정보 입력</h2>
 
                         {error && (
-                            <div className="bg-destructive/10 text-destructive text-sm p-3 rounded mb-4">
+                            <div className={styles.error}>
                                 {error}
                             </div>
                         )}
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">이름</label>
+                        <div className={styles.fields}>
+                            <div className={styles.field}>
+                                <label>이름</label>
                                 <input
                                     type="text"
                                     value={userName}
                                     disabled
                                     className="input w-full bg-muted text-muted-foreground"
                                 />
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <p className={styles.help}>
                                     * 현재 로그인된 계정의 이름으로 가입됩니다.
                                 </p>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium mb-1">소속 팀 (선택)</label>
+                            <div className={styles.field}>
+                                <label>소속 팀 (선택)</label>
                                 <select
                                     value={selectedTeamId}
                                     onChange={(e) => setSelectedTeamId(e.target.value)}
@@ -132,7 +133,7 @@ export default function JoinCenterSection({
                             </div>
                         </div>
 
-                        <div className="flex gap-3 mt-8">
+                        <div className={styles.actions}>
                             <button
                                 onClick={() => setIsModalOpen(false)}
                                 className="btn btn-secondary flex-1"

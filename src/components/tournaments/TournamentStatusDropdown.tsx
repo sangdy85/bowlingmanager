@@ -2,6 +2,7 @@
 
 import { updateTournamentStatus } from "@/app/actions/tournament-center";
 import { useState } from "react";
+import styles from "./TournamentStatusDropdown.module.css";
 
 interface TournamentStatusDropdownProps {
     tournamentId: string;
@@ -39,11 +40,11 @@ export default function TournamentStatusDropdown({
     };
 
     return (
-        <div className="relative">
+        <div className={styles.root}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 disabled={busy}
-                className="btn btn-primary h-12 px-6 font-black shadow-lg"
+                className={`btn btn-primary ${styles.trigger}`}
             >
                 상태 변경 ▼
             </button>
@@ -51,26 +52,26 @@ export default function TournamentStatusDropdown({
             {isOpen && (
                 <>
                     <div
-                        className="fixed inset-0 z-40"
+                        className={styles.backdrop}
                         onClick={() => setIsOpen(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-48 bg-card border-2 border-black rounded-xl shadow-2xl z-50 overflow-hidden">
+                    <div className={styles.menu}>
                         {currentStatus === 'PLANNING' && (
                             <button
                                 onClick={() => handleStatusChange('OPEN')}
-                                className="w-full text-left px-4 py-3 hover:bg-primary/10 transition-colors text-sm font-bold"
+                                className={styles.menuButton}
                             >모집 공개 및 BAND 게시</button>
                         )}
                         {currentStatus !== 'FINISHED' && (
                             <button
                                 onClick={() => handleStatusChange('FINISHED')}
-                                className="w-full text-left px-4 py-3 hover:bg-primary/10 transition-colors text-sm font-bold"
+                                className={styles.menuButton}
                             >
                                 {statusMap['FINISHED'].label} 단계로 이동
                             </button>
                         )}
                         {currentStatus === 'FINISHED' && (
-                            <div className="px-4 py-3 text-sm font-bold text-secondary-foreground">
+                            <div className={styles.finished}>
                                 종료된 대회입니다
                             </div>
                         )}

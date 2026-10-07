@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { updateBowlingCenter } from "@/app/actions/center";
 import BandIntegrationSettings from "@/components/centers/BandIntegrationSettings";
+import styles from "./CenterEdit.module.css";
 
 export default async function CenterEditPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ band?: string }> }) {
     const { id } = await params;
@@ -42,17 +43,20 @@ export default async function CenterEditPage({ params, searchParams }: { params:
     };
 
     return (
-        <div className="max-w-2xl mx-auto py-12 px-4">
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold">볼링장 정보 수정</h1>
-                <Link href={`/centers/${id}`} className="btn btn-secondary text-sm">
+        <div className={styles.page}>
+            <header className={styles.header}>
+                <div className={styles.headerMain}>
+                    <p className={styles.eyebrow}>CENTER SETTINGS</p>
+                    <h1 className={styles.title}>볼링장 정보 수정</h1>
+                </div>
+                <Link href={`/centers/${id}`} className={`btn btn-secondary ${styles.cancelButton}`}>
                     취소
                 </Link>
-            </div>
+            </header>
 
-            <form action={handleSubmit} className="space-y-6 card p-8">
-                <div className="space-y-2">
-                    <label htmlFor="name" className="text-sm font-medium">볼링장명 <span className="text-red-500">*</span></label>
+            <form action={handleSubmit} className={`card ${styles.form}`}>
+                <div className={styles.field}>
+                    <label htmlFor="name" className="text-sm font-medium">볼링장명 <span className={styles.required}>*</span></label>
                     <input
                         type="text"
                         id="name"
@@ -63,8 +67,8 @@ export default async function CenterEditPage({ params, searchParams }: { params:
                     />
                 </div>
 
-                <div className="space-y-2">
-                    <label htmlFor="address" className="text-sm font-medium">주소 <span className="text-red-500">*</span></label>
+                <div className={styles.field}>
+                    <label htmlFor="address" className="text-sm font-medium">주소 <span className={styles.required}>*</span></label>
                     <input
                         type="text"
                         id="address"
@@ -75,7 +79,7 @@ export default async function CenterEditPage({ params, searchParams }: { params:
                     />
                 </div>
 
-                <div className="space-y-2">
+                <div className={styles.field}>
                     <label htmlFor="phone" className="text-sm font-medium">전화번호</label>
                     <input
                         type="text"
@@ -87,7 +91,7 @@ export default async function CenterEditPage({ params, searchParams }: { params:
                     />
                 </div>
 
-                <div className="space-y-2">
+                <div className={styles.field}>
                     <label htmlFor="description" className="text-sm font-medium">볼링장 소개</label>
                     <textarea
                         id="description"
@@ -98,8 +102,8 @@ export default async function CenterEditPage({ params, searchParams }: { params:
                     />
                 </div>
 
-                <div className="pt-4">
-                    <button type="submit" className="btn btn-primary w-full h-12 text-lg">
+                <div className={styles.submitArea}>
+                    <button type="submit" className={`btn btn-primary ${styles.submitButton}`}>
                         정보 저장하기
                     </button>
                 </div>
