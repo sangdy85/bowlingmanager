@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { publishBandPostAction } from '@/app/actions/band-actions';
 import type { BandPostType } from '@/lib/band/types';
 import styles from './BandPublishStatus.module.css';
@@ -10,6 +11,7 @@ type History = { id: string; type: string; status: string; revision: number; cre
 export default function BandPublishStatus({ centerId, tournamentId, roundId, connected, posts }: {
     centerId: string; tournamentId: string; roundId?: string | null; connected: boolean; posts: History[];
 }) {
+    const router = useRouter();
     const [busy, setBusy] = useState<string | null>(null);
     const [message, setMessage] = useState('');
     const items: { type: BandPostType; label: string }[] = [
@@ -30,6 +32,7 @@ export default function BandPublishStatus({ centerId, tournamentId, roundId, con
                     try {
                         const result = await publishBandPostAction({ centerId, tournamentId, roundId, type: item.type });
                         setMessage(result.message);
+                        if (result.success) router.refresh();
                     } catch {
                         setMessage('BAND 게시 요청을 처리하지 못했습니다. 로그인과 관리 권한을 확인해주세요.');
                     } finally {
