@@ -40,6 +40,7 @@ export function getRoundFinalResults(round: any) {
                     groups[groupId] = {
                         id: groupId,
                         members: [],
+                        registrationIds: [],
                         totalRaw: 0,
                         totalHandicap: 0,
                         gameScores: new Array(gameCount).fill(0),
@@ -61,6 +62,7 @@ export function getRoundFinalResults(round: any) {
                 groups[groupId].totalRaw += pTotalCapped; // Using totalRaw as capped total in this context
                 groups[groupId].handicapSum += handicap;
                 groups[groupId].members.push(p.registration.guestName ?? p.registration.user?.name ?? 'Unknown');
+                groups[groupId].registrationIds.push(p.registrationId);
             });
 
         results = Object.values(groups).map((g: any) => {
@@ -75,7 +77,8 @@ export function getRoundFinalResults(round: any) {
                 handicapEach: g.handicapSum,
                 totalHandicap: g.handicapSum * validScores.length,
                 hiLow: hiLow,
-                isTeam: true
+                isTeam: true,
+                registrationIds: g.registrationIds
             };
         });
     } else {
