@@ -11,7 +11,9 @@ param(
     [string]$DevelopBranch = "codex/develop-1.2.0",
     [string]$MainBranch = "main",
     [string]$DeployHost = "",
-    [int]$DeployPort = 22
+    [int]$DeployPort = 22,
+    [string]$DeployIdentityFile = "",
+    [string]$PublicHealthUrl = "https://bowlingmanager.co.kr/api/mobile/v1/health"
 )
 
 $ErrorActionPreference = "Stop"
@@ -105,7 +107,9 @@ function Get-OriginMainRelease {
 function Invoke-ProductionDeploy {
     param(
         [string]$HostName,
-        [int]$Port
+        [int]$Port,
+        [string]$IdentityFile,
+        [string]$HealthUrl
     )
 
     if ([string]::IsNullOrWhiteSpace($HostName)) {
@@ -114,15 +118,61 @@ function Invoke-ProductionDeploy {
 
     Assert-Command "ssh"
 
+    $sshArgs = @(
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        "StrictHostKeyChecking=accept-new"
+    )
+
+    if ($Port -gt 0) {
+        $sshArgs += @("-p", "$Port")
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($IdentityFile)) {
+        if (-not (Test-Path -LiteralPath $IdentityFile)) {
+            throw "Deploy identity file not found: $IdentityFile"
+        }
+
+        $sshArgs += @("-i", $IdentityFile)
+    }
+
+    $sshArgs += @($HostName, "deploy-release")
+
     Write-Host "Host : $HostName"
     Write-Host "Port : $Port"
 
-    Invoke-Checked "ssh" @(
-        "-p",
-        "$Port",
-        $HostName,
-        "~/deploy-bowling.sh --check && ~/deploy-bowling.sh"
-    )
+    if (-not [string]::IsNullOrWhiteSpace($IdentityFile)) {
+        Write-Host "Key  : $IdentityFile"
+    }
+
+    Invoke-Checked "ssh" $sshArgs
+
+    if (-not [string]::IsNullOrWhiteSpace($HealthUrl)) {
+        Assert-Command "curl.exe"
+
+        Write-Step "PUBLIC HTTPS HEALTH CHECK"
+
+        $curlArgs = @(
+            "--fail",
+            "--silent",
+            "--show-error",
+            "--max-time",
+            "15",
+            "--user-agent",
+            "BowlingManagerReleaseCheck/1.0",
+            $HealthUrl
+        )
+
+        $healthOutput = & curl.exe @curlArgs
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "Public health check failed: $HealthUrl"
+        }
+
+        Write-Host "Public health: OK"
+        Write-Host ($healthOutput -join [Environment]::NewLine)
+    }
 }
 
 function Ensure-ReleaseTag {
@@ -209,7 +259,7 @@ if ($DeployOnly) {
     Write-Host "Main    : $($release.ShortSha)"
     Write-Host "Version : $($release.Version)+$($release.Build)"
 
-    Invoke-ProductionDeploy -HostName $DeployHost -Port $DeployPort
+    Invoke-ProductionDeploy -HostName $DeployHost -Port $DeployPort -IdentityFile $DeployIdentityFile -HealthUrl $PublicHealthUrl
 
     if (-not $SkipTag) {
         Write-Step "RELEASE TAG"
@@ -436,7 +486,7 @@ Write-Host "origin/$MainBranch -> $releaseShortSha"
 if ($Deploy) {
     Write-Step "11. PRODUCTION DEPLOY"
 
-    Invoke-ProductionDeploy -HostName $DeployHost -Port $DeployPort
+    Invoke-ProductionDeploy -HostName $DeployHost -Port $DeployPort -IdentityFile $DeployIdentityFile -HealthUrl $PublicHealthUrl
 
     if (-not $SkipTag) {
         Write-Step "12. RELEASE TAG"
