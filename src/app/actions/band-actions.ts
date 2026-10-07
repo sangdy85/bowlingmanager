@@ -34,10 +34,14 @@ function safeErrorMessage(error: unknown): string {
     if (error instanceof Error) {
         const message = error.message.trim();
 
+        if (message.includes("볼링장") || message.includes("관리 권한")) {
+            return "이 대회를 BAND에 공유할 관리 권한이 없습니다.";
+        }
+
         if (
             message.includes("permission")
             || message.includes("Permission")
-            || message.includes("권한")
+            || message.includes("글쓰기 권한")
         ) {
             return "선택한 BAND에 글쓰기 권한이 없습니다.";
         }
@@ -294,16 +298,16 @@ async function publishToBand(input: {
         throw new Error("선택한 BAND에 접근할 수 없습니다.");
     }
 
-    const canPost = await canWriteBandPost(
-        accessToken,
-        band.band_key,
-    );
-
-    if (!canPost) {
-        throw new Error("선택한 BAND에 글쓰기 권한이 없습니다.");
-    }
-
     try {
+        const canPost = await canWriteBandPost(
+            accessToken,
+            band.band_key,
+        );
+
+        if (!canPost) {
+            throw new Error("선택한 BAND에 글쓰기 권한이 없습니다.");
+        }
+
         const result = await createBandPost({
             accessToken,
             bandKey: band.band_key,
@@ -444,11 +448,24 @@ export async function retryBandShare(historyId: string) {
     }
 
     try {
-        if (history.sourceTournamentId) {
-            await requireLeagueAdmin(
-                history.sourceTournamentId,
-            );
+        if (
+            !history.sourceTournamentId
+            || !Number.isInteger(history.sourceRoundNumber)
+            || history.sourceRoundNumber < 1
+        ) {
+            return {
+                success: false as const,
+                message: "재게시할 원본 주차 정보를 확인할 수 없습니다.",
+            };
         }
+
+        await requireLeagueAdmin(
+            history.sourceTournamentId,
+        );
+        await findLeagueRound(
+            history.sourceTournamentId,
+            history.sourceRoundNumber,
+        );
 
         return publishToBand({
             userId,
