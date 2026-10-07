@@ -23,7 +23,7 @@ const players = [
     { regId: 'd', name: '홍길동' },
 ];
 
-test('announcement lists only STANDARD participants in original registration order', () => {
+test('announcement lists anyone participating in side, extra or ball in original registration order', () => {
     const result = rows(players, {
         a: new Set(['STANDARD', 'BALL']),
         b: new Set(['EXTRA']),
@@ -33,7 +33,9 @@ test('announcement lists only STANDARD participants in original registration ord
 
     assert.deepEqual(result.map(row => [row.regId, row.name]), [
         ['a', '김예원'],
+        ['b', '문성복'],
         ['c', '김예원'],
+        ['d', '홍길동'],
     ]);
 });
 
@@ -74,17 +76,19 @@ test('odd participant counts keep one extra row on the left table', () => {
     assert.deepEqual(split(result).map(side => side.length), [4, 3]);
 });
 
-test('copy text uses duplicated two-column headers and O markers in side-extra-ball order', () => {
+test('copy text uses side-extra-ball order and marks extra-only and ball-only participants', () => {
     const result = rows(players, {
         a: new Set(['STANDARD', 'BALL']),
-        c: new Set(['STANDARD', 'EXTRA']),
+        b: new Set(['EXTRA']),
+        d: new Set(['BALL']),
     });
     const text = format(result, 3);
 
     assert.match(text, /^\[3회차 사이드 게임 명단\]/);
     assert.match(text, /이름\t사이드\t번외\t볼사이드\t\t이름\t사이드\t번외\t볼사이드/);
     assert.match(text, /김예원\tO\t\tO/);
-    assert.match(text, /김예원\tO\tO\t/);
+    assert.match(text, /문성복\t\tO\t/);
+    assert.match(text, /홍길동\t\t\tO/);
 });
 
 test('announcement projection never mutates source players or participation used by save', () => {
