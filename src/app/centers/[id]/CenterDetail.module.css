@@ -88,6 +88,10 @@
   align-items: start;
 }
 
+.layoutFull {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .mainColumn {
   display: grid;
   min-width: 0;
@@ -104,7 +108,9 @@
 
 .introCard {
   margin: 0;
-  padding: 1.3rem;
+  padding: 1rem 1.1rem;
+  border-style: dashed;
+  background: rgba(17, 26, 43, 0.62);
 }
 
 .sectionTitle {
