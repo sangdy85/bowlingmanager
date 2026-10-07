@@ -3,7 +3,8 @@
 import ui from './ManagementUI.module.css';
 import { SummaryMetricCard } from './ManagementUI';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useId } from 'react';
+import { getParticipantSearchIds } from '@/lib/participant-search';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { updatePaymentStatus, deleteRegistration, removeFromRound, manualRegister, updateRegistration, updateRoundLanes, searchPlayers, bulkRegisterParticipants, updateEntryGroupId, autoAssignEntryGroups, updateSingleRegistrationGroup, checkAndCancelUnpaidRegistrations } from '@/app/actions/round-actions';
@@ -42,6 +43,8 @@ export default function RoundParticipantManager({
 }: RoundParticipantManagerProps) {
     const router = useRouter();
     const tableRef = useRef<HTMLDivElement>(null);
+    const searchId = useId();
+    const [participantSearch, setParticipantSearch] = useState('');
 
     // Default to initialRoundId or the latest round if not found
     const defaultRoundId = initialRoundId || (rounds && rounds.length > 0 ? rounds[0].id : '');
@@ -129,6 +132,8 @@ export default function RoundParticipantManager({
                 };
             });
     }, [selectedRound]);
+
+    const matchingParticipantIds = getParticipantSearchIds(roundParticipants, participantSearch);
 
     const openRegisterModal = () => {
         setIsEditMode(false);
@@ -512,7 +517,7 @@ export default function RoundParticipantManager({
                             )}
                         </h3>
                     )}
-                    <p className={ui.subtitle}>참가자 정보, 입금 현황과 레인 배정을 관리합니다.</p>
+                    <p className={ui.subtitle}>{isManager ? '참가자 정보, 입금 현황과 레인 배정을 관리합니다.' : '참가자 명단과 레인 배정을 확인하세요.'}</p>
                 </div>
                 <SummaryMetricCard label="현재 참여 인원" value={roundParticipants.length} />
               </div>
@@ -692,7 +697,17 @@ export default function RoundParticipantManager({
                 </div>
             )}
 
-            <div ref={tableRef} className={ui.tableScroll}>
+            <div className={ui.searchBar}>
+                <div className={ui.searchField}>
+                    <label htmlFor={searchId}>참가자 찾기</label>
+                    <input id={searchId} type="search" placeholder="이름 또는 팀명 입력" value={participantSearch}
+                        onChange={event => setParticipantSearch(event.target.value)} aria-controls={`${searchId}-table`} />
+                </div>
+                <p className={ui.searchCount} role="status">전체 {roundParticipants.length}명 중 <strong>{matchingParticipantIds.size}명</strong> 표시</p>
+                {participantSearch && <button type="button" className={ui.button} onClick={() => setParticipantSearch('')}>검색 초기화</button>}
+                <p id={`${searchId}-hint`} className={ui.tableHint}>이름으로 빠르게 찾고, 표를 좌우로 움직여 레인·관리 항목을 확인하세요. 다운로드에는 전체 명단이 포함됩니다.</p>
+            </div>
+            <div ref={tableRef} className={ui.tableScroll} tabIndex={0} role="region" aria-label="참가자 명단 표" aria-describedby={`${searchId}-hint`}>
                 <div className="overflow-x-auto">
                     {roundParticipants.length === 0 ? (
                         <div className={ui.empty}>
@@ -700,6 +715,7 @@ export default function RoundParticipantManager({
                         </div>
                     ) : (
                         <table
+                            id={`${searchId}-table`}
                             className={ui.table}
                             style={{
                                 color: 'black',
@@ -712,7 +728,7 @@ export default function RoundParticipantManager({
                                     {!isIndividualMode && <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '70px' }}>조</th>}
                                     <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '60px' }}>순번</th>
                                     <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '150px' }}>팀명</th>
-                                    <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '150px' }}>성함</th>
+                                    <th className={ui.stickyName} style={{ width: '150px' }}>성함</th>
                                     <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '80px' }}>핸디</th>
                                     <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '110px' }}>현황</th>
                                     <th className="border-2 border-slate-900 p-1 font-black" style={{ width: '180px' }}>레인</th>
@@ -734,6 +750,7 @@ export default function RoundParticipantManager({
                                     return (
                                         <tr
                                             key={reg.id}
+                                            hidden={!matchingParticipantIds.has(reg.id)}
                                             className="text-center h-12 hover:bg-blue-50 transition-colors"
                                             style={{ backgroundColor: bgColor }}
                                         >
@@ -760,7 +777,7 @@ export default function RoundParticipantManager({
                                             <td className={ui.textCell}>
                                                 {(reg.guestTeamName ?? reg.team?.name) || '개인'}
                                             </td>
-                                            <td className={ui.textCell}>
+                                            <td className={`${ui.textCell} ${ui.stickyName}`}>
                                                 <div className="flex flex-col gap-0.5">
                                                     <div className="flex items-center gap-1">
                                                         <span>{reg.guestName ?? reg.user?.name}</span>
@@ -934,6 +951,9 @@ export default function RoundParticipantManager({
                                         </tr>
                                     );
                                 })}
+                                {matchingParticipantIds.size === 0 && <tr><td colSpan={isIndividualMode ? 7 : 8}>
+                                    <div className={ui.empty}>검색 결과가 없습니다. 이름이나 팀명을 다시 확인해주세요.</div>
+                                </td></tr>}
                             </tbody>
                         </table>
                     )}

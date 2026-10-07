@@ -316,7 +316,7 @@ export default function SideGameManager({
                         </h2>
                         <p className={ui.subtitle}>
                             {isManager
-                                ? `진행 중인 ${gameCount}개 게임의 사이드 참가자를 확정하세요.`
+                                ? `${gameCount}게임 기준 · + 버튼으로 참여자를 선택하고 명단을 저장하세요.`
                                 : `현재 ${gameCount}개 게임의 사이드 게임 참여자 명단입니다.`}
                         </p>
                     </div>
@@ -378,7 +378,7 @@ export default function SideGameManager({
                             <tbody className="divide-y divide-black/5">
                                 {visiblePlayers.map((p, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                        <td className="p-3 font-bold text-lg">{p.name}</td>
+                                        <td className={ui.textCell}>{p.name}</td>
                                         {isManager && (['STANDARD', 'BALL', 'EXTRA'] as SideCategory[]).map(cat => (
                                             <td key={cat} className="p-3 text-center">
                                                 <button type="button"
@@ -390,7 +390,7 @@ export default function SideGameManager({
                                                         : 'bg-white text-slate-200 border-slate-100 hover:border-black hover:text-black'
                                                         }`}
                                                 >
-                                                    {participation[p.regId]?.has(cat) ? 'V' : '-'}
+                                                    {participation[p.regId]?.has(cat) ? '✓' : '+'}
                                                 </button>
                                             </td>
                                         ))}
@@ -408,34 +408,29 @@ export default function SideGameManager({
             </div>
 
             <div className={ui.section}>
-                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 mb-8">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-yellow-400 border-2 border-black rounded-full flex items-center justify-center text-2xl rotate-12 shadow-md">🏆</div>
-                        <h3 className="text-3xl font-black italic uppercase tracking-tighter text-black">Side Game Leaderboard</h3>
+                <div className={ui.header}>
+                    <div>
+                        <h3 className={ui.title}>사이드게임 순위</h3>
+                        <p className={ui.subtitle}>게임과 종목을 선택해 순위를 확인하세요.</p>
                     </div>
-                    <div className="flex flex-wrap gap-1 bg-slate-100 p-1.5 rounded-2xl border-2 border-black/5 overflow-x-auto max-w-full">
+                    <div className={ui.segmented} aria-label="순위를 볼 게임 선택">
                         {tabs.map(tab => (
-                            <button key={tab.id} onClick={() => setActiveTabId(tab.id)} className={`px-4 py-2 rounded-xl font-black transition-all text-xs whitespace-nowrap ${activeTabId === tab.id ? 'bg-black text-white shadow-lg -translate-y-0.5' : 'text-slate-500 hover:bg-white hover:text-black'}`}>
+                            <button type="button" key={tab.id} aria-pressed={activeTabId === tab.id} onClick={() => setActiveTabId(tab.id)}>
                                 {tab.label}
                             </button>
                         ))}
                     </div>
                 </div>
 
-                <div className="overflow-x-auto min-h-[400px]">
-                    <div className="mb-4 bg-slate-50 p-4 border-2 border-dashed border-slate-200 rounded-xl">
-                        <span className="text-xs font-black uppercase text-slate-400 tracking-widest block mb-1">Current Ranking View</span>
-                        <span className="text-xl font-black text-black">{currentTab.label} <span className="text-slate-300 mx-2">|</span> TOP 10</span>
+                <div>
+                    <div className={ui.rankingCaption}>
+                        <strong>{currentTab.label}</strong><span className={ui.badge}>상위 10명</span>
                     </div>
-
-                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '3px solid #000000', backgroundColor: '#ffffff', color: '#000000' }}>
+                    <div className={ui.tableScroll} tabIndex={0} role="region" aria-label={`${currentTab.label} 순위 표`}>
+                    <table className={`${ui.table} ${ui.rankingTable}`}>
                         <thead>
-                            <tr style={{ backgroundColor: '#000000', color: '#ffffff' }}>
-                                <th style={{ ...baseCell, border: '1px solid #ffffff33', width: '80px' }}>Rank</th>
-                                <th style={{ ...baseCell, border: '1px solid #ffffff33', textAlign: 'left' }}>선수명</th>
-                                <th style={{ ...baseCell, border: '1px solid #ffffff33', width: '100px' }}>점수</th>
-                                <th style={{ ...baseCell, border: '1px solid #ffffff33', width: '100px' }}>핸디</th>
-                                <th style={{ ...baseCell, border: '1px solid #ffffff33', width: '150px', fontWeight: 900, backgroundColor: '#dc2626' }}>최종 점수</th>
+                            <tr>
+                                <th>순위</th><th className={ui.textCell}>선수명</th><th>점수</th><th>핸디</th><th>최종 점수</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -469,6 +464,7 @@ export default function SideGameManager({
                             )}
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
         </div>

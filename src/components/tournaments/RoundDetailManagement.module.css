@@ -1,7 +1,15 @@
 .page {
   display: grid;
   gap: 1rem;
+  min-width: 0;
 }
+
+.mobileNav { display: none; }
+.publishDetails { border: 1px solid #334155; border-radius: 14px; background: #162237; color: #e2e8f0; }
+.publishDetails > summary { cursor: pointer; padding: 16px 20px; font-size: 14px; font-weight: 750; line-height: 1.6; }
+.publishDetails > summary span:last-child { margin-left: 12px; color: #94a3b8; font-size: 12px; font-weight: 500; }
+.publishDetails > summary:focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; border-radius: 12px; }
+.publishDetails > div { margin: 0 12px 12px; }
 
 .overview {
   display: grid;
@@ -400,8 +408,14 @@
   .metricsGrid { grid-template-columns: 1fr; }
   .headerActions { width: 100%; justify-content: stretch; }
   .nextActionButton { width: 100%; }
-  .navGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .managementNav { position: static; }
+  .navGrid { display: none; }
+  .managementNav { top: 4.5rem; padding: 12px; }
+  .mobileNav { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; }
+  .mobileNav label { color: #64748b; font-size: 12px; font-weight: 750; }
+  .mobileNav select { width: 100%; min-width: 0; min-height: 44px; padding: 8px; border: 1px solid #bfdbfe; border-radius: 10px; background: #eff6ff; color: #1e40af; font-size: 16px; font-weight: 700; }
+  .mobileNav select:focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }
+  .publishDetails > summary { padding: 12px 16px; }
+  .publishDetails > summary span:last-child { display: block; margin: 4px 0 0 18px; }
   .settingsForm { padding: 1rem; }
 }
 

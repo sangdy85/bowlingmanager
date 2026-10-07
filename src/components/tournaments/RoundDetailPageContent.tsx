@@ -950,13 +950,13 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                 </div>
             </div>
 
-            <div className={ui.tableScroll}>
+            <div className={ui.tableScroll} tabIndex={0} role="region" aria-label="게임별 점수 입력 표">
                 <table className={`${ui.table} ${ui.scoreTable}`} style={{ tableLayout: 'fixed', minWidth: `${520 + gameCount * 100}px` }}>
                     <thead>
                         <tr className="bg-gray-100 text-gray-600 uppercase text-[11px] font-bold tracking-tight">
                             <th className="py-3 px-2 border-b text-center" style={{ width: '60px', whiteSpace: 'nowrap' }}>레인</th>
                             <th className="py-3 px-2 border-b text-center" style={{ width: '90px', whiteSpace: 'nowrap' }}>팀</th>
-                            <th className="py-3 px-2 border-b text-center" style={{ width: '130px', whiteSpace: 'nowrap' }}>이름</th>
+                            <th className={ui.stickyName} style={{ width: '130px', whiteSpace: 'nowrap' }}>이름</th>
                             <th className="py-3 px-1 border-b text-center" style={{ width: 'auto', whiteSpace: 'nowrap' }}>
                                 점수(1-{gameCount}G)
                             </th>
@@ -1006,7 +1006,7 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                     <td className={ui.textCell} style={{ width: '90px' }}>
                                         {(p.registration.guestTeamName ?? p.registration.team?.name) || '-'}
                                     </td>
-                                    <td className={ui.textCell} style={{ width: '130px', fontWeight: 750 }}>
+                                    <td className={`${ui.textCell} ${ui.stickyName}`} style={{ width: '130px', fontWeight: 750 }}>
                                         <div className="flex flex-col items-center">
                                             <span className={isWaitlisted ? 'text-gray-400' : ''}>{p.registration.user?.name || p.registration.guestName}</span>
                                             {isTeamEvent && groupId && (
@@ -1020,7 +1020,8 @@ function RoundScoringTab({ round, onUpdate }: { round: any, onUpdate: () => void
                                         <div className="flex justify-center">
                                             <div className="flex items-center -space-x-px">
                                                 {Array.from({ length: gameCount }, (_, i) => i + 1).map(g => (
-                                                    <div key={g} className="relative group/input">
+                                                    <div key={g} className={ui.scoreField}>
+                                                        <span aria-hidden="true">{g}G</span>
                                                         <input
                                                             aria-label={`${p.registration.user?.name || p.registration.guestName} ${g}게임 점수`}
                                                             type="number"
@@ -2864,8 +2865,17 @@ export default function RoundDetailPageContent({
             {
                 isManager && (
                     <>
-                    {bandPublish && <BandPublishStatus centerId={centerId!} tournamentId={round.tournament.id} roundId={round.id} connected={bandPublish.connected} posts={bandPublish.posts} />}
+                    {bandPublish && <details className={styles.publishDetails}>
+                        <summary><span>BAND 게시 관리</span><span>{bandPublish.connected ? '게시 상태 확인 · 수동 게시' : '연결 설정 필요'}</span></summary>
+                        <BandPublishStatus centerId={centerId!} tournamentId={round.tournament.id} roundId={round.id} connected={bandPublish.connected} posts={bandPublish.posts} />
+                    </details>}
                     <nav aria-label="대회 관리 메뉴" className={styles.managementNav}>
+                        <div className={styles.mobileNav}>
+                            <label htmlFor="round-management-section">관리 화면 이동</label>
+                            <select id="round-management-section" value={activeTab} onChange={event => handleTabChange(event.target.value)}>
+                                {tabs.map(tab => <option key={tab.id} value={tab.id}>{tab.label} · {tab.description}</option>)}
+                            </select>
+                        </div>
                         <div className={styles.navGrid}>
                         {tabs.map(tab => (
                             <button
@@ -2961,7 +2971,7 @@ export default function RoundDetailPageContent({
                         {activeTab === 'lanes' && <RoundLanesTab round={round} onUpdate={refresh} isManager={isManager} />}
                         {activeTab === 'scoring' && <RoundScoringTab round={round} onUpdate={refresh} />}
                         {activeTab === 'sideGame' && (
-                            <div className={ui.section}>
+                            <div className={ui.surface}>
                                 <SideGameManager
                                     matchups={round.matchups}
                                     participants={round.participants}
