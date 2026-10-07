@@ -6,42 +6,12 @@ import {
     fetchBandProfile,
 } from "@/lib/band/client";
 import { encryptBandToken } from "@/lib/band/token-crypto";
+import { decodeBandOAuthPending } from "@/lib/band/oauth-cookie";
 
 export const dynamic = "force-dynamic";
 
 const COOKIE_NAME = "bowling_band_oauth";
 const MAX_AGE_MS = 10 * 60 * 1000;
-
-type PendingOAuth = {
-    state: string;
-    returnTo: string;
-    userId: string;
-    createdAt: number;
-};
-
-function decodePending(value: string | undefined): PendingOAuth | null {
-    if (!value) return null;
-
-    try {
-        const decoded = JSON.parse(
-            Buffer.from(value, "base64url").toString("utf8"),
-        ) as PendingOAuth;
-
-        if (
-            !decoded
-            || typeof decoded.state !== "string"
-            || typeof decoded.returnTo !== "string"
-            || typeof decoded.userId !== "string"
-            || typeof decoded.createdAt !== "number"
-        ) {
-            return null;
-        }
-
-        return decoded;
-    } catch {
-        return null;
-    }
-}
 
 function redirectWithStatus(
     request: NextRequest,
@@ -58,7 +28,7 @@ function redirectWithStatus(
 
 export async function GET(request: NextRequest) {
     const session = await auth();
-    const pending = decodePending(
+    const pending = decodeBandOAuthPending(
         request.cookies.get(COOKIE_NAME)?.value,
     );
 
@@ -83,15 +53,6 @@ export async function GET(request: NextRequest) {
             request,
             pending.returnTo,
             "oauth_denied",
-        );
-    }
-
-    const returnedState = request.nextUrl.searchParams.get("state");
-    if (returnedState && returnedState !== pending.state) {
-        return redirectWithStatus(
-            request,
-            pending.returnTo,
-            "oauth_invalid_state",
         );
     }
 
