@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react';
 import { changePassword, deleteAccount } from '@/app/actions/profile';
 import { signOut, useSession } from 'next-auth/react';
 import CenterRegistrationForm from '@/components/CenterRegistrationForm';
+import styles from './SettingsPage.module.css';
 
 export default function SettingsPage() {
     const { data: session } = useSession();
@@ -35,24 +36,28 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="max-w-2xl mx-auto py-8 px-4">
-            <h1 className="text-3xl font-bold mb-8">계정 설정</h1>
+        <div className={styles.page}>
+            <header className={styles.header}>
+                <h1 className={styles.title}>계정 설정</h1>
+                <p className={styles.subtitle}>가입 정보, 비밀번호와 관리자 등록 정보를 관리합니다.</p>
+            </header>
+            <div className={styles.stack}>
 
             {/* User Profile Info Section */}
-            <section className="card mb-8">
-                <h2 className="text-xl font-semibold mb-4 border-b border-border pb-2">가입 정보</h2>
-                <div className="flex flex-col gap-3" style={{ fontSize: '0.95rem' }}>
-                    <div className="flex justify-between items-center py-2 border-b border-border/10">
-                        <span className="text-muted-foreground">이름</span>
-                        <span className="font-semibold">{session?.user?.name || '-'}</span>
+            <section className={`card ${styles.section}`}>
+                <div className={styles.sectionHeader}><h2 className={styles.sectionTitle}>가입 정보</h2></div>
+                <div className={styles.profileRows}>
+                    <div className={styles.profileRow}>
+                        <span className={styles.profileLabel}>이름</span>
+                        <span className={styles.profileValue}>{session?.user?.name || '-'}</span>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-b border-border/10">
-                        <span className="text-muted-foreground">이메일 주소</span>
-                        <span className="font-semibold">{session?.user?.email || '-'}</span>
+                    <div className={styles.profileRow}>
+                        <span className={styles.profileLabel}>이메일 주소</span>
+                        <span className={styles.profileValue}>{session?.user?.email || '-'}</span>
                     </div>
-                    <div className="flex justify-between items-center py-2">
-                        <span className="text-muted-foreground">로그인 방식</span>
-                        <span className="font-semibold flex items-center gap-1.5">
+                    <div className={styles.profileRow}>
+                        <span className={styles.profileLabel}>로그인 방식</span>
+                        <span className={styles.profileValue}>
                             {session?.user?.provider === 'google' && (
                                 <>
                                     <svg className="social-icon" width="14" height="14" viewBox="0 0 24 24" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }}>
@@ -66,21 +71,7 @@ export default function SettingsPage() {
                             )}
                             {session?.user?.provider === 'naver' && (
                                 <>
-                                    <span style={{ 
-                                        backgroundColor: '#03C75A', 
-                                        color: '#ffffff', 
-                                        fontWeight: '900', 
-                                        fontFamily: 'sans-serif', 
-                                        fontSize: '11px', 
-                                        width: '16px', 
-                                        height: '16px', 
-                                        display: 'inline-flex', 
-                                        alignItems: 'center', 
-                                        justifyContent: 'center', 
-                                        borderRadius: '3px',
-                                        lineHeight: '1',
-                                        marginRight: '4px'
-                                    }}>N</span>
+                                    <span className={styles.naverBadge}>N</span>
                                     네이버 로그인 계정
                                 </>
                             )}
@@ -88,7 +79,7 @@ export default function SettingsPage() {
                                 <span className="text-primary font-medium">일반 이메일 가입 계정</span>
                             )}
                             {!session?.user?.provider && (
-                                <span className="text-muted-foreground">-</span>
+                                <span className={styles.profileLabel}>-</span>
                             )}
                         </span>
                     </div>
@@ -97,10 +88,10 @@ export default function SettingsPage() {
 
             {/* Password Change Section */}
             {session?.user?.provider === 'credentials' && (
-                <section className="card mb-8">
-                    <h2 className="text-xl font-semibold mb-4 border-b border-border pb-2">비밀번호 변경</h2>
-                    <form action={passwordAction} className="flex flex-col gap-4">
-                        <div>
+                <section className={`card ${styles.section}`}>
+                    <div className={styles.sectionHeader}><h2 className={styles.sectionTitle}>비밀번호 변경</h2></div>
+                    <form action={passwordAction} className={styles.form}>
+                        <div className={styles.field}>
                             <label className="label" htmlFor="currentPassword">현재 비밀번호</label>
                             <input
                                 className="input"
@@ -110,7 +101,7 @@ export default function SettingsPage() {
                                 required
                             />
                         </div>
-                        <div>
+                        <div className={styles.field}>
                             <label className="label" htmlFor="newPassword">새 비밀번호</label>
                             <input
                                 className="input"
@@ -120,7 +111,7 @@ export default function SettingsPage() {
                                 required
                             />
                         </div>
-                        <div>
+                        <div className={styles.field}>
                             <label className="label" htmlFor="confirmPassword">새 비밀번호 확인</label>
                             <input
                                 className="input"
@@ -132,12 +123,12 @@ export default function SettingsPage() {
                         </div>
 
                         {passwordState && (
-                            <div className={`text-sm text-center ${passwordState.success ? 'text-green-500' : 'text-destructive'}`}>
+                            <div className={`${styles.message} ${passwordState.success ? styles.success : styles.error}`}>
                                 {passwordState.message}
                             </div>
                         )}
 
-                        <div className="flex justify-end mt-2">
+                        <div className={styles.actionRow}>
                             <button
                                 type="submit"
                                 className="btn btn-primary"
@@ -151,35 +142,34 @@ export default function SettingsPage() {
             )}
 
             {/* Bowling Center Registration Section */}
-            <section className="card mb-8">
-                <h2 className="text-xl font-semibold mb-4 border-b border-border pb-2">볼링장 관리자 등록</h2>
+            <section className={`card ${styles.section}`}>
+                <div className={styles.sectionHeader}><h2 className={styles.sectionTitle}>볼링장 관리자 등록</h2></div>
                 <CenterRegistrationForm currentUserRole={session?.user?.role} />
             </section>
 
             {/* Account Deletion Section */}
-            <section className="card border-destructive/30 bg-destructive/5">
-                <h2 className="text-xl font-semibold mb-4 text-destructive border-b border-destructive/20 pb-2">계정 탈퇴</h2>
-                <p className="text-sm text-muted-foreground mb-6">
+            <section className={`card ${styles.section} ${styles.dangerSection}`}>
+                <div className={styles.sectionHeader}><h2 className={`${styles.sectionTitle} ${styles.dangerTitle}`}>계정 탈퇴</h2></div>
+                <p className={styles.dangerText}>
                     계정을 탈퇴하면 모든 점수 기록, 팀 가입 정보 및 게시글이 영구적으로 삭제됩니다.
                     소유하고 계신 팀이 있는 경우, 먼저 팀 소유권을 이전하거나 팀을 삭제해야 합니다.
                 </p>
 
                 {deleteError && (
-                    <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm font-medium">
-                        {deleteError}
-                    </div>
+                    <div className={`${styles.message} ${styles.error}`}>{deleteError}</div>
                 )}
 
-                <div className="flex justify-end">
+                <div className={styles.actionRow}>
                     <button
                         onClick={handleDeleteAccount}
-                        className="btn bg-destructive hover:bg-destructive/90 text-white"
+                        className={`btn ${styles.dangerButton}`}
                         disabled={isDeleting}
                     >
                         {isDeleting ? '처리 중...' : '계정 탈퇴'}
                     </button>
                 </div>
             </section>
+            </div>
         </div>
     );
 }
