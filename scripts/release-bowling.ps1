@@ -75,7 +75,7 @@ function Get-OriginMainRelease {
     $pubspec = $pubspecLines -join [Environment]::NewLine
     $match = [regex]::Match(
         $pubspec,
-        '(?m)^version:[ \t]*(\d+\.\d+\.\d+)\+(\d+)[ \t]*$'
+        'version\s*:\s*(\d+\.\d+\.\d+)\+(\d+)'
     )
 
     if (-not $match.Success) {
