@@ -84,4 +84,5 @@ export default function ActiveTournaments({ tournaments, centerId, isManager = f
                 })}
             </div>
         </section>
+    );
 }
