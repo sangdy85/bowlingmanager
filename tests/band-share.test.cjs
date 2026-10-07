@@ -231,3 +231,26 @@ test('weekly report screen keeps four PNG downloads and adds BAND share panel', 
   assert.match(downloader, /TOP_30/);
   assert.match(downloader, /4종 전체 다운로드/);
 });
+
+
+test('BAND OAuth routes keep pending state server-bound and avoid raw secret logging', () => {
+  const connectSource = source(
+    'src/app/api/integrations/band/connect/route.ts',
+  );
+  const callbackSource = source(
+    'src/app/api/integrations/band/callback/route.ts',
+  );
+
+  assert.match(connectSource, /encodeBandOAuthPending/);
+  assert.match(connectSource, /httpOnly:\s*true/);
+  assert.match(connectSource, /sameSite:\s*"lax"/);
+  assert.match(connectSource, /secure:\s*process\.env\.NODE_ENV === "production"/);
+  assert.doesNotMatch(connectSource, /searchParams\.set\("state"/);
+
+  assert.match(callbackSource, /decodeBandOAuthPending/);
+  assert.match(callbackSource, /pending\.userId !== session\.user\.id/);
+  assert.doesNotMatch(
+    callbackSource,
+    /console\.error\("BAND OAuth callback failed:",\s*error\)/,
+  );
+});
