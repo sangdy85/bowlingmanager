@@ -46,7 +46,15 @@ export default function TournamentListManager({
     });
 
     return (
-        <div className={styles.container}>
+        <section className={styles.container}>
+            <div className={styles.sectionHeader}>
+                <div>
+                    <h2 className={styles.sectionTitle}>대회 목록</h2>
+                    <p className={styles.sectionDescription}>진행 중인 대회와 종료된 대회를 유형별로 확인하세요.</p>
+                </div>
+                <span className={styles.sectionCount}>전체 {tournaments.length}개</span>
+            </div>
+
             {/* Header / Main Tabs */}
             <div className={styles.tabContainer}>
                 <button
@@ -146,6 +154,6 @@ export default function TournamentListManager({
                     </div>
                 )}
             </div>
-        </div>
+        </section>
     );
 }
