@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import Link from 'next/link';
+import controls from './CenterControls.module.css';
 import { createTournament } from '@/app/actions/tournament-center';
 
 function SubmitButton() {
@@ -59,7 +60,7 @@ export default function NewTournamentForm({ centerId }: { centerId: string }) {
         <form
             action={createTournament.bind(null, centerId)}
             onSubmit={handleSubmit}
-            className="space-y-6"
+            className={controls.form}
         >
             <div>
                 <label className="label">대회 유형</label>

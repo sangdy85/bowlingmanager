@@ -1,6 +1,8 @@
 'use client';
 
 import ui from './ManagementUI.module.css';
+import controls from './CenterControls.module.css';
+import LaneAssignmentModal from './LaneAssignmentModal';
 import { SummaryMetricCard } from './ManagementUI';
 
 import { useState, useMemo, useRef, useEffect, useId } from 'react';
@@ -45,6 +47,7 @@ export default function RoundParticipantManager({
     const tableRef = useRef<HTMLDivElement>(null);
     const searchId = useId();
     const [participantSearch, setParticipantSearch] = useState('');
+    const [showLanes, setShowLanes] = useState(false);
 
     // Default to initialRoundId or the latest round if not found
     const defaultRoundId = initialRoundId || (rounds && rounds.length > 0 ? rounds[0].id : '');
@@ -523,6 +526,7 @@ export default function RoundParticipantManager({
               </div>
                 {isManager && (
                     <div className={ui.toolbar}>
+                        <button type="button" className={ui.secondary} onClick={() => setShowLanes(true)}>🎳 레인 배정 공개</button>
                         <input
                             type="file"
                             ref={fileInputRef}
@@ -568,10 +572,12 @@ export default function RoundParticipantManager({
                 )}
             </div>
 
+            {showLanes && <LaneAssignmentModal participants={roundParticipants} roundNumber={selectedRound?.roundNumber} onClose={() => setShowLanes(false)} />}
+
             {/* Manual Register / Edit Form (Inline) */}
             {showModal && (
                 <div
-                    className="bg-slate-100 rounded-2xl border-2 border-slate-900 overflow-hidden animate-in slide-in-from-top-4 duration-300 mt-8 mb-8 shadow-xl"
+                    className={controls.registration}
                 >
                     <div className="bg-slate-900 px-6 py-3 flex justify-between items-center">
                         <h3 className="font-bold text-sm text-white uppercase tracking-wider">
@@ -581,7 +587,7 @@ export default function RoundParticipantManager({
                     </div>
 
                     <div className="p-6">
-                        <div className="flex flex-col lg:flex-row items-end gap-4">
+                        <div className={controls.registrationFields}>
                             {!isEditMode && (
                                 <div className="flex bg-white p-1 rounded-xl border border-slate-200 h-[52px]">
                                     <button type="button"
@@ -774,10 +780,10 @@ export default function RoundParticipantManager({
                                             <td className={`border-2 border-slate-900 p-1 font-black ${isWaitlisted ? 'text-amber-600' : ''}`}>
                                                 {isWaitlisted ? `대기 ${waitNumber}` : idx + 1}
                                             </td>
-                                            <td className={ui.textCell}>
+                                            <td className={ui.centerTextCell}>
                                                 {(reg.guestTeamName ?? reg.team?.name) || '개인'}
                                             </td>
-                                            <td className={`${ui.textCell} ${ui.stickyName}`}>
+                                            <td className={`${ui.centerTextCell} ${ui.stickyName}`}>
                                                 <div className="flex flex-col gap-0.5">
                                                     <div className="flex items-center gap-1">
                                                         <span>{reg.guestName ?? reg.user?.name}</span>

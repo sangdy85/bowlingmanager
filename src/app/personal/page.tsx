@@ -458,8 +458,8 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
 
                 <div className={styles.statTables}>
                     {/* 1. 전체 종합 (모든 팀 합산) */}
-                    <div className="table-responsive !p-0 !bg-white">
-                        <table className="w-full text-[13px] border-collapse !bg-white !text-[#0f172a]" style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>
+                    <div className={`table-responsive !p-0 !bg-white ${styles.tableSurface}`}>
+                        <table className={`w-full text-[13px] border-collapse !bg-white !text-[#0f172a] ${styles.dataTable}`} style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>
                             <thead>
                                 <tr className="!bg-[#f2f2f2]" style={{ backgroundColor: '#f2f2f2' }}>
                                     <th className="p-2 border border-slate-400 !text-[#0f172a] font-black text-left" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>분류 (전체 종합)</th>
@@ -493,8 +493,8 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         const other = teamScores.filter((s: any) => !['정기전', '벙개', '교류전', '상주'].includes(s.gameType || ''));
 
                         return (
-                            <div key={teamGroup.id} className="table-responsive mt-4">
-                                <table className="w-full text-[13px] border-collapse !bg-white !text-slate-900" style={{ backgroundColor: 'white', color: '#0f172a', border: '2px solid #64748b' }}>
+                            <div key={teamGroup.id} className={`table-responsive mt-4 ${styles.tableSurface}`}>
+                                <table className={`w-full text-[13px] border-collapse !bg-white !text-slate-900 ${styles.dataTable}`} style={{ backgroundColor: 'white', color: '#0f172a', border: '2px solid #64748b' }}>
                                     <thead>
                                         <tr className="!bg-[#f2f2f2]" style={{ backgroundColor: '#f2f2f2' }}>
                                             <th className="p-2 border border-slate-400 !text-blue-700 font-black text-left" style={{ border: '1px solid #94a3b8' }}>🛡️ {teamGroup.name}</th>
@@ -524,17 +524,17 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                 </div>
             </div>
 
-            <div className="card !bg-white !text-slate-900 border border-slate-400 shadow-none overflow-hidden p-0 rounded-none mb-4 mt-8" style={{ backgroundColor: 'white', border: '1px solid #94a3b8' }}>
-                <div className="bg-[#1e293b] p-3 border-b-2 border-[#0f172a]" style={{ backgroundColor: '#1e293b', borderBottom: '2px solid #0f172a' }}>
+            <div className={`card !text-slate-900 overflow-hidden p-0 mb-4 mt-8 ${styles.officialCard}`}>
+                <div className={styles.officialHeader}>
                     <h2 className="text-sm font-black flex items-center gap-2 text-white" style={{ color: 'white' }}>
                         🎳 {currentYear}년 볼링장 공식 기록
                     </h2>
                 </div>
 
                 {/* 공식 기록 요약 표 */}
-                <div className="p-0 sm:p-4 bg-white border-b border-slate-300">
-                    <div className="table-responsive">
-                        <table className="w-full text-xs border-collapse bg-white shadow-sm" style={{ border: '2px solid #94a3b8', minWidth: '350px' }}>
+                <div className={styles.officialSummary}>
+                    <div className={`table-responsive ${styles.tableSurface}`}>
+                        <table className={`w-full text-xs border-collapse bg-white shadow-sm ${styles.dataTable}`} style={{ border: '2px solid #94a3b8', minWidth: '350px' }}>
                             <thead>
                                 <tr className="bg-slate-200">
                                     <th className="p-2 border border-slate-400 text-[#0f172a] font-bold" style={{ color: '#0f172a', border: '1px solid #94a3b8' }}>공식 기록 분류</th>
@@ -578,8 +578,8 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         아직 등록된 공식 경기 기록이 없습니다.
                     </p>
                 ) : (
-                    <div className="table-responsive !bg-white">
-                        <table className="w-full text-[13px] border-collapse !bg-white !text-slate-900" style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>
+                    <div className={`table-responsive !bg-white ${styles.tableSurface}`}>
+                        <table className={`w-full text-[13px] border-collapse !bg-white !text-slate-900 ${styles.dataTable} ${styles.officialRecordsTable}`} style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>
                             <thead>
                                 <tr className="!bg-[#f2f2f2]" style={{ backgroundColor: '#f2f2f2' }}>
                                     <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[60px] sm:w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>날짜</th>
@@ -653,8 +653,8 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         아직 등록된 점수가 없습니다.
                     </p>
                 ) : (
-                    <div className="table-responsive !bg-white">
-                        <table className="w-full text-[13px] border-collapse !bg-white !text-slate-900" style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>
+                    <div className={`table-responsive !bg-white ${styles.tableSurface}`}>
+                        <table className={`w-full text-[13px] border-collapse !bg-white !text-slate-900 ${styles.dataTable}`} style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>
                             <thead>
                                 <tr className="!bg-[#f2f2f2]" style={{ backgroundColor: '#f2f2f2' }}>
                                     <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[60px] sm:w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>날짜</th>

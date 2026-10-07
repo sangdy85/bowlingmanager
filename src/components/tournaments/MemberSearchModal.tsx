@@ -1,4 +1,5 @@
 'use client';
+import controls from './CenterControls.module.css';
 
 import { useState, useTransition } from "react";
 import { searchUsers, addCenterMember } from "@/app/actions/center-members";
@@ -59,8 +60,8 @@ export default function MemberSearchModal({ centerId }: { centerId: string }) {
             </button>
 
             {isOpen && (
-                <div className="modal modal-open">
-                    <div className="modal-box max-w-md">
+                <div className={controls.overlay}>
+                    <div className={controls.dialog} role="dialog" aria-modal="true" aria-label="회원 검색 및 추가">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="font-bold text-lg">회원 검색 및 추가</h3>
                             <button

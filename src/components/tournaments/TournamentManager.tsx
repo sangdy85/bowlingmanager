@@ -1,4 +1,5 @@
 'use client';
+import controls from './CenterControls.module.css';
 
 import { useState, useRef, useEffect } from 'react';
 import { generateLeagueSchedule, updateLeagueScheduleDates } from '@/app/actions/league-actions';
@@ -159,7 +160,7 @@ export default function TournamentManager({
     }
 
     return (
-        <div className="card p-6 bg-secondary/10 border-secondary/20 relative">
+        <div className={`card ${controls.formPanel}`}>
             <button
                 onClick={() => setIsExpanded(false)}
                 className="absolute top-4 right-4 text-xs hover:underline text-secondary-foreground"

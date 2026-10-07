@@ -1,0 +1,116 @@
+.resultSection {
+  padding: clamp(18px, 3vw, 32px);
+}
+
+.resultHeading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 22px;
+  padding: 16px 18px;
+  border: 1px solid #dbe3ee;
+  border-left: 5px solid #2563eb;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fafc, #eff6ff);
+}
+
+.resultHeadingIcon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #dbeafe;
+  font-size: 22px;
+}
+
+.resultEyebrow {
+  display: block;
+  margin-bottom: 3px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+
+.resultHeading h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(21px, 3vw, 28px);
+  font-weight: 900;
+  line-height: 1.25;
+  letter-spacing: -.035em;
+}
+
+.resultHeading p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.winnerSection {
+  padding: 0 clamp(18px, 3vw, 32px) clamp(24px, 4vw, 40px);
+}
+
+.winnerPanel {
+  padding: clamp(16px, 3vw, 24px);
+  border: 1px solid #dbe3ee;
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.winnerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.winnerCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #172033, #0f172a);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, .12);
+}
+
+.winnerNumber {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #60a5fa;
+  border-radius: 50%;
+  background: #1e3a8a;
+  color: #dbeafe;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.winnerInfo { min-width: 0; }
+.winnerLabel { display: block; color: #93c5fd; font-size: 11px; font-weight: 800; }
+.winnerName { display: block; margin-top: 2px; color: #fff; font-size: 19px; font-weight: 900; line-height: 1.35; overflow-wrap: anywhere; }
+.winnerTeam { display: block; margin-top: 3px; color: #cbd5e1; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+
+@media (max-width: 860px) {
+  .winnerGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .resultSection { padding: 16px 12px 22px; }
+  .resultHeading { align-items: flex-start; padding: 14px; }
+  .resultHeadingIcon { flex-basis: 38px; width: 38px; height: 38px; }
+  .winnerSection { padding: 0 12px 24px; }
+  .winnerPanel { padding: 12px; }
+  .winnerGrid { grid-template-columns: 1fr; }
+  .winnerCard { padding: 14px; }
+}

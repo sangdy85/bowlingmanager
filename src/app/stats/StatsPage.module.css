@@ -35,6 +35,10 @@
 
 .card {
   padding: 1rem;
+  border: 1px solid #3f516d;
+  background: #111a2b;
+  color: #f1f5f9;
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.24);
 }
 
 .cardHeader {
@@ -44,31 +48,33 @@
   gap: 1rem;
   margin-bottom: 0.75rem;
   padding-bottom: 0.65rem;
-  border-bottom: 1px solid #2c3a52;
+  border-bottom: 2px solid #3b82f6;
 }
 
 .cardTitle {
   margin: 0;
   font-size: 1rem;
   font-weight: 850;
+  color: #f8fafc;
 }
 
 .tableWrap {
   overflow-x: auto;
-  border: 1px solid #334155;
+  border: 1px solid #52637e;
   border-radius: 0.8rem;
+  background: #0d1627;
 }
 
 .table {
   width: 100%;
   min-width: 650px;
   border-collapse: collapse;
-  background: #111a2b;
+  background: #0f192b;
 }
 
 .table th {
-  background: #172033;
-  color: #cbd5e1;
+  background: #1b2940;
+  color: #e2e8f0;
   font-size: 0.72rem;
   font-weight: 850;
   letter-spacing: -0.01em;
@@ -77,8 +83,8 @@
 .table th,
 .table td {
   padding: 0.68rem 0.75rem;
-  border-right: 1px solid #2b3a52;
-  border-bottom: 1px solid #2b3a52;
+  border-right: 1px solid #52637e;
+  border-bottom: 1px solid #52637e;
   text-align: center;
 }
 
@@ -92,12 +98,26 @@
 }
 
 .table tbody tr {
-  color: #dbe4f0;
+  color: #f1f5f9;
   transition: background-color 140ms ease;
 }
 
+.table tbody tr:nth-child(even) {
+  background: #152238;
+}
+
+.table tbody td {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.table tbody td:nth-child(2) {
+  color: #fff;
+  font-weight: 850;
+}
+
 .table tbody tr:hover {
-  background: rgba(59, 130, 246, 0.07);
+  background: #203454;
 }
 
 .rank {
@@ -105,12 +125,12 @@
 }
 
 .avg {
-  color: #93c5fd;
+  color: #bfdbfe;
   font-weight: 900;
 }
 
 .high {
-  color: #c4b5fd;
+  color: #ddd6fe;
   font-weight: 800;
 }
 

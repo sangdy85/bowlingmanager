@@ -76,6 +76,7 @@
 .info p:first-child { color: #1d4ed8; font-weight: 800; margin-bottom: 6px; }
 .scoreTable { min-width: 820px; }
 .scoreField { display: grid; gap: 5px; }
+.scoreInputs { display: flex; align-items: center; gap: 8px; }
 .scoreField > span { color: #64748b; font-size: 12px; font-weight: 750; }
 .scoreTable input[type=number] { height: 44px; font-size: 16px !important; }
 .scoreTable input[type=checkbox] { width: 18px; height: 18px; vertical-align: middle; }

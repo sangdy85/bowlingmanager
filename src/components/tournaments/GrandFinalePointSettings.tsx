@@ -1,4 +1,5 @@
 'use client';
+import controls from './CenterControls.module.css';
 
 import { useState } from 'react';
 import { updateGrandFinaleSettings } from '@/app/actions/tournament-center';
@@ -40,7 +41,7 @@ export default function GrandFinalePointSettings({ tournamentId, initialPoints }
     };
 
     return (
-        <div className="bg-white rounded-[2rem] border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+        <div className={controls.pointsPanel}>
             {/* Sticky Header */}
             <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-100 p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div className="space-y-1">
@@ -67,7 +68,7 @@ export default function GrandFinalePointSettings({ tournamentId, initialPoints }
             </div>
 
             <div className="p-6 md:p-10">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                <div className={controls.pointsGrid}>
                     {/* Female Champ Special Rank */}
                     <div className="relative group flex flex-col gap-3 p-5 rounded-3xl bg-pink-50/50 border-2 border-pink-200/50 shadow-sm hover:shadow-md hover:border-pink-300 transition-all">
                         <div className="absolute -top-3 left-4 px-3 py-1 bg-pink-500 text-[10px] font-black text-white rounded-full uppercase tracking-widest shadow-sm">
