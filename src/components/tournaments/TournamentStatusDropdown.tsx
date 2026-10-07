@@ -15,6 +15,7 @@ export default function TournamentStatusDropdown({
     statusMap
 }: TournamentStatusDropdownProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const [busy, setBusy] = useState(false);
 
     const handleStatusChange = async (status: string) => {
         if (status === 'FINISHED') {
@@ -25,11 +26,15 @@ export default function TournamentStatusDropdown({
         }
 
         try {
-            await updateTournamentStatus(tournamentId, status);
+            setBusy(true);
+            const result = await updateTournamentStatus(tournamentId, status);
             setIsOpen(false);
+            if (result.band?.status === 'FAILED') alert(`대회 상태는 변경되었습니다.\n${result.band.message}`);
         } catch (error) {
             console.error("Failed to update status:", error);
             alert("상태 변경에 실패했습니다.");
+        } finally {
+            setBusy(false);
         }
     };
 
@@ -37,6 +42,7 @@ export default function TournamentStatusDropdown({
         <div className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
+                disabled={busy}
                 className="btn btn-primary h-12 px-6 font-black shadow-lg"
             >
                 상태 변경 ▼
@@ -49,6 +55,12 @@ export default function TournamentStatusDropdown({
                         onClick={() => setIsOpen(false)}
                     />
                     <div className="absolute right-0 mt-2 w-48 bg-card border-2 border-black rounded-xl shadow-2xl z-50 overflow-hidden">
+                        {currentStatus === 'PLANNING' && (
+                            <button
+                                onClick={() => handleStatusChange('OPEN')}
+                                className="w-full text-left px-4 py-3 hover:bg-primary/10 transition-colors text-sm font-bold"
+                            >모집 공개 및 BAND 게시</button>
+                        )}
                         {currentStatus !== 'FINISHED' && (
                             <button
                                 onClick={() => handleStatusChange('FINISHED')}

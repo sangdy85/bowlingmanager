@@ -46,6 +46,8 @@ model User {
   markedTeamChargeTargets         TeamChargeTarget[]                @relation("TeamChargeTargetMarkedBy")
   teamChargeTargetAudits          TeamChargeTargetAudit[]           @relation("TeamChargeTargetAuditActor")
   teamEventAdminAudits            TeamEventAdminAudit[]             @relation("TeamEventAdminAuditActor")
+  bandConnections                 BandConnection[]                  @relation("BandConnectionUser")
+  requestedBandPosts              BandPost[]                        @relation("BandPostRequester")
 }
 
 model VerificationToken {
@@ -126,20 +128,22 @@ model MobileNotificationDelivery {
 }
 
 model BowlingCenter {
-  id           String         @id @default(cuid())
-  name         String
-  code         String         @unique
-  address      String
-  phone        String?
-  description  String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  ownerId      String
-  owner        User           @relation("CenterOwner", fields: [ownerId], references: [id])
-  CenterMember CenterMember[]
-  teams        Team[]
-  tournaments  Tournament[]
-  managers     User[]         @relation("CenterManagers")
+  id             String          @id @default(cuid())
+  name           String
+  code           String          @unique
+  address        String
+  phone          String?
+  description    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  ownerId        String
+  owner          User            @relation("CenterOwner", fields: [ownerId], references: [id])
+  CenterMember   CenterMember[]
+  teams          Team[]
+  tournaments    Tournament[]
+  managers       User[]          @relation("CenterManagers")
+  bandConnection BandConnection? @relation("CenterBandConnection")
+  bandPosts      BandPost[]      @relation("CenterBandPosts")
 }
 
 model Team {
@@ -1021,6 +1025,7 @@ model Tournament {
   center                 BowlingCenter            @relation(fields: [centerId], references: [id])
   attachments            TournamentAttachment[]
   registrations          TournamentRegistration[]
+  bandPosts              BandPost[]               @relation("TournamentBandPosts")
 }
 
 model TournamentAttachment {
@@ -1053,6 +1058,58 @@ model LeagueRound {
   participants      RoundParticipant[]
   individualScores  TournamentScore[]
   rawScores         RawLaneScore[]
+  bandPosts         BandPost[]
+}
+
+model BandConnection {
+  id                    String        @id @default(cuid())
+  centerId              String        @unique
+  connectedByUserId     String
+  bandUserKey           String?
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String?
+  tokenExpiresAt        DateTime?
+  bandKey               String?
+  bandName              String?
+  bandCoverUrl          String?
+  enabled               Boolean       @default(true)
+  autoRecruitment       Boolean       @default(true)
+  autoFinalResult       Boolean       @default(true)
+  doPush                Boolean       @default(false)
+  connectedAt           DateTime      @default(now())
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  center                BowlingCenter @relation("CenterBandConnection", fields: [centerId], references: [id], onDelete: Cascade)
+  connectedBy           User          @relation("BandConnectionUser", fields: [connectedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([connectedByUserId])
+}
+
+model BandPost {
+  id              String        @id @default(cuid())
+  centerId        String
+  tournamentId    String
+  roundId         String?
+  type            String
+  revision        Int           @default(1)
+  dedupeKey       String        @unique
+  bandKey         String
+  postKey         String?
+  contentSnapshot String
+  status          String        @default("PENDING")
+  errorCode       String?
+  errorMessage    String?
+  requestedById   String?
+  createdAt       DateTime      @default(now())
+  postedAt        DateTime?
+  center          BowlingCenter @relation("CenterBandPosts", fields: [centerId], references: [id], onDelete: Cascade)
+  tournament      Tournament    @relation("TournamentBandPosts", fields: [tournamentId], references: [id], onDelete: Cascade)
+  round           LeagueRound?  @relation(fields: [roundId], references: [id], onDelete: SetNull)
+  requestedBy     User?         @relation("BandPostRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+
+  @@index([centerId, createdAt])
+  @@index([tournamentId, type])
+  @@index([roundId, type])
 }
 
 model RawLaneScore {

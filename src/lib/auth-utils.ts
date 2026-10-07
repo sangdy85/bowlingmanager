@@ -7,10 +7,10 @@ export async function verifyCenterAdmin(centerId: string) {
 
     const center = await prisma.bowlingCenter.findUnique({
         where: { id: centerId },
-        include: { managers: true }
+        select: { ownerId: true, managers: { select: { id: true } } }
     });
 
-    if (!center || !center.managers.some(m => m.id === session.user.id)) {
+    if (!center || (center.ownerId !== session.user.id && !center.managers.some(m => m.id === session.user.id))) {
         throw new Error("해당 볼링장에 대한 관리 권한이 없습니다.");
     }
 

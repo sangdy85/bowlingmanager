@@ -18,6 +18,7 @@ import RoundResultSummary from './RoundResultSummary';
 import RoundParticipantManager from '@/components/tournaments/RoundParticipantManager';
 import { getEffectiveRoundDate, formatLane } from '@/lib/tournament-utils';
 import GrandFinaleCumulativeManager from './GrandFinaleCumulativeManager';
+import BandPublishStatus from './BandPublishStatus';
 import { calculateGameLaneAssignments } from '@/lib/lane-movement';
 import styles from './RoundDetailManagement.module.css';
 
@@ -2655,13 +2656,15 @@ export default function RoundDetailPageContent({
     userId,
     isManager = false,
     centerId,
-    userProfile
+    userProfile,
+    bandPublish
 }: {
     round: any,
     userId?: string,
     isManager?: boolean,
     centerId?: string,
-    userProfile?: { name: string | null, teamName: string | null }
+    userProfile?: { name: string | null, teamName: string | null },
+    bandPublish?: { connected: boolean; posts: any[] }
 }) {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -2864,6 +2867,8 @@ export default function RoundDetailPageContent({
 
             {
                 isManager && (
+                    <>
+                    {bandPublish && <BandPublishStatus centerId={centerId!} tournamentId={round.tournament.id} roundId={round.id} connected={bandPublish.connected} posts={bandPublish.posts} />}
                     <nav aria-label="대회 관리 메뉴" className={styles.managementNav}>
                         <div className={styles.navGrid}>
                         {tabs.map(tab => (
@@ -2885,6 +2890,7 @@ export default function RoundDetailPageContent({
                         ))}
                         </div>
                     </nav>
+                    </>
                 )
             }
 
