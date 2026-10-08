@@ -5,6 +5,7 @@ import { getChampRoundResults } from '@/app/actions/champ-results';
 import { getIndividualLeaderboard, getLeagueLeaderboard } from '@/app/actions/league-leaderboard';
 import { BandApiError, bandErrorMessage, createPost, getPermissions } from './client';
 import { decryptBandToken } from './token-crypto';
+import { bandExternalPostingAllowed, BAND_POSTING_DISABLED_MESSAGE } from './outbound-policy';
 import { bandPostContentIssue, bandPostContentSize, BAND_POST_MAX_UTF8_BYTES } from './content-guard';
 import { createBandPreviewApproval, verifyBandPreviewApproval } from './preview-signature';
 import { buildLeagueWeeklyPost, isLeagueWeekReady } from './league-weekly-content';
@@ -93,6 +94,10 @@ async function publishBuiltContent(input: PublishInput & {
     }
     if (latest && !input.forceRevision) {
         return { status: 'SKIPPED', message: '이미 게시 이력이 있어 중복 게시하지 않았습니다.', postId: latest.id, revision: latest.revision };
+    }
+    // Must run before inserting PENDING, token decryption or external permission checks.
+    if (!bandExternalPostingAllowed()) {
+        return { status: 'SKIPPED', message: BAND_POSTING_DISABLED_MESSAGE };
     }
 
     const revision = nextBandPostRevision(latest?.revision);
@@ -506,6 +511,7 @@ export async function republishBandPost(input: PublishInput & { type: BandPostTy
 }
 
 export async function sendBandTestPost(centerId: string): Promise<BandPublishOutcome> {
+    if (!bandExternalPostingAllowed()) return { status: 'SKIPPED', message: BAND_POSTING_DISABLED_MESSAGE };
     const connection = await (prisma as any).bandConnection.findUnique({
         where: { centerId }, include: { center: { select: { name: true } } },
     });
