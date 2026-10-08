@@ -69,7 +69,12 @@ test('토큰은 AES-GCM으로 왕복되고 변조되면 거부된다', () => {
 test('posting 권한 API 요청과 권한 없는 결과를 구분할 수 있다', async () => {
   const originalFetch = global.fetch;
   global.fetch = async url => { assert.match(String(url), /permissions=posting/); return new Response(JSON.stringify({ result_code: 1, result_data: { permissions: [] } }), { status: 200 }); };
-  try { const client = loadTs('src/lib/band/client.ts'); assert.deepEqual(await client.getPermissions('token', 'band'), []); }
+  try {
+    const client = loadTs('src/lib/band/client.ts', {
+      './outbound-policy': { bandExternalPostingAllowed: () => true, BAND_POSTING_DISABLED_MESSAGE: 'disabled' },
+    });
+    assert.deepEqual(await client.getPermissions('token', 'band'), []);
+  }
   finally { global.fetch = originalFetch; }
 });
 
