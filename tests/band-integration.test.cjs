@@ -171,7 +171,7 @@ test('수동 재게시에서는 자동 게시 설정이 꺼져 있어도 연결�
   const source = fs.readFileSync('src/lib/band/publisher.ts', 'utf8');
   assert.match(
     source,
-    /if \(!input\.forceRevision\) \{\s*const skipReason = bandAutoPublishSkipReason/,
+    /if \(!input\.forceRevision && !input\.previewOnly\) \{\s*const skipReason = bandAutoPublishSkipReason/,
   );
   assert.match(
     source,
