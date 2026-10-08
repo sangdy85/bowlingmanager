@@ -85,6 +85,9 @@ export async function GET(request: NextRequest) {
                     ? encryptBandToken(token.refreshToken)
                     : null,
                 tokenExpiresAt: expiresAt,
+                autoRecruitment: false,
+                autoFinalResult: false,
+                doPush: false,
             },
             update: {
                 connectedByUserId: session.user.id,
