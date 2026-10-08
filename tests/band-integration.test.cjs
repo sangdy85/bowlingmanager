@@ -267,7 +267,7 @@ test('상주리그 주차 결과 BAND 글에는 필수 결과 구역과 실제 �
     detailUrl: 'https://www.bowlingmanager.co.kr/centers/test/tournaments/league',
   });
 
-  for (const term of ['제 3회차 상주리그', '제 3차 · 8주차', '팀 순위표', '개인 순위표', '8주차 경기 결과', '개인 평균 TOP', '12,345핀', '홍길동', 'AVG 200.0', '600/590/580', 'https://www.bowlingmanager.co.kr/']) {
+  for (const term of ['제 3회차 상주리그', '제 3차 · 8주차', '팀 순위표', '개인 순위표', '8주차 경기 결과', '개인 평균 TOP', '승점 60', '12,345핀', '홍길동', 'AVG 200.0', '600/590/580', 'https://www.bowlingmanager.co.kr/']) {
     assert.ok(text.includes(term), `Missing section/value: ${term}`);
   }
   assert.ok(text.indexOf('팀 순위표') < text.indexOf('개인 순위표'));
