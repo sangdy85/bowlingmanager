@@ -246,3 +246,59 @@ test('회차 BAND 게시 후 회차 페이지도 revalidate한다', () => {
   assert.match(source, /if \(input\.roundId\)/);
   assert.match(source, /rounds\/\$\{input\.roundId\}/);
 });
+
+
+test('상주리그 주차 결과 BAND 글에는 필수 결과 구역과 실제 주차가 모두 포함된다', () => {
+  const weekly = loadTs('src/lib/band/league-weekly-content.ts');
+  const text = weekly.buildLeagueWeeklyPost({
+    tournamentName: '제 3회차 상주리그',
+    iteration: 3,
+    week: 8,
+    teams: [
+      { name: 'A팀', wins: 20, losses: 4, points: 60, totalPinfall: 12345 },
+      { name: 'B팀', wins: 15, losses: 9, points: 45, totalPinfall: 11987 },
+    ],
+    individualByTeam: [{ teamName: 'A팀', players: [{ name: '홍길동', gamesCount: 6, totalHandicappedPins: 1200 }] }],
+    matches: [{
+      teamA: 'A팀', teamB: 'B팀', pointsA: 2, pointsB: 1,
+      scoresA: [600, 590, 580], scoresB: [570, 575, 580],
+    }],
+    averageTop: [{ name: '홍길동', teamName: 'A팀', gamesCount: 6, totalHandicappedPins: 1200 }],
+    detailUrl: 'https://www.bowlingmanager.co.kr/centers/test/tournaments/league',
+  });
+
+  for (const term of ['제 3회차 상주리그', '제 3차 · 8주차', '팀 순위표', '개인 순위표', '8주차 경기 결과', '개인 평균 TOP', '12,345핀', '홍길동', 'AVG 200.0', '600/590/580', 'https://www.bowlingmanager.co.kr/']) {
+    assert.ok(text.includes(term), `Missing section/value: ${term}`);
+  }
+  assert.ok(text.indexOf('팀 순위표') < text.indexOf('개인 순위표'));
+  assert.ok(text.indexOf('개인 순위표') < text.indexOf('8주차 경기 결과'));
+  assert.ok(text.indexOf('8주차 경기 결과') < text.indexOf('개인 평균 TOP'));
+  assert.equal((text.match(/제 3회차 상주리그/g) || []).length, 1);
+});
+
+test('상주리그 주차 게시 준비 여부는 모든 매치 완료를 요구한다', () => {
+  const { isLeagueWeekReady } = loadTs('src/lib/band/league-weekly-content.ts');
+  assert.equal(isLeagueWeekReady([]), false);
+  assert.equal(isLeagueWeekReady([{ status: 'FINISHED' }, { status: 'PENDING' }]), false);
+  assert.equal(isLeagueWeekReady([{ status: 'FINISHED' }, { status: 'FINISHED' }]), true);
+});
+
+test('상주리그 주차별 BAND 게시 이력은 다른 주차와 구분된다', () => {
+  assert.equal(policy.bandPostDedupeKey('t1', 'week-1', 'LEAGUE_WEEKLY_RESULT', 1), 'ROUND:week-1:LEAGUE_WEEKLY_RESULT:1');
+  assert.equal(policy.bandPostDedupeKey('t1', 'week-2', 'LEAGUE_WEEKLY_RESULT', 1), 'ROUND:week-2:LEAGUE_WEEKLY_RESULT:1');
+});
+
+test('상주리그 BAND 버튼은 완료된 주차 관리 화면에만 제공된다', () => {
+  const source = fs.readFileSync('src/components/tournaments/LeagueResultManager.tsx', 'utf8');
+  const publisher = fs.readFileSync('src/lib/band/publisher.ts', 'utf8');
+  assert.ok(source.includes('isManager && finished &&'));
+  assert.ok(source.includes('LeagueWeeklyBandButton'));
+  assert.ok(publisher.includes('isLeagueWeekReady(round.matchups)'));
+  assert.ok(publisher.includes('getLeagueLeaderboard(tournament.id, round.roundNumber)'));
+  assert.ok(publisher.includes('getIndividualLeaderboard(tournament.id, round.roundNumber)'));
+});
+
+test('Prisma Client 생성은 TypeScript 검사보다 먼저 실행된다', () => {
+  const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  assert.ok(pkg.scripts.build.indexOf('prisma generate') < pkg.scripts.build.indexOf('typecheck'));
+});
