@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import prisma from '@/lib/prisma';
 import { PUBLIC_ORIGIN } from '@/lib/public-web';
 import { formatLane } from '@/lib/tournament-utils';
@@ -6,6 +5,8 @@ import { getChampRoundResults } from '@/app/actions/champ-results';
 import { getIndividualLeaderboard, getLeagueLeaderboard } from '@/app/actions/league-leaderboard';
 import { BandApiError, bandErrorMessage, createPost, getPermissions } from './client';
 import { decryptBandToken } from './token-crypto';
+import { bandPostContentIssue, bandPostContentSize, BAND_POST_MAX_UTF8_BYTES } from './content-guard';
+import { createBandPreviewApproval, verifyBandPreviewApproval } from './preview-signature';
 import { buildLeagueWeeklyPost, isLeagueWeekReady } from './league-weekly-content';
 import { buildFinalResultPost, buildLaneAssignmentPost, buildParticipantPost, buildRecruitmentPost } from './content';
 import type { BandPostType, BandPublishOutcome, FinalResultEntry } from './types';
@@ -34,6 +35,9 @@ async function publishBuiltContent(input: PublishInput & {
     content: string;
     autoFlag: 'autoRecruitment' | 'autoFinalResult';
 }): Promise<BandPublishOutcome> {
+    const contentIssue = bandPostContentIssue(input.content);
+    if (contentIssue) return { status: 'SKIPPED', message: contentIssue };
+
     const db = prisma as any;
     const connection = await db.bandConnection.findUnique({ where: { centerId: input.centerId } });
     if (!connection?.enabled || !connection.bandKey) {
@@ -48,9 +52,9 @@ async function publishBuiltContent(input: PublishInput & {
         where: { tournamentId: input.tournamentId, roundId: input.roundId || null, type: input.type },
         orderBy: { revision: 'desc' },
     });
-    // The token binds the preview to the exact post body, target BAND, settings
-    // and latest revision. It contains no OAuth credentials.
-    const previewToken = createHash('sha256').update(JSON.stringify({
+    // Signed server-side: the client cannot mint or alter the confirmation.
+    // This binds the exact body, target, history revision and actor for 15 minutes.
+    const approvalPayload = JSON.stringify({
         centerId: input.centerId,
         tournamentId: input.tournamentId,
         roundId: input.roundId || null,
@@ -61,7 +65,7 @@ async function publishBuiltContent(input: PublishInput & {
         content: input.content,
         latestRevision: latest?.revision ?? 0,
         latestStatus: latest?.status ?? null,
-    })).digest('hex');
+    });
 
     if (input.previewOnly) {
         return {
@@ -72,14 +76,17 @@ async function publishBuiltContent(input: PublishInput & {
                 bandKey: connection.bandKey,
                 doPush: connection.doPush === true,
                 content: input.content,
+                contentBytes: bandPostContentSize(input.content),
+                maxContentBytes: BAND_POST_MAX_UTF8_BYTES,
                 nextRevision: nextBandPostRevision(latest?.revision),
                 latestStatus: latest?.status ?? null,
-                previewToken,
+                previewToken: createBandPreviewApproval(approvalPayload, input.requestedById || ''),
             },
         };
     }
-    if (input.previewToken !== undefined && input.previewToken !== previewToken) {
-        return { status: 'SKIPPED', message: '미리보기 이후 게시 내용이나 대상, 이력이 변경되었습니다. 다시 미리보기 해주세요.' };
+    if (input.previewToken !== undefined &&
+        !verifyBandPreviewApproval(input.previewToken, approvalPayload, input.requestedById || '')) {
+        return { status: 'SKIPPED', message: '미리보기 승인 정보가 만료되었거나 게시 내용·대상·이력이 변경되었습니다. 다시 미리보기 해주세요.' };
     }
     if (latest?.status === 'PENDING' || latest?.status === 'UNKNOWN') {
         return { status: 'SKIPPED', message: '이전 BAND 게시 결과가 미확인 상태입니다. BAND에서 실제 게시 여부를 확인한 뒤 관리 조치가 필요합니다.', postId: latest.id, revision: latest.revision };
