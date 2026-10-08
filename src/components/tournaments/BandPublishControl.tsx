@@ -66,7 +66,7 @@ export default function BandPublishControl({
     };
 
     const publish = async () => {
-        if (busyRef.current || !preview || !approved || preview.latestStatus === 'PENDING') return;
+        if (busyRef.current || !preview || !approved || ['PENDING', 'UNKNOWN'].includes(preview.latestStatus || '')) return;
         busyRef.current = true;
         setBusy('publish');
         setMessage('');
@@ -124,15 +124,15 @@ export default function BandPublishControl({
                     </dl>
                     <h4>게시될 공지문</h4>
                     <pre className={styles.previewText}>{preview.content}</pre>
-                    {preview.latestStatus === 'PENDING' && (
-                        <p className={styles.previewWarning} role="alert">이전 게시가 처리 중입니다. 상태가 확인되기 전에는 재게시할 수 없습니다.</p>
+                    {['PENDING', 'UNKNOWN'].includes(preview.latestStatus || '') && (
+                        <p className={styles.previewWarning} role="alert">이전 게시 결과를 확인할 수 없습니다. BAND에서 실제 게시 여부를 확인하기 전에는 재게시할 수 없습니다.</p>
                     )}
                     <label className={styles.approval}>
                         <input
                             type="checkbox"
                             checked={approved}
                             onChange={event => setApproved(event.target.checked)}
-                            disabled={busy !== null || preview.latestStatus === 'PENDING'}
+                            disabled={busy !== null || ['PENDING', 'UNKNOWN'].includes(preview.latestStatus || '')}
                         />
                         게시 대상과 본문을 확인했으며 BAND에 게시하는 데 동의합니다.
                     </label>
@@ -143,7 +143,7 @@ export default function BandPublishControl({
                     <button
                         type="button"
                         className={styles.confirmButton}
-                        disabled={!approved || busy !== null || preview.latestStatus === 'PENDING'}
+                        disabled={!approved || busy !== null || ['PENDING', 'UNKNOWN'].includes(preview.latestStatus || '')}
                         onClick={publish}
                     >
                         {busy === 'publish' ? '게시 중…' : '확인 후 BAND 게시'}
