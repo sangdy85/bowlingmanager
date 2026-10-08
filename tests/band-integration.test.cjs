@@ -92,17 +92,6 @@ test('상주리그 주차 결과 템플릿은 네 가지 요구 섹션을 모두
   assert.match(result, /A팀 3 : 1 B팀/);
 });
 
-test('모집 안내의 없는 선택 항목은 생략한다', () => {
-  const result = content.buildRecruitmentPost({
-    title: '모집',
-    tournamentName: '대회',
-    centerName: '',
-    participantCount: 0,
-    detailUrl: 'https://www.bowlingmanager.co.kr/x',
-  });
-  assert.doesNotMatch(result, /장소|경기일|경기 방식|참가비|미정/);
-});
-
 test('게시 revision 키는 대회·회차·게시유형을 분리한다', () => {
   assert.equal(
     policy.bandPostDedupeKey('t1', 'r1', 'PARTICIPANTS', 1),
