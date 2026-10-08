@@ -122,7 +122,7 @@ export default function BandPublishControl({
                         <div><dt>게시 버전</dt><dd>v{preview.nextRevision}{preview.latestStatus ? ` · 이전: ${preview.latestStatus}` : ' · 첫 게시'}</dd></div>
                         <div><dt>알림 발송</dt><dd>{preview.doPush ? '사용' : '사용 안 함'}</dd></div>
                     </dl>
-                    <h4>게시될 공지문</h4>
+                    <h4>게시될 공지문 · {preview.contentBytes.toLocaleString('ko-KR')} / {preview.maxContentBytes.toLocaleString('ko-KR')} UTF-8 바이트</h4>
                     <pre className={styles.previewText}>{preview.content}</pre>
                     {['PENDING', 'UNKNOWN'].includes(preview.latestStatus || '') && (
                         <p className={styles.previewWarning} role="alert">이전 게시 결과를 확인할 수 없습니다. BAND에서 실제 게시 여부를 확인하기 전에는 재게시할 수 없습니다.</p>
