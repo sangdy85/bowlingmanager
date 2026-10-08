@@ -1080,7 +1080,7 @@ model BandConnection {
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
   center                BowlingCenter @relation("CenterBandConnection", fields: [centerId], references: [id], onDelete: Cascade)
-  connectedBy           User          @relation("BandConnectionUser", fields: [connectedByUserId], references: [id], onDelete: Restrict)
+  connectedBy           User          @relation("BandConnectionUser", fields: [connectedByUserId], references: [id], onDelete: Cascade)
 
   @@index([connectedByUserId])
 }
