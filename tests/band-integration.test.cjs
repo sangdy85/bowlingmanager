@@ -178,3 +178,71 @@ test('수동 재게시에서는 자동 게시 설정이 꺼져 있어도 연결�
     /if \(!connection\?\.enabled \|\| !connection\.bandKey\)/,
   );
 });
+
+
+test('참가자 명단 템플릿은 대기자를 표시하고 순서를 유지한다', () => {
+  const result = content.buildParticipantPost({
+    title: '2회차 참가자 명단',
+    tournamentName: '챔프전',
+    roundNumber: 2,
+    activeCount: 2,
+    waitlistCount: 1,
+    detailUrl: 'https://www.bowlingmanager.co.kr/round',
+    participants: [
+      { name: '홍길동', team: 'A팀' },
+      { name: '김철수', team: 'B팀' },
+      { name: '이영희', team: 'C팀', waitlisted: true },
+    ],
+  });
+  assert.ok(result.indexOf('홍길동') < result.indexOf('김철수'));
+  assert.ok(result.indexOf('김철수') < result.indexOf('이영희'));
+  assert.match(result, /참가 2명 · 대기 1명/);
+  assert.match(result, /이영희 · C팀 \[대기\]/);
+});
+
+test('레인 배정 템플릿은 이름 팀 레인을 함께 표시한다', () => {
+  const result = content.buildLaneAssignmentPost({
+    title: '2회차 레인 배정',
+    tournamentName: '챔프전',
+    roundNumber: 2,
+    detailUrl: 'https://www.bowlingmanager.co.kr/round',
+    entries: [
+      { name: '홍길동', team: 'A팀', lane: '2-1' },
+      { name: '김철수', team: 'B팀', lane: '2-2' },
+    ],
+  });
+  assert.match(result, /홍길동 · A팀 · 2-1/);
+  assert.match(result, /김철수 · B팀 · 2-2/);
+});
+
+test('회차 게시 타입도 회차 단위 dedupe key를 사용한다', () => {
+  assert.equal(policy.bandPostDedupeKey('t1', 'r1', 'PARTICIPANTS', 1), 'ROUND:r1:PARTICIPANTS:1');
+  assert.equal(policy.bandPostDedupeKey('t1', 'r1', 'LANE_ASSIGNMENT', 3), 'ROUND:r1:LANE_ASSIGNMENT:3');
+});
+
+test('참가자와 레인 게시 타입은 모집 자동 게시 설정 정책을 사용한다', () => {
+  const connection = { enabled: true, bandKey: 'b', autoRecruitment: false, autoFinalResult: true };
+  assert.match(policy.bandAutoPublishSkipReason(connection, 'PARTICIPANTS'), /꺼져/);
+  assert.match(policy.bandAutoPublishSkipReason(connection, 'LANE_ASSIGNMENT'), /꺼져/);
+});
+
+test('회차 BAND 게시 UI는 참가자 명단 레인 배정 최종 결과를 제공한다', () => {
+  const source = fs.readFileSync('src/components/tournaments/BandPublishStatus.tsx', 'utf8');
+  assert.match(source, /PARTICIPANTS/);
+  assert.match(source, /LANE_ASSIGNMENT/);
+  assert.match(source, /FINAL_RESULT/);
+  assert.match(source, /참가자 명단/);
+  assert.match(source, /레인 배정/);
+});
+
+test('레인 배정 게시 로직은 실제 참가자 전원 배정을 요구한다', () => {
+  const source = fs.readFileSync('src/lib/band/publisher.ts', 'utf8');
+  assert.match(source, /실제 참가자 전원의 레인 배정이 완료된 뒤 게시할 수 있습니다/);
+  assert.match(source, /formatLane\(participant\.lane\)/);
+});
+
+test('회차 BAND 게시 후 회차 페이지도 revalidate한다', () => {
+  const source = fs.readFileSync('src/app/actions/band-actions.ts', 'utf8');
+  assert.match(source, /if \(input\.roundId\)/);
+  assert.match(source, /rounds\/\$\{input\.roundId\}/);
+});
