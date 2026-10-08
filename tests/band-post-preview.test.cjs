@@ -20,7 +20,7 @@ function loadTs(relativePath, mocks = {}) {
 function publisherFixture() {
     process.env.AUTH_SECRET = 'band-preview-local-fixture-secret-at-least-32-bytes';
     const counters = { create: 0, update: 0, permissions: 0, post: 0, decrypt: 0 };
-    const flags = { postFails: false };
+    const flags = { postFails: false, outboundAllowed: true };
     const connection = {
         enabled: true,
         bandKey: 'band-key-1',
@@ -94,12 +94,29 @@ function publisherFixture() {
         './league-weekly-content': { buildLeagueWeeklyPost: () => '', isLeagueWeekReady: () => false },
         './content': content,
         './content-guard': contentGuard,
-        './outbound-policy': { bandExternalPostingAllowed: () => true, BAND_POSTING_DISABLED_MESSAGE: 'BAND posting disabled' },
+        './outbound-policy': { bandExternalPostingAllowed: () => flags.outboundAllowed, BAND_POSTING_DISABLED_MESSAGE: '외부 BAND 게시가 비활성화된 환경입니다.' },
         './preview-signature': approval,
         './policy': policy,
     });
     return { publisher, connection, tournament, history, counters, flags };
 }
+
+test('스테이징 외부 게시 차단은 이력 생성과 토큰 복호화 전에 실행되며 미리보기는 허용된다', async () => {
+    const { publisher, flags, counters, history } = publisherFixture();
+    flags.outboundAllowed = false;
+    const options = { tournamentId: 't1', type: 'RECRUITMENT', requestedById: 'manager-1' };
+    const preview = await publisher.republishBandPost({ ...options, previewOnly: true });
+    assert.equal(preview.status, 'SUCCESS');
+    assert.match(preview.preview.content, /가을 챔프전/);
+    const outcome = await publisher.republishBandPost({ ...options, previewToken: preview.preview.previewToken });
+    assert.equal(outcome.status, 'SKIPPED');
+    assert.match(outcome.message, /비활성화/);
+    assert.equal(history.length, 0);
+    assert.equal(counters.create, 0);
+    assert.equal(counters.decrypt, 0);
+    assert.equal(counters.permissions, 0);
+    assert.equal(counters.post, 0);
+});
 
 test('미리보기는 게시글을 만들지만 DB 작성, 토큰 복호화, BAND 전송은 하지 않는다', async () => {
     const { publisher, counters, history } = publisherFixture();
