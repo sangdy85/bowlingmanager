@@ -106,7 +106,7 @@ test('다른 센터 관리자가 아니면 공통 권한 검사가 차단한다'
 test('BAND API 실패여도 Tournament 상태 변경은 성공한 채 유지된다', async () => {
   let updated = false;
   const prisma = { tournament: {
-    findUnique: async () => ({ centerId: 'c1', status: 'PLANNING' }),
+    findUnique: async () => ({ centerId: 'c1', status: 'PLANNING', type: 'CHAMP' }),
     update: async () => { updated = true; },
   } };
   const actions = loadTs('src/app/actions/tournament-center.ts', {
