@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { disconnectCenterBand, selectCenterBand, sendBandTestPostAction, updateBandPreferences } from '@/app/actions/band-actions';
+import { disconnectCenterBand, selectCenterBand, sendBandTestPostAction } from '@/app/actions/band-actions';
 import type { BandSummary } from '@/lib/band/types';
 import styles from './BandIntegrationSettings.module.css';
 
@@ -18,12 +18,6 @@ export default function BandIntegrationSettings({ centerId, connection, oauthRes
     const router = useRouter();
     const [bands, setBands] = useState<BandSummary[]>([]);
     const [selected, setSelected] = useState(connection?.bandKey || '');
-    const [prefs, setPrefs] = useState({
-        enabled: connection?.enabled ?? true,
-        autoRecruitment: connection?.autoRecruitment ?? true,
-        autoFinalResult: connection?.autoFinalResult ?? true,
-        doPush: connection?.doPush ?? false,
-    });
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState(oauthResult === 'connected' ? 'BAND 인증을 완료했습니다. 게시할 BAND를 선택해주세요.' : '');
     const [isError, setIsError] = useState(Boolean(oauthResult && oauthResult !== 'connected'));
@@ -53,7 +47,7 @@ export default function BandIntegrationSettings({ centerId, connection, oauthRes
 
     return <section className={styles.panel} aria-labelledby="band-settings-title">
         <div className={styles.header}>
-            <div><h2 id="band-settings-title" className={styles.title}>NAVER BAND 자동 게시</h2><p className={styles.description}>대회 모집 공개와 최종 종료 시 선택한 BAND에 텍스트 안내를 게시합니다.</p></div>
+            <div><h2 id="band-settings-title" className={styles.title}>NAVER BAND 공유</h2><p className={styles.description}>운영 화면에서 [BAND에 공유]를 눌러 내용을 미리 확인한 뒤 선택한 BAND에 게시합니다.</p></div>
             {connection && <span className={styles.badge}>연결됨</span>}
         </div>
         {message && <p className={`${styles.message} ${isError ? styles.error : ''}`}>{message}</p>}
@@ -66,13 +60,6 @@ export default function BandIntegrationSettings({ centerId, connection, oauthRes
                         <option value="">BAND 선택</option>{bands.map(b => <option key={b.bandKey} value={b.bandKey}>{b.name}{b.memberCount != null ? ` (${b.memberCount}명)` : ''}</option>)}
                     </select><button className={styles.button} disabled={busy || !selected} onClick={() => run(() => selectCenterBand(centerId, selected))}>선택 저장</button></>}
                 </div>
-            </div>
-            <div className={`${styles.box} ${styles.checks}`}>
-                <label className={styles.check}><input type="checkbox" checked={prefs.enabled} onChange={e => setPrefs({ ...prefs, enabled: e.target.checked })}/> BAND 게시 기능 사용</label>
-                <label className={styles.check}><input type="checkbox" checked={prefs.autoRecruitment} onChange={e => setPrefs({ ...prefs, autoRecruitment: e.target.checked })}/> 모집 공개 시 자동 게시</label>
-                <label className={styles.check}><input type="checkbox" checked={prefs.autoFinalResult} onChange={e => setPrefs({ ...prefs, autoFinalResult: e.target.checked })}/> 대회 종료 시 최종 결과 자동 게시</label>
-                <label className={styles.check}><input type="checkbox" checked={prefs.doPush} onChange={e => setPrefs({ ...prefs, doPush: e.target.checked })}/> BAND 멤버에게 게시 알림 보내기</label>
-                <button className={styles.button} disabled={busy} onClick={() => run(() => updateBandPreferences(centerId, prefs))}>자동 게시 설정 저장</button>
             </div>
             <div className={styles.row}>
                 <button className={`${styles.button} ${styles.secondary}`} disabled={busy || !connection.bandKey} onClick={() => run(() => sendBandTestPostAction(centerId))}>테스트 글 게시</button>
