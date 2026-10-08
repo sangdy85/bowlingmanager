@@ -94,6 +94,7 @@ function publisherFixture() {
         './league-weekly-content': { buildLeagueWeeklyPost: () => '', isLeagueWeekReady: () => false },
         './content': content,
         './content-guard': contentGuard,
+        './outbound-policy': { bandExternalPostingAllowed: () => true, BAND_POSTING_DISABLED_MESSAGE: 'BAND posting disabled' },
         './preview-signature': approval,
         './policy': policy,
     });
