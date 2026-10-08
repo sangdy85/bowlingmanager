@@ -128,7 +128,7 @@ export async function updateTournamentStatus(tournamentId: string, status: strin
 
     const tournament = await prisma.tournament.findUnique({
         where: { id: tournamentId },
-        select: { centerId: true, status: true }
+        select: { centerId: true, status: true, type: true }
     });
 
     if (!tournament) throw new Error("Tournament not found");
@@ -146,8 +146,11 @@ export async function updateTournamentStatus(tournamentId: string, status: strin
     try {
         const opened = tournament.status === 'PLANNING' && ['OPEN', 'JOINING'].includes(status);
         const finished = tournament.status !== 'FINISHED' && status === 'FINISHED';
-        if (opened) band = await publishTournamentRecruitment({ tournamentId, requestedById: actorId });
-        if (finished) band = await publishTournamentFinalResult({ tournamentId, requestedById: actorId });
+        // League results are explicitly posted by week; changing its overall
+        // tournament status must never trigger a second generic BAND post.
+        const eligibleAutoType = tournament.type === 'CHAMP' || tournament.type === 'EVENT';
+        if (eligibleAutoType && opened) band = await publishTournamentRecruitment({ tournamentId, requestedById: actorId });
+        if (eligibleAutoType && finished) band = await publishTournamentFinalResult({ tournamentId, requestedById: actorId });
     } catch {
         band = { status: 'FAILED' as const, message: '대회 상태는 변경했지만 BAND 게시를 처리하지 못했습니다.' };
     }
