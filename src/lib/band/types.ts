@@ -79,9 +79,10 @@ export type LeagueMatchResult = {
 
 export type LeagueWeeklyPostData = {
     tournamentName: string;
+    iteration?: number | null;
     roundNumber: number;
     teamStandings: Array<{ name: string; wins: number; totalPinfall: number }>;
-    individualStandings: Array<{ name: string; teamName: string; average: number; totalPins: number }>;
+    individualStandings: Array<{ name: string; teamName: string; rank: number; average: number; totalPins: number }>;
     matchResults: LeagueMatchResult[];
     averageTop: Array<{ name: string; teamName: string; average: number }>;
     detailUrl: string;
