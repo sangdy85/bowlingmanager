@@ -1,5 +1,4 @@
 export type BandPostType =
-    | 'RECRUITMENT'
     | 'PARTICIPANTS'
     | 'LANE_ASSIGNMENT'
     | 'LEAGUE_WEEKLY_RESULT'
@@ -27,20 +26,6 @@ export type BandPostPreview = {
     centerId: string;
     tournamentId: string;
     roundId: string | null;
-};
-
-export type RecruitmentPostData = {
-    title: string;
-    tournamentName: string;
-    centerName: string;
-    centerAddress?: string | null;
-    date?: Date | string | null;
-    roundNumber?: number | null;
-    gameMethod?: string | null;
-    participantCount: number;
-    maxParticipants?: number | null;
-    entryFeeText?: string | null;
-    detailUrl: string;
 };
 
 export type FinalResultEntry = {
