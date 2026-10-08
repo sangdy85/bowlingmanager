@@ -49,7 +49,7 @@ test('기존 프로젝트 폴더에서 실수로 스테이징 초기화할 수 �
 });
 
 test('스테이징 샘플 생성은 운영 DB와 운영 환경에서 차단된다', () => {
-  const cwd = process.cwd();
+  const cwd = path.join(process.cwd(), 'not-the-staging-worktree');
   const base = {
     APP_ENV: 'band-staging',
     DATABASE_URL: 'file:./band-staging.db',
