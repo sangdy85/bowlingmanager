@@ -25,6 +25,7 @@ import RoundLuckyDrawTab from './RoundLuckyDrawTab';
 import { getRoundFinalResults } from '@/lib/round-final-results';
 import LuckyDrawWinners from './LuckyDrawWinners';
 import resultStyles from './ResultVisibility.module.css';
+import BandShareButton from './BandShareButton';
 
 // --- Tab Components ---
 
@@ -2124,13 +2125,15 @@ export default function RoundDetailPageContent({
     userId,
     isManager = false,
     centerId,
-    userProfile
+    userProfile,
+    bandPublish
 }: {
     round: any,
     userId?: string,
     isManager?: boolean,
     centerId?: string,
-    userProfile?: { name: string | null, teamName: string | null }
+    userProfile?: { name: string | null, teamName: string | null },
+    bandPublish?: { connected: boolean; bandName?: string | null }
 }) {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -2207,6 +2210,14 @@ export default function RoundDetailPageContent({
     const participantCount = round.participants.length;
     const assignedLaneCount = round.participants.filter((p: any) => p.lane).length;
     const scoredParticipantCount = new Set((round.individualScores || []).filter((s: any) => s.score > 0).map((s: any) => s.registrationId)).size;
+    const roundMaxParticipants = settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament.maxParticipants ?? 0;
+    const activeLaneParticipants = [...round.participants]
+        .sort((a: any, b: any) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())
+        .slice(0, roundMaxParticipants > 0 ? roundMaxParticipants : undefined);
+    const laneShareReady = activeLaneParticipants.length > 0
+        && activeLaneParticipants.every((p: any) => Number.isInteger(p.lane) && p.lane >= 11);
+    const hasFinishedLeagueMatches = round.tournament.type === 'LEAGUE'
+        && (round.matchups || []).some((m: any) => m.status === 'FINISHED');
     const tabs = [
         { id: 'overview', label: '현황', description: '진행 요약', icon: '▦' },
         ...(isManager ? [{ id: 'settings', label: '설정', description: '일정·운영', icon: '⚙' }] : []),
@@ -2415,22 +2426,54 @@ export default function RoundDetailPageContent({
                         {activeTab === 'overview' && <RoundOverviewTab round={round} isManager={isManager} onNavigate={handleTabChange} />}
                         {activeTab === 'settings' && isManager && <RoundSettingsTab round={round} onUpdate={refresh} />}
                         {activeTab === 'participants' && (
-                            <RoundParticipantManager
-                                rounds={round.tournament.rounds}
-                                initialRoundId={round.id}
-                                allRegistrations={round.tournament.registrations}
-                                isManager={isManager}
-                                onUpdate={refresh}
-                                currentUserId={userId}
-                                centerId={centerId || ''}
-                                isEvent={round.tournament.type === 'EVENT'}
-                                tournamentType={round.tournament.type}
-                                hideRoundTabs={true}
-                                tournament={round.tournament}
-                                maxParticipants={settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament.maxParticipants}
-                            />
+                            <div className="space-y-4">
+                                {isManager && centerId && ['CHAMP', 'EVENT'].includes(round.tournament.type) && (
+                                    <div className="flex justify-end">
+                                        <BandShareButton
+                                            centerId={centerId}
+                                            tournamentId={round.tournament.id}
+                                            roundId={round.id}
+                                            type="PARTICIPANTS"
+                                            label="참가자 명단 BAND에 공유"
+                                            connected={Boolean(bandPublish?.connected)}
+                                            bandName={bandPublish?.bandName}
+                                        />
+                                    </div>
+                                )}
+                                <RoundParticipantManager
+                                    rounds={round.tournament.rounds}
+                                    initialRoundId={round.id}
+                                    allRegistrations={round.tournament.registrations}
+                                    isManager={isManager}
+                                    onUpdate={refresh}
+                                    currentUserId={userId}
+                                    centerId={centerId || ''}
+                                    isEvent={round.tournament.type === 'EVENT'}
+                                    tournamentType={round.tournament.type}
+                                    hideRoundTabs={true}
+                                    tournament={round.tournament}
+                                    maxParticipants={settings.roundMaxParticipants?.[round.roundNumber] ?? round.tournament.maxParticipants}
+                                />
+                            </div>
                         )}
-                        {activeTab === 'lanes' && <RoundLanesTab round={round} onUpdate={refresh} isManager={isManager} />}
+                        {activeTab === 'lanes' && (
+                            <div className="space-y-4">
+                                {isManager && centerId && ['CHAMP', 'EVENT'].includes(round.tournament.type) && laneShareReady && (
+                                    <div className="flex justify-end">
+                                        <BandShareButton
+                                            centerId={centerId}
+                                            tournamentId={round.tournament.id}
+                                            roundId={round.id}
+                                            type="LANE_ASSIGNMENT"
+                                            label="레인 배정 BAND에 공유"
+                                            connected={Boolean(bandPublish?.connected)}
+                                            bandName={bandPublish?.bandName}
+                                        />
+                                    </div>
+                                )}
+                                <RoundLanesTab round={round} onUpdate={refresh} isManager={isManager} />
+                            </div>
+                        )}
                         {activeTab === 'scoring' && <RoundScoringTab round={round} onUpdate={refresh} />}
                         {activeTab === 'sideGame' && (
                             <div className={ui.surface}>
@@ -2448,7 +2491,37 @@ export default function RoundDetailPageContent({
                                 />
                             </div>
                         )}
-                        {activeTab === 'finalResults' && <RoundFinalResultsTab round={round} isManager={isManager || false} />}
+                        {activeTab === 'finalResults' && (
+                            <div className="space-y-4">
+                                {isManager && centerId && round.tournament.type === 'LEAGUE' && hasFinishedLeagueMatches && (
+                                    <div className="flex justify-end">
+                                        <BandShareButton
+                                            centerId={centerId}
+                                            tournamentId={round.tournament.id}
+                                            roundId={round.id}
+                                            type="LEAGUE_WEEKLY_RESULT"
+                                            label={`${round.roundNumber}주차 결과 BAND에 공유`}
+                                            connected={Boolean(bandPublish?.connected)}
+                                            bandName={bandPublish?.bandName}
+                                        />
+                                    </div>
+                                )}
+                                {isManager && centerId && ['CHAMP', 'EVENT'].includes(round.tournament.type) && scoredParticipantCount > 0 && (
+                                    <div className="flex justify-end">
+                                        <BandShareButton
+                                            centerId={centerId}
+                                            tournamentId={round.tournament.id}
+                                            roundId={round.id}
+                                            type="FINAL_RESULT"
+                                            label="대회 결과 BAND에 공유"
+                                            connected={Boolean(bandPublish?.connected)}
+                                            bandName={bandPublish?.bandName}
+                                        />
+                                    </div>
+                                )}
+                                <RoundFinalResultsTab round={round} isManager={isManager || false} />
+                            </div>
+                        )}
                         {activeTab === 'points' && isManager && (
                             <div className="space-y-12 pb-12">
                                 {/* Current Round Points */}
