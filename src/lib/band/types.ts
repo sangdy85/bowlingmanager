@@ -1,4 +1,4 @@
-export type BandPostType = 'RECRUITMENT' | 'PARTICIPANTS' | 'LANE_ASSIGNMENT' | 'FINAL_RESULT';
+export type BandPostType = 'RECRUITMENT' | 'PARTICIPANTS' | 'LANE_ASSIGNMENT' | 'FINAL_RESULT' | 'LEAGUE_WEEKLY_RESULT';
 
 export type BandSummary = {
     bandKey: string;
