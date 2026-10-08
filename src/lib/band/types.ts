@@ -7,12 +7,23 @@ export type BandSummary = {
     memberCount: number | null;
 };
 
+export type BandPostPreview = {
+    bandName: string;
+    bandKey: string;
+    doPush: boolean;
+    content: string;
+    nextRevision: number;
+    latestStatus: string | null;
+    previewToken: string;
+};
+
 export type BandPublishOutcome = {
     status: 'SUCCESS' | 'FAILED' | 'SKIPPED';
     message: string;
     postId?: string;
     postKey?: string;
     revision?: number;
+    preview?: BandPostPreview;
 };
 
 export type RecruitmentPostData = {
