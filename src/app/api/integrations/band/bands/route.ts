@@ -5,6 +5,9 @@ import { getBands, bandErrorMessage } from '@/lib/band/client';
 import { decryptBandToken } from '@/lib/band/token-crypto';
 
 export async function GET(request: NextRequest) {
+    if (process.env.APP_ENV === 'band-staging') {
+        return NextResponse.json({ error: '스테이징에서는 실제 BAND 목록 조회를 사용하지 않습니다.' }, { status: 403 });
+    }
     const centerId = request.nextUrl.searchParams.get('centerId');
     if (!centerId) return NextResponse.json({ error: 'centerId가 필요합니다.' }, { status: 400 });
     try {
