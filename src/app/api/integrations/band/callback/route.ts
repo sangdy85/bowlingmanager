@@ -27,6 +27,9 @@ function editUrl(request: NextRequest, centerId: string, result: string) {
 }
 
 export async function GET(request: NextRequest) {
+    if (process.env.APP_ENV === 'band-staging') {
+        return NextResponse.json({ error: '스테이징에서는 실제 BAND OAuth 인증을 처리하지 않습니다.' }, { status: 403 });
+    }
     const session = await auth();
 
     if (!session?.user?.id) {
