@@ -5,7 +5,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { spawnSync, spawn } = require('node:child_process');
+const { spawnSync } = require('node:child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const ENV_FILE = path.join(ROOT, '.env.band-staging.local');
@@ -111,10 +111,10 @@ function command(name) {
     return;
   }
   const cli = name === 'migrate'
-    ? require.resolve('prisma/build/index.js')
+    ? path.join(ROOT, 'node_modules', 'prisma', 'build', 'index.js')
     : name === 'seed'
       ? path.join(__dirname, 'seed-band-staging.cjs')
-      : require.resolve('next/dist/bin/next');
+      : path.join(ROOT, 'node_modules', 'next', 'dist', 'bin', 'next');
   const args = name === 'migrate' ? [cli, 'migrate', 'deploy']
     : name === 'seed' ? [cli]
     : [cli, 'dev', '-H', '127.0.0.1', '-p', String(PORT)];
@@ -122,7 +122,18 @@ function command(name) {
   console.log('BAND staging: ' + name + ' with isolated SQLite and external posting disabled.');
   const result = spawnSync(process.execPath, args, { cwd: ROOT, env, stdio: 'inherit' });
   if (result.error) throw result.error;
-  if (result.status !== 0) process.exitCode = result.status || 1;
+  if (result.status !== 0) {
+    process.exitCode = result.status || 1;
+    return;
+  }
+  if (name === 'migrate') {
+    // A clean worktree needs its Prisma Client regenerated after migrations.
+    const generator = spawnSync(process.execPath,
+      [path.join(ROOT, 'node_modules', 'prisma', 'build', 'index.js'), 'generate'],
+      { cwd: ROOT, env, stdio: 'inherit' });
+    if (generator.error) throw generator.error;
+    if (generator.status !== 0) process.exitCode = generator.status || 1;
+  }
 }
 
 if (require.main === module) {
