@@ -27,7 +27,10 @@ function parseSettings(raw: string | null | undefined): Record<string, any> {
 }
 
 function publicUrl(path: string): string {
-    return `${PUBLIC_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`;
+    const origin = process.env.APP_ENV === 'band-staging'
+        ? 'http://127.0.0.1:3101'
+        : PUBLIC_ORIGIN;
+    return `${origin}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
 async function publishBuiltContent(input: PublishInput & {
