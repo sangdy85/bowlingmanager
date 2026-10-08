@@ -45,3 +45,10 @@
  .previewActions { padding: 12px 16px 16px; }
  .previewActions button { flex: 1 1 130px; }
 }
+
+.uncertain { width: 100%; display: grid; gap: 8px; padding: 12px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 9px; }
+.uncertain .previewWarning { margin: 0; }
+.uncertain .approval { margin: 0; text-align: left; }
+.resolveActions { display: flex; gap: 8px; flex-wrap: wrap; }
+.resolveActions button { min-height: 40px; padding: 9px 12px; border: 1px solid #d97706; background: #fff; border-radius: 8px; color: #92400e; font-weight: 750; cursor: pointer; font-size: 12px; flex: 1 1 120px; }
+.resolveActions button:disabled { opacity: .5; cursor: not-allowed; }
