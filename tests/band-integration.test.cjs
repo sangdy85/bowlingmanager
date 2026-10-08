@@ -335,3 +335,16 @@ test('과거 주차 평균 TOP은 이후 주차의 결과에 영향받지 않는
   assert.equal(latest.metadata.currentRound, 2);
   assert.equal(latest.top30.length, 0);
 });
+
+
+test('소수점이 있는 상주리그 승점은 반올림하지 않는다', () => {
+  const weekly = loadTs('src/lib/band/league-weekly-content.ts');
+  const text = weekly.buildLeagueWeeklyPost({
+    tournamentName: '상주리그', iteration: 2, week: 3,
+    teams: [{ name: 'A팀', wins: 2.5, losses: 1.5, points: 7.5, totalPinfall: 1000 }],
+    individualByTeam: [], matches: [], averageTop: [],
+    detailUrl: 'https://www.bowlingmanager.co.kr/league',
+  });
+  assert.ok(text.includes('2.5승 1.5패'));
+  assert.ok(text.includes('승점 7.5'));
+});
