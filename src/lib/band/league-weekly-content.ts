@@ -38,7 +38,7 @@ export type LeagueWeeklyPostData = {
 };
 
 function number(value: number): string {
-    return Math.round(value).toLocaleString('ko-KR');
+    return new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(value);
 }
 
 function average(pins: number, games: number): string {
