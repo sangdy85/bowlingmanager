@@ -256,6 +256,7 @@ export default async function TournamentDetailPage({ params }: { params: Promise
     const safeTournament = JSON.parse(JSON.stringify(safeTournamentRaw));
     const safeBandPosts = (safeTournament.bandPosts || []).map((post: any) => ({
         id: post.id,
+        roundId: post.roundId,
         type: post.type,
         status: post.status,
         revision: post.revision,
@@ -522,6 +523,8 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                                 tournamentId={tournamentId}
                                 rounds={safeTournament.leagueRounds}
                                 isManager={isManager}
+                                bandConnected={Boolean(safeTournament.center.bandConnection?.enabled && safeTournament.center.bandConnection?.bandKey)}
+                                bandPosts={safeBandPosts}
                             />
                         )}
 
