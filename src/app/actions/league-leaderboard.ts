@@ -443,7 +443,10 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
     });
 
     let lastRoundNumber = 0;
-    const playedRounds = tournament.leagueRounds.filter((r: any) => r.matchups.some((m: any) => m.status === 'FINISHED'));
+    const playedRounds = tournament.leagueRounds.filter((r: any) =>
+        (!roundLimit || r.roundNumber <= roundLimit) &&
+        r.matchups.some((m: any) => m.status === 'FINISHED')
+    );
     if (playedRounds.length > 0) {
         lastRoundNumber = playedRounds[playedRounds.length - 1].roundNumber;
     }

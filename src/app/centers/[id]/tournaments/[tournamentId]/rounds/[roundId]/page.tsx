@@ -255,6 +255,7 @@ export default async function RoundDetailPage({ params }: { params: Promise<{ id
         select: {
             ownerId: true,
             managers: { select: { id: true } },
+            bandConnection: { select: { enabled: true, bandKey: true } },
             CenterMember: {
                 where: { userId: session?.user?.id },
                 include: { Team: true, User: true }
@@ -264,6 +265,12 @@ export default async function RoundDetailPage({ params }: { params: Promise<{ id
 
     const isManager = center?.ownerId === session?.user?.id ||
         center?.managers.some((m: any) => m.id === session?.user?.id);
+
+    const bandPosts = isManager ? await (prisma as any).bandPost.findMany({
+        where: { tournamentId, OR: [{ roundId }, { roundId: null }] },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, type: true, status: true, revision: true, createdAt: true, postedAt: true, errorMessage: true },
+    }) : [];
 
     // Get current user's profile info for manual matching (Name + Team)
     const currentMember = center?.CenterMember?.[0];
@@ -279,6 +286,14 @@ export default async function RoundDetailPage({ params }: { params: Promise<{ id
             isManager={isManager}
             centerId={centerId}
             userProfile={userProfile}
+            bandPublish={isManager ? {
+                connected: Boolean(center?.bandConnection?.enabled && center?.bandConnection?.bandKey),
+                posts: bandPosts.map((post: any) => ({
+                    ...post,
+                    createdAt: post.createdAt.toISOString(),
+                    postedAt: post.postedAt?.toISOString() || null,
+                })),
+            } : undefined}
         />
     );
 }
