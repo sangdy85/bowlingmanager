@@ -24,8 +24,6 @@ export default async function CenterEditPage({ params, searchParams }: { params:
                     bandName: true,
                     bandCoverUrl: true,
                     enabled: true,
-                    autoRecruitment: true,
-                    autoFinalResult: true,
                     doPush: true,
                     connectedAt: true
                 }
