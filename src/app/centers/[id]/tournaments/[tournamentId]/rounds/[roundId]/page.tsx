@@ -255,6 +255,7 @@ export default async function RoundDetailPage({ params }: { params: Promise<{ id
         select: {
             ownerId: true,
             managers: { select: { id: true } },
+            bandConnection: { select: { enabled: true, bandKey: true, bandName: true } },
             CenterMember: {
                 where: { userId: session?.user?.id },
                 include: { Team: true, User: true }
@@ -279,6 +280,10 @@ export default async function RoundDetailPage({ params }: { params: Promise<{ id
             isManager={isManager}
             centerId={centerId}
             userProfile={userProfile}
+            bandPublish={isManager ? {
+                connected: Boolean(center?.bandConnection?.enabled && center?.bandConnection?.bandKey),
+                bandName: center?.bandConnection?.bandName || null,
+            } : undefined}
         />
     );
 }
