@@ -270,9 +270,11 @@ test('상주리그 주차 결과 BAND 글에는 필수 결과 구역과 실제 �
   for (const term of ['제 3회차 상주리그', '제 3차 · 8주차', '팀 순위표', '개인 순위표', '8주차 경기 결과', '개인 평균 TOP', '승점 60', '12,345핀', '홍길동', 'AVG 200.0', '600/590/580', 'https://www.bowlingmanager.co.kr/']) {
     assert.ok(text.includes(term), `Missing section/value: ${term}`);
   }
-  assert.ok(text.indexOf('팀 순위표') < text.indexOf('개인 순위표'));
-  assert.ok(text.indexOf('개인 순위표') < text.indexOf('8주차 경기 결과'));
-  assert.ok(text.indexOf('8주차 경기 결과') < text.indexOf('개인 평균 TOP'));
+  // Match section headings, not the repeated week text in the post title.
+  const sections = ['🏆 팀 순위표', '👥 개인 순위표', '📝 8주차 경기 결과', '🔥 개인 평균 TOP'];
+  const positions = sections.map(section => text.indexOf(section));
+  assert.ok(positions.every(position => position >= 0), '모든 구역 제목이 표시되어야 합니다.');
+  assert.ok(positions.every((position, index) => index === 0 || positions[index - 1] < position), '게시 구역은 팀 순위 → 개인 순위 → 경기 결과 → 평균 TOP 순서여야 합니다.');
   assert.equal((text.match(/제 3회차 상주리그/g) || []).length, 1);
 });
 
