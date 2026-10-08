@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import prisma from '@/lib/prisma';
 import { PUBLIC_ORIGIN } from '@/lib/public-web';
 import { formatLane } from '@/lib/tournament-utils';
@@ -15,6 +16,8 @@ type PublishInput = {
     roundId?: string | null;
     requestedById?: string | null;
     forceRevision?: boolean;
+    previewOnly?: boolean;
+    previewToken?: string;
 };
 
 function parseSettings(raw: string | null | undefined): Record<string, any> {
@@ -36,7 +39,7 @@ async function publishBuiltContent(input: PublishInput & {
     if (!connection?.enabled || !connection.bandKey) {
         return { status: 'SKIPPED', message: '연결된 BAND가 없어 게시하지 않았습니다.' };
     }
-    if (!input.forceRevision) {
+    if (!input.forceRevision && !input.previewOnly) {
         const skipReason = bandAutoPublishSkipReason(connection, input.type);
         if (skipReason) return { status: 'SKIPPED', message: skipReason };
     }
@@ -45,6 +48,40 @@ async function publishBuiltContent(input: PublishInput & {
         where: { tournamentId: input.tournamentId, roundId: input.roundId || null, type: input.type },
         orderBy: { revision: 'desc' },
     });
+    // The token binds the preview to the exact post body, target BAND, settings
+    // and latest revision. It contains no OAuth credentials.
+    const previewToken = createHash('sha256').update(JSON.stringify({
+        centerId: input.centerId,
+        tournamentId: input.tournamentId,
+        roundId: input.roundId || null,
+        type: input.type,
+        bandKey: connection.bandKey,
+        doPush: connection.doPush === true,
+        content: input.content,
+        latestRevision: latest?.revision ?? 0,
+    })).digest('hex');
+
+    if (input.previewOnly) {
+        return {
+            status: 'SUCCESS',
+            message: '게시 전 미리보기가 준비되었습니다. 아직 BAND에 게시하지 않았습니다.',
+            preview: {
+                bandName: connection.bandName || '이름 미등록 BAND',
+                bandKey: connection.bandKey,
+                doPush: connection.doPush === true,
+                content: input.content,
+                nextRevision: nextBandPostRevision(latest?.revision),
+                latestStatus: latest?.status ?? null,
+                previewToken,
+            },
+        };
+    }
+    if (input.previewToken !== undefined && input.previewToken !== previewToken) {
+        return { status: 'SKIPPED', message: '미리보기 이후 게시 내용이나 대상, 이력이 변경되었습니다. 다시 미리보기 해주세요.' };
+    }
+    if (latest?.status === 'PENDING') {
+        return { status: 'SKIPPED', message: '이전 게시 요청이 처리 중입니다. 게시 상태를 확인한 뒤 다시 시도해주세요.', postId: latest.id, revision: latest.revision };
+    }
     if (latest && !input.forceRevision) {
         return { status: 'SKIPPED', message: '이미 게시 이력이 있어 중복 게시하지 않았습니다.', postId: latest.id, revision: latest.revision };
     }
