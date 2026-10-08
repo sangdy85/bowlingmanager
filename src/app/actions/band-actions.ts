@@ -102,7 +102,7 @@ export async function publishBandPostAction(input: {
 }): Promise<ActionResult> {
     const allowedTypes = new Set<BandPostType>(['RECRUITMENT', 'PARTICIPANTS', 'LANE_ASSIGNMENT', 'FINAL_RESULT', 'LEAGUE_WEEKLY_RESULT']);
     if (!allowedTypes.has(input.type)) return { success: false, message: '지원하지 않는 BAND 게시 유형입니다.' };
-    if (typeof input.previewToken !== 'string' || !/^\\d{13}\\.[a-f0-9]{64}$/.test(input.previewToken)) {
+    if (typeof input.previewToken !== 'string' || !/^\d{13}\.[a-f0-9]{64}$/.test(input.previewToken)) {
         return { success: false, message: '게시 전 미리보기를 먼저 확인해주세요.' };
     }
 
