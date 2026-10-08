@@ -1,4 +1,9 @@
-import type { FinalResultPostData, RecruitmentPostData } from './types';
+import type {
+    FinalResultPostData,
+    LaneAssignmentPostData,
+    ParticipantPostData,
+    RecruitmentPostData,
+} from './types';
 
 function formatDate(value: Date | string): string {
     return new Intl.DateTimeFormat('ko-KR', {
@@ -20,6 +25,43 @@ export function buildRecruitmentPost(data: RecruitmentPostData): string {
     lines.push('', '👥 모집', `현재 ${data.participantCount}명${capacity}`);
     if (data.entryFeeText) lines.push('', '💰 참가비', data.entryFeeText);
     lines.push('', '📝 참가신청 및 상세정보', data.detailUrl, '', 'BowlingManager 자동 안내');
+    return lines.join('\n');
+}
+
+export function buildParticipantPost(data: ParticipantPostData): string {
+    const lines = [
+        `👥 [${data.title}]`,
+        '',
+        data.tournamentName,
+    ];
+    if (data.roundNumber) lines.push(`${data.roundNumber}회차`);
+    lines.push('', `참가 ${data.activeCount}명${data.waitlistCount ? ` · 대기 ${data.waitlistCount}명` : ''}`, '');
+
+    data.participants.forEach((participant, index) => {
+        const team = participant.team ? ` · ${participant.team}` : '';
+        const waiting = participant.waitlisted ? ' [대기]' : '';
+        lines.push(`${index + 1}. ${participant.name}${team}${waiting}`);
+    });
+
+    lines.push('', '📋 상세 명단 보기', data.detailUrl, '', 'BowlingManager 참가자 안내');
+    return lines.join('\n');
+}
+
+export function buildLaneAssignmentPost(data: LaneAssignmentPostData): string {
+    const lines = [
+        `🎳 [${data.title}]`,
+        '',
+        data.tournamentName,
+    ];
+    if (data.roundNumber) lines.push(`${data.roundNumber}회차`);
+    lines.push('', `레인 배정 ${data.entries.length}명`, '');
+
+    data.entries.forEach((entry, index) => {
+        const team = entry.team ? ` · ${entry.team}` : '';
+        lines.push(`${index + 1}. ${entry.name}${team} · ${entry.lane}`);
+    });
+
+    lines.push('', '📋 레인 배정 상세 보기', data.detailUrl, '', 'BowlingManager 레인 안내');
     return lines.join('\n');
 }
 
