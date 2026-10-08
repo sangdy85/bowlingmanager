@@ -10,7 +10,6 @@ import {
     buildLaneAssignmentPost,
     buildLeagueWeeklyResultPost,
     buildParticipantListPost,
-    buildRecruitmentPost,
 } from './content';
 import type {
     BandPostPreview,
@@ -41,43 +40,6 @@ function playerName(registration: any) {
 
 function playerTeam(registration: any) {
     return registration?.guestTeamName || registration?.team?.name || '개인';
-}
-
-async function buildRecruitmentPreview(tournament: any, roundId?: string | null): Promise<BandPostPreview> {
-    const round = roundId
-        ? tournament.leagueRounds.find((item: any) => item.id === roundId)
-        : null;
-    if (roundId && !round) throw new Error('회차를 찾을 수 없습니다.');
-
-    const settings = parseSettings(tournament.settings);
-    const participantCount = round ? round.participants.length : tournament.registrations.length;
-    const maxParticipants = round
-        ? settings.roundMaxParticipants?.[round.roundNumber] ?? tournament.maxParticipants
-        : tournament.maxParticipants;
-    const detailPath = round
-        ? `/centers/${tournament.centerId}/tournaments/${tournament.id}/rounds/${round.id}`
-        : `/centers/${tournament.centerId}/tournaments/${tournament.id}`;
-    const content = buildRecruitmentPost({
-        title: round ? `${round.roundNumber}회차 참가 모집` : '대회 참가자 모집',
-        tournamentName: tournament.name,
-        centerName: tournament.center.name,
-        centerAddress: tournament.center.address,
-        date: round?.date || tournament.startDate,
-        roundNumber: round?.roundNumber,
-        gameMethod: settings.gameMethod,
-        participantCount,
-        maxParticipants,
-        entryFeeText: settings.entryFeeText || (tournament.entryFee > 0 ? `${tournament.entryFee.toLocaleString('ko-KR')}원` : null),
-        detailUrl: publicUrl(detailPath),
-    });
-    return {
-        type: 'RECRUITMENT',
-        label: '모집 안내',
-        content,
-        centerId: tournament.centerId,
-        tournamentId: tournament.id,
-        roundId: round?.id || null,
-    };
 }
 
 async function buildParticipantsPreview(tournament: any, roundId: string): Promise<BandPostPreview> {
@@ -265,8 +227,6 @@ export async function buildBandPostPreview(input: Pick<PublishInput, 'tournament
             return buildLeagueWeeklyPreview(tournament, input.roundId);
         case 'FINAL_RESULT':
             return buildFinalPreview(tournament, input.roundId);
-        case 'RECRUITMENT':
-            return buildRecruitmentPreview(tournament, input.roundId);
         default:
             throw new Error('지원하지 않는 BAND 게시 유형입니다.');
     }
@@ -360,23 +320,6 @@ export async function publishPreparedBandPost(
     return publishPreview(preview, requestedById);
 }
 
-export async function publishManualBandPost(input: PublishInput): Promise<BandPublishOutcome> {
-    const preview = await buildBandPostPreview(input);
-    return publishPreparedBandPost(preview, input.requestedById);
-}
-
-// Legacy entry points remain available for existing callers/tests, but no status transition calls them.
-export async function publishTournamentRecruitment(input: Omit<PublishInput, 'type'>): Promise<BandPublishOutcome> {
-    return publishManualBandPost({ ...input, type: 'RECRUITMENT' });
-}
-
-export async function publishTournamentFinalResult(input: Omit<PublishInput, 'type'>): Promise<BandPublishOutcome> {
-    return publishManualBandPost({ ...input, type: 'FINAL_RESULT' });
-}
-
-export async function republishBandPost(input: PublishInput): Promise<BandPublishOutcome> {
-    return publishManualBandPost(input);
-}
 
 export async function sendBandTestPost(centerId: string): Promise<BandPublishOutcome> {
     const connection = await (prisma as any).bandConnection.findUnique({
