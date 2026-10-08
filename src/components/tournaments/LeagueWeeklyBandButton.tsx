@@ -1,6 +1,7 @@
 'use client';
 
 import BandPublishControl from './BandPublishControl';
+import BandUncertainResolution from './BandUncertainResolution';
 
 export type LeagueWeeklyBandPost = {
     roundId: string | null;
@@ -45,6 +46,7 @@ export default function LeagueWeeklyBandButton({
             buttonLabel={latestPost ? '📢 BAND 주차 결과 다시 게시 · 미리보기' : '📢 BAND 주차 결과 미리보기'}
         />
         {!connected && <small style={{ color: '#475569' }}>볼링장 설정에서 BAND를 먼저 연결해주세요.</small>}
+        {latestPost && <BandUncertainResolution centerId={centerId} post={latestPost} />}
         {latestPost && (
             <small style={{ color: latestPost.status === 'FAILED' ? '#b91c1c' : '#334155' }}>
                 게시 이력: {latestPost.status} · v{latestPost.revision}
