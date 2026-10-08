@@ -115,7 +115,10 @@ function command(name) {
     const args = process.platform === 'win32'
       ? ['/d', '/s', '/c', 'npm.cmd run build']
       : ['run', 'build'];
-    const result = spawnSync(cmd, args, { cwd: ROOT, env, stdio: 'inherit' });
+    // Next.js build must use NODE_ENV=production, while APP_ENV remains band-staging.
+    const result = spawnSync(cmd, args, {
+      cwd: ROOT, env: { ...env, NODE_ENV: 'production' }, stdio: 'inherit',
+    });
     if (result.error) throw result.error;
     if (result.status !== 0) process.exitCode = result.status || 1;
     return;
