@@ -136,7 +136,7 @@ export default function BandPublishControl({
                         />
                         게시 대상과 본문을 확인했으며 BAND에 게시하는 데 동의합니다.
                     </label>
-                    <p className={styles.previewNote}>미리보기 후 참가자·점수·대상 밴드·게시 이력이 바뀌면 전송하지 않고 다시 확인을 요청합니다.</p>
+                    <p className={styles.previewNote}>미리보기 확인은 15분간 유효합니다. 참가자·점수·대상 밴드·게시 이력이 바뀌면 다시 미리보기를 요청합니다.</p>
                 </div>
                 <div className={styles.previewActions}>
                     <button type="button" className={styles.cancelButton} onClick={close} disabled={busy !== null}>취소</button>
