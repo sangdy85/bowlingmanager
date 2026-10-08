@@ -76,20 +76,22 @@ test('최종 결과 템플릿은 전달된 결과 순서를 그대로 유지한�
 
 test('상주리그 주차 결과 템플릿은 네 가지 요구 섹션을 모두 포함한다', () => {
   const result = content.buildLeagueWeeklyResultPost({
-    tournamentName: '상주리그 1차',
+    tournamentName: '상주리그',
+    iteration: 1,
     roundNumber: 4,
     teamStandings: [{ name: 'A팀', wins: 10, totalPinfall: 5000 }],
-    individualStandings: [{ name: '홍길동', teamName: 'A팀', average: 210.5, totalPins: 1895 }],
+    individualStandings: [{ name: '홍길동', teamName: 'A팀', rank: 1, average: 210.5, totalPins: 1895 }],
     matchResults: [{ teamA: 'A팀', teamB: 'B팀', pointsA: 3, pointsB: 1 }],
     averageTop: [{ name: '홍길동', teamName: 'A팀', average: 210.5 }],
     detailUrl: 'https://www.bowlingmanager.co.kr/league',
   });
-  assert.match(result, /4주차 경기 결과/);
+  assert.match(result, /1차 · 4주차 경기 결과/);
   assert.match(result, /팀 순위/);
   assert.match(result, /개인 순위/);
   assert.match(result, /4주차 경기 결과/);
   assert.match(result, /개인 에버 TOP/);
   assert.match(result, /A팀 3 : 1 B팀/);
+  assert.match(result, /A팀 · 1위 홍길동/);
 });
 
 test('게시 revision 키는 대회·회차·게시유형을 분리한다', () => {
