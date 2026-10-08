@@ -302,3 +302,36 @@ test('Prisma Client 생성은 TypeScript 검사보다 먼저 실행된다', () =
   const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
   assert.ok(pkg.scripts.build.indexOf('prisma generate') < pkg.scripts.build.indexOf('typecheck'));
 });
+
+
+test('과거 주차 평균 TOP은 이후 주차의 결과에 영향받지 않는다', async () => {
+  const baseMatch = {
+    status: 'FINISHED',
+    teamAId: 'team-a', teamBId: 'team-b',
+    teamA: { name: 'A팀' }, teamB: { name: 'B팀' },
+    teamASquad: null, teamBSquad: null, pointsA: 2, pointsB: 1,
+  };
+  const tournament = {
+    avgTopRankCount: 30,
+    avgMinParticipationPct: 100,
+    registrations: [],
+    leagueRounds: [
+      { roundNumber: 1, matchups: [{ ...baseMatch, individualScores: [{
+        teamId: 'team-a', teamSquad: null, userId: 'user-a', playerName: '홍길동',
+        score1: 200, score2: 200, score3: 200, handicap: 0,
+      }] }] },
+      { roundNumber: 2, matchups: [{ ...baseMatch, individualScores: [] }] },
+    ],
+  };
+  const leaderboard = loadTs('src/app/actions/league-leaderboard.ts', {
+    '@/lib/prisma': { __esModule: true, default: { tournament: { findUnique: async () => tournament } } },
+  });
+  const week1 = await leaderboard.getIndividualLeaderboard('league', 1);
+  assert.equal(week1.metadata.currentRound, 1);
+  assert.equal(week1.top30.length, 1);
+  assert.equal(week1.top30[0].name, '홍길동');
+
+  const latest = await leaderboard.getIndividualLeaderboard('league');
+  assert.equal(latest.metadata.currentRound, 2);
+  assert.equal(latest.top30.length, 0);
+});
