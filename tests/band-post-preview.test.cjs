@@ -152,6 +152,19 @@ test('대상 밴드 또는 알림 설정이 변경되면 이전 확인으로는 
     assert.deepEqual([counters.create, counters.post], [0, 0]);
 });
 
+test('미리보기 이후 게시 상태가 달라져도 새 확인이 필요하다', async () => {
+    const { publisher, history, counters } = publisherFixture();
+    const options = { tournamentId: 't1', type: 'RECRUITMENT' };
+    history.push({ id: 'existing-1', revision: 1, status: 'FAILED' });
+    const pre = await publisher.republishBandPost({ ...options, previewOnly: true });
+    history[0].status = 'SUCCESS';
+
+    const result = await publisher.republishBandPost({ ...options, previewToken: pre.preview.previewToken });
+    assert.equal(result.status, 'SKIPPED');
+    assert.match(result.message, /다시 미리보기/);
+    assert.equal(counters.post, 0);
+});
+
 test('이전 게시가 PENDING 상태일 때 중복 전송하지 않는다', async () => {
     const { publisher, history, counters } = publisherFixture();
     const options = { tournamentId: 't1', type: 'RECRUITMENT' };
