@@ -1073,8 +1073,8 @@ model BandConnection {
   bandName              String?
   bandCoverUrl          String?
   enabled               Boolean       @default(true)
-  autoRecruitment       Boolean       @default(true)
-  autoFinalResult       Boolean       @default(true)
+  autoRecruitment       Boolean       @default(false)
+  autoFinalResult       Boolean       @default(false)
   doPush                Boolean       @default(false)
   connectedAt           DateTime      @default(now())
   createdAt             DateTime      @default(now())
