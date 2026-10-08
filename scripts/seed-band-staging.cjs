@@ -86,21 +86,25 @@ async function seedBandStaging(prisma = new PrismaClient()) {
       date: new Date('2026-10-15T10:00:00.000Z'),
     } });
     await tx.leagueMatchup.create({ data: {
-      id: 'band-staging-match1', roundId: week1.id,
-      teamAId: teamA.id, teamBId: teamB.id,
+      id: 'band-staging-match1',
+      round: { connect: { id: week1.id } },
+      teamA: { connect: { id: teamA.id } },
+      teamB: { connect: { id: teamB.id } },
       status: 'FINISHED', pointsA: 2, pointsB: 1,
       scoreA1: 610, scoreA2: 620, scoreA3: 590,
       scoreB1: 575, scoreB2: 580, scoreB3: 570,
       individualScores: { create: [
-        { teamId: teamA.id, playerName: 'A선수1', score1: 205, score2: 208, score3: 195 },
-        { teamId: teamA.id, playerName: 'A선수2', score1: 190, score2: 196, score3: 183 },
-        { teamId: teamB.id, playerName: 'B선수1', score1: 191, score2: 194, score3: 189 },
-        { teamId: teamB.id, playerName: 'B선수2', score1: 182, score2: 184, score3: 179 },
+        { Team: { connect: { id: teamA.id } }, playerName: 'A선수1', score1: 205, score2: 208, score3: 195 },
+        { Team: { connect: { id: teamA.id } }, playerName: 'A선수2', score1: 190, score2: 196, score3: 183 },
+        { Team: { connect: { id: teamB.id } }, playerName: 'B선수1', score1: 191, score2: 194, score3: 189 },
+        { Team: { connect: { id: teamB.id } }, playerName: 'B선수2', score1: 182, score2: 184, score3: 179 },
       ] },
     } });
     await tx.leagueMatchup.create({ data: {
-      id: 'band-staging-match2', roundId: week2.id,
-      teamAId: teamA.id, teamBId: teamB.id, status: 'PENDING',
+      id: 'band-staging-match2', status: 'PENDING',
+      round: { connect: { id: week2.id } },
+      teamA: { connect: { id: teamA.id } },
+      teamB: { connect: { id: teamB.id } },
     } });
 
     for (const config of [
