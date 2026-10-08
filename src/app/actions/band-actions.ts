@@ -122,3 +122,66 @@ export async function publishBandPostAction(input: {
     }
     return { success: outcome.status === 'SUCCESS', message: outcome.message, outcome };
 }
+
+
+export async function resolveUncertainBandPostAction(input: {
+    centerId: string;
+    postId: string;
+    resolution: 'POSTED' | 'NOT_POSTED';
+    confirmed: boolean;
+}): Promise<ActionResult> {
+    if (input.confirmed !== true || !['POSTED', 'NOT_POSTED'].includes(input.resolution)) {
+        return { success: false, message: 'BAND 게시 여부를 직접 확인하고 결과를 선택해주세요.' };
+    }
+    const userId = await verifyCenterAdmin(input.centerId);
+    const db = prisma as any;
+    const post = await db.bandPost.findUnique({ where: { id: input.postId } });
+    if (!post || post.centerId !== input.centerId) {
+        return { success: false, message: '해당 게시 이력을 찾을 수 없습니다.' };
+    }
+    if (!['UNKNOWN', 'PENDING'].includes(post.status)) {
+        return { success: false, message: '미확인 상태의 게시 이력만 수동으로 확인할 수 있습니다.' };
+    }
+    // A recent PENDING request might still be in flight; require a waiting period.
+    if (post.status === 'PENDING' && Date.now() - new Date(post.createdAt).getTime() < 30 * 60 * 1000) {
+        return { success: false, message: '게시 요청이 아직 처리 중일 수 있습니다. 30분 후 BAND의 실제 게시 여부를 확인해주세요.' };
+    }
+    const current = await db.bandPost.findFirst({
+        where: { tournamentId: post.tournamentId, roundId: post.roundId || null, type: post.type },
+        orderBy: { revision: 'desc' },
+        select: { id: true },
+    });
+    if (current?.id !== post.id) {
+        return { success: false, message: '최신 게시 이력만 확인 처리할 수 있습니다.' };
+    }
+
+    const verifiedAt = new Date();
+    const result = await db.bandPost.updateMany({
+        where: { id: post.id, centerId: input.centerId, status: post.status },
+        data: input.resolution === 'POSTED'
+            ? {
+                status: 'SUCCESS',
+                postedAt: verifiedAt,
+                errorCode: 'MANUAL_VERIFIED_POSTED',
+                errorMessage: `BAND 게시 확인 · 관리자 ${userId} · ${verifiedAt.toISOString()}`,
+            }
+            : {
+                status: 'FAILED',
+                errorCode: 'MANUAL_VERIFIED_ABSENT',
+                errorMessage: `BAND 미게시 확인 · 관리자 ${userId} · ${verifiedAt.toISOString()}`,
+            },
+    });
+    if (result.count !== 1) {
+        return { success: false, message: '이력 상태가 변경되었습니다. 새로고침한 뒤 다시 확인해주세요.' };
+    }
+    revalidatePath(`/centers/${input.centerId}/tournaments/${post.tournamentId}`);
+    if (post.roundId) {
+        revalidatePath(`/centers/${input.centerId}/tournaments/${post.tournamentId}/rounds/${post.roundId}`);
+    }
+    return {
+        success: true,
+        message: input.resolution === 'POSTED'
+            ? '실제 게시 확인으로 기록했습니다. 중복 게시되지 않습니다.'
+            : '미게시 확인으로 기록했습니다. 필요하면 새 미리보기 후 재게시할 수 있습니다.',
+    };
+}
