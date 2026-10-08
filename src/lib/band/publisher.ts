@@ -63,6 +63,7 @@ async function buildParticipantsPreview(tournament: any, roundId: string): Promi
         label: '참가자 모집 현황',
         content: buildParticipantListPost({
             tournamentName: tournament.name,
+            iteration: tournament.iteration,
             roundNumber: round.roundNumber,
             participants,
             detailUrl: publicUrl(`/centers/${tournament.centerId}/tournaments/${tournament.id}/rounds/${round.id}?tab=participants`),
@@ -146,18 +147,17 @@ async function buildLeagueWeeklyPreview(tournament: any, roundId: string): Promi
         getIndividualLeaderboard(tournament.id, round.roundNumber),
     ]);
 
-    const allPlayers = individual.teams.flatMap((team: any) =>
-        team.players.map((person: any) => ({ ...person, teamName: team.teamName }))
+    const individualStandings = individual.teams.flatMap((team: any) =>
+        team.players
+            .filter((person: any) => person.gamesCount > 0)
+            .map((person: any, index: number) => ({
+                name: person.name,
+                teamName: team.teamName,
+                rank: index + 1,
+                average: person.totalHandicappedPins / person.gamesCount,
+                totalPins: person.totalHandicappedPins,
+            }))
     );
-    const individualStandings = allPlayers
-        .filter((person: any) => person.gamesCount > 0)
-        .sort((a: any, b: any) => b.totalHandicappedPins - a.totalHandicappedPins)
-        .map((person: any) => ({
-            name: person.name,
-            teamName: person.teamName,
-            average: person.totalHandicappedPins / person.gamesCount,
-            totalPins: person.totalHandicappedPins,
-        }));
 
     const matchResults = round.matchups
         .filter((match: any) => match.status === 'FINISHED')
@@ -168,10 +168,10 @@ async function buildLeagueWeeklyPreview(tournament: any, roundId: string): Promi
             pointsB: match.pointsB || 0,
         }));
 
-    const averageTop = individual.top30.map((person: any) => ({
-        name: person.name,
+    const averageTop = leaderboard.awards.individual.average.map((person: any) => ({
+        name: person.playerName,
         teamName: person.teamName,
-        average: person.gamesCount ? person.totalHandicappedPins / person.gamesCount : 0,
+        average: person.totalGames ? person.totalPinfall / person.totalGames : 0,
     }));
 
     return {
