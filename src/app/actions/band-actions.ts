@@ -73,7 +73,7 @@ export async function sendBandTestPostAction(centerId: string): Promise<ActionRe
 export async function publishBandPostAction(input: {
     centerId: string; tournamentId: string; roundId?: string | null; type: BandPostType;
 }): Promise<ActionResult> {
-    const allowedTypes = new Set<BandPostType>(['RECRUITMENT', 'PARTICIPANTS', 'LANE_ASSIGNMENT', 'FINAL_RESULT']);
+    const allowedTypes = new Set<BandPostType>(['RECRUITMENT', 'PARTICIPANTS', 'LANE_ASSIGNMENT', 'FINAL_RESULT', 'LEAGUE_WEEKLY_RESULT']);
     if (!allowedTypes.has(input.type)) return { success: false, message: '지원하지 않는 BAND 게시 유형입니다.' };
 
     const userId = await verifyCenterAdmin(input.centerId);
