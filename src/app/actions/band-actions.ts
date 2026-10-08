@@ -155,11 +155,26 @@ export async function publishBandPostAction(input: {
     tournamentId: string;
     roundId?: string | null;
     type: BandPostType;
+    previewContent?: string;
 }): Promise<ActionResult> {
     try {
         const userId = await verifyCenterAdmin(input.centerId);
         if (!await verifyTournamentCenter(input.centerId, input.tournamentId)) {
             return { success: false, message: '대회 정보를 확인할 수 없습니다.' };
+        }
+
+        if (input.previewContent != null) {
+            const latestPreview = await buildBandPostPreview({
+                tournamentId: input.tournamentId,
+                roundId: input.roundId,
+                type: input.type,
+            });
+            if (latestPreview.content !== input.previewContent) {
+                return {
+                    success: false,
+                    message: '참가자·레인·점수 정보가 미리보기 이후 변경되었습니다. 최신 미리보기를 다시 확인해주세요.',
+                };
+            }
         }
 
         const outcome = await publishManualBandPost({
