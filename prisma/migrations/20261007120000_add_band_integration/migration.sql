@@ -18,7 +18,7 @@ CREATE TABLE "BandConnection" (
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "BandConnection_centerId_fkey" FOREIGN KEY ("centerId") REFERENCES "BowlingCenter" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "BandConnection_connectedByUserId_fkey" FOREIGN KEY ("connectedByUserId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT "BandConnection_connectedByUserId_fkey" FOREIGN KEY ("connectedByUserId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
