@@ -150,13 +150,16 @@ async function buildLeagueWeeklyPreview(tournament: any, roundId: string): Promi
     const individualStandings = individual.teams.flatMap((team: any) =>
         team.players
             .filter((person: any) => person.gamesCount > 0)
-            .map((person: any, index: number) => ({
-                name: person.name,
-                teamName: team.teamName,
-                rank: index + 1,
-                average: person.totalHandicappedPins / person.gamesCount,
-                totalPins: person.totalHandicappedPins,
-            }))
+            .map((person: any, index: number) => {
+                const totalWithHandicap = person.totalRawPins + (person.handicap * person.gamesCount);
+                return {
+                    name: person.name,
+                    teamName: team.teamName,
+                    rank: index + 1,
+                    average: totalWithHandicap / person.gamesCount,
+                    totalPins: totalWithHandicap,
+                };
+            })
     );
 
     const matchResults = round.matchups
