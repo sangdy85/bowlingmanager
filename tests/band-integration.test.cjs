@@ -222,11 +222,12 @@ test('미리보기 이후 DB 내용이 바뀌면 게시를 차단한다', () => 
   assert.match(source, /최신 미리보기를 다시 확인/);
 });
 
-test('게시 본문은 기존 상주리그·챔프전 결과 함수를 재사용한다', () => {
+test('게시 본문은 기존 상주리그와 화면 최종결과 계산을 재사용한다', () => {
   const source = fs.readFileSync('src/lib/band/publisher.ts', 'utf8');
   assert.match(source, /getLeagueLeaderboard/);
   assert.match(source, /getIndividualLeaderboard/);
-  assert.match(source, /getChampRoundResults/);
+  assert.match(source, /getRoundFinalResultSnapshot/);
+  assert.doesNotMatch(source, /getChampRoundResults/);
 });
 
 test('운영 회차 화면에 종목별 BAND 공유 버튼이 연결된다', () => {
@@ -242,4 +243,71 @@ test('BAND 연결 사용자 삭제 시 연결 레코드는 cascade 처리된다'
   const migration = fs.readFileSync('prisma/migrations/20261007120000_add_band_integration/migration.sql', 'utf8');
   assert.match(schema, /BandConnectionUser.*onDelete: Cascade/);
   assert.match(migration, /BandConnection_connectedByUserId_fkey.*ON DELETE CASCADE/);
+});
+
+
+test('이전 회차 입상자 이력은 현재 회차 결과 스냅샷에 전달된다', () => {
+  const snapshot = loadTs('src/lib/round-final-results-server.ts', {
+    '@/lib/prisma': { __esModule: true, default: {} },
+    '@/lib/round-final-results': { getRoundFinalResults() { return {}; } },
+  });
+
+  const registration = (name, team = '개인') => ({
+    guestName: name,
+    guestTeamName: team,
+    handicap: 0,
+  });
+  const participant = (id, name, team, isFemaleChamp = false) => ({
+    id: `p-${id}`,
+    registrationId: id,
+    handicap: 0,
+    isFemaleChamp,
+    registration: registration(name, team),
+  });
+  const scores = (id, values) => values.map((score, index) => ({
+    registrationId: id,
+    gameNumber: index + 1,
+    score,
+  }));
+
+  const round1 = {
+    id: 'r1',
+    roundNumber: 1,
+    participants: [
+      participant('a', '홍길동', 'A팀'),
+      participant('b', '김볼링', 'B팀'),
+      participant('c', '이핀', 'C팀', true),
+    ],
+    individualScores: [
+      ...scores('a', [220, 220, 220]),
+      ...scores('b', [210, 210, 210]),
+      ...scores('c', [200, 200, 200]),
+    ],
+  };
+  const round2 = {
+    id: 'r2',
+    roundNumber: 2,
+    participants: [],
+    individualScores: [],
+  };
+
+  const previous = snapshot.getPreviousWinnersForRound(
+    [round1, round2],
+    'r2',
+    { gameCount: 3 },
+  );
+
+  assert.deepEqual(previous.rank1, { name: '홍길동', team: 'A팀' });
+  assert.deepEqual(previous.rank2, { name: '김볼링', team: 'B팀' });
+  assert.deepEqual(previous.rank3, { name: '이핀', team: 'C팀' });
+  assert.deepEqual(previous.femaleChamp, { name: '이핀', team: 'C팀' });
+});
+
+test('BAND 최종결과는 화면 계산 헬퍼의 순서를 그대로 게시한다', () => {
+  const source = fs.readFileSync('src/lib/band/publisher.ts', 'utf8');
+  const snapshotIndex = source.indexOf('getRoundFinalResultSnapshot(roundId)');
+  const mapIndex = source.indexOf('snapshot.sortedResults.map');
+  assert.ok(snapshotIndex >= 0);
+  assert.ok(mapIndex > snapshotIndex);
+  assert.doesNotMatch(source, /sort\([^)]*snapshot\.sortedResults/);
 });
