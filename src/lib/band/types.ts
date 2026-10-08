@@ -12,6 +12,8 @@ export type BandPostPreview = {
     bandKey: string;
     doPush: boolean;
     content: string;
+    contentBytes: number;
+    maxContentBytes: number;
     nextRevision: number;
     latestStatus: string | null;
     previewToken: string;
