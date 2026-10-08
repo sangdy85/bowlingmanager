@@ -7,8 +7,11 @@ import type { BandSummary } from '@/lib/band/types';
 import styles from './BandIntegrationSettings.module.css';
 
 type SafeConnection = {
-    bandKey: string | null; bandName: string | null; bandCoverUrl: string | null;
-    enabled: boolean; autoRecruitment: boolean; autoFinalResult: boolean; doPush: boolean;
+    bandKey: string | null;
+    bandName: string | null;
+    bandCoverUrl: string | null;
+    enabled: boolean;
+    doPush: boolean;
     connectedAt: string;
 } | null;
 
