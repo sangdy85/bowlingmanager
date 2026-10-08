@@ -47,6 +47,10 @@ export default function LeagueWeeklyBandButton({
                 type="button"
                 disabled={!connected || busy}
                 onClick={async () => {
+                    const confirmed = window.confirm(
+                        '선택한 주차의 팀 순위표, 개인 순위표, 경기 결과, 개인 평균 TOP을 BAND에 게시하시겠습니까?'
+                    );
+                    if (!confirmed) return;
                     setBusy(true);
                     setFeedback('');
                     try {
