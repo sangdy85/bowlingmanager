@@ -72,7 +72,14 @@ export default function BandIntegrationSettings({ centerId, connection, oauthRes
                 <label className={styles.check}><input type="checkbox" checked={prefs.autoRecruitment} onChange={e => setPrefs({ ...prefs, autoRecruitment: e.target.checked })}/> 모집 공개 시 자동 게시</label>
                 <label className={styles.check}><input type="checkbox" checked={prefs.autoFinalResult} onChange={e => setPrefs({ ...prefs, autoFinalResult: e.target.checked })}/> 대회 종료 시 최종 결과 자동 게시</label>
                 <label className={styles.check}><input type="checkbox" checked={prefs.doPush} onChange={e => setPrefs({ ...prefs, doPush: e.target.checked })}/> BAND 멤버에게 게시 알림 보내기</label>
-                <button className={styles.button} disabled={busy} onClick={() => run(() => updateBandPreferences(centerId, prefs))}>자동 게시 설정 저장</button>
+                <button className={styles.button} disabled={busy} onClick={() => {
+                    const enablingAuto = (prefs.autoRecruitment && !connection?.autoRecruitment) ||
+                        (prefs.autoFinalResult && !connection?.autoFinalResult);
+                    const enablingPush = prefs.doPush && !connection?.doPush;
+                    if ((enablingAuto || enablingPush) &&
+                        !confirm('자동 게시 또는 BAND 알림을 활성화하면 대회 상태 변경 시 실제 글과 알림이 발행될 수 있습니다. 설정을 저장하시겠습니까?')) return;
+                    run(() => updateBandPreferences(centerId, prefs));
+                }}>자동 게시 설정 저장</button>
             </div>
             <div className={styles.row}>
                 <button className={`${styles.button} ${styles.secondary}`} disabled={busy || !connection.bandKey} onClick={() => { if (confirm('선택한 BAND에 실제 테스트 게시글이 올라갑니다. 계속하시겠습니까?')) run(() => sendBandTestPostAction(centerId)); }}>테스트 글 게시</button>
