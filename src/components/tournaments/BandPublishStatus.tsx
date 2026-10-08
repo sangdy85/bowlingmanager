@@ -1,6 +1,7 @@
 'use client';
 
 import BandPublishControl from './BandPublishControl';
+import BandUncertainResolution from './BandUncertainResolution';
 import type { BandPostType } from '@/lib/band/types';
 import styles from './BandPublishStatus.module.css';
 
@@ -58,6 +59,7 @@ export default function BandPublishStatus({ centerId, tournamentId, roundId, con
                     connected={connected}
                     buttonLabel={latest ? '미리보기 · 다시 게시' : '미리보기 · BAND 게시'}
                 />
+                {latest && <BandUncertainResolution centerId={centerId} post={latest} />}
             </div>;
         })}</div>
     </section>;
