@@ -3,21 +3,7 @@ import type {
     LanePostData,
     LeagueWeeklyPostData,
     ParticipantPostData,
-    RecruitmentPostData,
 } from './types';
-
-function formatDate(value: Date | string): string {
-    return new Intl.DateTimeFormat('ko-KR', {
-        timeZone: 'Asia/Seoul',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        weekday: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-        hourCycle: 'h23',
-    }).format(new Date(value));
-}
 
 function roundLabel(roundNumber?: number | null) {
     return roundNumber ? `${roundNumber}회차` : '';
@@ -25,22 +11,6 @@ function roundLabel(roundNumber?: number | null) {
 
 function numbered(lines: string[], values: string[]) {
     values.forEach((value, index) => lines.push(`${index + 1}. ${value}`));
-}
-
-export function buildRecruitmentPost(data: RecruitmentPostData): string {
-    const lines = [
-        `🎳 [${data.title}]`,
-        '',
-        data.tournamentName,
-    ];
-    if (data.centerName) lines.push('', '📍 장소', [data.centerName, data.centerAddress].filter(Boolean).join(' · '));
-    if (data.date) lines.push('', '📅 경기일', `${data.roundNumber ? `${data.roundNumber}회차 · ` : ''}${formatDate(data.date)}`);
-    if (data.gameMethod) lines.push('', '🎳 경기 방식', data.gameMethod);
-    const capacity = data.maxParticipants && data.maxParticipants > 0 ? ` / 정원 ${data.maxParticipants}명` : '';
-    lines.push('', '👥 모집', `현재 ${data.participantCount}명${capacity}`);
-    if (data.entryFeeText) lines.push('', '💰 참가비', data.entryFeeText);
-    lines.push('', '📝 참가신청 및 상세정보', data.detailUrl, '', 'BowlingManager');
-    return lines.join('\n');
 }
 
 export function buildParticipantListPost(data: ParticipantPostData): string {
