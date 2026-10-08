@@ -5,7 +5,7 @@ import { getChampRoundResults } from '@/app/actions/champ-results';
 import { getIndividualLeaderboard, getLeagueLeaderboard } from '@/app/actions/league-leaderboard';
 import { BandApiError, bandErrorMessage, createPost, getPermissions } from './client';
 import { decryptBandToken } from './token-crypto';
-import { buildLeagueWeeklyPost } from './league-weekly-content';
+import { buildLeagueWeeklyPost, isLeagueWeekReady } from './league-weekly-content';
 import { buildFinalResultPost, buildLaneAssignmentPost, buildParticipantPost, buildRecruitmentPost } from './content';
 import type { BandPostType, BandPublishOutcome, FinalResultEntry } from './types';
 import { bandAutoPublishSkipReason, bandPostDedupeKey, nextBandPostRevision } from './policy';
@@ -383,7 +383,7 @@ export async function publishLeagueWeeklyResult(input: PublishInput): Promise<Ba
     if (tournament.type !== 'LEAGUE') return { status: 'SKIPPED', message: '상주리그 주차 결과에만 게시할 수 있습니다.' };
     const round = tournament.leagueRounds[0];
     if (!round) return { status: 'FAILED', message: '선택한 주차가 존재하지 않습니다.' };
-    if (!round.matchups.length || round.matchups.some((match: any) => match.status !== 'FINISHED')) {
+    if (!isLeagueWeekReady(round.matchups)) {
         return { status: 'SKIPPED', message: '해당 주차의 모든 경기가 완료된 후 BAND에 게시할 수 있습니다.' };
     }
 
