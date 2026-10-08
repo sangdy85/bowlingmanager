@@ -115,6 +115,20 @@ test('미리보기는 게시글을 만들지만 DB 작성, 토큰 복호화, BAN
     assert.deepEqual(counters, { create: 0, update: 0, permissions: 0, post: 0, decrypt: 0 });
 });
 
+test('내부 길이 제한을 초과한 글은 미리보기·자동 게시 모두 전송 전에 차단된다', async () => {
+    const { publisher, tournament, counters, history } = publisherFixture();
+    tournament.name = '가'.repeat(6000);
+    const options = { tournamentId: 't1', type: 'RECRUITMENT', requestedById: 'manager-1' };
+    const preview = await publisher.republishBandPost({ ...options, previewOnly: true });
+    assert.equal(preview.status, 'SKIPPED');
+    assert.match(preview.message, /내부 안전 기준/);
+    const automatic = await publisher.publishTournamentRecruitment({ tournamentId: 't1' });
+    assert.equal(automatic.status, 'SKIPPED');
+    assert.equal(counters.post, 0);
+    assert.equal(counters.create, 0);
+    assert.equal(history.length, 0);
+});
+
 test('확인한 미리보기 내용은 실제 게시 본문과 동일하며 같은 확인으로 재게시할 수 없다', async () => {
     const { publisher, counters, history } = publisherFixture();
     const options = { tournamentId: 't1', type: 'RECRUITMENT', requestedById: 'manager-1' };
