@@ -4,6 +4,7 @@ import BandPublishControl from './BandPublishControl';
 import BandUncertainResolution from './BandUncertainResolution';
 
 export type LeagueWeeklyBandPost = {
+    id: string;
     roundId: string | null;
     type: string;
     status: string;
