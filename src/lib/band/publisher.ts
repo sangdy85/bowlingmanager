@@ -1,10 +1,11 @@
 import prisma from '@/lib/prisma';
 import { PUBLIC_ORIGIN } from '@/lib/public-web';
+import { formatLane } from '@/lib/tournament-utils';
 import { getChampRoundResults } from '@/app/actions/champ-results';
 import { getIndividualLeaderboard } from '@/app/actions/league-leaderboard';
 import { BandApiError, bandErrorMessage, createPost, getPermissions } from './client';
 import { decryptBandToken } from './token-crypto';
-import { buildFinalResultPost, buildRecruitmentPost } from './content';
+import { buildFinalResultPost, buildLaneAssignmentPost, buildParticipantPost, buildRecruitmentPost } from './content';
 import type { BandPostType, BandPublishOutcome, FinalResultEntry } from './types';
 import { bandAutoPublishSkipReason, bandPostDedupeKey, nextBandPostRevision } from './policy';
 
@@ -142,6 +143,129 @@ export async function publishTournamentRecruitment(input: PublishInput): Promise
     return publishBuiltContent({ ...input, centerId: tournament.centerId, type: 'RECRUITMENT', content, autoFlag: 'autoRecruitment' });
 }
 
+
+function roundParticipantLimit(tournament: any, round: any): number {
+    const settings = parseSettings(tournament.settings);
+    return settings.roundMaxParticipants?.[round.roundNumber] ?? tournament.maxParticipants ?? 0;
+}
+
+function orderedRoundParticipants(round: any): any[] {
+    return [...(round.participants || [])].sort((a, b) => {
+        const aTime = new Date(a.createdAt || a.registration?.createdAt || 0).getTime();
+        const bTime = new Date(b.createdAt || b.registration?.createdAt || 0).getTime();
+        return aTime - bTime;
+    });
+}
+
+function participantDisplayName(participant: any): string {
+    return participant.registration?.guestName ?? participant.registration?.user?.name ?? '이름 미등록';
+}
+
+function participantTeamName(participant: any): string | null {
+    return participant.registration?.guestTeamName ?? participant.registration?.team?.name ?? null;
+}
+
+async function findRoundForBandPost(tournamentId: string, roundId: string | null | undefined) {
+    const tournament = await (prisma as any).tournament.findUnique({
+        where: { id: tournamentId },
+        include: {
+            leagueRounds: {
+                orderBy: { roundNumber: 'asc' },
+                include: {
+                    participants: {
+                        include: {
+                            registration: {
+                                include: {
+                                    user: { select: { name: true } },
+                                    team: { select: { name: true } },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+    if (!tournament) return { tournament: null, round: null };
+    const round = roundId ? tournament.leagueRounds.find((item: any) => item.id === roundId) : null;
+    return { tournament, round };
+}
+
+export async function publishRoundParticipants(input: PublishInput): Promise<BandPublishOutcome> {
+    if (!input.roundId) return { status: 'FAILED', message: '회차 정보가 필요합니다.' };
+    const { tournament, round } = await findRoundForBandPost(input.tournamentId, input.roundId);
+    if (!tournament) return { status: 'FAILED', message: '대회를 찾을 수 없습니다.' };
+    if (!round) return { status: 'FAILED', message: '회차를 찾을 수 없습니다.' };
+    if (!['CHAMP', 'EVENT'].includes(tournament.type)) {
+        return { status: 'SKIPPED', message: '참가자 명단 BAND 게시 기능은 챔프전·이벤트전에서 사용합니다.' };
+    }
+
+    const ordered = orderedRoundParticipants(round);
+    const limit = roundParticipantLimit(tournament, round);
+    const activeCount = limit > 0 ? Math.min(limit, ordered.length) : ordered.length;
+    const waitlistCount = Math.max(0, ordered.length - activeCount);
+    const content = buildParticipantPost({
+        title: `${round.roundNumber}회차 참가자 명단`,
+        tournamentName: tournament.name,
+        roundNumber: round.roundNumber,
+        participants: ordered.map((participant, index) => ({
+            name: participantDisplayName(participant),
+            team: participantTeamName(participant),
+            waitlisted: limit > 0 && index >= limit,
+        })),
+        activeCount,
+        waitlistCount,
+        detailUrl: publicUrl(`/centers/${tournament.centerId}/tournaments/${tournament.id}/rounds/${round.id}?tab=participants`),
+    });
+
+    return publishBuiltContent({
+        ...input,
+        centerId: tournament.centerId,
+        type: 'PARTICIPANTS',
+        content,
+        autoFlag: 'autoRecruitment',
+    });
+}
+
+export async function publishRoundLaneAssignment(input: PublishInput): Promise<BandPublishOutcome> {
+    if (!input.roundId) return { status: 'FAILED', message: '회차 정보가 필요합니다.' };
+    const { tournament, round } = await findRoundForBandPost(input.tournamentId, input.roundId);
+    if (!tournament) return { status: 'FAILED', message: '대회를 찾을 수 없습니다.' };
+    if (!round) return { status: 'FAILED', message: '회차를 찾을 수 없습니다.' };
+    if (!['CHAMP', 'EVENT'].includes(tournament.type)) {
+        return { status: 'SKIPPED', message: '레인 배정 BAND 게시 기능은 챔프전·이벤트전에서 사용합니다.' };
+    }
+
+    const ordered = orderedRoundParticipants(round);
+    const limit = roundParticipantLimit(tournament, round);
+    const active = limit > 0 ? ordered.slice(0, limit) : ordered;
+    if (active.length === 0) return { status: 'SKIPPED', message: '게시할 참가자가 없습니다.' };
+    const incomplete = active.some(participant => !Number.isInteger(participant.lane) || participant.lane < 11);
+    if (incomplete) return { status: 'SKIPPED', message: '실제 참가자 전원의 레인 배정이 완료된 뒤 게시할 수 있습니다.' };
+
+    const content = buildLaneAssignmentPost({
+        title: `${round.roundNumber}회차 레인 배정`,
+        tournamentName: tournament.name,
+        roundNumber: round.roundNumber,
+        entries: [...active]
+            .sort((a, b) => a.lane - b.lane)
+            .map(participant => ({
+                name: participantDisplayName(participant),
+                team: participantTeamName(participant),
+                lane: formatLane(participant.lane),
+            })),
+        detailUrl: publicUrl(`/centers/${tournament.centerId}/tournaments/${tournament.id}/rounds/${round.id}?tab=participants`),
+    });
+
+    return publishBuiltContent({
+        ...input,
+        centerId: tournament.centerId,
+        type: 'LANE_ASSIGNMENT',
+        content,
+        autoFlag: 'autoRecruitment',
+    });
+}
+
 async function finalResultData(tournament: any, requestedRoundId?: string | null): Promise<{
     roundId: string | null;
     roundNumber: number | null;
@@ -217,9 +341,16 @@ export async function publishTournamentFinalResult(input: PublishInput): Promise
 
 export async function republishBandPost(input: PublishInput & { type: BandPostType }): Promise<BandPublishOutcome> {
     const forced = { ...input, forceRevision: true };
-    return input.type === 'RECRUITMENT'
-        ? publishTournamentRecruitment(forced)
-        : publishTournamentFinalResult(forced);
+    switch (input.type) {
+        case 'RECRUITMENT':
+            return publishTournamentRecruitment(forced);
+        case 'PARTICIPANTS':
+            return publishRoundParticipants(forced);
+        case 'LANE_ASSIGNMENT':
+            return publishRoundLaneAssignment(forced);
+        case 'FINAL_RESULT':
+            return publishTournamentFinalResult(forced);
+    }
 }
 
 export async function sendBandTestPost(centerId: string): Promise<BandPublishOutcome> {
