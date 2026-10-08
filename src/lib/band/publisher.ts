@@ -353,9 +353,16 @@ async function publishPreview(preview: BandPostPreview, requestedById?: string |
     }
 }
 
+export async function publishPreparedBandPost(
+    preview: BandPostPreview,
+    requestedById?: string | null,
+): Promise<BandPublishOutcome> {
+    return publishPreview(preview, requestedById);
+}
+
 export async function publishManualBandPost(input: PublishInput): Promise<BandPublishOutcome> {
     const preview = await buildBandPostPreview(input);
-    return publishPreview(preview, input.requestedById);
+    return publishPreparedBandPost(preview, input.requestedById);
 }
 
 // Legacy entry points remain available for existing callers/tests, but no status transition calls them.
