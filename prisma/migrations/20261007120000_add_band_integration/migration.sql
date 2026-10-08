@@ -11,8 +11,6 @@ CREATE TABLE "BandConnection" (
     "bandName" TEXT,
     "bandCoverUrl" TEXT,
     "enabled" BOOLEAN NOT NULL DEFAULT true,
-    "autoRecruitment" BOOLEAN NOT NULL DEFAULT true,
-    "autoFinalResult" BOOLEAN NOT NULL DEFAULT true,
     "doPush" BOOLEAN NOT NULL DEFAULT false,
     "connectedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
