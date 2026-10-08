@@ -73,6 +73,9 @@ export async function sendBandTestPostAction(centerId: string): Promise<ActionRe
 export async function publishBandPostAction(input: {
     centerId: string; tournamentId: string; roundId?: string | null; type: BandPostType;
 }): Promise<ActionResult> {
+    const allowedTypes = new Set<BandPostType>(['RECRUITMENT', 'PARTICIPANTS', 'LANE_ASSIGNMENT', 'FINAL_RESULT']);
+    if (!allowedTypes.has(input.type)) return { success: false, message: '지원하지 않는 BAND 게시 유형입니다.' };
+
     const userId = await verifyCenterAdmin(input.centerId);
     const tournament = await prisma.tournament.findUnique({ where: { id: input.tournamentId }, select: { centerId: true } });
     if (!tournament || tournament.centerId !== input.centerId) return { success: false, message: '대회 정보를 확인할 수 없습니다.' };
@@ -83,5 +86,8 @@ export async function publishBandPostAction(input: {
         requestedById: userId,
     });
     revalidatePath(`/centers/${input.centerId}/tournaments/${input.tournamentId}`);
+    if (input.roundId) {
+        revalidatePath(`/centers/${input.centerId}/tournaments/${input.tournamentId}/rounds/${input.roundId}`);
+    }
     return { success: outcome.status === 'SUCCESS', message: outcome.message, outcome };
 }
