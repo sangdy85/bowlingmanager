@@ -2,7 +2,7 @@
 .title { font-weight: 900; margin: 0 0 .25rem; color: #172554; }
 .hint { margin: 0 0 .8rem; color: #475569; font-size: .8rem; }
 .list { display: grid; gap: .65rem; }
-.item { background: white; border-radius: .75rem; padding: .75rem; display: flex; gap: .75rem; justify-content: space-between; align-items: center; }
+.item { background: white; border-radius: .75rem; padding: .75rem; display: flex; flex-wrap: wrap; gap: .75rem; justify-content: space-between; align-items: center; }
 .meta { min-width: 0; font-size: .8rem; color: #64748b; }
 .name { display: block; color: #0f172a; font-weight: 800; margin-bottom: .2rem; }
 .badge { display: inline-block; margin-right: .35rem; padding: .15rem .45rem; border-radius: 999px; font-weight: 800; font-size: .7rem; }
