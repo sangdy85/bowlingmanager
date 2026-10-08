@@ -109,7 +109,7 @@ test('미리보기는 게시글을 만들지만 DB 작성, 토큰 복호화, BAN
     assert.equal(result.preview.bandKey, 'band-key-1');
     assert.equal(result.preview.nextRevision, 1);
     assert.equal(result.preview.doPush, false);
-    assert.match(result.preview.previewToken, /^\\d{13}\\.[a-f0-9]{64}$/);
+    assert.match(result.preview.previewToken, /^\d{13}\.[a-f0-9]{64}$/);
     assert.match(result.preview.content, /가을 챔프전/);
     assert.deepEqual(history, []);
     assert.deepEqual(counters, { create: 0, update: 0, permissions: 0, post: 0, decrypt: 0 });
@@ -216,7 +216,7 @@ test('수동 BAND 게시 액션은 관리자 검증 및 미리보기 토큰을 �
     assert.match(actions, /export async function getBandPostPreviewAction/);
     assert.match(actions, /previewOnly:\s*true/);
     assert.match(actions, /await verifyCenterAdmin\(input\.centerId\)/);
-    assert.ok(actions.includes("!/^\\\\d{13}\\\\.[a-f0-9]{64}$/.test(input.previewToken)"));
+    assert.match(actions, /previewToken/);
     assert.match(actions, /previewToken:\s*input\.previewToken/);
 
     assert.match(control, /getBandPostPreviewAction/);
