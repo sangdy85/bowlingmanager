@@ -71,31 +71,6 @@ export async function selectCenterBand(centerId: string, bandKey: string): Promi
     }
 }
 
-// Kept for compatibility with the original BAND schema. Current product flow uses manual preview/publish.
-export async function updateBandPreferences(centerId: string, input: {
-    enabled: boolean;
-    autoRecruitment: boolean;
-    autoFinalResult: boolean;
-    doPush: boolean;
-}): Promise<ActionResult> {
-    try {
-        await verifyCenterAdmin(centerId);
-        await (prisma as any).bandConnection.update({
-            where: { centerId },
-            data: {
-                enabled: input.enabled === true,
-                autoRecruitment: input.autoRecruitment === true,
-                autoFinalResult: input.autoFinalResult === true,
-                doPush: input.doPush === true,
-            },
-        });
-        revalidatePath(`/centers/${centerId}/edit`);
-        return { success: true, message: 'BAND 설정을 저장했습니다.' };
-    } catch {
-        return { success: false, message: 'BAND 설정을 저장하지 못했습니다.' };
-    }
-}
-
 export async function disconnectCenterBand(centerId: string): Promise<ActionResult> {
     try {
         await verifyCenterAdmin(centerId);
