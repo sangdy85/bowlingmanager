@@ -6,6 +6,9 @@ import { buildBandAuthorizationUrl, createBandOAuthState } from '@/lib/band/auth
 const COOKIE_NAME = 'bowling_band_oauth';
 
 export async function GET(request: NextRequest) {
+    if (process.env.APP_ENV === 'band-staging') {
+        return NextResponse.json({ error: '스테이징에서는 실제 BAND OAuth 연결을 사용할 수 없습니다.' }, { status: 403 });
+    }
     const centerId = request.nextUrl.searchParams.get('centerId');
     const session = await auth();
 
