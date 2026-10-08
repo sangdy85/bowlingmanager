@@ -56,9 +56,11 @@ async function publishBuiltContent(input: PublishInput & {
         roundId: input.roundId || null,
         type: input.type,
         bandKey: connection.bandKey,
+        bandName: connection.bandName || '',
         doPush: connection.doPush === true,
         content: input.content,
         latestRevision: latest?.revision ?? 0,
+        latestStatus: latest?.status ?? null,
     })).digest('hex');
 
     if (input.previewOnly) {
