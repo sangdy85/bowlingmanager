@@ -110,12 +110,23 @@ function command(name) {
     console.log('DB exists: ' + fs.existsSync(DB_FILE));
     return;
   }
-  const cli = name === 'migrate'
+  if (name === 'build') {
+    const cmd = process.platform === 'win32' ? process.env.ComSpec || 'cmd.exe' : 'npm';
+    const args = process.platform === 'win32'
+      ? ['/d', '/s', '/c', 'npm.cmd run build']
+      : ['run', 'build'];
+    const result = spawnSync(cmd, args, { cwd: ROOT, env, stdio: 'inherit' });
+    if (result.error) throw result.error;
+    if (result.status !== 0) process.exitCode = result.status || 1;
+    return;
+  }
+  const cli = name === 'migrate' || name === 'validate'
     ? path.join(ROOT, 'node_modules', 'prisma', 'build', 'index.js')
     : name === 'seed'
       ? path.join(__dirname, 'seed-band-staging.cjs')
       : path.join(ROOT, 'node_modules', 'next', 'dist', 'bin', 'next');
   const args = name === 'migrate' ? [cli, 'migrate', 'deploy']
+    : name === 'validate' ? [cli, 'validate']
     : name === 'seed' ? [cli]
     : [cli, 'dev', '-H', '127.0.0.1', '-p', String(PORT)];
 
@@ -140,8 +151,8 @@ if (require.main === module) {
   try {
     const [op, ...args] = process.argv.slice(2);
     if (op === 'init') init(args.includes(CONFIRM));
-    else if (['migrate', 'seed', 'start', 'check'].includes(op)) command(op);
-    else throw new Error('Usage: node scripts/band-staging.cjs init --confirm-band-staging | migrate | seed | start | check');
+    else if (['migrate', 'validate', 'seed', 'build', 'start', 'check'].includes(op)) command(op);
+    else throw new Error('Usage: node scripts/band-staging.cjs init --confirm-band-staging | migrate | validate | seed | build | start | check');
   } catch (error) {
     console.error('BAND staging safety check failed:', error.message);
     process.exitCode = 1;
