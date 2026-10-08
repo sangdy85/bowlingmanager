@@ -1,4 +1,4 @@
-export type BandPostType = 'RECRUITMENT' | 'FINAL_RESULT';
+export type BandPostType = 'RECRUITMENT' | 'PARTICIPANTS' | 'LANE_ASSIGNMENT' | 'FINAL_RESULT';
 
 export type BandSummary = {
     bandKey: string;
@@ -26,6 +26,36 @@ export type RecruitmentPostData = {
     participantCount: number;
     maxParticipants?: number | null;
     entryFeeText?: string | null;
+    detailUrl: string;
+};
+
+export type ParticipantPostEntry = {
+    name: string;
+    team?: string | null;
+    waitlisted?: boolean;
+};
+
+export type ParticipantPostData = {
+    title: string;
+    tournamentName: string;
+    roundNumber?: number | null;
+    participants: ParticipantPostEntry[];
+    activeCount: number;
+    waitlistCount: number;
+    detailUrl: string;
+};
+
+export type LaneAssignmentPostEntry = {
+    name: string;
+    team?: string | null;
+    lane: string;
+};
+
+export type LaneAssignmentPostData = {
+    title: string;
+    tournamentName: string;
+    roundNumber?: number | null;
+    entries: LaneAssignmentPostEntry[];
     detailUrl: string;
 };
 
