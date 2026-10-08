@@ -43,6 +43,9 @@ async function readBandResponse(response: Response): Promise<any> {
 }
 
 export async function getBands(accessToken: string): Promise<BandSummary[]> {
+    if (process.env.APP_ENV === 'band-staging') {
+        throw new BandApiError(BAND_POSTING_DISABLED_MESSAGE, 'EXTERNAL_POSTING_DISABLED', 409);
+    }
     const url = new URL('/v2.1/bands', BAND_API_ORIGIN);
     url.searchParams.set('access_token', accessToken);
     const data = await readBandResponse(await fetch(url, { cache: 'no-store' }));
@@ -55,6 +58,9 @@ export async function getBands(accessToken: string): Promise<BandSummary[]> {
 }
 
 export async function getPermissions(accessToken: string, bandKey: string): Promise<string[]> {
+    if (process.env.APP_ENV === 'band-staging') {
+        throw new BandApiError(BAND_POSTING_DISABLED_MESSAGE, 'EXTERNAL_POSTING_DISABLED', 409);
+    }
     const url = new URL('/v2/band/permissions', BAND_API_ORIGIN);
     url.searchParams.set('access_token', accessToken);
     url.searchParams.set('band_key', bandKey);
