@@ -114,15 +114,11 @@ async function buildFinalPreview(tournament: any, roundId?: string | null): Prom
     }
 
     const snapshot = await getRoundFinalResultSnapshot(roundId);
-    const results: FinalResultEntry[] = snapshot.sortedResults.map((entry: any) => {
-        const playedGames = (entry.scores || []).filter((score: number) => score > 0).length;
-        return {
-            name: entry.name,
-            team: entry.team,
-            total: entry.total,
-            average: playedGames ? entry.total / playedGames : null,
-        };
-    });
+    const results: FinalResultEntry[] = snapshot.sortedResults.map((entry: any) => ({
+        name: entry.name,
+        team: entry.team,
+        total: entry.total,
+    }));
 
     return {
         type: 'FINAL_RESULT',
