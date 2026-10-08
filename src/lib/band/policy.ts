@@ -9,7 +9,7 @@ type ConnectionPolicy = {
 
 export function bandAutoPublishSkipReason(connection: ConnectionPolicy | null, type: BandPostType): string | null {
     if (!connection?.enabled || !connection.bandKey) return '연결된 BAND가 없어 게시하지 않았습니다.';
-    const enabled = type === 'FINAL_RESULT' ? connection.autoFinalResult : connection.autoRecruitment;
+    const enabled = type === 'FINAL_RESULT' || type === 'LEAGUE_WEEKLY_RESULT' ? connection.autoFinalResult : connection.autoRecruitment;
     return enabled ? null : '해당 BAND 자동 게시 설정이 꺼져 있습니다.';
 }
 
