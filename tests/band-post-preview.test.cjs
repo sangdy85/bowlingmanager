@@ -18,6 +18,7 @@ function loadTs(relativePath, mocks = {}) {
 }
 
 function publisherFixture() {
+    process.env.AUTH_SECRET = 'band-preview-local-fixture-secret-at-least-32-bytes';
     const counters = { create: 0, update: 0, permissions: 0, post: 0, decrypt: 0 };
     const flags = { postFails: false };
     const connection = {
@@ -68,6 +69,8 @@ function publisherFixture() {
     };
     const policy = loadTs('src/lib/band/policy.ts');
     const content = loadTs('src/lib/band/content.ts');
+    const contentGuard = loadTs('src/lib/band/content-guard.ts');
+    const approval = loadTs('src/lib/band/preview-signature.ts');
     const publisher = loadTs('src/lib/band/publisher.ts', {
         '@/lib/prisma': { __esModule: true, default: db },
         '@/lib/public-web': { PUBLIC_ORIGIN: 'https://www.bowlingmanager.co.kr' },
@@ -90,6 +93,8 @@ function publisherFixture() {
         './token-crypto': { decryptBandToken: () => { counters.decrypt++; return 'access-token'; } },
         './league-weekly-content': { buildLeagueWeeklyPost: () => '', isLeagueWeekReady: () => false },
         './content': content,
+        './content-guard': contentGuard,
+        './preview-signature': approval,
         './policy': policy,
     });
     return { publisher, connection, tournament, history, counters, flags };
@@ -97,14 +102,14 @@ function publisherFixture() {
 
 test('미리보기는 게시글을 만들지만 DB 작성, 토큰 복호화, BAND 전송은 하지 않는다', async () => {
     const { publisher, counters, history } = publisherFixture();
-    const result = await publisher.republishBandPost({ tournamentId: 't1', type: 'RECRUITMENT', previewOnly: true });
+    const result = await publisher.republishBandPost({ tournamentId: 't1', type: 'RECRUITMENT', previewOnly: true, requestedById: 'manager-1' });
 
     assert.equal(result.status, 'SUCCESS');
     assert.equal(result.preview.bandName, '볼링장 운영 밴드');
     assert.equal(result.preview.bandKey, 'band-key-1');
     assert.equal(result.preview.nextRevision, 1);
     assert.equal(result.preview.doPush, false);
-    assert.match(result.preview.previewToken, /^[a-f0-9]{64}$/);
+    assert.match(result.preview.previewToken, /^\\d{13}\\.[a-f0-9]{64}$/);
     assert.match(result.preview.content, /가을 챔프전/);
     assert.deepEqual(history, []);
     assert.deepEqual(counters, { create: 0, update: 0, permissions: 0, post: 0, decrypt: 0 });
@@ -112,7 +117,7 @@ test('미리보기는 게시글을 만들지만 DB 작성, 토큰 복호화, BAN
 
 test('확인한 미리보기 내용은 실제 게시 본문과 동일하며 같은 확인으로 재게시할 수 없다', async () => {
     const { publisher, counters, history } = publisherFixture();
-    const options = { tournamentId: 't1', type: 'RECRUITMENT' };
+    const options = { tournamentId: 't1', type: 'RECRUITMENT', requestedById: 'manager-1' };
     const pre = await publisher.republishBandPost({ ...options, previewOnly: true });
     const sent = await publisher.republishBandPost({ ...options, previewToken: pre.preview.previewToken });
 
@@ -211,7 +216,7 @@ test('수동 BAND 게시 액션은 관리자 검증 및 미리보기 토큰을 �
     assert.match(actions, /export async function getBandPostPreviewAction/);
     assert.match(actions, /previewOnly:\s*true/);
     assert.match(actions, /await verifyCenterAdmin\(input\.centerId\)/);
-    assert.match(actions, /!\/\^\[a-f0-9\]\{64\}\$\/\.test\(input\.previewToken\)/);
+    assert.ok(actions.includes("!/^\\\\d{13}\\\\.[a-f0-9]{64}$/.test(input.previewToken)"));
     assert.match(actions, /previewToken:\s*input\.previewToken/);
 
     assert.match(control, /getBandPostPreviewAction/);
