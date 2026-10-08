@@ -66,7 +66,7 @@ export function buildLeagueWeeklyPost(data: LeagueWeeklyPostData): string {
 
     if (data.teams.length) {
         data.teams.forEach((team, index) => {
-            lines.push(`${index + 1}위 ${team.name} · ${number(team.wins)}승 ${number(team.losses)}패 · ${number(team.totalPinfall)}핀`);
+            lines.push(`${index + 1}위 ${team.name} · ${number(team.wins)}승 ${number(team.losses)}패 · 승점 ${number(team.wins * 3)} · ${number(team.totalPinfall)}핀`);
         });
     } else lines.push('집계된 팀 순위가 없습니다.');
 
