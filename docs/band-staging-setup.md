@@ -60,8 +60,8 @@ node scripts/band-staging.cjs start
 ~~~powershell
 cd C:\bm-staging
 node --test tests/band-integration.test.cjs tests/band-post-preview.test.cjs tests/band-operational-qa.test.cjs tests/band-staging-safety.test.cjs
-npx prisma validate
-npm.cmd run build
+node scripts/band-staging.cjs validate
+node scripts/band-staging.cjs build
 git diff --check origin/main...HEAD
 git status --short
 ~~~
