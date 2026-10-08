@@ -1,8 +1,8 @@
 import prisma from '@/lib/prisma';
 import { PUBLIC_ORIGIN } from '@/lib/public-web';
-import { getChampRoundResults } from '@/app/actions/champ-results';
 import { getIndividualLeaderboard, getLeagueLeaderboard } from '@/app/actions/league-leaderboard';
 import { formatLane } from '@/lib/tournament-utils';
+import { getRoundFinalResultSnapshot } from '@/lib/round-final-results-server';
 import { BandApiError, bandErrorMessage, createPost, getPermissions } from './client';
 import { decryptBandToken } from './token-crypto';
 import {
@@ -110,29 +110,36 @@ async function buildLanePreview(tournament: any, roundId: string): Promise<BandP
 
 async function buildFinalPreview(tournament: any, roundId?: string | null): Promise<BandPostPreview> {
     if (!roundId) throw new Error('결과를 공유할 회차가 필요합니다.');
-    if (!['CHAMP', 'EVENT'].includes(tournament.type)) throw new Error('이 결과 공유 형식은 챔프전·이벤트전에서 사용합니다.');
+    if (!['CHAMP', 'EVENT'].includes(tournament.type)) {
+        throw new Error('이 결과 공유 형식은 챔프전·이벤트전에서 사용합니다.');
+    }
 
-    const result = await getChampRoundResults(roundId);
-    const results: FinalResultEntry[] = result.results.map((entry: any) => ({
-        name: entry.name,
-        team: entry.team,
-        total: entry.total,
-        average: entry.playedG ? entry.total / entry.playedG : null,
-    }));
+    const snapshot = await getRoundFinalResultSnapshot(roundId);
+    const results: FinalResultEntry[] = snapshot.sortedResults.map((entry: any) => {
+        const playedGames = (entry.scores || []).filter((score: number) => score > 0).length;
+        return {
+            name: entry.name,
+            team: entry.team,
+            total: entry.total,
+            average: playedGames ? entry.total / playedGames : null,
+        };
+    });
 
     return {
         type: 'FINAL_RESULT',
         label: '최종 결과',
         content: buildFinalResultPost({
-            title: result.roundNumber ? `${result.roundNumber}회차 최종 결과` : '대회 최종 결과',
-            tournamentName: tournament.name,
-            roundNumber: result.roundNumber,
+            title: snapshot.roundNumber ? `${snapshot.roundNumber}회차 최종 결과` : '대회 최종 결과',
+            tournamentName: snapshot.tournamentName,
+            roundNumber: snapshot.roundNumber,
             results,
-            participantCount: result.results.length,
-            detailUrl: publicUrl(`/centers/${tournament.centerId}/tournaments/${tournament.id}/rounds/${roundId}/results`),
+            participantCount: snapshot.participantCount,
+            detailUrl: publicUrl(
+                `/centers/${snapshot.centerId}/tournaments/${snapshot.tournamentId}/rounds/${roundId}/results`,
+            ),
         }),
-        centerId: tournament.centerId,
-        tournamentId: tournament.id,
+        centerId: snapshot.centerId,
+        tournamentId: snapshot.tournamentId,
         roundId,
     };
 }
