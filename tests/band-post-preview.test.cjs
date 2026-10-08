@@ -150,7 +150,7 @@ test('확인한 미리보기 내용은 실제 게시 본문과 동일하며 같�
 
 test('미리보기 후 데이터가 변경되면 게시하지 않는다', async () => {
     const { publisher, tournament, counters } = publisherFixture();
-    const options = { tournamentId: 't1', type: 'RECRUITMENT' };
+    const options = { tournamentId: 't1', type: 'RECRUITMENT', requestedById: 'manager-1' };
     const pre = await publisher.republishBandPost({ ...options, previewOnly: true });
     tournament.registrations.push({ id: 'r2' });
 
@@ -163,7 +163,7 @@ test('미리보기 후 데이터가 변경되면 게시하지 않는다', async 
 
 test('대상 밴드 또는 알림 설정이 변경되면 이전 확인으로는 게시할 수 없다', async () => {
     const { publisher, connection, counters } = publisherFixture();
-    const options = { tournamentId: 't1', type: 'RECRUITMENT' };
+    const options = { tournamentId: 't1', type: 'RECRUITMENT', requestedById: 'manager-1' };
     const before = await publisher.republishBandPost({ ...options, previewOnly: true });
     connection.bandKey = 'band-key-2';
     const changedBand = await publisher.republishBandPost({ ...options, previewToken: before.preview.previewToken });
@@ -178,7 +178,7 @@ test('대상 밴드 또는 알림 설정이 변경되면 이전 확인으로는 
 
 test('미리보기 이후 게시 상태가 달라져도 새 확인이 필요하다', async () => {
     const { publisher, history, counters } = publisherFixture();
-    const options = { tournamentId: 't1', type: 'RECRUITMENT' };
+    const options = { tournamentId: 't1', type: 'RECRUITMENT', requestedById: 'manager-1' };
     history.push({ id: 'existing-1', revision: 1, status: 'FAILED' });
     const pre = await publisher.republishBandPost({ ...options, previewOnly: true });
     history[0].status = 'SUCCESS';
@@ -191,7 +191,7 @@ test('미리보기 이후 게시 상태가 달라져도 새 확인이 필요하�
 
 test('이전 게시가 PENDING 상태일 때 중복 전송하지 않는다', async () => {
     const { publisher, history, counters } = publisherFixture();
-    const options = { tournamentId: 't1', type: 'RECRUITMENT' };
+    const options = { tournamentId: 't1', type: 'RECRUITMENT', requestedById: 'manager-1' };
     history.push({ id: 'pending-1', revision: 1, status: 'PENDING', dedupeKey: 'TOURNAMENT:t1:RECRUITMENT:1' });
     const pre = await publisher.republishBandPost({ ...options, previewOnly: true });
     assert.equal(pre.preview.latestStatus, 'PENDING');
@@ -204,7 +204,7 @@ test('이전 게시가 PENDING 상태일 때 중복 전송하지 않는다', asy
 
 test('전송 중 타임아웃은 실패로 단정하지 않고 미확인 상태로 기록해 중복 게시를 막는다', async () => {
     const { publisher, flags, counters, history } = publisherFixture();
-    const options = { tournamentId: 't1', type: 'RECRUITMENT' };
+    const options = { tournamentId: 't1', type: 'RECRUITMENT', requestedById: 'manager-1' };
     const pre = await publisher.republishBandPost({ ...options, previewOnly: true });
     flags.postFails = true;
 
