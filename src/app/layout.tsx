@@ -28,6 +28,19 @@ export default function RootLayout({
         <AuthContext>
           <div className="min-h-screen bg-background text-foreground flex flex-col justify-between">
             <div>
+              {process.env.APP_ENV === 'band-staging' && (
+                <div role="status" style={{
+                  backgroundColor: '#fef3c7',
+                  color: '#78350f',
+                  borderBottom: '2px solid #d97706',
+                  textAlign: 'center',
+                  fontSize: '0.875rem',
+                  fontWeight: 800,
+                  padding: '0.65rem 1rem',
+                }}>
+                  🧪 BAND 스테이징 테스트 환경 · 가상 데이터 · 실제 BAND 게시 불가
+                </div>
+              )}
               <Navbar />
               <main className="container mx-auto px-4 py-8">
                 {children}
