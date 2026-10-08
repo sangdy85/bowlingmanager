@@ -19,6 +19,7 @@ function loadTs(relativePath, mocks = {}) {
 
 function publisherFixture() {
     const counters = { create: 0, update: 0, permissions: 0, post: 0, decrypt: 0 };
+    const flags = { postFails: false };
     const connection = {
         enabled: true,
         bandKey: 'band-key-1',
@@ -80,14 +81,18 @@ function publisherFixture() {
             BandApiError: class BandApiError extends Error {},
             bandErrorMessage: error => error.message,
             getPermissions: async () => { counters.permissions++; return ['posting']; },
-            createPost: async () => { counters.post++; return { postKey: `band-post-${counters.post}` }; },
+            createPost: async () => {
+                counters.post++;
+                if (flags.postFails) throw new Error('network timeout');
+                return { postKey: `band-post-${counters.post}` };
+            },
         },
         './token-crypto': { decryptBandToken: () => { counters.decrypt++; return 'access-token'; } },
         './league-weekly-content': { buildLeagueWeeklyPost: () => '', isLeagueWeekReady: () => false },
         './content': content,
         './policy': policy,
     });
-    return { publisher, connection, tournament, history, counters };
+    return { publisher, connection, tournament, history, counters, flags };
 }
 
 test('미리보기는 게시글을 만들지만 DB 작성, 토큰 복호화, BAND 전송은 하지 않는다', async () => {
@@ -174,8 +179,27 @@ test('이전 게시가 PENDING 상태일 때 중복 전송하지 않는다', asy
 
     const result = await publisher.republishBandPost({ ...options, previewToken: pre.preview.previewToken });
     assert.equal(result.status, 'SKIPPED');
-    assert.match(result.message, /처리 중/);
+    assert.match(result.message, /미확인 상태/);
     assert.equal(counters.post, 0);
+});
+
+test('전송 중 타임아웃은 실패로 단정하지 않고 미확인 상태로 기록해 중복 게시를 막는다', async () => {
+    const { publisher, flags, counters, history } = publisherFixture();
+    const options = { tournamentId: 't1', type: 'RECRUITMENT' };
+    const pre = await publisher.republishBandPost({ ...options, previewOnly: true });
+    flags.postFails = true;
+
+    const outcome = await publisher.republishBandPost({ ...options, previewToken: pre.preview.previewToken });
+    assert.equal(outcome.status, 'FAILED');
+    assert.match(outcome.message, /게시 결과를 확인할 수 없습니다/);
+    assert.equal(history[0].status, 'UNKNOWN');
+    assert.equal(history[0].errorCode, 'PUBLISH_UNCONFIRMED');
+
+    const secondPreview = await publisher.republishBandPost({ ...options, previewOnly: true });
+    assert.equal(secondPreview.preview.latestStatus, 'UNKNOWN');
+    const duplicate = await publisher.republishBandPost({ ...options, previewToken: secondPreview.preview.previewToken });
+    assert.equal(duplicate.status, 'SKIPPED');
+    assert.equal(counters.post, 1);
 });
 
 test('수동 BAND 게시 액션은 관리자 검증 및 미리보기 토큰을 필수로 요구한다', () => {
