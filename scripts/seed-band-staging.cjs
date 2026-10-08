@@ -91,8 +91,8 @@ async function seedBandStaging(prisma = new PrismaClient()) {
       teamA: { connect: { id: teamA.id } },
       teamB: { connect: { id: teamB.id } },
       status: 'FINISHED', pointsA: 2, pointsB: 1,
-      scoreA1: 610, scoreA2: 620, scoreA3: 590,
-      scoreB1: 575, scoreB2: 580, scoreB3: 570,
+      scoreA1: 395, scoreA2: 404, scoreA3: 378,
+      scoreB1: 373, scoreB2: 378, scoreB3: 368,
       individualScores: { create: [
         { Team: { connect: { id: teamA.id } }, playerName: 'A선수1', score1: 205, score2: 208, score3: 195 },
         { Team: { connect: { id: teamA.id } }, playerName: 'A선수2', score1: 190, score2: 196, score3: 183 },
