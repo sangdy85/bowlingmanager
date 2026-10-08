@@ -73,18 +73,19 @@ export function buildFinalResultPost(data: FinalResultPostData): string {
 
 export function buildLeagueWeeklyResultPost(data: LeagueWeeklyPostData): string {
     const lines = [
-        `🎳 [${data.tournamentName} · ${data.roundNumber}주차 경기 결과]`,
+        `🎳 [${data.tournamentName}]`,
+        `📌 ${data.iteration ? `${data.iteration}차 · ` : ''}${data.roundNumber}주차 경기 결과`,
         '',
         '🏆 팀 순위',
     ];
 
     data.teamStandings.slice(0, 10).forEach((team, index) => {
-        lines.push(`${index + 1}위 ${team.name} · 승점 ${team.wins} · ${Math.round(team.totalPinfall).toLocaleString('ko-KR')}핀`);
+        lines.push(`${index + 1}위 ${team.name} · 승 ${team.wins} · 점수 ${team.wins * 3} · ${Math.round(team.totalPinfall).toLocaleString('ko-KR')}핀`);
     });
 
-    lines.push('', '👤 개인 순위');
-    data.individualStandings.slice(0, 10).forEach((person, index) => {
-        lines.push(`${index + 1}위 ${person.name} · ${person.teamName} · AVG ${person.average.toFixed(1)}`);
+    lines.push('', '👤 개인 순위표');
+    data.individualStandings.slice(0, 30).forEach(person => {
+        lines.push(`${person.teamName} · ${person.rank}위 ${person.name} · AVG ${person.average.toFixed(1)}`);
     });
 
     lines.push('', `📋 ${data.roundNumber}주차 경기 결과`);
