@@ -70,11 +70,40 @@ export async function sendBandTestPostAction(centerId: string): Promise<ActionRe
     return { success: outcome.status === 'SUCCESS', message: outcome.message, outcome };
 }
 
-export async function publishBandPostAction(input: {
+export async function getBandPostPreviewAction(input: {
     centerId: string; tournamentId: string; roundId?: string | null; type: BandPostType;
 }): Promise<ActionResult> {
     const allowedTypes = new Set<BandPostType>(['RECRUITMENT', 'PARTICIPANTS', 'LANE_ASSIGNMENT', 'FINAL_RESULT', 'LEAGUE_WEEKLY_RESULT']);
     if (!allowedTypes.has(input.type)) return { success: false, message: '지원하지 않는 BAND 게시 유형입니다.' };
+
+    await verifyCenterAdmin(input.centerId);
+    const tournament = await prisma.tournament.findUnique({
+        where: { id: input.tournamentId },
+        select: { centerId: true },
+    });
+    if (!tournament || tournament.centerId !== input.centerId) {
+        return { success: false, message: '대회 정보를 확인할 수 없습니다.' };
+    }
+
+    // This path computes the identical text as publishing, but never writes
+    // history, decrypts tokens, checks external permissions, or calls BAND.
+    const outcome = await republishBandPost({
+        tournamentId: input.tournamentId,
+        roundId: input.roundId,
+        type: input.type,
+        previewOnly: true,
+    });
+    return { success: outcome.status === 'SUCCESS' && Boolean(outcome.preview), message: outcome.message, outcome };
+}
+
+export async function publishBandPostAction(input: {
+    centerId: string; tournamentId: string; roundId?: string | null; type: BandPostType; previewToken: string;
+}): Promise<ActionResult> {
+    const allowedTypes = new Set<BandPostType>(['RECRUITMENT', 'PARTICIPANTS', 'LANE_ASSIGNMENT', 'FINAL_RESULT', 'LEAGUE_WEEKLY_RESULT']);
+    if (!allowedTypes.has(input.type)) return { success: false, message: '지원하지 않는 BAND 게시 유형입니다.' };
+    if (typeof input.previewToken !== 'string' || !/^[a-f0-9]{64}$/.test(input.previewToken)) {
+        return { success: false, message: '게시 전 미리보기를 먼저 확인해주세요.' };
+    }
 
     const userId = await verifyCenterAdmin(input.centerId);
     const tournament = await prisma.tournament.findUnique({ where: { id: input.tournamentId }, select: { centerId: true } });
@@ -84,6 +113,7 @@ export async function publishBandPostAction(input: {
         roundId: input.roundId,
         type: input.type,
         requestedById: userId,
+        previewToken: input.previewToken,
     });
     revalidatePath(`/centers/${input.centerId}/tournaments/${input.tournamentId}`);
     if (input.roundId) {
