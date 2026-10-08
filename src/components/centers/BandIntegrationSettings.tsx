@@ -20,8 +20,8 @@ export default function BandIntegrationSettings({ centerId, connection, oauthRes
     const [selected, setSelected] = useState(connection?.bandKey || '');
     const [prefs, setPrefs] = useState({
         enabled: connection?.enabled ?? true,
-        autoRecruitment: connection?.autoRecruitment ?? true,
-        autoFinalResult: connection?.autoFinalResult ?? true,
+        autoRecruitment: connection?.autoRecruitment ?? false,
+        autoFinalResult: connection?.autoFinalResult ?? false,
         doPush: connection?.doPush ?? false,
     });
     const [busy, setBusy] = useState(false);
@@ -53,7 +53,7 @@ export default function BandIntegrationSettings({ centerId, connection, oauthRes
 
     return <section className={styles.panel} aria-labelledby="band-settings-title">
         <div className={styles.header}>
-            <div><h2 id="band-settings-title" className={styles.title}>NAVER BAND 자동 게시</h2><p className={styles.description}>대회 모집 공개와 최종 종료 시 선택한 BAND에 텍스트 안내를 게시합니다.</p></div>
+            <div><h2 id="band-settings-title" className={styles.title}>NAVER BAND 자동 게시</h2><p className={styles.description}>기본값은 자동 게시 꺼짐입니다. 필요한 시점에 관리자가 별도로 자동 게시를 활성화할 수 있습니다.</p></div>
             {connection && <span className={styles.badge}>연결됨</span>}
         </div>
         {message && <p className={`${styles.message} ${isError ? styles.error : ''}`}>{message}</p>}
@@ -75,7 +75,7 @@ export default function BandIntegrationSettings({ centerId, connection, oauthRes
                 <button className={styles.button} disabled={busy} onClick={() => run(() => updateBandPreferences(centerId, prefs))}>자동 게시 설정 저장</button>
             </div>
             <div className={styles.row}>
-                <button className={`${styles.button} ${styles.secondary}`} disabled={busy || !connection.bandKey} onClick={() => run(() => sendBandTestPostAction(centerId))}>테스트 글 게시</button>
+                <button className={`${styles.button} ${styles.secondary}`} disabled={busy || !connection.bandKey} onClick={() => { if (confirm('선택한 BAND에 실제 테스트 게시글이 올라갑니다. 계속하시겠습니까?')) run(() => sendBandTestPostAction(centerId)); }}>테스트 글 게시</button>
                 <button className={`${styles.button} ${styles.danger}`} disabled={busy} onClick={() => { if (confirm('BAND 연결을 해제하시겠습니까?')) run(() => disconnectCenterBand(centerId)); }}>연결 해제</button>
             </div>
         </div>}
