@@ -57,9 +57,9 @@ export function isLeagueWeekReady(matches: ReadonlyArray<{ status: string }>): b
 
 // Read-only presentation of the official league leaderboard and selected week's matches.
 export function buildLeagueWeeklyPost(data: LeagueWeeklyPostData): string {
-    const iteration = data.iteration == null ? '' : `제 ${data.iteration}차 · `;
     const lines = [
-        `🎳 [${data.tournamentName} ${iteration}${data.week}주차 경기 결과]`,
+        `🎳 [${data.tournamentName} · ${data.week}주차 경기 결과]`,
+        data.iteration == null ? `📌 ${data.week}주차` : `📌 제 ${data.iteration}차 · ${data.week}주차`,
         '',
         '🏆 팀 순위표 (해당 주차까지 누적)',
     ];
