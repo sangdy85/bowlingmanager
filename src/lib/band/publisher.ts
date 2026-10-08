@@ -63,7 +63,6 @@ async function buildParticipantsPreview(tournament: any, roundId: string): Promi
         label: '참가자 모집 현황',
         content: buildParticipantListPost({
             tournamentName: tournament.name,
-            iteration: tournament.iteration,
             roundNumber: round.roundNumber,
             participants,
             detailUrl: publicUrl(`/centers/${tournament.centerId}/tournaments/${tournament.id}/rounds/${round.id}?tab=participants`),
@@ -189,6 +188,7 @@ async function buildLeagueWeeklyPreview(tournament: any, roundId: string): Promi
         label: `${round.roundNumber}주차 결과`,
         content: buildLeagueWeeklyResultPost({
             tournamentName: tournament.name,
+            iteration: tournament.iteration,
             roundNumber: round.roundNumber,
             teamStandings: leaderboard.teamStandings,
             individualStandings,
