@@ -1,0 +1,155 @@
+'use client';
+
+import { useEffect, useId, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { getBandPostPreviewAction, publishBandPostAction } from '@/app/actions/band-actions';
+import type { BandPostPreview, BandPostType } from '@/lib/band/types';
+import styles from './BandPublishStatus.module.css';
+
+export default function BandPublishControl({
+    centerId,
+    tournamentId,
+    roundId,
+    type,
+    connected,
+    buttonLabel,
+}: {
+    centerId: string;
+    tournamentId: string;
+    roundId?: string | null;
+    type: BandPostType;
+    connected: boolean;
+    buttonLabel: string;
+}) {
+    const router = useRouter();
+    const titleId = useId();
+    const dialogRef = useRef<HTMLDialogElement>(null);
+    const busyRef = useRef(false);
+    const [busy, setBusy] = useState<'preview' | 'publish' | null>(null);
+    const [preview, setPreview] = useState<BandPostPreview | null>(null);
+    const [approved, setApproved] = useState(false);
+    const [message, setMessage] = useState('');
+
+    useEffect(() => {
+        const dialog = dialogRef.current;
+        if (!dialog) return;
+        if (preview && !dialog.open) dialog.showModal();
+        if (!preview && dialog.open) dialog.close();
+    }, [preview]);
+
+    const close = () => {
+        if (busyRef.current) return;
+        dialogRef.current?.close();
+        setPreview(null);
+        setApproved(false);
+    };
+
+    const openPreview = async () => {
+        if (busyRef.current || !connected) return;
+        busyRef.current = true;
+        setBusy('preview');
+        setMessage('');
+        setApproved(false);
+        try {
+            const result = await getBandPostPreviewAction({ centerId, tournamentId, roundId, type });
+            if (result.success && result.outcome?.preview) {
+                setPreview(result.outcome.preview);
+            } else {
+                setMessage(result.message);
+            }
+        } catch {
+            setMessage('게시 미리보기를 준비하지 못했습니다. 잠시 후 다시 시도해주세요.');
+        } finally {
+            busyRef.current = false;
+            setBusy(null);
+        }
+    };
+
+    const publish = async () => {
+        if (busyRef.current || !preview || !approved || preview.latestStatus === 'PENDING') return;
+        busyRef.current = true;
+        setBusy('publish');
+        setMessage('');
+        try {
+            const result = await publishBandPostAction({
+                centerId, tournamentId, roundId, type, previewToken: preview.previewToken,
+            });
+            setMessage(result.message);
+            // A second attempt always needs a new preview, including on API failures.
+            setPreview(null);
+            setApproved(false);
+            if (result.success) router.refresh();
+        } catch {
+            setMessage('게시 결과를 확인하지 못했습니다. BAND 게시 이력을 확인한 뒤 다시 시도해주세요.');
+            setPreview(null);
+            setApproved(false);
+        } finally {
+            busyRef.current = false;
+            setBusy(null);
+        }
+    };
+
+    return <>
+        <div className={styles.control}>
+            <button
+                type="button"
+                className={styles.button}
+                disabled={!connected || busy !== null}
+                onClick={openPreview}
+            >
+                {busy === 'preview' ? '미리보기 준비 중…' : busy === 'publish' ? '게시 중…' : buttonLabel}
+            </button>
+            {message && <p role="status" className={styles.feedback}>{message}</p>}
+        </div>
+        <dialog
+            ref={dialogRef}
+            className={styles.previewDialog}
+            aria-labelledby={titleId}
+            onCancel={event => { event.preventDefault(); close(); }}
+        >
+            {preview && <>
+                <div className={styles.previewHeader}>
+                    <div>
+                        <h3 id={titleId}>NAVER BAND 게시 미리보기</h3>
+                        <p>대상 밴드와 공지 내용을 확인한 후 게시해주세요.</p>
+                    </div>
+                    <button type="button" onClick={close} className={styles.close} disabled={busy !== null} aria-label="미리보기 닫기">✕</button>
+                </div>
+                <div className={styles.previewBody}>
+                    <dl className={styles.previewDetails}>
+                        <div><dt>게시 대상</dt><dd>{preview.bandName}</dd></div>
+                        <div><dt>BAND Key</dt><dd className={styles.key}>{preview.bandKey}</dd></div>
+                        <div><dt>게시 버전</dt><dd>v{preview.nextRevision}{preview.latestStatus ? ` · 이전: ${preview.latestStatus}` : ' · 첫 게시'}</dd></div>
+                        <div><dt>알림 발송</dt><dd>{preview.doPush ? '사용' : '사용 안 함'}</dd></div>
+                    </dl>
+                    <h4>게시될 공지문</h4>
+                    <pre className={styles.previewText}>{preview.content}</pre>
+                    {preview.latestStatus === 'PENDING' && (
+                        <p className={styles.previewWarning} role="alert">이전 게시가 처리 중입니다. 상태가 확인되기 전에는 재게시할 수 없습니다.</p>
+                    )}
+                    <label className={styles.approval}>
+                        <input
+                            type="checkbox"
+                            checked={approved}
+                            onChange={event => setApproved(event.target.checked)}
+                            disabled={busy !== null || preview.latestStatus === 'PENDING'}
+                        />
+                        게시 대상과 본문을 확인했으며 BAND에 게시하는 데 동의합니다.
+                    </label>
+                    <p className={styles.previewNote}>미리보기 후 참가자·점수·대상 밴드·게시 이력이 바뀌면 전송하지 않고 다시 확인을 요청합니다.</p>
+                </div>
+                <div className={styles.previewActions}>
+                    <button type="button" className={styles.cancelButton} onClick={close} disabled={busy !== null}>취소</button>
+                    <button
+                        type="button"
+                        className={styles.confirmButton}
+                        disabled={!approved || busy !== null || preview.latestStatus === 'PENDING'}
+                        onClick={publish}
+                    >
+                        {busy === 'publish' ? '게시 중…' : '확인 후 BAND 게시'}
+                    </button>
+                </div>
+            </>}
+        </dialog>
+    </>;
+}
