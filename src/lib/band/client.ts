@@ -1,4 +1,5 @@
 import type { BandSummary } from './types';
+import { bandExternalPostingAllowed, BAND_POSTING_DISABLED_MESSAGE } from './outbound-policy';
 
 const BAND_API_ORIGIN = 'https://openapi.band.us';
 
@@ -15,6 +16,7 @@ export class BandApiError extends Error {
 
 export function bandErrorMessage(error: unknown): string {
     if (error instanceof BandApiError) {
+        if (error.code === 'EXTERNAL_POSTING_DISABLED') return BAND_POSTING_DISABLED_MESSAGE;
         if (error.code === '60400' || error.status === 403) {
             return 'BAND 게시 권한이 없습니다. 밴드의 글쓰기 권한 설정을 확인해주세요.';
         }
@@ -68,6 +70,9 @@ export async function createPost(input: {
     content: string;
     doPush?: boolean;
 }): Promise<{ bandKey: string; postKey: string }> {
+    if (!bandExternalPostingAllowed()) {
+        throw new BandApiError(BAND_POSTING_DISABLED_MESSAGE, 'EXTERNAL_POSTING_DISABLED', 409);
+    }
     const body = new URLSearchParams({
         access_token: input.accessToken,
         band_key: input.bandKey,
