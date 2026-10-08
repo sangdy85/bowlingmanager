@@ -2,9 +2,10 @@ import prisma from '@/lib/prisma';
 import { PUBLIC_ORIGIN } from '@/lib/public-web';
 import { formatLane } from '@/lib/tournament-utils';
 import { getChampRoundResults } from '@/app/actions/champ-results';
-import { getIndividualLeaderboard } from '@/app/actions/league-leaderboard';
+import { getIndividualLeaderboard, getLeagueLeaderboard } from '@/app/actions/league-leaderboard';
 import { BandApiError, bandErrorMessage, createPost, getPermissions } from './client';
 import { decryptBandToken } from './token-crypto';
+import { buildLeagueWeeklyPost } from './league-weekly-content';
 import { buildFinalResultPost, buildLaneAssignmentPost, buildParticipantPost, buildRecruitmentPost } from './content';
 import type { BandPostType, BandPublishOutcome, FinalResultEntry } from './types';
 import { bandAutoPublishSkipReason, bandPostDedupeKey, nextBandPostRevision } from './policy';
@@ -339,6 +340,103 @@ export async function publishTournamentFinalResult(input: PublishInput): Promise
     });
 }
 
+
+export async function publishLeagueWeeklyResult(input: PublishInput): Promise<BandPublishOutcome> {
+    if (!input.roundId) return { status: 'FAILED', message: '게시할 주차를 지정해주세요.' };
+
+    const tournament = await (prisma as any).tournament.findUnique({
+        where: { id: input.tournamentId },
+        select: {
+            id: true,
+            centerId: true,
+            name: true,
+            type: true,
+            iteration: true,
+            leagueRounds: {
+                where: { id: input.roundId },
+                select: {
+                    id: true,
+                    roundNumber: true,
+                    matchups: {
+                        select: {
+                            status: true,
+                            pointsA: true,
+                            pointsB: true,
+                            scoreA1: true,
+                            scoreA2: true,
+                            scoreA3: true,
+                            scoreB1: true,
+                            scoreB2: true,
+                            scoreB3: true,
+                            teamASquad: true,
+                            teamBSquad: true,
+                            teamA: { select: { name: true } },
+                            teamB: { select: { name: true } },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    if (!tournament) return { status: 'FAILED', message: '대회를 찾을 수 없습니다.' };
+    if (tournament.type !== 'LEAGUE') return { status: 'SKIPPED', message: '상주리그 주차 결과에만 게시할 수 있습니다.' };
+    const round = tournament.leagueRounds[0];
+    if (!round) return { status: 'FAILED', message: '선택한 주차가 존재하지 않습니다.' };
+    if (!round.matchups.length || round.matchups.some((match: any) => match.status !== 'FINISHED')) {
+        return { status: 'SKIPPED', message: '해당 주차의 모든 경기가 완료된 후 BAND에 게시할 수 있습니다.' };
+    }
+
+    // Official cumulative standings are calculated only up to the selected week.
+    const [leaderboard, individual] = await Promise.all([
+        getLeagueLeaderboard(tournament.id, round.roundNumber),
+        getIndividualLeaderboard(tournament.id, round.roundNumber),
+    ]);
+    const results = buildLeagueWeeklyPost({
+        tournamentName: tournament.name,
+        iteration: tournament.iteration,
+        week: round.roundNumber,
+        teams: leaderboard.teamStandings.map((team: any) => ({
+            name: team.name,
+            wins: team.wins,
+            losses: team.losses,
+            points: team.points,
+            totalPinfall: team.totalPinfall,
+        })),
+        individualByTeam: individual.teams.map((team: any) => ({
+            teamName: team.teamName,
+            players: team.players.map((player: any) => ({
+                name: player.name,
+                gamesCount: player.gamesCount,
+                totalHandicappedPins: player.totalHandicappedPins,
+            })),
+        })),
+        matches: round.matchups.map((match: any) => ({
+            teamA: `${match.teamA?.name || '부전승'}${match.teamASquad ? ` (${match.teamASquad})` : ''}`,
+            teamB: `${match.teamB?.name || '부전승'}${match.teamBSquad ? ` (${match.teamBSquad})` : ''}`,
+            pointsA: match.pointsA ?? 0,
+            pointsB: match.pointsB ?? 0,
+            scoresA: [match.scoreA1, match.scoreA2, match.scoreA3],
+            scoresB: [match.scoreB1, match.scoreB2, match.scoreB3],
+        })),
+        averageTop: individual.top30.map((player: any) => ({
+            name: player.name,
+            teamName: player.teamName,
+            gamesCount: player.gamesCount,
+            totalHandicappedPins: player.totalHandicappedPins,
+        })),
+        detailUrl: publicUrl(`/centers/${tournament.centerId}/tournaments/${tournament.id}`),
+    });
+
+    return publishBuiltContent({
+        ...input,
+        centerId: tournament.centerId,
+        type: 'LEAGUE_WEEKLY_RESULT',
+        content: results,
+        autoFlag: 'autoFinalResult',
+    });
+}
+
 export async function republishBandPost(input: PublishInput & { type: BandPostType }): Promise<BandPublishOutcome> {
     const forced = { ...input, forceRevision: true };
     switch (input.type) {
@@ -350,6 +448,8 @@ export async function republishBandPost(input: PublishInput & { type: BandPostTy
             return publishRoundLaneAssignment(forced);
         case 'FINAL_RESULT':
             return publishTournamentFinalResult(forced);
+        case 'LEAGUE_WEEKLY_RESULT':
+            return publishLeagueWeeklyResult(forced);
     }
 }
 
