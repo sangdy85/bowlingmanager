@@ -81,8 +81,8 @@ async function publishBuiltContent(input: PublishInput & {
     if (input.previewToken !== undefined && input.previewToken !== previewToken) {
         return { status: 'SKIPPED', message: '미리보기 이후 게시 내용이나 대상, 이력이 변경되었습니다. 다시 미리보기 해주세요.' };
     }
-    if (latest?.status === 'PENDING') {
-        return { status: 'SKIPPED', message: '이전 게시 요청이 처리 중입니다. 게시 상태를 확인한 뒤 다시 시도해주세요.', postId: latest.id, revision: latest.revision };
+    if (latest?.status === 'PENDING' || latest?.status === 'UNKNOWN') {
+        return { status: 'SKIPPED', message: '이전 BAND 게시 결과가 미확인 상태입니다. BAND에서 실제 게시 여부를 확인한 뒤 관리 조치가 필요합니다.', postId: latest.id, revision: latest.revision };
     }
     if (latest && !input.forceRevision) {
         return { status: 'SKIPPED', message: '이미 게시 이력이 있어 중복 게시하지 않았습니다.', postId: latest.id, revision: latest.revision };
@@ -90,6 +90,7 @@ async function publishBuiltContent(input: PublishInput & {
 
     const revision = nextBandPostRevision(latest?.revision);
     let history: any = null;
+    let externalPostStarted = false;
     try {
         history = await db.bandPost.create({
             data: {
@@ -112,6 +113,9 @@ async function publishBuiltContent(input: PublishInput & {
             throw new BandApiError('BAND posting permission denied.', 'POSTING_PERMISSION_DENIED', 403);
         }
 
+        // Once the outbound request starts, a timeout does not prove the post
+        // failed. Prevent a blind retry until someone verifies the BAND itself.
+        externalPostStarted = true;
         const posted = await createPost({
             accessToken,
             bandKey: connection.bandKey,
@@ -127,17 +131,19 @@ async function publishBuiltContent(input: PublishInput & {
         if (error?.code === 'P2002' && !history) {
             return { status: 'SKIPPED', message: '동일한 게시 요청이 이미 처리 중이거나 완료되었습니다.' };
         }
+        const ambiguousMessage = 'BAND 게시 결과를 확인할 수 없습니다. BAND에서 글이 올라갔는지 확인하기 전에는 재게시하지 마세요.';
+        const message = externalPostStarted ? ambiguousMessage : bandErrorMessage(error);
         if (history) {
             await db.bandPost.update({
                 where: { id: history.id },
                 data: {
-                    status: 'FAILED',
-                    errorCode: error instanceof BandApiError ? error.code : 'PUBLISH_FAILED',
-                    errorMessage: bandErrorMessage(error),
+                    status: externalPostStarted ? 'UNKNOWN' : 'FAILED',
+                    errorCode: externalPostStarted ? 'PUBLISH_UNCONFIRMED' : error instanceof BandApiError ? error.code : 'PUBLISH_FAILED',
+                    errorMessage: message,
                 },
             }).catch(() => undefined);
         }
-        return { status: 'FAILED', message: bandErrorMessage(error), postId: history?.id, revision };
+        return { status: 'FAILED', message, postId: history?.id, revision };
     }
 }
 
