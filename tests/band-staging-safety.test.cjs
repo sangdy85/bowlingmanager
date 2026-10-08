@@ -45,7 +45,7 @@ test('스테이징 설정은 별도 SQLite와 게시 금지를 강제한다', ()
 
 test('기존 프로젝트 폴더에서 실수로 스테이징 초기화할 수 없다', () => {
   assert.throws(() => runner.init(false), /requires --confirm-band-staging/);
-  assert.throws(() => runner.assertWorktree(), /Git worktree folder/);
+  assert.throws(() => runner.assertWorktree(fs, path.join(process.cwd(), 'not-a-worktree')), /Git worktree folder/);
 });
 
 test('스테이징 샘플 생성은 운영 DB와 운영 환경에서 차단된다', () => {
