@@ -51,6 +51,10 @@ function gameScores(scores?: Array<number | null>): string {
         : '';
 }
 
+export function isLeagueWeekReady(matches: ReadonlyArray<{ status: string }>): boolean {
+    return matches.length > 0 && matches.every(match => match.status === 'FINISHED');
+}
+
 // Read-only presentation of the official league leaderboard and selected week's matches.
 export function buildLeagueWeeklyPost(data: LeagueWeeklyPostData): string {
     const iteration = data.iteration == null ? '' : `제 ${data.iteration}차 · `;
