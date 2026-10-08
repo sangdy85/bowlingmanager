@@ -154,3 +154,37 @@ test('최근 PENDING, 이전 이력 및 다른 센터 게시물은 복구할 수
         assert.equal(getUpdated(), null);
     }
 });
+
+test('BAND 미리보기와 게시 서버 액션은 권한 없는 호출 및 다른 센터 대회를 거부한다', async () => {
+    let published = 0;
+    let queried = 0;
+    const prisma = { tournament: {
+        findUnique: async () => { queried++; return { centerId: 'center-2' }; },
+    }};
+    const publisher = {
+        republishBandPost: async () => { published++; return { status: 'SUCCESS', preview: {} }; },
+        sendBandTestPost: async () => undefined,
+    };
+    const actionMocks = {
+        '@/lib/prisma': { __esModule: true, default: prisma },
+        'next/cache': { revalidatePath() {} },
+        '@/lib/auth-utils': { verifyCenterAdmin: async centerId => {
+            if (centerId === 'center-denied') throw new Error('관리 권한 없음');
+            return 'admin-1';
+        }},
+        '@/lib/band/client': { getBands() {}, getPermissions() {}, bandErrorMessage() {} },
+        '@/lib/band/token-crypto': { decryptBandToken() {} },
+        '@/lib/band/publisher': publisher,
+    };
+    const actions = loadTs('src/app/actions/band-actions.ts', actionMocks);
+    await assert.rejects(actions.getBandPostPreviewAction({
+        centerId: 'center-denied', tournamentId: 't1', type: 'RECRUITMENT',
+    }), /관리 권한 없음/);
+    assert.equal(queried, 0);
+
+    const differentCenter = await actions.getBandPostPreviewAction({
+        centerId: 'center-1', tournamentId: 't1', type: 'RECRUITMENT',
+    });
+    assert.equal(differentCenter.success, false);
+    assert.equal(published, 0);
+});
