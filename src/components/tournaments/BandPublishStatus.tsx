@@ -14,9 +14,16 @@ export default function BandPublishStatus({ centerId, tournamentId, roundId, con
     const router = useRouter();
     const [busy, setBusy] = useState<string | null>(null);
     const [message, setMessage] = useState('');
-    const items: { type: BandPostType; label: string }[] = [
-        { type: 'RECRUITMENT', label: '모집 안내' }, { type: 'FINAL_RESULT', label: '최종 결과' },
-    ];
+    const items: { type: BandPostType; label: string }[] = roundId
+        ? [
+            { type: 'PARTICIPANTS', label: '참가자 명단' },
+            { type: 'LANE_ASSIGNMENT', label: '레인 배정' },
+            { type: 'FINAL_RESULT', label: '최종 결과' },
+        ]
+        : [
+            { type: 'RECRUITMENT', label: '모집 안내' },
+            { type: 'FINAL_RESULT', label: '최종 결과' },
+        ];
     return <section className={styles.panel} aria-label="BAND 게시 상태">
         <h3 className={styles.title}>NAVER BAND 게시</h3>
         <p className={styles.hint}>{connected ? '자동 게시 이력과 수동 재게시를 관리합니다.' : '볼링장 설정에서 BAND를 연결하고 게시 대상을 선택해주세요.'}</p>
