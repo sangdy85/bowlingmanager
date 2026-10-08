@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 const VALID_FOR_MS = 15 * 60 * 1000;
-const TOKEN_FORMAT = /^(\\d{13})\\.([a-f0-9]{64})$/;
+const TOKEN_FORMAT = /^(\d{13})\.([a-f0-9]{64})$/;
 
 function secret(): string {
     const value = process.env.AUTH_SECRET;
