@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma';
 import { verifyCenterAdmin } from '@/lib/auth-utils';
 import { getBands, getPermissions, bandErrorMessage } from '@/lib/band/client';
 import { decryptBandToken } from '@/lib/band/token-crypto';
+import { isBandConfigured } from '@/lib/band/config';
 import { republishBandPost, sendBandTestPost } from '@/lib/band/publisher';
 import type { BandPostType, BandPublishOutcome } from '@/lib/band/types';
 
@@ -71,25 +72,23 @@ export async function sendBandTestPostAction(centerId: string): Promise<ActionRe
 }
 
 export async function getBandPostPreviewAction(input: {
-    centerId: string; tournamentId: string; roundId?: string | null; type: BandPostType;
+    centerId: string; tournamentId: string; roundId?: string | null; type: BandPostType; week?: number; doPush?: boolean;
 }): Promise<ActionResult> {
     const allowedTypes = new Set<BandPostType>(['RECRUITMENT', 'PARTICIPANTS', 'LANE_ASSIGNMENT', 'FINAL_RESULT', 'LEAGUE_WEEKLY_RESULT']);
     if (!allowedTypes.has(input.type)) return { success: false, message: '지원하지 않는 BAND 게시 유형입니다.' };
 
     const userId = await verifyCenterAdmin(input.centerId);
-    const tournament = await prisma.tournament.findUnique({
-        where: { id: input.tournamentId },
-        select: { centerId: true },
-    });
-    if (!tournament || tournament.centerId !== input.centerId) {
-        return { success: false, message: '대회 정보를 확인할 수 없습니다.' };
-    }
+    const target = await verifyBandActionTarget(input);
+    if (target.error) return { success: false, message: target.error };
+    if (input.doPush !== undefined && typeof input.doPush !== 'boolean') return { success: false, message: '알림 설정을 확인해주세요.' };
 
     // This path computes the identical text as publishing, but never writes
     // history, decrypts tokens, checks external permissions, or calls BAND.
     const outcome = await republishBandPost({
         tournamentId: input.tournamentId,
         roundId: input.roundId,
+        week: input.week,
+        doPush: input.doPush,
         type: input.type,
         previewOnly: true,
         requestedById: userId,
@@ -98,7 +97,7 @@ export async function getBandPostPreviewAction(input: {
 }
 
 export async function publishBandPostAction(input: {
-    centerId: string; tournamentId: string; roundId?: string | null; type: BandPostType; previewToken: string;
+    centerId: string; tournamentId: string; roundId?: string | null; type: BandPostType; week?: number; doPush?: boolean; previewToken: string;
 }): Promise<ActionResult> {
     const allowedTypes = new Set<BandPostType>(['RECRUITMENT', 'PARTICIPANTS', 'LANE_ASSIGNMENT', 'FINAL_RESULT', 'LEAGUE_WEEKLY_RESULT']);
     if (!allowedTypes.has(input.type)) return { success: false, message: '지원하지 않는 BAND 게시 유형입니다.' };
@@ -107,11 +106,14 @@ export async function publishBandPostAction(input: {
     }
 
     const userId = await verifyCenterAdmin(input.centerId);
-    const tournament = await prisma.tournament.findUnique({ where: { id: input.tournamentId }, select: { centerId: true } });
-    if (!tournament || tournament.centerId !== input.centerId) return { success: false, message: '대회 정보를 확인할 수 없습니다.' };
+    const target = await verifyBandActionTarget(input);
+    if (target.error) return { success: false, message: target.error };
+    if (input.doPush !== undefined && typeof input.doPush !== 'boolean') return { success: false, message: '알림 설정을 확인해주세요.' };
     const outcome = await republishBandPost({
         tournamentId: input.tournamentId,
         roundId: input.roundId,
+        week: input.week,
+        doPush: input.doPush,
         type: input.type,
         requestedById: userId,
         previewToken: input.previewToken,
@@ -183,5 +185,45 @@ export async function resolveUncertainBandPostAction(input: {
         message: input.resolution === 'POSTED'
             ? '실제 게시 확인으로 기록했습니다. 중복 게시되지 않습니다.'
             : '미게시 확인으로 기록했습니다. 필요하면 새 미리보기 후 재게시할 수 있습니다.',
+    };
+}
+
+
+async function verifyBandActionTarget(input: { centerId: string; tournamentId: string; roundId?: string | null; type: BandPostType; week?: number }) {
+    const tournament = await prisma.tournament.findUnique({
+        where: { id: input.tournamentId },
+        select: { centerId: true, type: true, leagueRounds: {
+            where: { id: input.roundId || '' },
+            select: { id: true, roundNumber: true, matchups: { select: { status: true } } },
+        } },
+    });
+    if (!tournament || tournament.centerId !== input.centerId) return { error: '대회 정보를 확인할 수 없습니다.' };
+    if (input.type === 'LEAGUE_WEEKLY_RESULT') {
+        const round = tournament.leagueRounds[0];
+        if (tournament.type !== 'LEAGUE' || !Number.isSafeInteger(input.week) || !input.week || input.week < 1 || !round || round.id !== input.roundId || round.roundNumber !== input.week) {
+            return { error: '선택한 주차와 경기 정보가 일치하지 않습니다. 새로고침 후 다시 선택해주세요.' };
+        }
+        return { round };
+    }
+    return {};
+}
+
+export async function getLeagueWeeklyBandStateAction(input: { centerId: string; tournamentId: string; roundId: string; week: number }) {
+    await verifyCenterAdmin(input.centerId);
+    const target = await verifyBandActionTarget({ ...input, type: 'LEAGUE_WEEKLY_RESULT' });
+    if (target.error || !target.round) return { success: false as const, message: target.error || '주차를 확인할 수 없습니다.' };
+    const [connection, latestPost] = await Promise.all([
+        prisma.bandConnection.findUnique({ where: { centerId: input.centerId }, select: { enabled: true, bandKey: true } }),
+        prisma.bandPost.findFirst({
+            where: { tournamentId: input.tournamentId, roundId: target.round.id, type: 'LEAGUE_WEEKLY_RESULT' },
+            orderBy: { revision: 'desc' },
+            select: { id: true, roundId: true, type: true, status: true, revision: true, createdAt: true, postedAt: true, errorMessage: true },
+        }),
+    ]);
+    const matches = target.round.matchups;
+    return { success: true as const, roundId: target.round.id, week: target.round.roundNumber,
+        ready: matches.length > 0 && matches.every(match => match.status === 'FINISHED'),
+        matchCount: matches.length, configured: isBandConfigured(), connected: Boolean(connection?.enabled && connection.bandKey),
+        latestPost: latestPost ? { ...latestPost, createdAt: latestPost.createdAt.toISOString(), postedAt: latestPost.postedAt?.toISOString() || null } : null,
     };
 }

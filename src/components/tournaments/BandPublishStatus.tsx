@@ -15,15 +15,17 @@ type History = {
     errorMessage: string | null;
 };
 
-export default function BandPublishStatus({ centerId, tournamentId, roundId, connected, posts }: {
+export default function BandPublishStatus({ centerId, tournamentId, roundId, connected, posts, configured }: {
     centerId: string;
     tournamentId: string;
     roundId?: string | null;
     connected: boolean;
+    configured: boolean;
     posts: History[];
 }) {
     const items: { type: BandPostType; label: string }[] = roundId
         ? [
+            { type: 'RECRUITMENT', label: '회차 모집 안내' },
             { type: 'PARTICIPANTS', label: '참가자 명단' },
             { type: 'LANE_ASSIGNMENT', label: '레인 배정' },
             { type: 'FINAL_RESULT', label: '최종 결과' },
@@ -36,7 +38,7 @@ export default function BandPublishStatus({ centerId, tournamentId, roundId, con
     return <section className={styles.panel} aria-label="BAND 게시 상태">
         <h3 className={styles.title}>NAVER BAND 게시</h3>
         <p className={styles.hint}>
-            {connected
+            {!configured ? 'NAVER BAND 연동 준비 중입니다. 앱 승인과 운영 설정 완료 후 게시할 수 있습니다.' : connected
                 ? '게시할 대상 밴드와 공지 내용을 미리 확인한 후 게시할 수 있습니다.'
                 : '볼링장 설정에서 BAND를 연결하고 게시 대상을 선택해주세요.'}
         </p>
@@ -56,7 +58,7 @@ export default function BandPublishStatus({ centerId, tournamentId, roundId, con
                     tournamentId={tournamentId}
                     roundId={roundId}
                     type={item.type}
-                    connected={connected}
+                    connected={configured && connected}
                     buttonLabel={latest ? '미리보기 · 다시 게시' : '미리보기 · BAND 게시'}
                 />
                 {latest && <BandUncertainResolution centerId={centerId} post={latest} />}

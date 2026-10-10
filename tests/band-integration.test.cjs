@@ -73,7 +73,7 @@ test('posting 권한 API 요청과 권한 없는 결과를 구분할 수 있다'
   finally { global.fetch = originalFetch; }
 });
 
-test('OAuth pending context는 서명 쿠키, nonce, 10분 만료와 callback 사용자 검증을 적용한다', () => {
+test('OAuth state는 서명 JWT로 BAND 요청과 쿠키에 함께 묶이고 callback에서 사용자까지 검증한다', () => {
   const authSource = fs.readFileSync('src/lib/band/auth.ts', 'utf8');
   const connectSource = fs.readFileSync('src/app/api/integrations/band/connect/route.ts', 'utf8');
   const callbackSource = fs.readFileSync('src/app/api/integrations/band/callback/route.ts', 'utf8');
@@ -81,18 +81,21 @@ test('OAuth pending context는 서명 쿠키, nonce, 10분 만료와 callback �
   assert.match(authSource, /SignJWT/);
   assert.match(authSource, /nonce: randomUUID\(\)/);
   assert.match(authSource, /setExpirationTime\('10m'\)/);
-  assert.doesNotMatch(authSource, /searchParams\.set\('state'/);
+  assert.match(authSource, /searchParams\.set\('state', state\)/);
 
   assert.match(connectSource, /createBandOAuthState/);
+  assert.match(connectSource, /buildBandAuthorizationUrl\(pending\)/);
   assert.match(connectSource, /response\.cookies\.set\(COOKIE_NAME/);
   assert.match(connectSource, /httpOnly:\s*true/);
   assert.match(connectSource, /sameSite:\s*'lax'/);
   assert.match(connectSource, /secure:\s*process\.env\.NODE_ENV === 'production'/);
 
   assert.match(callbackSource, /request\.cookies\.get\(COOKIE_NAME\)/);
+  assert.match(callbackSource, /searchParams\.get\('state'\)/);
+  assert.match(callbackSource, /pending !== returnedState/);
+  assert.match(callbackSource, /verifyBandOAuthState\(returnedState\)/);
   assert.match(callbackSource, /stateData\.userId !== session\.user\.id/);
   assert.match(callbackSource, /verifyCenterAdmin\(stateData\.centerId\)/);
-  assert.doesNotMatch(callbackSource, /searchParams\.get\('state'\)/);
 });
 
 test('다른 센터 관리자가 아니면 공통 권한 검사가 차단한다', async () => {
@@ -226,12 +229,14 @@ test('참가자와 레인 게시 타입은 모집 자동 게시 설정 정책을
   assert.match(policy.bandAutoPublishSkipReason(connection, 'LANE_ASSIGNMENT'), /꺼져/);
 });
 
-test('회차 BAND 게시 UI는 참가자 명단 레인 배정 최종 결과를 제공한다', () => {
+test('회차 BAND 게시 UI는 모집 참가자 명단 레인 배정 최종 결과를 제공한다', () => {
   const source = fs.readFileSync('src/components/tournaments/BandPublishStatus.tsx', 'utf8');
+  assert.match(source, /RECRUITMENT/);
   assert.match(source, /PARTICIPANTS/);
   assert.match(source, /LANE_ASSIGNMENT/);
   assert.match(source, /FINAL_RESULT/);
   assert.match(source, /참가자 명단/);
+  assert.match(source, /회차 모집 안내/);
   assert.match(source, /레인 배정/);
 });
 
@@ -249,7 +254,7 @@ test('회차 BAND 게시 후 회차 페이지도 revalidate한다', () => {
 
 
 test('상주리그 주차 결과 BAND 글에는 필수 결과 구역과 실제 주차가 모두 포함된다', () => {
-  const weekly = loadTs('src/lib/band/league-weekly-content.ts');
+  const weekly = loadTs('src/lib/band/league-weekly-content.ts', { '@/lib/league-report': loadTs('src/lib/league-report.ts') });
   const text = weekly.buildLeagueWeeklyPost({
     tournamentName: '제 3회차 상주리그',
     iteration: 3,
@@ -279,7 +284,7 @@ test('상주리그 주차 결과 BAND 글에는 필수 결과 구역과 실제 �
 });
 
 test('상주리그 주차 게시 준비 여부는 모든 매치 완료를 요구한다', () => {
-  const { isLeagueWeekReady } = loadTs('src/lib/band/league-weekly-content.ts');
+  const { isLeagueWeekReady } = loadTs('src/lib/band/league-weekly-content.ts', { '@/lib/league-report': loadTs('src/lib/league-report.ts') });
   assert.equal(isLeagueWeekReady([]), false);
   assert.equal(isLeagueWeekReady([{ status: 'FINISHED' }, { status: 'PENDING' }]), false);
   assert.equal(isLeagueWeekReady([{ status: 'FINISHED' }, { status: 'FINISHED' }]), true);
@@ -290,14 +295,15 @@ test('상주리그 주차별 BAND 게시 이력은 다른 주차와 구분된다
   assert.equal(policy.bandPostDedupeKey('t1', 'week-2', 'LEAGUE_WEEKLY_RESULT', 1), 'ROUND:week-2:LEAGUE_WEEKLY_RESULT:1');
 });
 
-test('상주리그 BAND 버튼은 완료된 주차 관리 화면에만 제공된다', () => {
-  const source = fs.readFileSync('src/components/tournaments/LeagueResultManager.tsx', 'utf8');
+test('상주리그 BAND 버튼은 공식 결과표의 선택 주차 영역에만 제공된다', () => {
+  const cards = fs.readFileSync('src/components/tournaments/LeagueResultManager.tsx', 'utf8');
+  const downloads = fs.readFileSync('src/components/tournaments/WeeklyResultDownloader.tsx', 'utf8');
   const publisher = fs.readFileSync('src/lib/band/publisher.ts', 'utf8');
-  assert.ok(source.includes('isManager && finished &&'));
-  assert.ok(source.includes('LeagueWeeklyBandButton'));
-  assert.ok(publisher.includes('isLeagueWeekReady(round.matchups)'));
-  assert.ok(publisher.includes('getLeagueLeaderboard(tournament.id, round.roundNumber)'));
-  assert.ok(publisher.includes('getIndividualLeaderboard(tournament.id, round.roundNumber)'));
+  assert.ok(!cards.includes('LeagueWeeklyBandButton'));
+  assert.ok(downloads.includes('isManager && selectedRoundInfo'));
+  assert.ok(downloads.includes('week={selectedRound}'));
+  assert.ok(publisher.includes('isLeagueWeekReady(roundInfo.matchups)'));
+  assert.ok(publisher.includes('getWeeklyLeagueReport(tournament.id, round.roundNumber)'));
 });
 
 test('Prisma Client 생성은 TypeScript 검사보다 먼저 실행된다', () => {
@@ -340,7 +346,7 @@ test('과거 주차 평균 TOP은 이후 주차의 결과에 영향받지 않는
 
 
 test('소수점이 있는 상주리그 승점은 반올림하지 않는다', () => {
-  const weekly = loadTs('src/lib/band/league-weekly-content.ts');
+  const weekly = loadTs('src/lib/band/league-weekly-content.ts', { '@/lib/league-report': loadTs('src/lib/league-report.ts') });
   const text = weekly.buildLeagueWeeklyPost({
     tournamentName: '상주리그', iteration: 2, week: 3,
     teams: [{ name: 'A팀', wins: 2.5, losses: 1.5, points: 7.5, totalPinfall: 1000 }],

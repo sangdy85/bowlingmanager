@@ -615,3 +615,23 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
         }
     };
 }
+
+
+// One read path for the official PNGs and BAND; all standings retain their existing calculations.
+export async function getWeeklyLeagueReport(tournamentId: string, week: number) {
+    if (!Number.isSafeInteger(week) || week < 1) throw new Error('올바른 주차를 선택해주세요.');
+    const [leaderboard, individual, roundInfo] = await Promise.all([
+        getLeagueLeaderboard(tournamentId, week),
+        getIndividualLeaderboard(tournamentId, week),
+        prisma.leagueRound.findFirst({
+            where: { tournamentId, roundNumber: week },
+            include: { tournament: { select: { teamHandicapLimit: true } }, matchups: { include: {
+                teamA: { select: { id: true, name: true } },
+                teamB: { select: { id: true, name: true } },
+                individualScores: { include: { User: { select: { name: true } } } },
+            } } },
+        }),
+    ]);
+    if (!roundInfo) throw new Error('선택한 주차가 존재하지 않습니다.');
+    return { leaderboard, individual, roundInfo: { ...roundInfo, tournamentTeamHandicapLimit: roundInfo.tournament.teamHandicapLimit } };
+}

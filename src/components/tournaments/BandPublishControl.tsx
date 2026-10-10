@@ -13,6 +13,9 @@ export default function BandPublishControl({
     type,
     connected,
     buttonLabel,
+    week,
+    onBusyChange,
+    onSettled,
 }: {
     centerId: string;
     tournamentId: string;
@@ -20,11 +23,15 @@ export default function BandPublishControl({
     type: BandPostType;
     connected: boolean;
     buttonLabel: string;
+    week?: number;
+    onBusyChange?: (busy: boolean) => void;
+    onSettled?: () => void;
 }) {
     const router = useRouter();
     const titleId = useId();
     const dialogRef = useRef<HTMLDialogElement>(null);
     const busyRef = useRef(false);
+    const requestSequence = useRef(0);
     const [busy, setBusy] = useState<'preview' | 'publish' | null>(null);
     const [preview, setPreview] = useState<BandPostPreview | null>(null);
     const [approved, setApproved] = useState(false);
@@ -37,6 +44,26 @@ export default function BandPublishControl({
         if (!preview && dialog.open) dialog.close();
     }, [preview]);
 
+    useEffect(() => {
+        const sequenceRef = requestSequence;
+        const dialog = dialogRef.current;
+        sequenceRef.current++;
+        busyRef.current = false;
+        setBusy(null);
+        setPreview(null);
+        setApproved(false);
+        setMessage('');
+        return () => {
+            sequenceRef.current++;
+            dialog?.close();
+        };
+    }, [centerId, tournamentId, roundId, type, week]);
+
+    useEffect(() => {
+        onBusyChange?.(busy !== null);
+        return () => onBusyChange?.(false);
+    }, [busy, onBusyChange]);
+
     const close = () => {
         if (busyRef.current) return;
         dialogRef.current?.close();
@@ -44,48 +71,55 @@ export default function BandPublishControl({
         setApproved(false);
     };
 
-    const openPreview = async () => {
+    const openPreview = async (doPush?: boolean) => {
         if (busyRef.current || !connected) return;
         busyRef.current = true;
+        const sequence = ++requestSequence.current;
         setBusy('preview');
+        setPreview(null);
         setMessage('');
         setApproved(false);
         try {
-            const result = await getBandPostPreviewAction({ centerId, tournamentId, roundId, type });
+            const result = await getBandPostPreviewAction({ centerId, tournamentId, roundId, type, week, doPush });
+            if (sequence !== requestSequence.current) return;
             if (result.success && result.outcome?.preview) {
                 setPreview(result.outcome.preview);
             } else {
                 setMessage(result.message);
             }
         } catch {
+            if (sequence !== requestSequence.current) return;
             setMessage('게시 미리보기를 준비하지 못했습니다. 잠시 후 다시 시도해주세요.');
         } finally {
-            busyRef.current = false;
-            setBusy(null);
+            if (sequence === requestSequence.current) { busyRef.current = false; setBusy(null); }
         }
     };
 
     const publish = async () => {
         if (busyRef.current || !preview || !approved || ['PENDING', 'UNKNOWN'].includes(preview.latestStatus || '')) return;
         busyRef.current = true;
+        const sequence = ++requestSequence.current;
         setBusy('publish');
         setMessage('');
         try {
             const result = await publishBandPostAction({
-                centerId, tournamentId, roundId, type, previewToken: preview.previewToken,
+                centerId, tournamentId, roundId, type, week, doPush: preview.doPush, previewToken: preview.previewToken,
             });
+            if (sequence !== requestSequence.current) return;
+            onSettled?.();
             setMessage(result.message);
             // A second attempt always needs a new preview, including on API failures.
             setPreview(null);
             setApproved(false);
             if (result.success) router.refresh();
         } catch {
+            if (sequence !== requestSequence.current) return;
+            onSettled?.();
             setMessage('게시 결과를 확인하지 못했습니다. BAND 게시 이력을 확인한 뒤 다시 시도해주세요.');
             setPreview(null);
             setApproved(false);
         } finally {
-            busyRef.current = false;
-            setBusy(null);
+            if (sequence === requestSequence.current) { busyRef.current = false; setBusy(null); }
         }
     };
 
@@ -95,7 +129,7 @@ export default function BandPublishControl({
                 type="button"
                 className={styles.button}
                 disabled={!connected || busy !== null}
-                onClick={openPreview}
+                onClick={() => openPreview()}
             >
                 {busy === 'preview' ? '미리보기 준비 중…' : busy === 'publish' ? '게시 중…' : buttonLabel}
             </button>
@@ -122,6 +156,11 @@ export default function BandPublishControl({
                         <div><dt>게시 버전</dt><dd>v{preview.nextRevision}{preview.latestStatus ? ` · 이전: ${preview.latestStatus}` : ' · 첫 게시'}</dd></div>
                         <div><dt>알림 발송</dt><dd>{preview.doPush ? '사용' : '사용 안 함'}</dd></div>
                     </dl>
+                    <label className={styles.approval}>
+                        <input type="checkbox" checked={preview.doPush} disabled={busy !== null}
+                            onChange={event => openPreview(event.target.checked)} />
+                        이번 공지에 BAND 알림 발송 (변경 시 미리보기를 다시 확인합니다)
+                    </label>
                     <h4>게시될 공지문 · {preview.contentBytes.toLocaleString('ko-KR')} / {preview.maxContentBytes.toLocaleString('ko-KR')} UTF-8 바이트</h4>
                     <pre className={styles.previewText}>{preview.content}</pre>
                     {['PENDING', 'UNKNOWN'].includes(preview.latestStatus || '') && (

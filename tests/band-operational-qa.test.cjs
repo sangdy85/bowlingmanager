@@ -103,6 +103,7 @@ function resolveFixture(options = {}) {
             if (centerId !== 'center-1') throw new Error('관리 권한 없음');
             return 'admin-1';
         }},
+        '@/lib/band/config': loadTs('src/lib/band/config.ts'),
         '@/lib/band/client': { getBands() {}, getPermissions() {}, bandErrorMessage() {} },
         '@/lib/band/token-crypto': { decryptBandToken() {} },
         '@/lib/band/publisher': { republishBandPost() {}, sendBandTestPost() {} },
@@ -174,6 +175,7 @@ test('BAND 미리보기와 게시 서버 액션은 권한 없는 호출 및 다�
         }},
         '@/lib/band/client': { getBands() {}, getPermissions() {}, bandErrorMessage() {} },
         '@/lib/band/token-crypto': { decryptBandToken() {} },
+        '@/lib/band/config': loadTs('src/lib/band/config.ts'),
         '@/lib/band/publisher': publisher,
     };
     const actions = loadTs('src/app/actions/band-actions.ts', actionMocks);

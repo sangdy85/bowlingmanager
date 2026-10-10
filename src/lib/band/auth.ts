@@ -14,7 +14,13 @@ function stateKey(): Uint8Array {
     return new TextEncoder().encode(required('BAND_CLIENT_SECRET'));
 }
 
+function isStateId(value: unknown): value is string {
+    return typeof value === 'string' && value.length > 0 && value.trim() === value &&
+        !/[\u0000-\u001f\u007f]/.test(value);
+}
+
 export async function createBandOAuthState(centerId: string, userId: string): Promise<string> {
+    if (!isStateId(centerId) || !isStateId(userId)) throw new Error('Invalid BAND OAuth context.');
     return new SignJWT({ centerId, userId, nonce: randomUUID() })
         .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
         .setIssuedAt()
@@ -29,18 +35,27 @@ export async function verifyBandOAuthState(state: string): Promise<{ centerId: s
         issuer: 'bowlingmanager',
         audience: 'naver-band-oauth',
         algorithms: ['HS256'],
+        requiredClaims: ['iat', 'exp'],
+        maxTokenAge: '10m',
     });
-    if (typeof payload.centerId !== 'string' || typeof payload.userId !== 'string' || typeof payload.nonce !== 'string') {
+    if (!isStateId(payload.centerId) || !isStateId(payload.userId) ||
+        typeof payload.nonce !== 'string' ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(payload.nonce) ||
+        typeof payload.iat !== 'number' || typeof payload.exp !== 'number' ||
+        !Number.isSafeInteger(payload.iat) || !Number.isSafeInteger(payload.exp) ||
+        payload.exp <= payload.iat || payload.exp - payload.iat > 600) {
         throw new Error('Invalid BAND OAuth state.');
     }
     return { centerId: payload.centerId, userId: payload.userId };
 }
 
-export function buildBandAuthorizationUrl(): string {
+export function buildBandAuthorizationUrl(state: string): string {
+    if (!state) throw new Error('BAND OAuth state is required.');
     const url = new URL(BAND_AUTHORIZE_URL);
     url.searchParams.set('response_type', 'code');
     url.searchParams.set('client_id', required('BAND_CLIENT_ID'));
     url.searchParams.set('redirect_uri', required('BAND_REDIRECT_URI'));
+    url.searchParams.set('state', state);
     return url.toString();
 }
 

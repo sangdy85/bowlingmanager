@@ -20,7 +20,7 @@ function loadTs(relativePath, mocks = {}) {
 function publisherFixture() {
     process.env.AUTH_SECRET = 'band-preview-local-fixture-secret-at-least-32-bytes';
     const counters = { create: 0, update: 0, permissions: 0, post: 0, decrypt: 0 };
-    const flags = { postFails: false };
+    const flags = { postFails: false, configured: true };
     const connection = {
         enabled: true,
         bandKey: 'band-key-1',
@@ -74,6 +74,7 @@ function publisherFixture() {
     const publisher = loadTs('src/lib/band/publisher.ts', {
         '@/lib/prisma': { __esModule: true, default: db },
         '@/lib/public-web': { PUBLIC_ORIGIN: 'https://www.bowlingmanager.co.kr' },
+        '@/lib/league-report': loadTs('src/lib/league-report.ts'),
         '@/lib/tournament-utils': { formatLane: lane => String(lane) },
         '@/app/actions/champ-results': { getChampRoundResults: async () => ({ results: [] }) },
         '@/app/actions/league-leaderboard': {
@@ -96,9 +97,28 @@ function publisherFixture() {
         './content-guard': contentGuard,
         './preview-signature': approval,
         './policy': policy,
+        './config': { ...loadTs('src/lib/band/config.ts'), isBandConfigured: () => flags.configured },
     });
     return { publisher, connection, tournament, history, counters, flags };
 }
+
+test('BAND 미설정은 자동·수동·미리보기·테스트 게시를 이력 작성이나 외부 전송 없이 건너뛴다', async () => {
+    const { publisher, flags, counters, history } = publisherFixture();
+    flags.configured = false;
+    const outcomes = [
+        await publisher.publishTournamentRecruitment({ tournamentId: 't1' }),
+        await publisher.republishBandPost({ tournamentId: 't1', type: 'RECRUITMENT' }),
+        await publisher.republishBandPost({ tournamentId: 't1', type: 'RECRUITMENT', previewOnly: true }),
+        await publisher.sendBandTestPost('center-1'),
+    ];
+    for (const outcome of outcomes) {
+        assert.equal(outcome.status, 'SKIPPED');
+        assert.match(outcome.message, /연동 준비 중/);
+        assert.equal(outcome.preview, undefined);
+    }
+    assert.deepEqual(history, []);
+    assert.deepEqual(counters, { create: 0, update: 0, permissions: 0, post: 0, decrypt: 0 });
+});
 
 test('미리보기는 게시글을 만들지만 DB 작성, 토큰 복호화, BAND 전송은 하지 않는다', async () => {
     const { publisher, counters, history } = publisherFixture();

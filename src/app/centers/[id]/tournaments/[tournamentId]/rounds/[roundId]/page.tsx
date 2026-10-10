@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { notFound, redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { isBandConfigured } from "@/lib/band/config";
 import Link from "next/link";
 import RoundDetailPageContent from "@/components/tournaments/RoundDetailPageContent";
 
@@ -287,6 +288,7 @@ export default async function RoundDetailPage({ params }: { params: Promise<{ id
             centerId={centerId}
             userProfile={userProfile}
             bandPublish={isManager ? {
+                configured: isBandConfigured(),
                 connected: Boolean(center?.bandConnection?.enabled && center?.bandConnection?.bandKey),
                 posts: bandPosts.map((post: any) => ({
                     ...post,

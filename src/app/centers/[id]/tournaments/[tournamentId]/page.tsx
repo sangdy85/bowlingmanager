@@ -21,7 +21,7 @@ import TournamentMemberView from "@/components/tournaments/TournamentMemberView"
 import { getLeagueLeaderboard, getIndividualLeaderboard } from "@/app/actions/league-leaderboard";
 import { getEffectiveRoundDate, calculateTournamentStatus } from "@/lib/tournament-utils";
 import styles from "./TournamentDetail.module.css";
-import BandPublishStatus from "@/components/tournaments/BandPublishStatus";
+import { isBandConfigured } from "@/lib/band/config";
 
 export default async function TournamentDetailPage({ params }: { params: Promise<{ id: string, tournamentId: string }> }) {
     const { id: centerId, tournamentId } = await params;
@@ -36,7 +36,6 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                     bandConnection: { select: { enabled: true, bandKey: true } }
                 }
             },
-            bandPosts: { orderBy: { createdAt: 'desc' } },
             attachments: {
                 orderBy: { createdAt: 'desc' }
             },
@@ -254,16 +253,6 @@ export default async function TournamentDetailPage({ params }: { params: Promise
     };
 
     const safeTournament = JSON.parse(JSON.stringify(safeTournamentRaw));
-    const safeBandPosts = (safeTournament.bandPosts || []).map((post: any) => ({
-        id: post.id,
-        roundId: post.roundId,
-        type: post.type,
-        status: post.status,
-        revision: post.revision,
-        createdAt: post.createdAt,
-        postedAt: post.postedAt,
-        errorMessage: post.errorMessage,
-    }));
 
     return (
         <div className={styles.page}>
@@ -508,6 +497,10 @@ export default async function TournamentDetailPage({ params }: { params: Promise
 
                         {safeTournament.type === 'LEAGUE' && safeTournament.leagueRounds.length > 0 && (
                             <WeeklyResultDownloader
+                                centerId={centerId}
+                                isManager={isManager}
+                                bandConnected={Boolean(safeTournament.center.bandConnection?.enabled && safeTournament.center.bandConnection?.bandKey)}
+                                bandConfigured={isBandConfigured()}
                                 tournamentId={safeTournament.id}
                                 tournamentName={safeTournament.name}
                                 rounds={safeTournament.leagueRounds}
@@ -523,8 +516,6 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                                 tournamentId={tournamentId}
                                 rounds={safeTournament.leagueRounds}
                                 isManager={isManager}
-                                bandConnected={Boolean(safeTournament.center.bandConnection?.enabled && safeTournament.center.bandConnection?.bandKey)}
-                                bandPosts={safeBandPosts}
                             />
                         )}
 
@@ -569,15 +560,6 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                     </div>
 
                     <aside className={styles.sidebar}>
-                        {isManager && (
-                            <BandPublishStatus
-                                centerId={centerId}
-                                tournamentId={tournamentId}
-                                connected={Boolean(safeTournament.center.bandConnection?.enabled && safeTournament.center.bandConnection?.bandKey)}
-                                posts={safeBandPosts}
-                            />
-                        )}
-
                         <section className={`card ${styles.sideCard}`}>
                             <h3 className={styles.sideTitle}>📍 참여 볼링장</h3>
                             <p className={styles.sideText}>{safeTournament.center.name}</p>

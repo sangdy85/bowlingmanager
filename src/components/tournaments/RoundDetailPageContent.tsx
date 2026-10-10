@@ -2133,7 +2133,7 @@ export default function RoundDetailPageContent({
     isManager?: boolean,
     centerId?: string,
     userProfile?: { name: string | null, teamName: string | null },
-    bandPublish?: { connected: boolean; posts: any[] }
+    bandPublish?: { connected: boolean; configured: boolean; posts: any[] }
 }) {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -2343,6 +2343,7 @@ export default function RoundDetailPageContent({
                             tournamentId={round.tournament.id}
                             roundId={round.id}
                             connected={bandPublish.connected}
+                            configured={bandPublish.configured}
                             posts={bandPublish.posts}
                         />
                     )}

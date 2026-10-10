@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { resolveUncertainBandPostAction } from '@/app/actions/band-actions';
 import styles from './BandPublishStatus.module.css';
 
-export default function BandUncertainResolution({ centerId, post }: {
+export default function BandUncertainResolution({ centerId, post, onResolved }: {
     centerId: string;
+    onResolved?: () => void;
     post: { id: string; status: string; createdAt: string };
 }) {
     const router = useRouter();
@@ -31,7 +32,7 @@ export default function BandUncertainResolution({ centerId, post }: {
                 centerId, postId: post.id, resolution, confirmed: true,
             });
             setMessage(result.message);
-            if (result.success) router.refresh();
+            if (result.success) { onResolved?.(); router.refresh(); }
         } catch {
             setMessage('게시 이력 확인을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.');
         } finally {

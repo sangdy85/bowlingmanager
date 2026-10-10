@@ -5,6 +5,7 @@ import Link from "next/link";
 import { updateBowlingCenter } from "@/app/actions/center";
 import styles from "./CenterEdit.module.css";
 import BandIntegrationSettings from "@/components/centers/BandIntegrationSettings";
+import { isBandConfigured } from "@/lib/band/config";
 
 export default async function CenterEditPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ band?: string }> }) {
     const { id } = await params;
@@ -111,6 +112,7 @@ export default async function CenterEditPage({ params, searchParams }: { params:
 
             <BandIntegrationSettings
                 centerId={id}
+                configured={isBandConfigured()}
                 oauthResult={band}
                 connection={center.bandConnection ? {
                     ...center.bandConnection,

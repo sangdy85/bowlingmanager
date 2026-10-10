@@ -4,6 +4,8 @@ import prisma from '@/lib/prisma';
 import { verifyCenterAdmin } from '@/lib/auth-utils';
 import { exchangeBandAuthorizationCode, verifyBandOAuthState } from '@/lib/band/auth';
 import { encryptBandToken } from '@/lib/band/token-crypto';
+import { isBandConfigured } from '@/lib/band/config';
+import { bandAppUrl } from '@/lib/band/redirect';
 
 const COOKIE_NAME = 'bowling_band_oauth';
 
@@ -23,30 +25,36 @@ function redirectAndClear(
 }
 
 function editUrl(request: NextRequest, centerId: string, result: string) {
-    return new URL(`/centers/${centerId}/edit?band=${result}`, request.url);
+    return bandAppUrl(request, `/centers/${encodeURIComponent(centerId)}/edit?band=${result}`);
 }
 
 export async function GET(request: NextRequest) {
-    const session = await auth();
+    let session;
+    try {
+        session = await auth();
+    } catch {
+        return redirectAndClear(request, bandAppUrl(request, '/login'));
+    }
 
     if (!session?.user?.id) {
         return redirectAndClear(
             request,
-            new URL('/login', request.url),
+            bandAppUrl(request, '/login'),
         );
     }
 
     const pending = request.cookies.get(COOKIE_NAME)?.value;
-    if (!pending) {
+    const returnedState = request.nextUrl.searchParams.get('state');
+    if (!pending || !returnedState || pending !== returnedState) {
         return redirectAndClear(
             request,
-            new URL('/centers?band=state-error', request.url),
+            bandAppUrl(request, '/centers?band=state-error'),
         );
     }
 
     let stateData: { centerId: string; userId: string };
     try {
-        stateData = await verifyBandOAuthState(pending);
+        stateData = await verifyBandOAuthState(returnedState);
 
         if (stateData.userId !== session.user.id) {
             throw new Error('OAuth user mismatch.');
@@ -56,16 +64,20 @@ export async function GET(request: NextRequest) {
     } catch {
         return redirectAndClear(
             request,
-            new URL('/centers?band=state-error', request.url),
+            bandAppUrl(request, '/centers?band=state-error'),
         );
     }
 
     const code = request.nextUrl.searchParams.get('code');
-    if (!code || request.nextUrl.searchParams.has('error')) {
+    if (!code?.trim() || request.nextUrl.searchParams.has('error')) {
         return redirectAndClear(
             request,
             editUrl(request, stateData.centerId, 'oauth-error'),
         );
+    }
+
+    if (!isBandConfigured()) {
+        return redirectAndClear(request, editUrl(request, stateData.centerId, 'not-configured'));
     }
 
     try {

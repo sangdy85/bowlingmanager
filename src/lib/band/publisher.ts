@@ -2,15 +2,17 @@ import prisma from '@/lib/prisma';
 import { PUBLIC_ORIGIN } from '@/lib/public-web';
 import { formatLane } from '@/lib/tournament-utils';
 import { getChampRoundResults } from '@/app/actions/champ-results';
-import { getIndividualLeaderboard, getLeagueLeaderboard } from '@/app/actions/league-leaderboard';
+import { getIndividualLeaderboard, getWeeklyLeagueReport } from '@/app/actions/league-leaderboard';
 import { BandApiError, bandErrorMessage, createPost, getPermissions } from './client';
 import { decryptBandToken } from './token-crypto';
 import { bandPostContentIssue, bandPostContentSize, BAND_POST_MAX_UTF8_BYTES } from './content-guard';
 import { createBandPreviewApproval, verifyBandPreviewApproval } from './preview-signature';
+import { getLeagueMatchTeamReport } from '@/lib/league-report';
 import { buildLeagueWeeklyPost, isLeagueWeekReady } from './league-weekly-content';
 import { buildFinalResultPost, buildLaneAssignmentPost, buildParticipantPost, buildRecruitmentPost } from './content';
 import type { BandPostType, BandPublishOutcome, FinalResultEntry } from './types';
 import { bandAutoPublishSkipReason, bandPostDedupeKey, nextBandPostRevision } from './policy';
+import { isBandConfigured, BAND_NOT_CONFIGURED_MESSAGE } from './config';
 
 type PublishInput = {
     tournamentId: string;
@@ -19,6 +21,8 @@ type PublishInput = {
     forceRevision?: boolean;
     previewOnly?: boolean;
     previewToken?: string;
+    week?: number;
+    doPush?: boolean;
 };
 
 function parseSettings(raw: string | null | undefined): Record<string, any> {
@@ -35,6 +39,7 @@ async function publishBuiltContent(input: PublishInput & {
     content: string;
     autoFlag: 'autoRecruitment' | 'autoFinalResult';
 }): Promise<BandPublishOutcome> {
+    if (!isBandConfigured()) return { status: 'SKIPPED', message: BAND_NOT_CONFIGURED_MESSAGE };
     const contentIssue = bandPostContentIssue(input.content);
     if (contentIssue) return { status: 'SKIPPED', message: contentIssue };
 
@@ -48,6 +53,7 @@ async function publishBuiltContent(input: PublishInput & {
         if (skipReason) return { status: 'SKIPPED', message: skipReason };
     }
 
+    const doPush = typeof input.doPush === 'boolean' ? input.doPush : connection.doPush === true;
     const latest = await db.bandPost.findFirst({
         where: { tournamentId: input.tournamentId, roundId: input.roundId || null, type: input.type },
         orderBy: { revision: 'desc' },
@@ -61,7 +67,7 @@ async function publishBuiltContent(input: PublishInput & {
         type: input.type,
         bandKey: connection.bandKey,
         bandName: connection.bandName || '',
-        doPush: connection.doPush === true,
+        doPush,
         content: input.content,
         latestRevision: latest?.revision ?? 0,
         latestStatus: latest?.status ?? null,
@@ -74,7 +80,7 @@ async function publishBuiltContent(input: PublishInput & {
             preview: {
                 bandName: connection.bandName || '이름 미등록 BAND',
                 bandKey: connection.bandKey,
-                doPush: connection.doPush === true,
+                doPush,
                 content: input.content,
                 contentBytes: bandPostContentSize(input.content),
                 maxContentBytes: BAND_POST_MAX_UTF8_BYTES,
@@ -127,7 +133,7 @@ async function publishBuiltContent(input: PublishInput & {
             accessToken,
             bandKey: connection.bandKey,
             content: input.content,
-            doPush: connection.doPush,
+            doPush,
         });
         await db.bandPost.update({
             where: { id: history.id },
@@ -439,45 +445,32 @@ export async function publishLeagueWeeklyResult(input: PublishInput): Promise<Ba
         return { status: 'SKIPPED', message: '해당 주차의 모든 경기가 완료된 후 BAND에 게시할 수 있습니다.' };
     }
 
-    // Official cumulative standings are calculated only up to the selected week.
-    const [leaderboard, individual] = await Promise.all([
-        getLeagueLeaderboard(tournament.id, round.roundNumber),
-        getIndividualLeaderboard(tournament.id, round.roundNumber),
-    ]);
+    if (input.week !== undefined && (!Number.isSafeInteger(input.week) || input.week !== round.roundNumber)) {
+        return { status: 'FAILED', message: '선택한 주차와 경기 정보가 일치하지 않습니다.' };
+    }
+    const { leaderboard, individual, roundInfo } = await getWeeklyLeagueReport(tournament.id, round.roundNumber);
+    if (roundInfo.id !== input.roundId || !isLeagueWeekReady(roundInfo.matchups)) {
+        return { status: 'SKIPPED', message: '선택한 주차의 모든 경기가 완료된 후 게시할 수 있습니다.' };
+    }
     const results = buildLeagueWeeklyPost({
-        tournamentName: tournament.name,
-        iteration: tournament.iteration,
-        week: round.roundNumber,
-        teams: leaderboard.teamStandings.map((team: any) => ({
-            name: team.name,
-            wins: team.wins,
-            losses: team.losses,
-            points: team.points,
-            totalPinfall: team.totalPinfall,
-        })),
-        individualByTeam: individual.teams.map((team: any) => ({
-            teamName: team.teamName,
-            players: team.players.map((player: any) => ({
-                name: player.name,
-                gamesCount: player.gamesCount,
-                totalHandicappedPins: player.totalHandicappedPins,
-            })),
-        })),
-        matches: round.matchups.map((match: any) => ({
-            teamA: `${match.teamA?.name || '부전승'}${match.teamASquad ? ` (${match.teamASquad})` : ''}`,
-            teamB: `${match.teamB?.name || '부전승'}${match.teamBSquad ? ` (${match.teamBSquad})` : ''}`,
-            pointsA: match.pointsA ?? 0,
-            pointsB: match.pointsB ?? 0,
-            scoresA: [match.scoreA1, match.scoreA2, match.scoreA3],
-            scoresB: [match.scoreB1, match.scoreB2, match.scoreB3],
-        })),
-        averageTop: individual.top30.map((player: any) => ({
-            name: player.name,
-            teamName: player.teamName,
-            gamesCount: player.gamesCount,
-            totalHandicappedPins: player.totalHandicappedPins,
-        })),
-        detailUrl: publicUrl(`/centers/${tournament.centerId}/tournaments/${tournament.id}`),
+        tournamentName: tournament.name, iteration: tournament.iteration, week: round.roundNumber,
+        teams: leaderboard.teamStandings, awards: leaderboard.awards,
+        awardMinGames: leaderboard.metadata.awardMinGames, reportNotice: leaderboard.metadata.reportNotice,
+        avgTopRankCount: individual.metadata.avgTopRankCount || 30,
+        individualByTeam: individual.teams,
+        matches: roundInfo.matchups.map((match: any) => {
+            const a = getLeagueMatchTeamReport(match, true, roundInfo.tournamentTeamHandicapLimit);
+            const b = getLeagueMatchTeamReport(match, false, roundInfo.tournamentTeamHandicapLimit);
+            return {
+                teamA: `${match.teamA?.name || '부전승'}${match.teamASquad ? ` (${match.teamASquad})` : ''}`,
+                teamB: `${match.teamB?.name || '부전승'}${match.teamBSquad ? ` (${match.teamBSquad})` : ''}`,
+                pointsA: match.pointsA ?? 0, pointsB: match.pointsB ?? 0,
+                scoresA: [a.g1, a.g2, a.g3], scoresB: [b.g1, b.g2, b.g3],
+                playersA: a.scores, playersB: b.scores, lanes: match.lanes,
+            };
+        }),
+        averageTop: individual.top30,
+        detailUrl: publicUrl(`/centers/${tournament.centerId}/tournaments/${tournament.id}?week=${round.roundNumber}`),
     });
 
     return publishBuiltContent({
@@ -506,6 +499,7 @@ export async function republishBandPost(input: PublishInput & { type: BandPostTy
 }
 
 export async function sendBandTestPost(centerId: string): Promise<BandPublishOutcome> {
+    if (!isBandConfigured()) return { status: 'SKIPPED', message: BAND_NOT_CONFIGURED_MESSAGE };
     const connection = await (prisma as any).bandConnection.findUnique({
         where: { centerId }, include: { center: { select: { name: true } } },
     });

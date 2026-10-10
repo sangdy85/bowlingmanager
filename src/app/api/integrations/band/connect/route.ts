@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { verifyCenterAdmin } from '@/lib/auth-utils';
 import { buildBandAuthorizationUrl, createBandOAuthState } from '@/lib/band/auth';
+import { isBandConfigured } from '@/lib/band/config';
+import { bandAppUrl } from '@/lib/band/redirect';
 
 const COOKIE_NAME = 'bowling_band_oauth';
 
@@ -10,17 +12,21 @@ export async function GET(request: NextRequest) {
     const session = await auth();
 
     if (!session?.user?.id) {
-        return NextResponse.redirect(new URL('/login', request.url));
+        return NextResponse.redirect(bandAppUrl(request, '/login'));
     }
-    if (!centerId) {
+    if (!centerId?.trim()) {
         return NextResponse.json({ error: 'centerId가 필요합니다.' }, { status: 400 });
     }
 
     try {
         await verifyCenterAdmin(centerId);
 
+        if (!isBandConfigured()) {
+            return NextResponse.redirect(bandAppUrl(request, `/centers/${encodeURIComponent(centerId)}/edit?band=not-configured`));
+        }
+
         const pending = await createBandOAuthState(centerId, session.user.id);
-        const response = NextResponse.redirect(buildBandAuthorizationUrl());
+        const response = NextResponse.redirect(buildBandAuthorizationUrl(pending));
 
         response.cookies.set(COOKIE_NAME, pending, {
             httpOnly: true,
@@ -33,7 +39,7 @@ export async function GET(request: NextRequest) {
         return response;
     } catch {
         return NextResponse.redirect(
-            new URL(`/centers/${centerId}/edit?band=connect-error`, request.url),
+            bandAppUrl(request, `/centers/${encodeURIComponent(centerId)}/edit?band=connect-error`),
         );
     }
 }

@@ -12,8 +12,8 @@ type SafeConnection = {
     connectedAt: string;
 } | null;
 
-export default function BandIntegrationSettings({ centerId, connection, oauthResult }: {
-    centerId: string; connection: SafeConnection; oauthResult?: string;
+export default function BandIntegrationSettings({ centerId, connection, oauthResult, configured }: {
+    centerId: string; connection: SafeConnection; oauthResult?: string; configured: boolean;
 }) {
     const router = useRouter();
     const [bands, setBands] = useState<BandSummary[]>([]);
@@ -56,8 +56,9 @@ export default function BandIntegrationSettings({ centerId, connection, oauthRes
             <div><h2 id="band-settings-title" className={styles.title}>NAVER BAND 자동 게시</h2><p className={styles.description}>기본값은 자동 게시 꺼짐입니다. 필요한 시점에 관리자가 별도로 자동 게시를 활성화할 수 있습니다.</p></div>
             {connection && <span className={styles.badge}>연결됨</span>}
         </div>
+        {!configured && <p className={styles.message} role="status">NAVER BAND 연동 준비 중입니다. 앱 승인과 운영 설정이 완료되면 연결·게시 기능을 사용할 수 있습니다.</p>}
         {message && <p className={`${styles.message} ${isError ? styles.error : ''}`}>{message}</p>}
-        {!connection ? <a className={styles.button} href={`/api/integrations/band/connect?centerId=${encodeURIComponent(centerId)}`}>NAVER BAND 연결</a> : <div className={styles.stack}>
+        {!configured ? <button type="button" className={styles.button} disabled>BAND 연결·게시 준비 중</button> : !connection ? <a className={styles.button} href={`/api/integrations/band/connect?centerId=${encodeURIComponent(centerId)}`}>NAVER BAND 연결</a> : <div className={styles.stack}>
             <div className={styles.box}>
                 <p><strong>게시 BAND:</strong> {connection.bandName || '선택 전'}</p>
                 <div className={styles.row}>
