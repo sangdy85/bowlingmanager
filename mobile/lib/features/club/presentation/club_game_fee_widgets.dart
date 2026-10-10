@@ -46,7 +46,9 @@ class ClubGameFeeActions extends StatelessWidget {
                 FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('요청 취소')),
               ],
             ));
-            if (cancel == true && context.mounted) await onAction(<String, dynamic>{'action': 'CANCEL_REQUEST', 'revision': fee.revision});
+            if (cancel == true && context.mounted) {
+              await onAction(<String, dynamic>{'action': 'CANCEL_REQUEST', 'revision': fee.revision});
+            }
           },
           child: const Text('확인 요청 취소'),
         ),
@@ -79,12 +81,14 @@ class ClubGameFeeActions extends StatelessWidget {
         ),
       ],
     ));
-    if (done == true && context.mounted) await onAction(<String, dynamic>{
-      'action': transfer ? 'REQUEST_TRANSFER' : 'REQUEST_CASH',
-      'revision': event.myGameFee.revision,
-      if (transfer) 'accountId': account!.id,
-      if (transfer) 'accountRevision': account!.revision,
-    });
+    if (done == true && context.mounted) {
+      await onAction(<String, dynamic>{
+        'action': transfer ? 'REQUEST_TRANSFER' : 'REQUEST_CASH',
+        'revision': event.myGameFee.revision,
+        if (transfer) 'accountId': account!.id,
+        if (transfer) 'accountRevision': account!.revision,
+      });
+    }
   }
 }
 
@@ -126,11 +130,13 @@ class ClubGameFeeAdminStatus extends StatelessWidget {
         FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(transfer ? '입금 확인' : '현장 결제 확인')),
       ],
     ));
-    if (confirmed == true && context.mounted) await onAction(<String, dynamic>{
-      'action': transfer ? 'CONFIRM_TRANSFER' : 'CONFIRM_CASH',
-      'memberId': item.memberId,
-      'revision': fee.revision,
-    });
+    if (confirmed == true && context.mounted) {
+      await onAction(<String, dynamic>{
+        'action': transfer ? 'CONFIRM_TRANSFER' : 'CONFIRM_CASH',
+        'memberId': item.memberId,
+        'revision': fee.revision,
+      });
+    }
   }
 }
 
@@ -147,7 +153,9 @@ class PaymentAccountDetails extends StatelessWidget {
       TextButton.icon(
         onPressed: () async {
           await Clipboard.setData(ClipboardData(text: account.accountNumber));
-          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('계좌번호를 복사했습니다.')));
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('계좌번호를 복사했습니다.')));
+          }
         },
         icon: const Icon(Icons.copy_outlined), label: const Text('계좌번호 복사'),
       ),

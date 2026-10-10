@@ -17,7 +17,9 @@ class ClubPaymentAccountsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authControllerProvider).user;
-    if (user == null) return const Center(child: CircularProgressIndicator());
+    if (user == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
     final provider = clubPaymentAccountsProvider((userId: user.id, teamId: teamId));
     return Scaffold(
       appBar: AppBar(title: const Text('회비 및 게임비 계좌 설정')),
@@ -28,7 +30,7 @@ class ClubPaymentAccountsScreen extends ConsumerWidget {
           TextButton(onPressed: () => ref.invalidate(provider), child: const Text('다시 시도')),
         ])),
         data: (accounts) => RefreshIndicator(
-          onRefresh: () async { await ref.refresh(provider.future); },
+          onRefresh: () => ref.refresh(provider.future),
           child: ListView(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.all(20), children: <Widget>[
             const Text('회원에게 안내할 은행명, 계좌번호, 예금주를 설정합니다.'),
             const SizedBox(height: 16),
@@ -120,7 +122,9 @@ class _AccountEditorState extends ConsumerState<_AccountEditor> {
     ),
   );
   Future<void> _save() async {
-    if (!_form.currentState!.validate()) return;
+    if (!_form.currentState!.validate()) {
+      return;
+    }
     setState(() { _saving = true; _error = null; });
     try {
       await ref.read(clubEventsApiProvider).savePaymentAccount(widget.teamId, <String, dynamic>{
@@ -132,11 +136,13 @@ class _AccountEditorState extends ConsumerState<_AccountEditor> {
         Navigator.pop(context, true);
       }
     } on Object catch (error) {
-      if (mounted) setState(() {
-        _saving = false;
-        _error = error is ApiException ? error.userMessage : clubErrorMessage(error);
-        _staleAccount = error is ApiException && error.code == 'STALE_ACCOUNT';
-      });
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = error is ApiException ? error.userMessage : clubErrorMessage(error);
+          _staleAccount = error is ApiException && error.code == 'STALE_ACCOUNT';
+        });
+      }
     }
   }
 
@@ -144,7 +150,9 @@ class _AccountEditorState extends ConsumerState<_AccountEditor> {
     setState(() => _saving = true);
     try {
       final accounts = await ref.read(clubEventsApiProvider).fetchPaymentAccounts(widget.teamId);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final matching = accounts.where((account) => account.kind == widget.kind);
       final account = matching.isEmpty ? null : matching.first;
       setState(() {
@@ -157,10 +165,12 @@ class _AccountEditorState extends ConsumerState<_AccountEditor> {
         _saving = false;
       });
     } on Object catch (error) {
-      if (mounted) setState(() {
-        _saving = false;
-        _error = error is ApiException ? error.userMessage : clubErrorMessage(error);
-      });
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = error is ApiException ? error.userMessage : clubErrorMessage(error);
+        });
+      }
     }
   }
 }

@@ -43,15 +43,23 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> w
   }
 
   void _refreshPaymentState() {
-    if (!mounted || _working || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed ||
-        ModalRoute.of(context)?.isCurrent != true) return;
+    if (!mounted ||
+        _working ||
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed ||
+        ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
     final user = ref.read(authControllerProvider).user;
-    if (user != null) ref.invalidate(clubEventProvider((userId: user.id, teamId: widget.teamId, eventId: widget.eventId)));
+    if (user != null) {
+      ref.invalidate(clubEventProvider((userId: user.id, teamId: widget.teamId, eventId: widget.eventId)));
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _refreshPaymentState();
+    if (state == AppLifecycleState.resumed) {
+      _refreshPaymentState();
+    }
   }
 
   @override
