@@ -175,6 +175,8 @@ model Team {
   seasonFinalTemplates         SeasonFinalTemplate[]
   charges                      TeamCharge[]
   eventAdminAudits             TeamEventAdminAudit[]
+  paymentAccounts              TeamPaymentAccount[]
+  gameFeeAudits                TeamGameFeeAudit[]
 }
 
 model TeamSeason {
@@ -829,6 +831,20 @@ model EventCompetitionVotePick {
   @@index([selectedParticipantId])
 }
 
+model TeamPaymentAccount {
+  id            String   @id @default(cuid())
+  teamId        String
+  kind          String
+  bankName      String
+  accountNumber String
+  holderName    String
+  revision      Int      @default(1)
+  updatedAt     DateTime @updatedAt
+  team          Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, kind])
+}
+
 model TeamEventAttendance {
   id                  String      @id @default(cuid())
   eventId             String
@@ -837,6 +853,13 @@ model TeamEventAttendance {
   status              String      @default("UNANSWERED")
   manualGroupingScore Int?
   manualGroup         String?
+  gameFeeStatus       String      @default("UNPAID")
+  gameFeeRevision     Int         @default(0)
+  gameFeeRequestedAt  DateTime?
+  gameFeeConfirmedAt  DateTime?
+  gameFeeConfirmedBy  String?
+  gameFeeAccountJson  String?
+  gameFeeAudits       TeamGameFeeAudit[]
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
   event               TeamEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -1297,4 +1320,26 @@ model Inquiry {
   author    User     @relation(fields: [authorId], references: [id])
   status    String   @default("PENDING") // PENDING, ANSWERED
   answer    String?
+}
+
+model TeamGameFeeAudit {
+  id              String               @id @default(cuid())
+  teamId          String
+  attendanceId    String?
+  eventSnapshotId String
+  eventTitle      String
+  memberId        String
+  memberName      String
+  actorUserId     String
+  action          String
+  previousStatus  String
+  nextStatus      String
+  revision        Int
+  accountJson     String?
+  createdAt       DateTime             @default(now())
+  team            Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  attendance      TeamEventAttendance? @relation(fields: [attendanceId], references: [id], onDelete: SetNull)
+
+  @@unique([attendanceId, revision])
+  @@index([teamId, eventSnapshotId, createdAt])
 }
