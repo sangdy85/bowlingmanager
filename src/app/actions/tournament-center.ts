@@ -6,9 +6,18 @@ import { parseKSTDate } from "@/lib/tournament-utils";
 import { redirect } from "next/navigation";
 import { verifyCenterAdmin } from "@/lib/auth-utils";
 import { publishTournamentFinalResult, publishTournamentRecruitment } from "@/lib/band/publisher";
+import { createKingPerfect } from '@/lib/king-perfect/service';
+import { isKingPerfect } from '@/lib/king-perfect/rules';
 
 export async function createTournament(centerId: string, formData: FormData) {
-    await verifyCenterAdmin(centerId);
+    const actorId = await verifyCenterAdmin(centerId);
+
+    if (formData.get('customMode') === 'KING_PERFECT') {
+        if (formData.get('type') !== 'CUSTOM') throw new Error('킹퍼펙트는 CUSTOM 유형이어야 합니다.');
+        const id = await createKingPerfect(actorId, centerId, String(formData.get('name') || ''), String(formData.get('month') || ''), String(formData.get('requestKey') || ''));
+        revalidatePath(`/centers/${centerId}`);
+        redirect(`/centers/${centerId}/tournaments/${id}`);
+    }
 
     const type = formData.get("type") as string;
     const iterationStr = formData.get("iteration") as string;
@@ -128,11 +137,12 @@ export async function updateTournamentStatus(tournamentId: string, status: strin
 
     const tournament = await prisma.tournament.findUnique({
         where: { id: tournamentId },
-        select: { centerId: true, status: true, type: true }
+        select: { centerId: true, status: true, type: true, settings: true }
     });
 
     if (!tournament) throw new Error("Tournament not found");
     const actorId = await verifyCenterAdmin(tournament.centerId);
+    if (isKingPerfect(tournament.type, tournament.settings)) throw new Error('킹퍼펙트 상태는 전용 일정운영에서 변경하세요.');
 
     await prisma.tournament.update({
         where: { id: tournamentId },
@@ -247,13 +257,14 @@ export async function deleteTournamentAttachment(attachmentId: string) {
 export async function updateGrandFinaleSettings(tournamentId: string, grandFinaleSettings: any) {
     const tournament = await (prisma.tournament as any).findUnique({
         where: { id: tournamentId },
-        select: { centerId: true, settings: true }
+        select: { centerId: true, settings: true, type: true }
     });
 
     if (!tournament) throw new Error("Tournament not found");
     await verifyCenterAdmin(tournament.centerId);
 
     const currentSettings = tournament.settings ? JSON.parse(tournament.settings) : {};
+    if (isKingPerfect(tournament.type, tournament.settings)) throw new Error('킹퍼펙트 설정은 전용 화면에서 변경하세요.');
     const newSettings = {
         ...currentSettings,
         ...grandFinaleSettings
@@ -276,6 +287,7 @@ export async function updateTournamentBasicInfo(tournamentId: string, formData: 
 
     if (!tournament) throw new Error("Tournament not found");
     await verifyCenterAdmin(tournament.centerId);
+    if (isKingPerfect(tournament.type, tournament.settings)) throw new Error('킹퍼펙트 설정은 전용 화면에서 변경하세요.');
 
     const name = formData.get("name") as string;
     const startDateRaw = formData.get("startDate") as string;

@@ -62,6 +62,8 @@ test('상주리그 상태 변경은 일반 모집·최종 결과 자동 게시�
         update: async () => undefined,
     }};
     const actions = loadTs('src/app/actions/tournament-center.ts', {
+        '@/lib/king-perfect/service': { createKingPerfect: async () => { throw new Error('Legacy tournament must not create KING_PERFECT'); } },
+        '@/lib/king-perfect/rules': loadTs('src/lib/king-perfect/rules.ts'),
         '@/lib/prisma': { __esModule: true, default: prisma },
         'next/cache': { revalidatePath() {} },
         'next/navigation': { redirect() {} },

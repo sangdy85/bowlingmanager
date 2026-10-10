@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
 import Link from 'next/link';
 import controls from './CenterControls.module.css';
@@ -27,7 +27,10 @@ function SubmitButton() {
     );
 }
 
-export default function NewTournamentForm({ centerId }: { centerId: string }) {
+export default function NewTournamentForm({ centerId, kingPerfectEnabled = false }: { centerId: string; kingPerfectEnabled?: boolean }) {
+    const [customMode, setCustomMode] = useState('GENERAL');
+    const [requestKey, setRequestKey] = useState('');
+    useEffect(() => setRequestKey(crypto.randomUUID()), []);
     const [type, setType] = useState('LEAGUE');
     const [iteration, setIteration] = useState(1);
     const [gameMode, setGameMode] = useState('INDIVIDUAL');
@@ -74,7 +77,7 @@ export default function NewTournamentForm({ centerId }: { centerId: string }) {
                     <option value="LEAGUE">상주리그 (팀 대항 풀리그)</option>
                     <option value="CHAMP">챔프전</option>
                     <option value="EVENT">이벤트전 (단발성 경기)</option>
-                    <option value="CUSTOM">커스텀 모드 (별도 개발 예정)</option>
+                    <option value="CUSTOM">커스텀 모드</option>
                 </select>
             </div>
 
@@ -212,6 +215,21 @@ export default function NewTournamentForm({ centerId }: { centerId: string }) {
 
             {type === 'CUSTOM' ? (
                 <div className="card p-8 bg-teal-50 border-teal-200">
+                    <label className="label">전용 모드
+                        <select name="customMode" className="input" value={customMode} onChange={e => setCustomMode(e.target.value)}>
+                            <option value="GENERAL">일반 커스텀 모드</option>
+                            {kingPerfectEnabled && <option value="KING_PERFECT">킹퍼펙트 (KING PERFECT)</option>}
+                        </select>
+                    </label>
+                    {customMode === 'KING_PERFECT' && <div className="card p-4">
+                        <strong>♛ KING PERFECT · 본선 24명</strong>
+                        <p>매월 셋째 일요일 19:00 · 연습 18:50 (한국시간)</p>
+                        <p>예선 1,000원 / 본선 단계별 10,000원 / 결승 핸디 0</p>
+                        <label className="label">첫 회차 월<input className="input" name="month" type="month" required /></label>
+                        <input type="hidden" name="requestKey" value={requestKey} />
+                        <p>생성 후 예선 반영 방식, 게임 수, 2R 매핑을 관리자 설정에서 확인하세요.</p>
+                    </div>}
+                    {customMode !== 'KING_PERFECT' && <>
                     <h3 className="text-xl font-bold text-teal-800 mb-4">🛠️ 커스텀 모드 개발 안내</h3>
                     <p className="text-teal-700 leading-relaxed mb-6">
                         본 유형은 센터의 요구사항에 맞춰 <strong>별도로 개발되는 특별한 대회 모드</strong>입니다.<br />
@@ -224,6 +242,7 @@ export default function NewTournamentForm({ centerId }: { centerId: string }) {
                         </a>
                     </div>
 
+                    </>}
                     <div className="space-y-4">
                         <div>
                             <label className="label">대회 명칭 (관리용)</label>

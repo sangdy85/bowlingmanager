@@ -22,8 +22,10 @@ import { getLeagueLeaderboard, getIndividualLeaderboard } from "@/app/actions/le
 import { getEffectiveRoundDate, calculateTournamentStatus } from "@/lib/tournament-utils";
 import styles from "./TournamentDetail.module.css";
 import { isBandConfigured } from "@/lib/band/config";
+import { isKingPerfect } from '@/lib/king-perfect/rules';
+import KingPerfectPage from '@/components/tournaments/KingPerfectPage';
 
-export default async function TournamentDetailPage({ params }: { params: Promise<{ id: string, tournamentId: string }> }) {
+export default async function TournamentDetailPage({ params, searchParams }: { params: Promise<{ id: string, tournamentId: string }>; searchParams: Promise<{ edition?: string }> }) {
     const { id: centerId, tournamentId } = await params;
     const session = await auth();
 
@@ -70,7 +72,10 @@ export default async function TournamentDetailPage({ params }: { params: Promise
         }
     })) as any;
 
-    if (!tournament) notFound();
+    if (!tournament || tournament.centerId !== centerId) notFound();
+    if (isKingPerfect(tournament.type, tournament.settings)) {
+        return <KingPerfectPage tournamentId={tournamentId} centerId={centerId} editionId={(await searchParams).edition} />;
+    }
 
     const now = new Date();
 

@@ -1049,6 +1049,7 @@ model Tournament {
   attachments            TournamentAttachment[]
   registrations          TournamentRegistration[]
   bandPosts              BandPost[]               @relation("TournamentBandPosts")
+  kingPerfectEditions    KingPerfectEdition[]
 }
 
 model TournamentAttachment {
@@ -1243,8 +1244,158 @@ model CenterMember {
   BowlingCenter BowlingCenter @relation(fields: [centerId], references: [id], onDelete: Cascade)
   User          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   Team          Team?         @relation(fields: [teamId], references: [id])
+  kingPerfectEntries KingPerfectEntry[]
 
   @@unique([userId, centerId])
+}
+
+// Dedicated competition data; never shares LeagueRound scores or advancement.
+model KingPerfectEdition {
+  id           String @id @default(cuid())
+  tournamentId String
+  month        String
+  startsAt     DateTime
+  practiceAt   DateTime
+  state        String @default("QUALIFYING_OPEN")
+  revision     Int @default(0)
+  rules        String
+  published    Boolean @default(false)
+  settlement   String?
+  createdAt    DateTime @default(now())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Restrict)
+  entries      KingPerfectEntry[]
+  matches      KingPerfectMatch[]
+  audits       KingPerfectAudit[]
+  @@unique([tournamentId, month])
+}
+
+model KingPerfectEntry {
+  id           String @id @default(cuid())
+  editionId    String
+  memberId     String
+  name         String
+  handicap     Int
+  eligibility  String @default("PENDING")
+  athlete      Boolean @default(false)
+  cancelled    Boolean @default(false)
+  edition      KingPerfectEdition @relation(fields: [editionId], references: [id], onDelete: Restrict)
+  member       CenterMember @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  attempts     KingPerfectAttempt[]
+  seed         KingPerfectSeed?
+  seats        KingPerfectSeat[]
+  fees         KingPerfectFee[]
+  sideEntries  KingPerfectSideEntry[]
+  luckyWin     KingPerfectLuckyWin?
+  @@unique([editionId, memberId])
+}
+
+model KingPerfectAttempt {
+  id           String @id @default(cuid())
+  entryId      String
+  requestKey   String @unique
+  raw          Int
+  handicap     Int
+  converted    Int
+  voided       Boolean @default(false)
+  createdAt    DateTime @default(now())
+  entry        KingPerfectEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  @@index([entryId, createdAt])
+}
+
+model KingPerfectSeed {
+  id           String @id @default(cuid())
+  editionId    String
+  entryId      String @unique
+  position     Int
+  attemptId    String
+  raw          Int
+  handicap     Int
+  converted    Int
+  entry        KingPerfectEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  @@unique([editionId, position])
+}
+
+model KingPerfectMatch {
+  id           String @id @default(cuid())
+  editionId    String
+  stage        String
+  slot         Int
+  tableIndex   Int
+  lanes        String
+  confirmed    Boolean @default(false)
+  edition      KingPerfectEdition @relation(fields: [editionId], references: [id], onDelete: Restrict)
+  seats        KingPerfectSeat[]
+  @@unique([editionId, stage, slot])
+}
+
+model KingPerfectSeat {
+  id           String @id @default(cuid())
+  matchId      String
+  entryId      String
+  position     Int
+  handicap     Int
+  rawTotal     Int?
+  total        Int?
+  rank         Int?
+  match        KingPerfectMatch @relation(fields: [matchId], references: [id], onDelete: Restrict)
+  entry        KingPerfectEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  games        KingPerfectGame[]
+  @@unique([matchId, entryId])
+  @@unique([matchId, position])
+}
+
+model KingPerfectGame {
+  id           String @id @default(cuid())
+  seatId       String
+  number       Int
+  raw          Int?
+  converted    Int?
+  seat         KingPerfectSeat @relation(fields: [seatId], references: [id], onDelete: Restrict)
+  @@unique([seatId, number])
+}
+
+model KingPerfectFee {
+  id           String @id @default(cuid())
+  entryId      String
+  source       String
+  stage        String
+  amount       Int
+  status       String @default("UNPAID")
+  entry        KingPerfectEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  @@unique([entryId, source])
+  @@index([stage, status])
+}
+
+model KingPerfectAudit {
+  id           String @id @default(cuid())
+  editionId    String
+  requestKey   String
+  actorId      String
+  action       String
+  reason       String
+  payload      String
+  before       String
+  after        String
+  createdAt    DateTime @default(now())
+  edition      KingPerfectEdition @relation(fields: [editionId], references: [id], onDelete: Restrict)
+  @@unique([editionId, requestKey])
+  @@index([editionId, createdAt])
+}
+
+model KingPerfectSideEntry {
+  id           String @id @default(cuid())
+  entryId      String
+  stage        String
+  category     String
+  entry        KingPerfectEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  @@unique([entryId, stage, category])
+}
+
+model KingPerfectLuckyWin {
+  id           String @id @default(cuid())
+  entryId      String @unique
+  createdAt    DateTime @default(now())
+  entry        KingPerfectEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
 }
 
 model LeagueMatchupIndividualScore {

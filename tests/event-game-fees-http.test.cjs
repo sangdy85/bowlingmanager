@@ -133,7 +133,18 @@ test('real HTTP game fee lifecycle, authentication, privacy and conflicts', { ti
       const stopped = once(server, 'exit');
       if (process.platform === 'win32') {
         // Next's dev worker is a child process; stop only this test's process tree.
-        execFileSync('taskkill', ['/PID', String(server.pid), '/T', '/F'], { stdio: 'ignore' });
+        try {
+          execFileSync('taskkill', ['/PID', String(server.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
+        } catch (error) {
+          // A Next worker can exit between the exitCode check and taskkill.
+          // Ignore only a proven already-exited parent, never access-denied/live failures.
+          try { process.kill(server.pid, 0); }
+          catch (probe) { if (probe.code !== 'ESRCH') throw error; }
+          if (server.exitCode === null) {
+            try { process.kill(server.pid, 0); throw error; }
+            catch (probe) { if (probe.code !== 'ESRCH') throw error; }
+          }
+        }
       } else {
         server.kill('SIGTERM');
       }

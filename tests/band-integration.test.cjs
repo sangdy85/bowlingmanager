@@ -113,6 +113,8 @@ test('BAND API 실패여도 Tournament 상태 변경은 성공한 채 유지된�
     update: async () => { updated = true; },
   } };
   const actions = loadTs('src/app/actions/tournament-center.ts', {
+    '@/lib/king-perfect/service': { createKingPerfect: async () => { throw new Error('Legacy tournament must not create KING_PERFECT'); } },
+    '@/lib/king-perfect/rules': loadTs('src/lib/king-perfect/rules.ts'),
     '@/lib/prisma': { __esModule: true, default: prisma },
     'next/cache': { revalidatePath() {} },
     'next/navigation': { redirect() {} },
