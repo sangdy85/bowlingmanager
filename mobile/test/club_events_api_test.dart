@@ -12,6 +12,40 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('payment accounts and game fee report use scoped paths and preserve revisions', () async {
+    final requests = <RequestOptions>[];
+    final dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
+      ..httpClientAdapter = _Adapter((options) {
+        requests.add(options);
+        return _json(200, <String, Object>{
+          'success': true,
+          'data': options.method == 'GET' ? <String, Object>{
+            'accounts': <Object>[<String, Object>{
+              'id': 'account-1', 'kind': 'GAME_FEE', 'bankName': '카카오뱅크',
+              'accountNumber': '3333121234567', 'holderName': '총무', 'revision': 2,
+            }],
+          } : <String, Object>{'status': 'TRANSFER_REQUESTED'},
+        });
+      });
+    final api = ClubEventsApi(dio);
+    final accounts = await api.fetchPaymentAccounts('team/1');
+    expect(accounts.single.revision, 2);
+    await api.savePaymentAccount('team/1', <String, dynamic>{
+      'kind': 'DUES', 'bankName': '카카오뱅크', 'accountNumber': '111122223333',
+      'holderName': '총무', 'revision': 0,
+    });
+    await api.updateGameFee('team/1', 'event/1', <String, dynamic>{
+      'action': 'REQUEST_TRANSFER', 'revision': 0, 'accountId': 'account-1', 'accountRevision': 2,
+    });
+    expect(requests.map((request) => '${request.method} ${request.path}'), <String>[
+      'GET /teams/team%2F1/payment-accounts',
+      'PUT /teams/team%2F1/payment-accounts',
+      'POST /teams/team%2F1/events/event%2F1/game-fee',
+    ]);
+    expect((requests.last.data as Map)['accountRevision'], 2);
+    expect((requests.last.data as Map).containsKey('memberId'), isFalse);
+  });
+
   test('uses protected team event paths for list and mutations', () async {
     final List<RequestOptions> requests = <RequestOptions>[];
     final Dio dio = Dio(BaseOptions(baseUrl: 'https://example.test'))

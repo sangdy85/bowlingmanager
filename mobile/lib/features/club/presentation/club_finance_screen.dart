@@ -39,6 +39,14 @@ class ClubFinanceScreen extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
             children: <Widget>[
+              Card(child: ListTile(
+                leading: const Icon(Icons.payments_outlined),
+                title: const Text('게임비 결제 확인'),
+                subtitle: const Text('일정 상세에서 입금·현장 결제를 신고하고 관리자가 확인합니다.'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push('/club/${Uri.encodeComponent(teamId)}/events'),
+              )),
+              const SizedBox(height: 16),
               if (envelope.canManage) ...<Widget>[
                 _ManagerDashboard(request: request),
                 const SizedBox(height: 16),
@@ -48,7 +56,7 @@ class ClubFinanceScreen extends ConsumerWidget {
                     '/club/${Uri.encodeComponent(teamId)}/finance/new',
                   ),
                   icon: const Icon(Icons.add_rounded),
-                  label: const Text('새 회비/게임비'),
+                  label: const Text('새 회비/기타 정산'),
                 ),
               ] else
                 _MemberOverview(charges: envelope.charges),

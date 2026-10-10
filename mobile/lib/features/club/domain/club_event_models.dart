@@ -1,3 +1,4 @@
+import 'package:bowlingmanager_mobile/features/club/domain/club_payment_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 
 enum ClubEventAttendance {
@@ -541,15 +542,18 @@ class ClubEventAttendanceItem {
     required this.memberId,
     required this.name,
     required this.status,
+    this.gameFee,
   });
   final String memberId;
   final String name;
   final ClubEventAttendance status;
+  final ClubGameFee? gameFee;
   factory ClubEventAttendanceItem.fromJson(Map<String, dynamic> json) =>
       ClubEventAttendanceItem(
         memberId: _requiredString(json['memberId']),
         name: _requiredString(json['name']),
         status: ClubEventAttendance.fromJson(json['status']),
+        gameFee: json['gameFee'] == null ? null : ClubGameFee.fromJson(_map(json['gameFee'])),
       );
 }
 
@@ -577,6 +581,8 @@ class ClubEvent {
     required this.attendance,
     this.bowlerHiddenEnabled = false,
     this.competition,
+    this.myGameFee = const ClubGameFee(),
+    this.gameFeeAccount,
   });
 
   final String id;
@@ -601,6 +607,8 @@ class ClubEvent {
   final List<ClubEventAttendanceItem>? attendance;
   final bool bowlerHiddenEnabled;
   final ClubCompetitionConfig? competition;
+  final ClubGameFee myGameFee;
+  final ClubPaymentAccount? gameFeeAccount;
 
   bool get canManage => myRole == ClubRole.owner || myRole == ClubRole.manager;
   bool get isLocked => laneDrawStatus != ClubEventDrawStatus.notStarted;
@@ -617,6 +625,8 @@ class ClubEvent {
       throw const FormatException('Invalid event response.');
     }
     return ClubEvent(
+      myGameFee: json['myGameFee'] == null ? const ClubGameFee() : ClubGameFee.fromJson(_map(json['myGameFee'])),
+      gameFeeAccount: json['gameFeeAccount'] == null ? null : ClubPaymentAccount.fromJson(_map(json['gameFeeAccount'])),
       id: _requiredString(json['id']),
       teamId: _requiredString(json['teamId']),
       teamName: json['teamName'] as String?,

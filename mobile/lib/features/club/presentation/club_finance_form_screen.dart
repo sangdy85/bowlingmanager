@@ -125,7 +125,7 @@ class _State extends ConsumerState<ClubFinanceFormScreen> {
       }
     }
     return Scaffold(
-      appBar: AppBar(title: Text(editing == null ? '새 회비/게임비' : '초안 수정')),
+      appBar: AppBar(title: Text(editing == null ? '새 회비/기타 정산' : '초안 수정')),
       body: Form(
         key: _form,
         child: ListView(
@@ -136,6 +136,7 @@ class _State extends ConsumerState<ClubFinanceFormScreen> {
               initialValue: _type,
               decoration: const InputDecoration(labelText: '종류'),
               items: ClubChargeType.values
+                  .where((value) => editing != null || value != ClubChargeType.eventFee)
                   .map(
                     (ClubChargeType value) => DropdownMenuItem(
                       value: value,

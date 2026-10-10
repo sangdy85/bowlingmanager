@@ -105,6 +105,16 @@ class ClubManagementScreen extends ConsumerWidget {
                     '/club/${Uri.encodeComponent(teamId)}/manage/team',
                   ),
                 ),
+                const SizedBox(height: 12),
+                _ManagementLink(
+                  key: const Key('management-payment-accounts-link'),
+                  icon: Icons.account_balance_outlined,
+                  title: '회비 및 게임비 계좌 설정',
+                  subtitle: '회비 계좌와 게임비 입금 계좌를 각각 설정합니다.',
+                  onTap: () => context.push(
+                    '/club/${Uri.encodeComponent(teamId)}/manage/payment-accounts',
+                  ),
+                ),
               ],
             );
           },
