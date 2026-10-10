@@ -112,3 +112,31 @@
 - 수정 후 typecheck 성공, 전체 lint 오류 0/기존 경고 18, diff 검사 통과.
 - 서버 읽기 전용 확인: 기준 runtime 파일 431개 일치, 기존 API 84개, PM2 online 및 systemd active/enabled, DB quick_check 정상. 실제 장안퍼펙트볼링센터 ID를 확인했다.
 - 신규 migration은 11개 전용 테이블 추가만 수행하며 기존 테이블 변경은 없다. 적용 전 운영 DB 복사본에서 먼저 검증한다.
+
+## 2026-10-11 운영 반영 완료
+사용자가 후속 요청에서 운영 서버 배포를 명시적으로 승인했다. 아래 결과가 현재 적용 상태이며 앞 절의 비배포 기록은 최초 로컬 구현 시점의 이력이다.
+
+- 기능 소스 커밋: e433243507ae563d407fc8066e0613a79cc88898 (codex/king-perfect-local).
+- 릴리스: king-perfect-20261011. 실제 운영 Build: UhQgjt0yt24gAnqroTq3f.
+- 운영 경로: /home/user/bowling-score-manager. 원격 main/Git baseline을 강제로 갱신하지 않고 기존 배포 방식을 유지했다.
+- 운영 소스 431개를 기준과 대조한 뒤 변경 runtime 파일 12개만 반영했다. 기존 API 경로 84개를 보존했다.
+- 활성화 센터: 장안퍼펙트볼링센터, cmlrk8r4v0001vmo41ax1m8e7. KING_PERFECT_CENTER_IDS에 이 ID만 설정했고 PM2 저장 설정도 확인했다.
+- 신규 migration 20261010100000_add_king_perfect 1개 적용: 전용 테이블 11개 추가, 완료 migration 총 23개. 기존 테이블 데이터 건수 유지와 DB quick_check=ok 확인.
+- 테스트 참가자·예선·대회 기록은 운영에 생성하지 않았다. 운영 KING_PERFECT 회차/참가자 수는 검증 시점에 0.
+- 서버의 별도 복사본에서 migration→Prisma generate→Next production build→HTTP 검증을 통과한 후 전환했다. 전환 직전 다시 DB 백업을 만들었다.
+- 실제 PM2 bowling-manager online, pm2-user.service active/enabled. upstream·Nginx·외부 www 홈/로그인/센터/기존 공개 대회/모바일 health/정적 JS 모두 200. 기본 도메인은 정상 www 308 redirect.
+- 검증 구간 새 앱 오류 0건. 운영 로그인 계정으로 생성/점수 입력을 직접 수행하지는 않았다. 이 작업은 격리 로그인 fixture와 서비스 통합 테스트에서 검증했다.
+- 실제 BAND OAuth/게시/푸시는 실행하지 않았고 기존 환경값·업로드·운영 데이터를 보존했다.
+- 마지막 기능 수정 후 전용 회귀 테스트 33/33, typecheck 및 전체 lint 오류 0/기존 경고 18, Linux production build 통과. 전체 621 pass/1 TODO는 최초 구현 검증 결과이며 마지막 작은 수정 뒤에는 관련 테스트만 다시 실행했다.
+- 신규 파일까지 stage하여 검사할 때 발견된 EOF 빈 줄 8개를 정리했다. 최종 staged diff 검사 통과. 커밋은 22개 파일 +1603/-11이다.
+
+### 백업과 복구
+- 백업: /home/user/bowling-backups/king-perfect-20261011-before
+- DB: database-before.db 및 database-at-cutover.db. 소스, 환경, 이전 .next, Prisma Client, PM2 dump와 이전 배포 영수증도 보존.
+- 배포 자료: /home/user/bowling-deploy/king-perfect-20261011
+- 앱 복구: bash /home/user/bowling-deploy/king-perfect-20261011/rollback.sh
+- 복구는 이전 앱/빌드/Prisma Client/허용 목록을 복원하며 운영 DB·업로드를 덮어쓰지 않는다. 추가된 테이블과 migration 이력은 유지한다. 실제 복구는 실행하지 않았고 문법·절차를 검토했다.
+- Git push/merge/main 갱신은 수행하지 않았다. 기능 커밋은 로컬 작업 브랜치에 보존했다.
+
+### 사용 시작
+센터 관리자 로그인 → 장안퍼펙트볼링센터 → 대회 생성 → 커스텀 모드 → KING PERFECT를 선택한다. 실제 규칙 확인 전에는 게임 수·기록 반영·2R 이동·시상 기준을 자동 확정하지 않는다.

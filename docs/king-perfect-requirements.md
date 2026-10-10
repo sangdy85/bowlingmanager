@@ -49,3 +49,6 @@ KingPerfectEdition(월별 회차/규칙/상태/버전), Entry(센터 회원/자�
 4. 스크립트는 매번 새 OS 임시 폴더에 DB와 앱을 만들고 migration→25명 fixture→production build→127.0.0.1:4319 순으로 실행한다.
 5. 출력되는 테스트 전용 계정으로 로그인한다. 운영 계정을 쓰지 않는다. Ctrl+C로 종료한다.
 6. 임시 폴더 경로는 scratch/king-perfect-preview.json에 기록된다. 테스트 fixture는 영구 운영 데이터로 생성되지 않는다.
+
+## 후속 운영 반영 (2026-10-11)
+후속 배포 승인에 따라 e433243 기능 소스를 운영 Build UhQgjt0yt24gAnqroTq3f로 적용했다. 실제 장안퍼펙트볼링센터 ID cmlrk8r4v0001vmo41ax1m8e7에만 활성화했고 전용 migration 1개를 적용했다. 기존 DB 데이터와 환경·업로드는 보존했다. 초기의 비배포 기록은 최초 구현 단계의 이력이다. 상세 검증·백업·복구 기록은 king-perfect-test-results.md의 운영 반영 완료 절을 참고한다.
