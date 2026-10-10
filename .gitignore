@@ -53,3 +53,21 @@ next-env.d.ts
 /scratch/
 
 mobile/android/app/google-services.json
+
+# runtime data and deployment artifacts
+/public/uploads/
+/uploads/
+*.db.*
+*.sqlite
+*.sqlite-*
+*.sqlite.*
+*.log
+/nohup.out
+/.deployment-release.json
+
+# private signing material
+*.key
+*.jks
+*.p12
+*.pfx
+key.properties
