@@ -3,6 +3,7 @@ import 'package:bowlingmanager_mobile/core/theme/app_text_styles.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dart';
 import 'package:flutter/material.dart';
@@ -79,7 +80,9 @@ class _ClubMembersScreenState extends ConsumerState<ClubMembersScreen> {
                 ),
               )
             else
-              for (final ClubMember member in data) ...<Widget>[
+              for (final ClubMember member in data.where(
+                (member) => myRole == ClubRole.owner || !member.isBlinded,
+              )) ...<Widget>[
                 _MemberCard(
                   member: member,
                   myRole: myRole,
@@ -230,7 +233,7 @@ class _ClubMembersScreenState extends ConsumerState<ClubMembersScreen> {
               title: Text(nextBlind ? '회원 블라인드' : '블라인드 해제'),
               content: Text(
                 nextBlind
-                    ? '이 회원을 블라인드 처리하시겠습니까?\n회원 자격과 기존 기록은 유지되며 현재 종합순위에서 숨겨집니다.'
+                    ? '이 회원을 블라인드 처리하시겠습니까?\n회원 정보는 팀장만 조회·관리할 수 있습니다. 기존 경기 기록은 유지됩니다.'
                     : '블라인드를 해제하시겠습니까?\n별도 가입 절차 없이 현재 종합순위에 다시 표시됩니다.',
               ),
               actions: <Widget>[
@@ -281,6 +284,8 @@ class _ClubMembersScreenState extends ConsumerState<ClubMembersScreen> {
     ref.invalidate(clubActivitiesControllerProvider);
     ref.invalidate(clubActivityProvider);
     ref.invalidate(clubActivityEditProvider);
+    ref.invalidate(clubMemberProfileProvider);
+    ref.invalidate(clubSeasonRankingProvider);
   }
 }
 
@@ -348,8 +353,7 @@ class _MemberCard extends StatelessWidget {
         (myRole == ClubRole.owner && member.role != ClubRole.owner) ||
         (myRole == ClubRole.manager && member.role == ClubRole.member);
     final canManageBlind =
-        member.role != ClubRole.owner &&
-        (myRole == ClubRole.owner || myRole == ClubRole.manager);
+        member.role != ClubRole.owner && myRole == ClubRole.owner;
     return Card(
       key: Key('club-member-${member.id}'),
       child: Column(

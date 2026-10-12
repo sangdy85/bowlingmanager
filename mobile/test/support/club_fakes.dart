@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bowlingmanager_mobile/features/club/data/club_api.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_repository.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_records_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_management_models.dart';
 
@@ -25,6 +26,17 @@ const ClubDetail testClubDetail = ClubDetail(
   name: '테스트 동호회',
   myRole: ClubRole.owner,
   memberCount: 3,
+);
+
+const ClubTeamProfile testClubTeamProfile = ClubTeamProfile(
+  id: 'team-1',
+  name: '테스트 동호회',
+  description: null,
+  notice: null,
+  myRole: ClubRole.owner,
+  seasonRankingEnabled: false,
+  bowlerHiddenEnabled: false,
+  activeSeason: null,
 );
 
 const List<ClubMember> testClubMembers = <ClubMember>[

@@ -592,10 +592,10 @@ export default function WeeklyResultDownloader({
                                                                 <tr key={pIdx} style={{ borderBottom: '1px solid #000000', height: '36px' }}>
                                                                     <td style={{ ...baseCell, textAlign: 'left', paddingLeft: '10px' }}>{s?.playerName || s?.User?.name || ""}</td>
                                                                     <td style={{ ...baseCell, color: '#9ca3af', fontWeight: 400 }}>{s?.handicap || ""}</td>
-                                                                    <td style={{ ...baseCell }}>{s ? getLeaguePlayerGames(s)[0] : ""}</td>
-                                                                    <td style={{ ...baseCell }}>{s ? getLeaguePlayerGames(s)[1] : ""}</td>
-                                                                    <td style={{ ...baseCell }}>{s ? getLeaguePlayerGames(s)[2] : ""}</td>
-                                                                    <td style={{ ...baseCell, backgroundColor: '#f9fafb', fontWeight: 400 }}>{s ? getLeaguePlayerGames(s).reduce((sum, score) => sum + score, 0) : ""}</td>
+                                                                    <td style={{ ...baseCell }}>{s ? getLeaguePlayerGames(s, match.useStoredTeamTotals === true)[0] : ""}</td>
+                                                                    <td style={{ ...baseCell }}>{s ? getLeaguePlayerGames(s, match.useStoredTeamTotals === true)[1] : ""}</td>
+                                                                    <td style={{ ...baseCell }}>{s ? getLeaguePlayerGames(s, match.useStoredTeamTotals === true)[2] : ""}</td>
+                                                                    <td style={{ ...baseCell, backgroundColor: '#f9fafb', fontWeight: 400 }}>{s ? getLeaguePlayerGames(s, match.useStoredTeamTotals === true).reduce((sum, score) => sum + score, 0) : ""}</td>
                                                                 </tr>
                                                             );
                                                         })}

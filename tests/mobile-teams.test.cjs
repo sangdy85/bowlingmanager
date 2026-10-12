@@ -47,6 +47,20 @@ function dependencies(changes = {}) {
 
 const teams = loadTs('src/lib/mobile-api/teams.ts', { '@/lib/prisma': {} });
 
+test('blind member directory is owner-only including the blinded member own request', async () => {
+    const deps = dependencies({
+        listMembers: async () => [
+            { id: 'hidden', userId: 'member-1', alias: null, blindAt: new Date(), user: { name: '숨김', handicap: 0 } },
+            { id: 'visible', userId: 'other', alias: null, blindAt: null, user: { name: '표시', handicap: 0 } },
+        ],
+    });
+    for (const actor of ['manager-1', 'member-1', 'other']) {
+        const result = await teams.listMobileTeamMembers(actor, 'team-1', deps);
+        assert.deepEqual(result.map(row => row.id), ['visible']);
+    }
+    assert.equal((await teams.listMobileTeamMembers('owner-1', 'team-1', deps)).length, 2);
+});
+
 test('team list returns one or multiple active memberships with current roles', async () => {
     const result = await teams.listMobileTeams('owner-1', dependencies({
         listMemberships: async () => [

@@ -113,7 +113,9 @@ export async function getMobileMemberProfile(
 ) {
     const team = await requireTeam(actorUserId, teamId);
     const member = team.members.find((candidate) => candidate.id === memberId);
-    if (!member) throw new ClubExpansionError("MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다.", 404);
+    if (!member || (member.blindAt != null && roleOf(team, actorUserId) !== "OWNER")) {
+        throw new ClubExpansionError("MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다.", 404);
+    }
     const allScores = mappedScores(await listTeamScores(teamId));
     const yearScores = allScores.filter(
         (score) => Number(teamActivityDateKey(score.gameDate).slice(0, 4)) === year,

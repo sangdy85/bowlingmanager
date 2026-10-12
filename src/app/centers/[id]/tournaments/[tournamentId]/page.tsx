@@ -234,7 +234,7 @@ export default async function TournamentDetailPage({ params, searchParams }: { p
         
         const tournamentOverallStatus = calculateTournamentStatus(tournament.startDate, tournamentSettings.registrationStart, tournament.endDate, tournament.status, now);
 
-        if (allFinished && tournamentOverallStatus === 'FINISHED') {
+        if (tournament.status === 'FINISHED' || (allFinished && tournamentOverallStatus === 'FINISHED')) {
             currentStatus = 'FINISHED';
         } else if (anyOngoing || hasStarted) {
             currentStatus = 'ONGOING';
@@ -257,7 +257,11 @@ export default async function TournamentDetailPage({ params, searchParams }: { p
         }
     };
 
-    const safeTournament = JSON.parse(JSON.stringify(safeTournamentRaw));
+    const safeTournament = JSON.parse(JSON.stringify(safeTournamentRaw, (key, value) => {
+        if (['password', 'tokenHash', 'accessTokenEncrypted', 'refreshTokenEncrypted'].includes(key)) return undefined;
+        if (!isManager && ['email', 'emailVerified'].includes(key)) return undefined;
+        return value;
+    }));
 
     return (
         <div className={styles.page}>

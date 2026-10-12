@@ -39,6 +39,7 @@ export type WeeklyMatchResult = {
     playersA?: any[];
     playersB?: any[];
     lanes?: string | null;
+    useStoredTeamTotals?: boolean;
 };
 
 export type LeagueWeeklyPostData = {
@@ -124,7 +125,7 @@ export function buildLeagueWeeklyPost(data: LeagueWeeklyPostData): string {
             if (a || b) lines.push(`   게임별 ${match.teamA}${a} / ${match.teamB}${b}${match.lanes ? ` · 레인 ${match.lanes}` : ''}`);
             for (const [team, players] of [[match.teamA, match.playersA], [match.teamB, match.playersB]] as const) {
                 players?.forEach(player => {
-                    const games = getLeaguePlayerGames(player);
+                    const games = getLeaguePlayerGames(player, match.useStoredTeamTotals === true);
                     lines.push(`   ${team} · ${player.playerName || player.User?.name || '이름 미등록'} · 핸디 ${number(player.handicap || 0)} · ${games.join('/')}`);
                 });
             }

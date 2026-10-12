@@ -466,7 +466,7 @@ export async function publishLeagueWeeklyResult(input: PublishInput): Promise<Ba
                 teamB: `${match.teamB?.name || '부전승'}${match.teamBSquad ? ` (${match.teamBSquad})` : ''}`,
                 pointsA: match.pointsA ?? 0, pointsB: match.pointsB ?? 0,
                 scoresA: [a.g1, a.g2, a.g3], scoresB: [b.g1, b.g2, b.g3],
-                playersA: a.scores, playersB: b.scores, lanes: match.lanes,
+                playersA: a.scores, playersB: b.scores, lanes: match.lanes, useStoredTeamTotals: match.useStoredTeamTotals === true,
             };
         }),
         averageTop: individual.top30,

@@ -13,6 +13,21 @@ abstract interface class ShareImageService {
   });
 }
 
+/// Send the invite as a link so photo-only receivers such as KakaoTalk
+/// cannot discard the actionable URL. The public invite page supplies OG artwork.
+class FlutterInviteLinkShareService implements ShareImageService {
+  const FlutterInviteLinkShareService();
+
+  @override
+  Future<void> share(
+    GlobalKey boundaryKey, {
+    required String fileName,
+    required String text,
+  }) async {
+    await SharePlus.instance.share(ShareParams(text: text));
+  }
+}
+
 class FlutterShareImageService implements ShareImageService {
   const FlutterShareImageService({this.pixelRatio = 3});
 

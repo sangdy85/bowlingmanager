@@ -8,7 +8,7 @@ export async function getLeagueRoundResults(roundId: string) {
             where: { id: roundId },
             include: {
                 tournament: {
-                    select: { name: true, settings: true, type: true, teamHandicapLimit: true, reportNotice: true }
+                    select: { name: true, settings: true, type: true, teamHandicapLimit: true, manualTeamHandicaps: true, reportNotice: true }
                 },
                 matchups: {
                     include: {
@@ -16,7 +16,7 @@ export async function getLeagueRoundResults(roundId: string) {
                             include: {
                                 members: {
                                     include: {
-                                        user: true
+                                        user: { select: { id: true, name: true, handicap: true } }
                                     }
                                 }
                             }
@@ -25,13 +25,13 @@ export async function getLeagueRoundResults(roundId: string) {
                             include: {
                                 members: {
                                     include: {
-                                        user: true
+                                        user: { select: { id: true, name: true, handicap: true } }
                                     }
                                 }
                             }
                         },
                         individualScores: {
-                            include: { User: true, Team: true },
+                            include: { User: { select: { id: true, name: true, handicap: true } }, Team: true },
                             orderBy: { id: 'asc' }
                         }
                     }
@@ -40,7 +40,7 @@ export async function getLeagueRoundResults(roundId: string) {
                     include: {
                         registration: {
                             include: {
-                                user: true,
+                                user: { select: { id: true, name: true, handicap: true } },
                                 team: true
                             }
                         }
@@ -53,6 +53,8 @@ export async function getLeagueRoundResults(roundId: string) {
 
         const settings = round.tournament.settings ? JSON.parse(round.tournament.settings) : {};
         const teamHandicapLimit = round.tournament.teamHandicapLimit ?? settings.teamHandicapLimit;
+        const manualTeamHandicaps = round.tournament.manualTeamHandicaps ? JSON.parse(round.tournament.manualTeamHandicaps) : {};
+        const useStoredTeamTotals = settings.historicalImport?.useStoredTeamTotals === true;
 
         return {
             id: round.id,
@@ -79,9 +81,17 @@ export async function getLeagueRoundResults(roundId: string) {
                 teamA: m.teamA,
                 teamB: m.teamB,
                 lanes: m.lanes,
+                manualTeamHandicaps,
                 pointsA: m.pointsA,
                 pointsB: m.pointsB,
                 status: m.status,
+                scoreA1: m.scoreA1,
+                scoreA2: m.scoreA2,
+                scoreA3: m.scoreA3,
+                scoreB1: m.scoreB1,
+                scoreB2: m.scoreB2,
+                scoreB3: m.scoreB3,
+                useStoredTeamTotals,
                 individualScores: m.individualScores.map((s: any) => ({
                     id: s.id,
                     userId: s.userId,

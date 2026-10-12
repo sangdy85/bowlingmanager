@@ -6,6 +6,9 @@ import 'package:bowlingmanager_mobile/features/club/application/club_providers.d
 import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
+import 'package:bowlingmanager_mobile/features/club/application/club_event_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_records_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_screen.dart';
 import 'package:bowlingmanager_mobile/features/club/share/club_invite_share_data.dart';
 import 'package:bowlingmanager_mobile/features/club/share/club_invite_share_preview_sheet.dart';
@@ -39,154 +42,187 @@ class ClubDetailScreen extends ConsumerWidget {
           onRetry: refresh,
         ),
       ),
-      data: (ClubDetail club) => RefreshIndicator(
-        onRefresh: refresh,
-        child: ListView(
-          key: const Key('club-detail'),
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
-          children: <Widget>[
-            const _BackHeader(title: '동호회 상세'),
-            const SizedBox(height: 22),
-            Card(
+      data: (ClubDetail club) => Column(
+        children: <Widget>[
+          Flexible(
+            flex: 0,
+            child: SingleChildScrollView(
+              key: const Key('club-detail'),
               child: Padding(
-                padding: const EdgeInsets.all(22),
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(club.name, style: AppTextStyles.headline),
-                    const SizedBox(height: 18),
-                    _DetailRow(label: '내 역할', value: club.myRole.label),
-                    const SizedBox(height: 12),
-                    _DetailRow(label: '회원 수', value: '${club.memberCount}명'),
-                    if (profile.value?.notice
-                        case final String notice) ...<Widget>[
-                      const SizedBox(height: 16),
-                      Text('공지 · $notice'),
-                    ],
-                    if (profile.value?.description
-                        case final String description) ...<Widget>[
-                      const SizedBox(height: 10),
-                      Text(
-                        description,
-                        style: const TextStyle(color: AppColors.textSecondary),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Row(
+                              children: <Widget>[
+                                IconButton(
+                                  key: const Key('club-back'),
+                                  onPressed: context.pop,
+                                  icon: const Icon(Icons.arrow_back_rounded),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    club.name,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.title,
+                                  ),
+                                ),
+                                if (club.myRole != ClubRole.member)
+                                  TextButton(
+                                    key: const Key('club-management-link'),
+                                    onPressed: () => context.push(
+                                      '/club/${Uri.encodeComponent(teamId)}/manage',
+                                    ),
+                                    child: const Text('관리'),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            _DetailRow(label: '내 역할', value: club.myRole.label),
+                            const SizedBox(height: 4),
+                            _DetailRow(
+                              label: '회원 수',
+                              value: '${club.memberCount}명',
+                            ),
+                            if (profile.value?.notice
+                                case final String notice) ...<Widget>[
+                              const SizedBox(height: 4),
+                              Text(
+                                '공지 · $notice',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                            if (profile.value?.description
+                                case final String description) ...<Widget>[
+                              const SizedBox(height: 4),
+                              Text(
+                                description,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                    ],
+                    ),
+                    _ClubNextEvent(teamId: teamId, userId: user.id),
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: <Widget>[
+                        OutlinedButton(
+                          key: const Key('club-members-link'),
+                          onPressed: () => context.push(
+                            '/club/${Uri.encodeComponent(teamId)}/members',
+                          ),
+                          child: const Text('회원보기'),
+                        ),
+                        OutlinedButton(
+                          key: const Key('club-board-link'),
+                          onPressed: () => context.push(
+                            '/club/${Uri.encodeComponent(teamId)}/board',
+                          ),
+                          child: const Text('게시판'),
+                        ),
+                        if (club.inviteUrl != null) ...<Widget>[
+                          OutlinedButton(
+                            key: const Key('club-invite-share'),
+                            onPressed: () => showClubInviteSharePreview(
+                              context: context,
+                              data: ClubInviteShareData.fromClub(club),
+                            ),
+                            child: const Text('초대하기'),
+                          ),
+                        ],
+                        OutlinedButton(
+                          key: const Key('club-finance-link'),
+                          onPressed: () => context.push(
+                            '/club/${Uri.encodeComponent(teamId)}/finance',
+                          ),
+                          child: const Text('회비/정산'),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            if (club.inviteUrl != null) ...<Widget>[
-              _ClubMenuCard(
-                tileKey: const Key('club-invite-share'),
-                icon: Icons.person_add_alt_1_rounded,
-                title: '동호회 초대',
-                subtitle: '초대 카드와 링크를 공유하세요',
-                onTap: () => showClubInviteSharePreview(
-                  context: context,
-                  data: ClubInviteShareData.fromClub(club),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-            _ClubMenuCard(
-              tileKey: const Key('club-records-link'),
-              icon: Icons.query_stats_rounded,
-              title: '동호회 기록',
-              subtitle: '종합 순위, 종합 기록, 상세 기록',
-              onTap: () => context.push(
-                '/club/${Uri.encodeComponent(teamId)}/records',
-                extra: club.name,
-              ),
+          ),
+          Expanded(
+            child: ClubRecordsScreen(
+              teamId: teamId,
+              clubName: club.name,
+              embedded: true,
             ),
-            const SizedBox(height: 12),
-            _ClubMenuCard(
-              tileKey: const Key('club-events-link'),
-              icon: Icons.event_note_rounded,
-              title: '일정',
-              subtitle: '참석 조사, 게스트, 레인 좌석 추첨',
-              onTap: () =>
-                  context.push('/club/${Uri.encodeComponent(teamId)}/events'),
-            ),
-            const SizedBox(height: 12),
-            _ClubMenuCard(
-              tileKey: const Key('club-members-link'),
-              icon: Icons.people_outline_rounded,
-              title: '전체 회원 보기',
-              subtitle: '${club.memberCount}명의 회원',
-              onTap: () =>
-                  context.push('/club/${Uri.encodeComponent(teamId)}/members'),
-            ),
-            const SizedBox(height: 12),
-            _ClubMenuCard(
-              tileKey: const Key('club-board-link'),
-              icon: Icons.forum_outlined,
-              title: '게시판',
-              subtitle: '동호회 게시글',
-              onTap: () =>
-                  context.push('/club/${Uri.encodeComponent(teamId)}/board'),
-            ),
-            const SizedBox(height: 12),
-            _ClubMenuCard(
-              tileKey: const Key('club-finance-link'),
-              icon: Icons.payments_outlined,
-              title: '회비 / 정산',
-              subtitle: '회비와 게임비 납부 현황을 확인하세요',
-              onTap: () =>
-                  context.push('/club/${Uri.encodeComponent(teamId)}/finance'),
-            ),
-            if (club.myRole == ClubRole.owner ||
-                club.myRole == ClubRole.manager) ...<Widget>[
-              const SizedBox(height: 12),
-              _ClubMenuCard(
-                tileKey: const Key('club-management-link'),
-                icon: Icons.admin_panel_settings_outlined,
-                title: '관리',
-                subtitle: '점수 기록, 기록 관리, 팀원 관리',
-                onTap: () =>
-                    context.push('/club/${Uri.encodeComponent(teamId)}/manage'),
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ClubMenuCard extends StatelessWidget {
-  const _ClubMenuCard({
-    required this.tileKey,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final Key tileKey;
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
+class _ClubNextEvent extends ConsumerWidget {
+  const _ClubNextEvent({required this.teamId, required this.userId});
+  final String teamId;
+  final String userId;
   @override
-  Widget build(BuildContext context) => Card(
-    clipBehavior: Clip.antiAlias,
-    child: SizedBox(
-      height: 88,
-      child: ListTile(
-        key: tileKey,
-        minTileHeight: 88,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-        leading: Icon(icon, size: 24, color: AppColors.primaryBright),
-        title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-        trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: onTap,
-      ),
-    ),
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final request = (
+      userId: userId,
+      teamId: teamId,
+      scope: ClubEventListScope.upcoming,
+    );
+    final state = ref.watch(clubEventsProvider(request));
+    return Column(
+      children: <Widget>[
+        state.when(
+          loading: () => const LinearProgressIndicator(),
+          error: (error, _) => TextButton(
+            onPressed: () => ref.invalidate(clubEventsProvider(request)),
+            child: const Text('일정 다시 불러오기'),
+          ),
+          data: (data) {
+            final event = data.events.firstOrNull;
+            if (event == null) return const Text('예정된 일정이 없습니다.');
+            return ListTile(
+              key: const Key('club-next-event'),
+              dense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+              title: Text(
+                '${event.date} · ${event.title}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                '${event.gameType ?? '기타'}${event.competition == null ? '' : ' · ${event.competition!.type.label}'}',
+                maxLines: 1,
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => context.push(
+                '/club/${Uri.encodeComponent(teamId)}/events/${Uri.encodeComponent(event.id)}',
+              ),
+            );
+          },
+        ),
+        TextButton(
+          key: const Key('club-events-link'),
+          onPressed: () =>
+              context.push('/club/${Uri.encodeComponent(teamId)}/events'),
+          child: const Text('전체 일정 보기'),
+        ),
+      ],
+    );
+  }
 }
 
 class _DetailFrame extends StatelessWidget {

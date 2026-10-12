@@ -15,7 +15,6 @@ import 'package:bowlingmanager_mobile/features/club/share/club_result_share_data
 import 'package:bowlingmanager_mobile/features/club/share/club_result_share_preview_sheet.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/application/records_providers.dart';
-import 'package:bowlingmanager_mobile/shared/widgets/bowling_medal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,6 +27,7 @@ class ClubRecordsScreen extends ConsumerStatefulWidget {
     this.targetActivityId,
     this.targetFilter,
     this.clubName,
+    this.embedded = false,
     super.key,
   });
 
@@ -37,6 +37,7 @@ class ClubRecordsScreen extends ConsumerStatefulWidget {
   final String? targetActivityId;
   final ClubRecordFilter? targetFilter;
   final String? clubName;
+  final bool embedded;
 
   @override
   ConsumerState<ClubRecordsScreen> createState() => _ClubRecordsScreenState();
@@ -86,11 +87,12 @@ class _ClubRecordsScreenState extends ConsumerState<ClubRecordsScreen> {
           padding: const EdgeInsets.fromLTRB(16, 12, 20, 8),
           child: Row(
             children: <Widget>[
-              IconButton(
-                key: const Key('club-records-back'),
-                onPressed: context.pop,
-                icon: const Icon(Icons.arrow_back_rounded),
-              ),
+              if (!widget.embedded)
+                IconButton(
+                  key: const Key('club-records-back'),
+                  onPressed: context.pop,
+                  icon: const Icon(Icons.arrow_back_rounded),
+                ),
               const SizedBox(width: 6),
               const Expanded(child: Text('동호회 기록', style: AppTextStyles.title)),
               DropdownButton<int>(
@@ -361,47 +363,11 @@ class _OverviewBody extends ConsumerWidget {
                 ),
               )
             else
-              Card(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columns: const <DataColumn>[
-                      DataColumn(label: Text('순위')),
-                      DataColumn(label: Text('이름')),
-                      DataColumn(label: Text('POINT')),
-                      DataColumn(label: Text('🥇')),
-                      DataColumn(label: Text('🥈')),
-                      DataColumn(label: Text('🥉')),
-                    ],
-                    rows: season.rows
-                        .map(
-                          (row) => DataRow(
-                            cells: <DataCell>[
-                              DataCell(
-                                row.rank <= 3
-                                    ? Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: <Widget>[
-                                          BowlingMedalIcon(
-                                            position: row.rank,
-                                            size: 18,
-                                          ),
-                                          Text('${row.rank}'),
-                                        ],
-                                      )
-                                    : Text('${row.rank}'),
-                              ),
-                              DataCell(Text(row.name)),
-                              DataCell(Text('${row.points}')),
-                              DataCell(Text('${row.gold}')),
-                              DataCell(Text('${row.silver}')),
-                              DataCell(Text('${row.bronze}')),
-                            ],
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
+              ClubSeasonRankingGrid(
+                rows: season.rows,
+                onMember: null,
+                hidden: false,
+                podiumSummary: true,
               ),
             const SizedBox(height: 10),
             OutlinedButton.icon(

@@ -135,7 +135,10 @@ export async function listMobileTeamMembers(
     const team = await dependencies.findAccessibleTeam(userId, teamId);
     if (!team) return null;
 
-    const members = (await dependencies.listMembers(teamId)).map((member) => ({
+    const canSeeBlind = teamRole(team, userId) === "OWNER";
+    const members = (await dependencies.listMembers(teamId))
+        .filter((member) => canSeeBlind || member.blindAt == null)
+        .map((member) => ({
         id: member.id,
         name: member.alias || member.user.name,
         role: teamRole(team, member.userId),

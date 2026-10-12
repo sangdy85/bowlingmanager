@@ -3,9 +3,11 @@ export function getLeagueMatchTeamReport(match: any, isA: boolean, teamHandicapL
 const teamId = isA ? match.teamAId : match.teamBId;
 const squad = isA ? match.teamASquad : match.teamBSquad;
 const points = isA ? match.pointsA : match.pointsB;
+const manualPenalty = Number(match.manualTeamHandicaps?.[teamId] || 0);
 const scores = match.individualScores?.filter((s: any) => s.teamId === teamId && s.teamSquad === squad) || [];
 const oppId = isA ? match.teamBId : match.teamAId;
 const oppSquad = isA ? match.teamBSquad : match.teamASquad;
+const opponentManualPenalty = Number(match.manualTeamHandicaps?.[oppId] || 0);
 const oppScores = match.individualScores?.filter((s: any) => s.teamId === oppId && s.teamSquad === oppSquad) || [];
 
 const rawHandiSum = scores.reduce((sum: number, s: any) => sum + (s.handicap || 0), 0);
@@ -18,16 +20,33 @@ const oppHandiSum = (hLimit !== null && oppRawHandiSum > hLimit) ? hLimit : oppR
 const excessH = Math.max(0, rawHandiSum - handiSum);
 const oppExcessH = Math.max(0, oppRawHandiSum - oppHandiSum);
 
-const g1 = scores.reduce((sum: number, s: any) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0) - excessH;
-const g2 = scores.reduce((sum: number, s: any) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0) - excessH;
-const g3 = scores.reduce((sum: number, s: any) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0) - excessH;
+const g1 = scores.reduce((sum: number, s: any) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0) - excessH + manualPenalty;
+const g2 = scores.reduce((sum: number, s: any) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0) - excessH + manualPenalty;
+const g3 = scores.reduce((sum: number, s: any) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0) - excessH + manualPenalty;
 
-const oppG1 = oppScores.reduce((sum: number, s: any) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0) - oppExcessH;
-const oppG2 = oppScores.reduce((sum: number, s: any) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0) - oppExcessH;
-const oppG3 = oppScores.reduce((sum: number, s: any) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0) - oppExcessH;
+const oppG1 = oppScores.reduce((sum: number, s: any) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0) - oppExcessH + opponentManualPenalty;
+const oppG2 = oppScores.reduce((sum: number, s: any) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0) - oppExcessH + opponentManualPenalty;
+const oppG3 = oppScores.reduce((sum: number, s: any) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0) - oppExcessH + opponentManualPenalty;
 
-const total = g1 + g2 + g3;
-const oppTotal = oppG1 + oppG2 + oppG3;
+const storedScores = isA
+    ? [match.scoreA1, match.scoreA2, match.scoreA3]
+    : [match.scoreB1, match.scoreB2, match.scoreB3];
+const storedOpponentScores = isA
+    ? [match.scoreB1, match.scoreB2, match.scoreB3]
+    : [match.scoreA1, match.scoreA2, match.scoreA3];
+const useStoredScores = match.useStoredTeamTotals === true
+    && storedScores.every((score: unknown) => Number.isFinite(score))
+    && storedOpponentScores.every((score: unknown) => Number.isFinite(score));
+
+const reportG1 = useStoredScores ? Number(storedScores[0]) : g1;
+const reportG2 = useStoredScores ? Number(storedScores[1]) : g2;
+const reportG3 = useStoredScores ? Number(storedScores[2]) : g3;
+const reportOppG1 = useStoredScores ? Number(storedOpponentScores[0]) : oppG1;
+const reportOppG2 = useStoredScores ? Number(storedOpponentScores[1]) : oppG2;
+const reportOppG3 = useStoredScores ? Number(storedOpponentScores[2]) : oppG3;
+
+const total = reportG1 + reportG2 + reportG3;
+const oppTotal = reportOppG1 + reportOppG2 + reportOppG3;
 
 const draws = points !== null && (points % 1) === 0.5 ? 1 : 0;
 const isWinner = points !== null && points >= 3;
@@ -49,9 +68,9 @@ return draws > 0 && valA === valB ? '△' : '-';
 };
 
 const markers = [
-getMarker(g1, oppG1, handiSum, oppHandiSum, getHiLow(scores, 1), getHiLow(oppScores, 1)),
-getMarker(g2, oppG2, handiSum, oppHandiSum, getHiLow(scores, 2), getHiLow(oppScores, 2)),
-getMarker(g3, oppG3, handiSum, oppHandiSum, getHiLow(scores, 3), getHiLow(oppScores, 3))
+getMarker(reportG1, reportOppG1, handiSum, oppHandiSum, getHiLow(scores, 1), getHiLow(oppScores, 1)),
+getMarker(reportG2, reportOppG2, handiSum, oppHandiSum, getHiLow(scores, 2), getHiLow(oppScores, 2)),
+getMarker(reportG3, reportOppG3, handiSum, oppHandiSum, getHiLow(scores, 3), getHiLow(oppScores, 3))
 ];
 
 const getSeriesTotalRaw = (sList: any[], gameNum: number) => {
@@ -76,12 +95,14 @@ getSeriesHiLow(oppScores)
 );
 
 
-return { scores, handiSum, g1, g2, g3, total, oppTotal, markers, totalMark, isWinner };
+return { scores, handiSum, g1: reportG1, g2: reportG2, g3: reportG3, total, oppTotal, markers, totalMark, isWinner };
 }
 
 // Preserve the official team-by-team image's existing display basis.
 export function getLeaguePlayerReportValues(player: any) {
- const totalWithHandicap = player.totalRawPins + (player.handicap * player.gamesCount);
+ const totalWithHandicap = Number.isFinite(player.totalHandicappedPins)
+     ? player.totalHandicappedPins
+     : player.totalRawPins + (player.handicap * player.gamesCount);
  const currentWeekWithHandicap = player.currentWeekPins || 0;
  return { totalWithHandicap, currentWeekWithHandicap, previousTotalWithHandicap: totalWithHandicap - currentWeekWithHandicap, average: (totalWithHandicap / (player.gamesCount || 1)).toFixed(1) };
 }
@@ -90,6 +111,9 @@ export function leagueReportNotice(notice: string | null | undefined, awardMinGa
  return (notice || `* 개인 에버 / 개인 하이 / 단게임은 ${Math.ceil(awardMinGames / 3)}주(${awardMinGames}게임) 이상 참여자 대상\n* 모든 개인 기록(에버, 하이, 단게임)은 핸디캡 포함 기준입니다.\n* 단체전은 중복시상 가능하나 개인전은 중복시상 불가 (에버 1,2 > 하이 1 > 에버 3 > 단게임 1 ... 순)`).split('\n').filter(line => line.trim() !== '');
 }
 
-export function getLeaguePlayerGames(player: any): number[] {
-    return [player.score1, player.score2, player.score3].map(score => Math.min((score || 0) + (player.handicap || 0), 300));
+export function getLeaguePlayerGames(player: any, preserveOfficialHandicappedScore = false): number[] {
+    return [player.score1, player.score2, player.score3].map(score => {
+        const handicappedScore = (score || 0) + (player.handicap || 0);
+        return preserveOfficialHandicappedScore ? handicappedScore : Math.min(handicappedScore, 300);
+    });
 }

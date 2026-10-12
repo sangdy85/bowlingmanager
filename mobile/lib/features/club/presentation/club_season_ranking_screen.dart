@@ -1186,6 +1186,7 @@ class ClubSeasonRankingGrid extends StatefulWidget {
     required this.rows,
     required this.onMember,
     required this.hidden,
+    this.podiumSummary = false,
     this.competitionColumns = const <ClubSeasonCompetitionColumn>[],
     this.currentMemberId,
     super.key,
@@ -1193,6 +1194,7 @@ class ClubSeasonRankingGrid extends StatefulWidget {
   final List<ClubSeasonRankingRow> rows;
   final ValueChanged<ClubSeasonRankingRow>? onMember;
   final bool hidden;
+  final bool podiumSummary;
   final List<ClubSeasonCompetitionColumn> competitionColumns;
   final String? currentMemberId;
 
@@ -1209,18 +1211,38 @@ class _ClubSeasonRankingGridState extends State<ClubSeasonRankingGrid> {
   static const double _headerHeight = 58;
   static const double _rowHeight = 64;
   final ScrollController _horizontalController = ScrollController();
+  final ScrollController _leftRows = ScrollController();
+  final ScrollController _rightRows = ScrollController();
+  bool _syncingRows = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _leftRows.addListener(() => _syncRows(_leftRows, _rightRows));
+    _rightRows.addListener(() => _syncRows(_rightRows, _leftRows));
+  }
+
+  void _syncRows(ScrollController from, ScrollController to) {
+    if (_syncingRows || !from.hasClients || !to.hasClients) return;
+    _syncingRows = true;
+    to.jumpTo(from.offset.clamp(0, to.position.maxScrollExtent));
+    _syncingRows = false;
+  }
 
   @override
   void dispose() {
     _horizontalController.dispose();
+    _leftRows.dispose();
+    _rightRows.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    final double rightWidth =
-        widget.hidden && widget.competitionColumns.isNotEmpty
+    final double rightWidth = widget.podiumSummary
+        ? 3 * _pointsWidth
+        : widget.hidden && widget.competitionColumns.isNotEmpty
         ? widget.competitionColumns.length * _competitionWidth +
               2 * _supplementWidth
         : widget.hidden
@@ -1228,202 +1250,288 @@ class _ClubSeasonRankingGridState extends State<ClubSeasonRankingGrid> {
         : 12 * 112;
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          SizedBox(
-            width: _rankWidth + _nameWidth + _pointsWidth,
-            child: Column(
-              children: <Widget>[
-                _GridCell(
-                  height: _headerHeight,
-                  color: colors.surfaceContainerHighest,
-                  padding: EdgeInsets.zero,
-                  child: const Row(
-                    children: <Widget>[
-                      _RankingColumnHeader(width: _rankWidth, label: '순위'),
-                      _RankingColumnHeader(width: _nameWidth, label: '이름'),
-                      _RankingColumnHeader(width: _pointsWidth, label: '총P'),
-                    ],
+      child: SizedBox(
+        height: (_headerHeight + widget.rows.length * _rowHeight).clamp(
+          _headerHeight,
+          460,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            SizedBox(
+              width: _rankWidth + _nameWidth + _pointsWidth,
+              child: Column(
+                children: <Widget>[
+                  _GridCell(
+                    height: _headerHeight,
+                    color: colors.surfaceContainerHighest,
+                    padding: EdgeInsets.zero,
+                    child: Row(
+                      children: <Widget>[
+                        const _RankingColumnHeader(
+                          width: _rankWidth,
+                          label: '순위',
+                        ),
+                        const _RankingColumnHeader(
+                          width: _nameWidth,
+                          label: '이름',
+                        ),
+                        _RankingColumnHeader(
+                          width: _pointsWidth,
+                          label: widget.podiumSummary ? 'POINT' : '총P',
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                for (final row in widget.rows)
-                  InkWell(
-                    onTap: widget.onMember == null
-                        ? null
-                        : () => widget.onMember!(row),
-                    child: _GridCell(
-                      height: _rowHeight,
-                      color: row.id == widget.currentMemberId
-                          ? colors.primaryContainer.withValues(alpha: .42)
-                          : null,
-                      padding: EdgeInsets.zero,
-                      child: Row(
+                  Expanded(
+                    child: SingleChildScrollView(
+                      key: const Key('season-ranking-left-rows'),
+                      controller: _leftRows,
+                      child: Column(
                         children: <Widget>[
-                          SizedBox(
-                            width: _rankWidth,
-                            child: Text(
-                              '${row.rank}위',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontWeight: row.rank <= 3
-                                    ? FontWeight.w800
-                                    : FontWeight.w600,
-                                color: row.rank <= 3 ? colors.primary : null,
+                          for (final row in widget.rows)
+                            InkWell(
+                              onTap: widget.onMember == null
+                                  ? null
+                                  : () => widget.onMember!(row),
+                              child: _GridCell(
+                                height: _rowHeight,
+                                color: row.id == widget.currentMemberId
+                                    ? colors.primaryContainer.withValues(
+                                        alpha: .42,
+                                      )
+                                    : null,
+                                padding: EdgeInsets.zero,
+                                child: Row(
+                                  children: <Widget>[
+                                    SizedBox(
+                                      width: _rankWidth,
+                                      child: Text(
+                                        '${row.rank}위',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontWeight: row.rank <= 3
+                                              ? FontWeight.w800
+                                              : FontWeight.w600,
+                                          color: row.rank <= 3
+                                              ? colors.primary
+                                              : null,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: _nameWidth,
+                                      child: Text(
+                                        row.name,
+                                        textAlign: TextAlign.center,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: _pointsWidth,
+                                      child: Text(
+                                        '${row.points}P',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                          SizedBox(
-                            width: _nameWidth,
-                            child: Text(
-                              row.name,
-                              textAlign: TextAlign.center,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          SizedBox(
-                            width: _pointsWidth,
-                            child: Text(
-                              '${row.points}P',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
                   ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: Scrollbar(
-              controller: _horizontalController,
-              thumbVisibility: true,
-              scrollbarOrientation: ScrollbarOrientation.bottom,
-              child: SingleChildScrollView(
+            Expanded(
+              child: Scrollbar(
                 controller: _horizontalController,
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: rightWidth,
-                  child: Column(
-                    children: <Widget>[
-                      _GridCell(
-                        height: _headerHeight,
-                        color: colors.surfaceContainerHighest,
-                        padding: EdgeInsets.zero,
-                        child: Row(
-                          children: <Widget>[
-                            if (widget.hidden &&
-                                widget.competitionColumns.isNotEmpty)
-                              for (final column in widget.competitionColumns)
-                                SizedBox(
-                                  width: _competitionWidth,
-                                  child: Text(
-                                    '${column.month}월 · ${_type(column.competitionType)}\n${column.displayName}',
-                                    textAlign: TextAlign.center,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                )
-                            else
-                              for (int month = 1; month <= 12; month++)
-                                SizedBox(
-                                  width: widget.hidden ? 64 : 112,
-                                  child: Text(
-                                    '$month월',
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                            if (widget.hidden) ...<Widget>[
-                              const _RankingColumnHeader(
-                                width: _supplementWidth,
-                                label: '기초P',
-                              ),
-                              const _RankingColumnHeader(
-                                width: _supplementWidth,
-                                label: '조정P',
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      for (final row in widget.rows)
+                thumbVisibility: true,
+                scrollbarOrientation: ScrollbarOrientation.bottom,
+                child: SingleChildScrollView(
+                  controller: _horizontalController,
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: rightWidth,
+                    height: (_headerHeight + widget.rows.length * _rowHeight)
+                        .clamp(_headerHeight, 460),
+                    child: Column(
+                      children: <Widget>[
                         _GridCell(
-                          height: _rowHeight,
-                          color: row.id == widget.currentMemberId
-                              ? colors.primaryContainer.withValues(alpha: .42)
-                              : null,
+                          height: _headerHeight,
+                          color: colors.surfaceContainerHighest,
                           padding: EdgeInsets.zero,
                           child: Row(
                             children: <Widget>[
-                              if (widget.hidden &&
+                              if (widget.podiumSummary)
+                                for (final label in const <String>[
+                                  '🥇',
+                                  '🥈',
+                                  '🥉',
+                                ])
+                                  _RankingColumnHeader(
+                                    width: _pointsWidth,
+                                    label: label,
+                                  )
+                              else if (widget.hidden &&
                                   widget.competitionColumns.isNotEmpty)
                                 for (final column in widget.competitionColumns)
                                   SizedBox(
                                     width: _competitionWidth,
                                     child: Text(
-                                      _competitionCell(row, column.id),
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      style: const TextStyle(fontSize: 11),
-                                    ),
-                                  )
-                              else if (widget.hidden)
-                                for (final points in row.monthlyPoints)
-                                  SizedBox(
-                                    width: 64,
-                                    child: Text(
-                                      points == 0 ? '-' : _signedPoints(points),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  )
-                              else
-                                for (final entries in row.monthlyHistory)
-                                  SizedBox(
-                                    width: 112,
-                                    child: Text(
-                                      entries.isEmpty
-                                          ? '-'
-                                          : entries.map(_entryLabel).join('\n'),
+                                      '${column.month}월 · ${_type(column.competitionType)}\n${column.displayName}',
                                       textAlign: TextAlign.center,
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 11),
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  )
+                              else
+                                for (int month = 1; month <= 12; month++)
+                                  SizedBox(
+                                    width: widget.hidden ? 64 : 112,
+                                    child: Text(
+                                      '$month월',
+                                      textAlign: TextAlign.center,
                                     ),
                                   ),
                               if (widget.hidden) ...<Widget>[
-                                SizedBox(
+                                const _RankingColumnHeader(
                                   width: _supplementWidth,
-                                  child: Text(
-                                    _signedPoints(row.openingBalancePoints),
-                                    textAlign: TextAlign.center,
-                                  ),
+                                  label: '기초P',
                                 ),
-                                SizedBox(
+                                const _RankingColumnHeader(
                                   width: _supplementWidth,
-                                  child: Text(
-                                    _signedPoints(row.adjustmentPoints),
-                                    textAlign: TextAlign.center,
-                                  ),
+                                  label: '조정P',
                                 ),
                               ],
                             ],
                           ),
                         ),
-                    ],
+                        Expanded(
+                          child: SingleChildScrollView(
+                            key: const Key('season-ranking-score-rows'),
+                            controller: _rightRows,
+                            child: Column(
+                              children: <Widget>[
+                                for (final row in widget.rows)
+                                  _GridCell(
+                                    height: _rowHeight,
+                                    color: row.id == widget.currentMemberId
+                                        ? colors.primaryContainer.withValues(
+                                            alpha: .42,
+                                          )
+                                        : null,
+                                    padding: EdgeInsets.zero,
+                                    child: Row(
+                                      children: <Widget>[
+                                        if (widget.podiumSummary)
+                                          for (final count in <int>[
+                                            row.gold,
+                                            row.silver,
+                                            row.bronze,
+                                          ])
+                                            SizedBox(
+                                              width: _pointsWidth,
+                                              child: Text(
+                                                '$count',
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            )
+                                        else if (widget.hidden &&
+                                            widget
+                                                .competitionColumns
+                                                .isNotEmpty)
+                                          for (final column
+                                              in widget.competitionColumns)
+                                            SizedBox(
+                                              width: _competitionWidth,
+                                              child: Text(
+                                                _competitionCell(
+                                                  row,
+                                                  column.id,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                                maxLines: 2,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                            )
+                                        else if (widget.hidden)
+                                          for (final points
+                                              in row.monthlyPoints)
+                                            SizedBox(
+                                              width: 64,
+                                              child: Text(
+                                                points == 0
+                                                    ? '-'
+                                                    : _signedPoints(points),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            )
+                                        else
+                                          for (final entries
+                                              in row.monthlyHistory)
+                                            SizedBox(
+                                              width: 112,
+                                              child: Text(
+                                                entries.isEmpty
+                                                    ? '-'
+                                                    : entries
+                                                          .map(_entryLabel)
+                                                          .join('\n'),
+                                                textAlign: TextAlign.center,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                            ),
+                                        if (widget.hidden) ...<Widget>[
+                                          SizedBox(
+                                            width: _supplementWidth,
+                                            child: Text(
+                                              _signedPoints(
+                                                row.openingBalancePoints,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                          SizedBox(
+                                            width: _supplementWidth,
+                                            child: Text(
+                                              _signedPoints(
+                                                row.adjustmentPoints,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -277,9 +277,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _showWebUrlError() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('웹 페이지를 열지 못했습니다. 잠시 후 다시 시도해주세요.'),
-      ),
+      const SnackBar(content: Text('웹 페이지를 열지 못했습니다. 잠시 후 다시 시도해주세요.')),
     );
   }
 }

@@ -4,17 +4,32 @@ import { notFound } from "next/navigation";
 import styles from "@/components/public/Public.module.css";
 import { ANDROID_APP_URL } from "@/lib/public-web";
 import { getPublicTeamInvite } from "@/lib/team-membership";
+import { PUBLIC_ORIGIN } from "@/lib/public-web";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export const metadata: Metadata = {
-    title: "동호회 초대 | BowlingManager",
-    description: "BowlingManager 동호회 초대",
-    robots: { index: false, follow: false },
-};
-
 type PageProps = { params: Promise<{ code: string }> };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+    const invite = await getPublicTeamInvite((await params).code);
+    const title = invite ? `${invite.name} 동호회 초대` : "동호회 초대 | BowlingManager";
+    const description = invite
+        ? `회원 ${invite.memberCount}명과 함께 볼링 기록을 관리해보세요.`
+        : "BowlingManager 동호회 초대";
+    return {
+        title,
+        description,
+        robots: { index: false, follow: false },
+        ...(invite ? {
+            openGraph: {
+                title, description, type: "website",
+                url: `${PUBLIC_ORIGIN}/invite/team/${invite.code}`,
+                images: [{ url: `${PUBLIC_ORIGIN}/images/bowlingmanager-invite.png`, width: 512, height: 512, alt: "BowlingManager" }],
+            },
+        } : {}),
+    };
+}
 
 export default async function TeamInvitePage({ params }: PageProps) {
     const { code } = await params;

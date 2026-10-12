@@ -30,6 +30,8 @@ interface IndividualScore {
 }
 
 interface Matchup {
+    manualTeamHandicaps?: Record<string, number>;
+    useStoredTeamTotals?: boolean;
     id: string;
     teamA: Team | null;
     teamB: Team | null;
@@ -41,6 +43,12 @@ interface Matchup {
     individualScores: IndividualScore[];
     pointsA: number | null;
     pointsB: number | null;
+    scoreA1?: number | null;
+    scoreA2?: number | null;
+    scoreA3?: number | null;
+    scoreB1?: number | null;
+    scoreB2?: number | null;
+    scoreB3?: number | null;
     status: string;
 }
 
@@ -104,10 +112,11 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                         const hSum = (hLimit !== null && rawHSum > hLimit) ? hLimit : rawHSum;
 
                         const excessH = Math.max(0, rawHSum - hSum);
+                        const manualPenalty = Number(m.manualTeamHandicaps?.[teamId || ''] || 0);
 
-                        const g1 = teamScores.reduce((sum, s) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0) - excessH;
-                        const g2 = teamScores.reduce((sum, s) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0) - excessH;
-                        const g3 = teamScores.reduce((sum, s) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0) - excessH;
+                        const calculatedG1 = teamScores.reduce((sum, s) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0) - excessH + manualPenalty;
+                        const calculatedG2 = teamScores.reduce((sum, s) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0) - excessH + manualPenalty;
+                        const calculatedG3 = teamScores.reduce((sum, s) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0) - excessH + manualPenalty;
 
                         const opponentId = isRight ? m.teamAId : m.teamBId;
                         const opponentSquad = isRight ? m.teamASquad : m.teamBSquad;
@@ -115,10 +124,31 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                         const rawOHSum = opponentScores.reduce((sum, s) => sum + (s.handicap || 0), 0);
                         const ohSum = (hLimit !== null && rawOHSum > hLimit) ? hLimit : rawOHSum;
                         const excessOH = Math.max(0, rawOHSum - ohSum);
+                        const opponentManualPenalty = Number(m.manualTeamHandicaps?.[opponentId || ''] || 0);
 
-                        const og1 = opponentScores.reduce((sum, s) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0) - excessOH;
-                        const og2 = opponentScores.reduce((sum, s) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0) - excessOH;
-                        const og3 = opponentScores.reduce((sum, s) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0) - excessOH;
+                        const calculatedOg1 = opponentScores.reduce((sum, s) => sum + Math.min((s.score1 || 0) + (s.handicap || 0), 300), 0) - excessOH + opponentManualPenalty;
+                        const calculatedOg2 = opponentScores.reduce((sum, s) => sum + Math.min((s.score2 || 0) + (s.handicap || 0), 300), 0) - excessOH + opponentManualPenalty;
+                        const calculatedOg3 = opponentScores.reduce((sum, s) => sum + Math.min((s.score3 || 0) + (s.handicap || 0), 300), 0) - excessOH + opponentManualPenalty;
+
+                        const storedGames = isRight
+                            ? [m.scoreB1, m.scoreB2, m.scoreB3]
+                            : [m.scoreA1, m.scoreA2, m.scoreA3];
+                        const storedOpponentGames = isRight
+                            ? [m.scoreA1, m.scoreA2, m.scoreA3]
+                            : [m.scoreB1, m.scoreB2, m.scoreB3];
+                        const useStoredGames = m.useStoredTeamTotals === true
+                            && storedGames.every(score => Number.isFinite(score))
+                            && storedOpponentGames.every(score => Number.isFinite(score));
+                        const g1 = useStoredGames ? Number(storedGames[0]) : calculatedG1;
+                        const g2 = useStoredGames ? Number(storedGames[1]) : calculatedG2;
+                        const g3 = useStoredGames ? Number(storedGames[2]) : calculatedG3;
+                        const og1 = useStoredGames ? Number(storedOpponentGames[0]) : calculatedOg1;
+                        const og2 = useStoredGames ? Number(storedOpponentGames[1]) : calculatedOg2;
+                        const og3 = useStoredGames ? Number(storedOpponentGames[2]) : calculatedOg3;
+                        const displayPlayerGame = (score: number, handicap: number) => {
+                            const handicapped = score + handicap;
+                            return m.useStoredTeamTotals === true ? handicapped : Math.min(handicapped, 300);
+                        };
 
 
                         const draws = points !== null && (points % 1) === 0.5 ? 1 : 0;
@@ -224,10 +254,10 @@ export default function RoundResultSummary({ round, tournamentName, teamHandicap
                                             <tr key={idx} style={{ borderBottom: '1px solid #000000', height: isMobile ? '24px' : '32px' }}>
                                                 <td style={{ ...baseCell }}>{s?.playerName || ''}</td>
                                                 <td style={{ ...baseCell, fontWeight: 400, color: '#64748b' }}>{s?.handicap || ''}</td>
-                                                <td style={baseCell}>{s ? Math.min(s.score1 + s.handicap, 300) : ''}</td>
-                                                <td style={baseCell}>{s ? Math.min(s.score2 + s.handicap, 300) : ''}</td>
-                                                <td style={baseCell}>{s ? Math.min(s.score3 + s.handicap, 300) : ''}</td>
-                                                <td style={{ ...baseCell, backgroundColor: '#f8fafc', fontWeight: 400 }}>{s ? Math.min(s.score1 + s.handicap, 300) + Math.min(s.score2 + s.handicap, 300) + Math.min(s.score3 + s.handicap, 300) : ''}</td>
+                                                <td style={baseCell}>{s ? displayPlayerGame(s.score1, s.handicap) : ''}</td>
+                                                <td style={baseCell}>{s ? displayPlayerGame(s.score2, s.handicap) : ''}</td>
+                                                <td style={baseCell}>{s ? displayPlayerGame(s.score3, s.handicap) : ''}</td>
+                                                <td style={{ ...baseCell, backgroundColor: '#f8fafc', fontWeight: 400 }}>{s ? displayPlayerGame(s.score1, s.handicap) + displayPlayerGame(s.score2, s.handicap) + displayPlayerGame(s.score3, s.handicap) : ''}</td>
                                             </tr>
                                         );
                                     })}
