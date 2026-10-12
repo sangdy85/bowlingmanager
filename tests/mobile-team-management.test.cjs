@@ -267,8 +267,8 @@ test('only OWNER changes manager roles and owner remains protected', async () =>
   );
 });
 
-test('OWNER and MANAGER blind members idempotently while preserving membership identity', async () => {
-  for (const actor of ['owner', 'manager']) {
+test('OWNER blinds members idempotently while preserving membership identity', async () => {
+  for (const actor of ['owner']) {
     const current = fixture();
     const result = await service.setTeamMemberBlind(
       actor,
@@ -296,7 +296,26 @@ test('OWNER and MANAGER blind members idempotently while preserving membership i
   }
 });
 
+test('manager cannot remove a blinded member through direct API while owner can manage it', async () => {
+  const hiddenTeam = { ...team, members: team.members.map(member =>
+    member.id === 'membership-member' ? { ...member, blindAt: new Date() } : member) };
+  const current = fixture({ findAccessibleTeam: async () => hiddenTeam });
+  await assert.rejects(
+    service.removeTeamMember('manager', 'team-1', 'membership-member', current.dependencies),
+    error => error.code === 'MEMBER_NOT_FOUND',
+  );
+  assert.equal(current.state.removed, null);
+  await service.removeTeamMember('owner', 'team-1', 'membership-member', current.dependencies);
+  assert.equal(current.state.removed.memberId, 'membership-member');
+});
+
 test('blind mutation protects owners and rejects MEMBER, outsider and cross-team targets', async () => {
+  for (const blind of [true, false]) {
+    await assert.rejects(
+      () => service.setTeamMemberBlind('manager', 'team-1', 'membership-member', blind, fixture().dependencies),
+      error => error.code === 'FORBIDDEN' && error.status === 403,
+    );
+  }
   await assert.rejects(
     () => service.setTeamMemberBlind('owner', 'team-1', 'membership-owner', true, fixture().dependencies),
     error => error.code === 'OWNER_PROTECTED' && error.status === 403,

@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import NewTournamentForm from "@/components/tournaments/NewTournamentForm";
 import styles from "./NewTournamentPage.module.css";
+import { centerEnabled } from '@/lib/king-perfect/rules';
 
 export default async function NewTournamentPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: centerId } = await params;
@@ -15,7 +16,7 @@ export default async function NewTournamentPage({ params }: { params: Promise<{ 
     });
 
     if (!center) notFound();
-    if (!center.managers.some(m => m.id === session?.user?.id)) {
+    if (center.ownerId !== session?.user?.id && !center.managers.some(m => m.id === session?.user?.id)) {
         redirect(`/centers/${centerId}`);
     }
 
@@ -32,7 +33,7 @@ export default async function NewTournamentPage({ params }: { params: Promise<{ 
             </header>
 
             <div className={styles.formShell}>
-                <NewTournamentForm centerId={centerId} />
+                <NewTournamentForm centerId={centerId} kingPerfectEnabled={centerEnabled(centerId)} />
             </div>
         </div>
     );

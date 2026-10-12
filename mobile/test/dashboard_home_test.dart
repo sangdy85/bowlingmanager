@@ -5,6 +5,8 @@ import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.d
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/home/domain/dashboard.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_event_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_events_api.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_events_repository.dart';
@@ -407,7 +409,8 @@ void main() {
       expect(find.text('입상 1/1/0'), findsNothing);
       await tester.tap(find.byKey(const Key('club-achievement-team-1')));
       await tester.pumpAndSettle();
-      expect(find.text('동호회 상세'), findsOneWidget);
+      expect(find.byKey(const Key('club-detail')), findsOneWidget);
+      expect(find.text('동호회 기록'), findsOneWidget);
     },
   );
 
@@ -478,6 +481,15 @@ Future<void> _pumpAuthenticatedApp(
         dashboardRepositoryProvider.overrideWithValue(dashboardRepository),
         clubRepositoryProvider.overrideWithValue(
           clubRepository ?? FakeClubRepository(),
+        ),
+        clubTeamProfileProvider.overrideWith(
+          (ref, request) async => testClubTeamProfile,
+        ),
+        clubEventsProvider.overrideWith(
+          (ref, request) async => const ClubEventsEnvelope(
+            role: ClubRole.member,
+            events: <ClubEvent>[],
+          ),
         ),
         if (eventsApi != null)
           clubEventsRepositoryProvider.overrideWithValue(

@@ -7,11 +7,39 @@ import 'package:bowlingmanager_mobile/features/club/share/club_invite_share_data
 import 'package:bowlingmanager_mobile/features/club/share/club_invite_share_preview_sheet.dart';
 import 'package:bowlingmanager_mobile/shared/share/share_image_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const String _validUrl = 'https://www.bowlingmanager.co.kr/invite/team/A1B2C3';
 
 void main() {
+  testWidgets(
+    'default invite sharing sends a clickable link without a photo-only payload',
+    (tester) async {
+      MethodCall? sent;
+      const channel = MethodChannel('dev.fluttercommunity.plus/share');
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        call,
+      ) async {
+        sent = call;
+        return 'success';
+      });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          null,
+        ),
+      );
+      await const FlutterInviteLinkShareService().share(
+        GlobalKey(),
+        fileName: 'invite.png',
+        text: '동호회 초대\n$_validUrl',
+      );
+      expect(sent?.method, 'share');
+      expect((sent!.arguments as Map)['text'], contains(_validUrl));
+      expect((sent!.arguments as Map)['paths'], isNull);
+    },
+  );
   group('ClubInviteShareData', () {
     test('uses only display fields and the server-provided invite URL', () {
       final ClubInviteShareData data = ClubInviteShareData.fromClub(

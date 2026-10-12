@@ -46,6 +46,8 @@ model User {
   markedTeamChargeTargets         TeamChargeTarget[]                @relation("TeamChargeTargetMarkedBy")
   teamChargeTargetAudits          TeamChargeTargetAudit[]           @relation("TeamChargeTargetAuditActor")
   teamEventAdminAudits            TeamEventAdminAudit[]             @relation("TeamEventAdminAuditActor")
+  bandConnections                 BandConnection[]                  @relation("BandConnectionUser")
+  requestedBandPosts              BandPost[]                        @relation("BandPostRequester")
 }
 
 model VerificationToken {
@@ -139,7 +141,9 @@ model BowlingCenter {
   CenterMember CenterMember[]
   teams        Team[]
   tournaments  Tournament[]
-  managers     User[]         @relation("CenterManagers")
+  managers       User[]          @relation("CenterManagers")
+  bandConnection BandConnection?  @relation("CenterBandConnection")
+  bandPosts      BandPost[]       @relation("CenterBandPosts")
 }
 
 model Team {
@@ -171,6 +175,8 @@ model Team {
   seasonFinalTemplates         SeasonFinalTemplate[]
   charges                      TeamCharge[]
   eventAdminAudits             TeamEventAdminAudit[]
+  paymentAccounts              TeamPaymentAccount[]
+  gameFeeAudits                TeamGameFeeAudit[]
 }
 
 model TeamSeason {
@@ -825,6 +831,20 @@ model EventCompetitionVotePick {
   @@index([selectedParticipantId])
 }
 
+model TeamPaymentAccount {
+  id            String   @id @default(cuid())
+  teamId        String
+  kind          String
+  bankName      String
+  accountNumber String
+  holderName    String
+  revision      Int      @default(1)
+  updatedAt     DateTime @updatedAt
+  team          Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, kind])
+}
+
 model TeamEventAttendance {
   id                  String      @id @default(cuid())
   eventId             String
@@ -833,6 +853,13 @@ model TeamEventAttendance {
   status              String      @default("UNANSWERED")
   manualGroupingScore Int?
   manualGroup         String?
+  gameFeeStatus       String      @default("UNPAID")
+  gameFeeRevision     Int         @default(0)
+  gameFeeRequestedAt  DateTime?
+  gameFeeConfirmedAt  DateTime?
+  gameFeeConfirmedBy  String?
+  gameFeeAccountJson  String?
+  gameFeeAudits       TeamGameFeeAudit[]
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
   event               TeamEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -1021,6 +1048,8 @@ model Tournament {
   center                 BowlingCenter            @relation(fields: [centerId], references: [id])
   attachments            TournamentAttachment[]
   registrations          TournamentRegistration[]
+  bandPosts              BandPost[]               @relation("TournamentBandPosts")
+  kingPerfectEditions    KingPerfectEdition[]
 }
 
 model TournamentAttachment {
@@ -1053,6 +1082,58 @@ model LeagueRound {
   participants      RoundParticipant[]
   individualScores  TournamentScore[]
   rawScores         RawLaneScore[]
+  bandPosts         BandPost[]
+}
+
+model BandConnection {
+  id                    String        @id @default(cuid())
+  centerId              String        @unique
+  connectedByUserId     String
+  bandUserKey           String?
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String?
+  tokenExpiresAt        DateTime?
+  bandKey               String?
+  bandName              String?
+  bandCoverUrl          String?
+  enabled               Boolean       @default(true)
+  autoRecruitment       Boolean       @default(false)
+  autoFinalResult       Boolean       @default(false)
+  doPush                Boolean       @default(false)
+  connectedAt           DateTime      @default(now())
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  center                BowlingCenter @relation("CenterBandConnection", fields: [centerId], references: [id], onDelete: Cascade)
+  connectedBy           User          @relation("BandConnectionUser", fields: [connectedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([connectedByUserId])
+}
+
+model BandPost {
+  id              String        @id @default(cuid())
+  centerId        String
+  tournamentId    String
+  roundId         String?
+  type            String
+  revision        Int           @default(1)
+  dedupeKey       String        @unique
+  bandKey         String
+  postKey         String?
+  contentSnapshot String
+  status          String        @default("PENDING")
+  errorCode       String?
+  errorMessage    String?
+  requestedById   String?
+  createdAt       DateTime      @default(now())
+  postedAt        DateTime?
+  center          BowlingCenter @relation("CenterBandPosts", fields: [centerId], references: [id], onDelete: Cascade)
+  tournament      Tournament    @relation("TournamentBandPosts", fields: [tournamentId], references: [id], onDelete: Cascade)
+  round           LeagueRound?  @relation(fields: [roundId], references: [id], onDelete: SetNull)
+  requestedBy     User?         @relation("BandPostRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+
+  @@index([centerId, createdAt])
+  @@index([tournamentId, type])
+  @@index([roundId, type])
 }
 
 model RawLaneScore {
@@ -1163,8 +1244,158 @@ model CenterMember {
   BowlingCenter BowlingCenter @relation(fields: [centerId], references: [id], onDelete: Cascade)
   User          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   Team          Team?         @relation(fields: [teamId], references: [id])
+  kingPerfectEntries KingPerfectEntry[]
 
   @@unique([userId, centerId])
+}
+
+// Dedicated competition data; never shares LeagueRound scores or advancement.
+model KingPerfectEdition {
+  id           String @id @default(cuid())
+  tournamentId String
+  month        String
+  startsAt     DateTime
+  practiceAt   DateTime
+  state        String @default("QUALIFYING_OPEN")
+  revision     Int @default(0)
+  rules        String
+  published    Boolean @default(false)
+  settlement   String?
+  createdAt    DateTime @default(now())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Restrict)
+  entries      KingPerfectEntry[]
+  matches      KingPerfectMatch[]
+  audits       KingPerfectAudit[]
+  @@unique([tournamentId, month])
+}
+
+model KingPerfectEntry {
+  id           String @id @default(cuid())
+  editionId    String
+  memberId     String
+  name         String
+  handicap     Int
+  eligibility  String @default("PENDING")
+  athlete      Boolean @default(false)
+  cancelled    Boolean @default(false)
+  edition      KingPerfectEdition @relation(fields: [editionId], references: [id], onDelete: Restrict)
+  member       CenterMember @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  attempts     KingPerfectAttempt[]
+  seed         KingPerfectSeed?
+  seats        KingPerfectSeat[]
+  fees         KingPerfectFee[]
+  sideEntries  KingPerfectSideEntry[]
+  luckyWin     KingPerfectLuckyWin?
+  @@unique([editionId, memberId])
+}
+
+model KingPerfectAttempt {
+  id           String @id @default(cuid())
+  entryId      String
+  requestKey   String @unique
+  raw          Int
+  handicap     Int
+  converted    Int
+  voided       Boolean @default(false)
+  createdAt    DateTime @default(now())
+  entry        KingPerfectEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  @@index([entryId, createdAt])
+}
+
+model KingPerfectSeed {
+  id           String @id @default(cuid())
+  editionId    String
+  entryId      String @unique
+  position     Int
+  attemptId    String
+  raw          Int
+  handicap     Int
+  converted    Int
+  entry        KingPerfectEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  @@unique([editionId, position])
+}
+
+model KingPerfectMatch {
+  id           String @id @default(cuid())
+  editionId    String
+  stage        String
+  slot         Int
+  tableIndex   Int
+  lanes        String
+  confirmed    Boolean @default(false)
+  edition      KingPerfectEdition @relation(fields: [editionId], references: [id], onDelete: Restrict)
+  seats        KingPerfectSeat[]
+  @@unique([editionId, stage, slot])
+}
+
+model KingPerfectSeat {
+  id           String @id @default(cuid())
+  matchId      String
+  entryId      String
+  position     Int
+  handicap     Int
+  rawTotal     Int?
+  total        Int?
+  rank         Int?
+  match        KingPerfectMatch @relation(fields: [matchId], references: [id], onDelete: Restrict)
+  entry        KingPerfectEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  games        KingPerfectGame[]
+  @@unique([matchId, entryId])
+  @@unique([matchId, position])
+}
+
+model KingPerfectGame {
+  id           String @id @default(cuid())
+  seatId       String
+  number       Int
+  raw          Int?
+  converted    Int?
+  seat         KingPerfectSeat @relation(fields: [seatId], references: [id], onDelete: Restrict)
+  @@unique([seatId, number])
+}
+
+model KingPerfectFee {
+  id           String @id @default(cuid())
+  entryId      String
+  source       String
+  stage        String
+  amount       Int
+  status       String @default("UNPAID")
+  entry        KingPerfectEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  @@unique([entryId, source])
+  @@index([stage, status])
+}
+
+model KingPerfectAudit {
+  id           String @id @default(cuid())
+  editionId    String
+  requestKey   String
+  actorId      String
+  action       String
+  reason       String
+  payload      String
+  before       String
+  after        String
+  createdAt    DateTime @default(now())
+  edition      KingPerfectEdition @relation(fields: [editionId], references: [id], onDelete: Restrict)
+  @@unique([editionId, requestKey])
+  @@index([editionId, createdAt])
+}
+
+model KingPerfectSideEntry {
+  id           String @id @default(cuid())
+  entryId      String
+  stage        String
+  category     String
+  entry        KingPerfectEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  @@unique([entryId, stage, category])
+}
+
+model KingPerfectLuckyWin {
+  id           String @id @default(cuid())
+  entryId      String @unique
+  createdAt    DateTime @default(now())
+  entry        KingPerfectEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
 }
 
 model LeagueMatchupIndividualScore {
@@ -1240,4 +1471,26 @@ model Inquiry {
   author    User     @relation(fields: [authorId], references: [id])
   status    String   @default("PENDING") // PENDING, ANSWERED
   answer    String?
+}
+
+model TeamGameFeeAudit {
+  id              String               @id @default(cuid())
+  teamId          String
+  attendanceId    String?
+  eventSnapshotId String
+  eventTitle      String
+  memberId        String
+  memberName      String
+  actorUserId     String
+  action          String
+  previousStatus  String
+  nextStatus      String
+  revision        Int
+  accountJson     String?
+  createdAt       DateTime             @default(now())
+  team            Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  attendance      TeamEventAttendance? @relation(fields: [attendanceId], references: [id], onDelete: SetNull)
+
+  @@unique([attendanceId, revision])
+  @@index([teamId, eventSnapshotId, createdAt])
 }

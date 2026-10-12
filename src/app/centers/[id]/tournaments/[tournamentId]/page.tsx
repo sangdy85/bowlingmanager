@@ -21,15 +21,23 @@ import TournamentMemberView from "@/components/tournaments/TournamentMemberView"
 import { getLeagueLeaderboard, getIndividualLeaderboard } from "@/app/actions/league-leaderboard";
 import { getEffectiveRoundDate, calculateTournamentStatus } from "@/lib/tournament-utils";
 import styles from "./TournamentDetail.module.css";
+import { isBandConfigured } from "@/lib/band/config";
+import { isKingPerfect } from '@/lib/king-perfect/rules';
+import KingPerfectPage from '@/components/tournaments/KingPerfectPage';
 
-export default async function TournamentDetailPage({ params }: { params: Promise<{ id: string, tournamentId: string }> }) {
+export default async function TournamentDetailPage({ params, searchParams }: { params: Promise<{ id: string, tournamentId: string }>; searchParams: Promise<{ edition?: string }> }) {
     const { id: centerId, tournamentId } = await params;
     const session = await auth();
 
     const tournament = (await (prisma.tournament as any).findUnique({
         where: { id: tournamentId },
         include: {
-            center: { include: { managers: true } },
+            center: {
+                include: {
+                    managers: true,
+                    bandConnection: { select: { enabled: true, bandKey: true } }
+                }
+            },
             attachments: {
                 orderBy: { createdAt: 'desc' }
             },
@@ -64,7 +72,10 @@ export default async function TournamentDetailPage({ params }: { params: Promise
         }
     })) as any;
 
-    if (!tournament) notFound();
+    if (!tournament || tournament.centerId !== centerId) notFound();
+    if (isKingPerfect(tournament.type, tournament.settings)) {
+        return <KingPerfectPage tournamentId={tournamentId} centerId={centerId} editionId={(await searchParams).edition} />;
+    }
 
     const now = new Date();
 
@@ -223,7 +234,7 @@ export default async function TournamentDetailPage({ params }: { params: Promise
         
         const tournamentOverallStatus = calculateTournamentStatus(tournament.startDate, tournamentSettings.registrationStart, tournament.endDate, tournament.status, now);
 
-        if (allFinished && tournamentOverallStatus === 'FINISHED') {
+        if (tournament.status === 'FINISHED' || (allFinished && tournamentOverallStatus === 'FINISHED')) {
             currentStatus = 'FINISHED';
         } else if (anyOngoing || hasStarted) {
             currentStatus = 'ONGOING';
@@ -246,7 +257,11 @@ export default async function TournamentDetailPage({ params }: { params: Promise
         }
     };
 
-    const safeTournament = JSON.parse(JSON.stringify(safeTournamentRaw));
+    const safeTournament = JSON.parse(JSON.stringify(safeTournamentRaw, (key, value) => {
+        if (['password', 'tokenHash', 'accessTokenEncrypted', 'refreshTokenEncrypted'].includes(key)) return undefined;
+        if (!isManager && ['email', 'emailVerified'].includes(key)) return undefined;
+        return value;
+    }));
 
     return (
         <div className={styles.page}>
@@ -491,6 +506,10 @@ export default async function TournamentDetailPage({ params }: { params: Promise
 
                         {safeTournament.type === 'LEAGUE' && safeTournament.leagueRounds.length > 0 && (
                             <WeeklyResultDownloader
+                                centerId={centerId}
+                                isManager={isManager}
+                                bandConnected={Boolean(safeTournament.center.bandConnection?.enabled && safeTournament.center.bandConnection?.bandKey)}
+                                bandConfigured={isBandConfigured()}
                                 tournamentId={safeTournament.id}
                                 tournamentName={safeTournament.name}
                                 rounds={safeTournament.leagueRounds}
@@ -550,7 +569,6 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                     </div>
 
                     <aside className={styles.sidebar}>
-
                         <section className={`card ${styles.sideCard}`}>
                             <h3 className={styles.sideTitle}>📍 참여 볼링장</h3>
                             <p className={styles.sideText}>{safeTournament.center.name}</p>

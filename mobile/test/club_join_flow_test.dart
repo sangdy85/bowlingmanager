@@ -3,6 +3,10 @@ import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/core/storage/onboarding_storage.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/application/club_event_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/onboarding/application/onboarding_providers.dart';
@@ -100,6 +104,24 @@ Future<void> _pumpJoinApp(
         authRepositoryProvider.overrideWithValue(authRepository),
         onboardingStorageProvider.overrideWithValue(onboardingStorage),
         clubRepositoryProvider.overrideWithValue(clubRepository),
+        clubEventsProvider.overrideWith(
+          (ref, request) async => const ClubEventsEnvelope(
+            role: ClubRole.member,
+            events: <ClubEvent>[],
+          ),
+        ),
+        clubTeamProfileProvider.overrideWith(
+          (ref, request) async => const ClubTeamProfile(
+            id: 'team-1',
+            name: '테스트 동호회',
+            description: null,
+            notice: null,
+            myRole: ClubRole.member,
+            seasonRankingEnabled: false,
+            bowlerHiddenEnabled: false,
+            activeSeason: null,
+          ),
+        ),
         dashboardRepositoryProvider.overrideWithValue(
           FakeDashboardRepository(),
         ),

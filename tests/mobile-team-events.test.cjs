@@ -371,13 +371,13 @@ test('active members can read attendance names and guests without private user f
     event.competitionType = type;
     const response = await service.getTeamEvent('user-2', 'team-1', event.id);
     assert.deepEqual(response.attendance, [
-      { memberId: 'member-1', name: '별명1', status: 'ATTENDING' },
-      { memberId: 'member-2', name: '회원2', status: 'UNANSWERED' },
+      { memberId: 'member-1', name: '별명1', status: 'ATTENDING', gameFee: null },
+      { memberId: 'member-2', name: '회원2', status: 'UNANSWERED', gameFee: { status: 'UNPAID', revision: 0, requestedAt: null, confirmedAt: null, account: null } },
     ], type);
     assert.deepEqual(response.guests, [{ id: 'guest-1', name: '게스트1' }], type);
     assert.equal(response.myRole, 'MEMBER', type);
     for (const item of response.attendance) {
-      assert.deepEqual(Object.keys(item).sort(), ['memberId', 'name', 'status']);
+      assert.deepEqual(Object.keys(item).sort(), ['gameFee', 'memberId', 'name', 'status']);
     }
     assert.equal(JSON.stringify(response).includes('user-1'), false, type);
   }

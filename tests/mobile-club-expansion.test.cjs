@@ -30,6 +30,24 @@ function loadTs(relative, overrides = {}, cache = new Map()) {
 
 const service = loadTs('src/lib/mobile-api/club-expansion.ts', { '@/lib/prisma': {} });
 
+test('blind member profile is owner-only and denied before loading scores', async () => {
+  let scoreReads = 0;
+  const isolated = loadTs('src/lib/mobile-api/club-expansion.ts', {
+    '@/lib/prisma': {
+      team: { findFirst: async () => ({
+        id: 'team', ownerId: 'owner', User: [{ id: 'manager' }],
+        members: [{ id: 'hidden', userId: 'member', alias: null, blindAt: new Date(), joinedAt: new Date(), user: { name: '숨김', handicap: 0 } }],
+      }) },
+      score: { findMany: async () => { scoreReads++; return []; } },
+    },
+  });
+  for (const actor of ['manager', 'member']) {
+    await assert.rejects(isolated.getMobileMemberProfile(actor, 'team', 'hidden', 2026), error => error.code === 'MEMBER_NOT_FOUND');
+  }
+  assert.equal(scoreReads, 0);
+  assert.equal((await isolated.getMobileMemberProfile('owner', 'team', 'hidden', 2026)).id, 'hidden');
+});
+
 const members = [
   { id: 'member-a', userId: 'user-a', name: '동명이인' },
   { id: 'member-b', userId: 'user-b', name: '동명이인' },

@@ -415,6 +415,9 @@ export async function removeTeamMember(
     const { team, role } = await requireManager(actorUserId, teamId, dependencies);
     const target = team.members.find((member) => member.id === memberId);
     if (!target) throw new TeamManagementError("MEMBER_NOT_FOUND", "팀원을 찾을 수 없습니다.", 404);
+    if (target.blindAt != null && role !== "OWNER") {
+        throw new TeamManagementError("MEMBER_NOT_FOUND", "팀원을 찾을 수 없습니다.", 404);
+    }
     if (target.userId === actorUserId) {
         throw new TeamManagementError("SELF_REMOVAL_FORBIDDEN", "자기 자신은 강퇴할 수 없습니다.", 400);
     }
@@ -460,7 +463,8 @@ export async function setTeamMemberBlind(
     dependencies: TeamManagementDependencies = defaultDependencies,
     now = new Date(),
 ) {
-    const { team } = await requireManager(actorUserId, teamId, dependencies);
+    const { team, role } = await requireManager(actorUserId, teamId, dependencies);
+    if (role !== "OWNER") throw new TeamManagementError("FORBIDDEN", "팀장만 블라인드 회원을 관리할 수 있습니다.", 403);
     if (typeof blind !== "boolean") {
         throw invalid("INVALID_BLIND_STATE", "블라인드 상태를 확인해주세요.");
     }

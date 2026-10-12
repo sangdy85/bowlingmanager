@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "npm run lint && npm run typecheck && prisma generate && next build",
+    "build": "prisma generate && npm run lint && npm run typecheck && next build",
     "start": "next start",
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit --incremental false",

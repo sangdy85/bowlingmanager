@@ -30,7 +30,7 @@ export default function LeagueResultManager({
     centerId,
     tournamentId,
     rounds,
-    isManager
+    isManager,
 }: LeagueResultManagerProps) {
     const isRoundFinished = (matchups: Matchup[]) => {
         return matchups.length > 0 && matchups.every(m => m.status === 'FINISHED');

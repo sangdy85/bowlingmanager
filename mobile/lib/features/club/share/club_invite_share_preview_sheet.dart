@@ -14,7 +14,7 @@ Future<void> copyClubInviteUrlToClipboard(String value) =>
 Future<void> showClubInviteSharePreview({
   required BuildContext context,
   required ClubInviteShareData data,
-  ShareImageService service = const FlutterShareImageService(),
+  ShareImageService service = const FlutterInviteLinkShareService(),
   InviteClipboardWriter clipboardWriter = copyClubInviteUrlToClipboard,
 }) {
   return showModalBottomSheet<void>(
@@ -74,6 +74,29 @@ class _ClubInviteSharePreviewSheetState
     setState(() => _isSharing = true);
     try {
       await widget.service.share(
+        _boundaryKey,
+        fileName: 'bowlingmanager-club-invite.png',
+        text: widget.data.shareText,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('초대 카드를 공유하지 못했습니다.')));
+      }
+    } finally {
+      if (mounted) setState(() => _isSharing = false);
+    }
+  }
+
+  Future<void> _shareImage() async {
+    if (_isBusy) return;
+    if (!isValidClubInviteUrl(widget.data.inviteUrl)) {
+      _showInvalidUrlError();
+      return;
+    }
+    setState(() => _isSharing = true);
+    try {
+      await const FlutterShareImageService().share(
         _boundaryKey,
         fileName: 'bowlingmanager-club-invite.png',
         text: widget.data.shareText,
@@ -154,7 +177,7 @@ class _ClubInviteSharePreviewSheetState
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '링크를 받은 사람은 동호회 가입 화면으로 이동합니다.',
+                      '초대 링크를 받은 사람은 동호회 가입 화면으로 이동합니다.\n카카오톡은 기본 공유하기를 이용하세요.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
@@ -177,10 +200,16 @@ class _ClubInviteSharePreviewSheetState
                         ),
                       )
                     : const Icon(Icons.share_rounded),
-                label: Text(_isSharing ? '이미지 준비 중' : '공유하기'),
+                label: Text(_isSharing ? '공유 준비 중' : '공유하기'),
               ),
             ),
             const SizedBox(height: 8),
+            TextButton.icon(
+              key: const Key('club-invite-image-share'),
+              onPressed: _isBusy ? null : _shareImage,
+              icon: const Icon(Icons.image_outlined),
+              label: const Text('이미지 파일과 링크 공유'),
+            ),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(

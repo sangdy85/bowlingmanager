@@ -7,6 +7,9 @@ import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.d
 import 'package:bowlingmanager_mobile/features/auth/application/auth_state.dart';
 import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/application/club_event_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_models.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/onboarding/application/onboarding_providers.dart';
@@ -94,10 +97,7 @@ void main() {
     await tester.tap(inquiry);
     await tester.pump();
 
-    expect(
-      find.text('웹 페이지를 열지 못했습니다. 잠시 후 다시 시도해주세요.'),
-      findsOneWidget,
-    );
+    expect(find.text('웹 페이지를 열지 못했습니다. 잠시 후 다시 시도해주세요.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -414,7 +414,8 @@ void main() {
 
     await tester.tap(find.byKey(const Key('profile-club-team-1')));
     await tester.pumpAndSettle();
-    expect(find.text('동호회 상세'), findsOneWidget);
+    expect(find.byKey(const Key('club-detail')), findsOneWidget);
+    expect(find.text('동호회 기록'), findsOneWidget);
     expect(find.text('테스트 동호회'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('club-back')));
@@ -441,6 +442,15 @@ Future<ProviderContainer> _openProfile(
           FakeDashboardRepository(),
         ),
         clubRepositoryProvider.overrideWithValue(clubRepository),
+        clubTeamProfileProvider.overrideWith(
+          (ref, request) async => testClubTeamProfile,
+        ),
+        clubEventsProvider.overrideWith(
+          (ref, request) async => const ClubEventsEnvelope(
+            role: ClubRole.member,
+            events: <ClubEvent>[],
+          ),
+        ),
         onboardingStorageProvider.overrideWithValue(
           MemoryOnboardingStorage(completed: true),
         ),

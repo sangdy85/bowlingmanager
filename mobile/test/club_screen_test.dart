@@ -8,6 +8,8 @@ import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.d
 import 'package:bowlingmanager_mobile/features/capture/domain/capture_models.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_expansion_providers.dart';
 import 'package:bowlingmanager_mobile/features/club/application/club_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/application/club_event_providers.dart';
+import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_expansion_api.dart';
 import 'package:bowlingmanager_mobile/features/club/data/club_post_image_picker.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_expansion_models.dart';
@@ -34,6 +36,96 @@ import 'support/dashboard_fakes.dart';
 
 void main() {
   testWidgets(
+    'compact club detail keeps next event and record tabs visible at 412px',
+    (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 1.2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await _openClubs(
+        tester,
+        FakeClubRepository(),
+        surfaceSize: const Size(412, 820),
+        upcomingEvent: ClubEvent.fromJson(<String, Object?>{
+          'id': 'next',
+          'teamId': 'team-1',
+          'title': '10월 정기전',
+          'date': '2026-10-31',
+          'time': '19:00',
+          'location': '서울 볼링장',
+          'gameType': '정기전',
+          'attendanceEnabled': true,
+          'laneDrawEnabled': false,
+          'laneDrawMode': 'BULK',
+          'laneDrawStatus': 'NOT_STARTED',
+          'myRole': 'MEMBER',
+          'myAttendance': 'UNANSWERED',
+          'counts': <String, int>{
+            'attending': 0,
+            'notAttending': 0,
+            'unanswered': 1,
+            'guests': 0,
+          },
+          'guests': <Object>[],
+          'slots': <Object>[],
+          'assignments': <Object>[],
+          'myAssignment': null,
+          'attendance': null,
+          'competition': null,
+        }),
+      );
+      await tester.tap(find.byKey(const Key('club-team-1')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('club-next-event')), findsOneWidget);
+      expect(find.text('2026-10-31 · 10월 정기전'), findsOneWidget);
+      expect(find.text('전체 일정 보기'), findsOneWidget);
+      expect(find.text('종합 순위'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
+    'only the owner sees blinded members even if cached API data includes them',
+    (tester) async {
+      for (final role in <ClubRole>[
+        ClubRole.owner,
+        ClubRole.manager,
+        ClubRole.member,
+      ]) {
+        final repository = FakeClubRepository()
+          ..detail = ClubDetail(
+            id: 'team-1',
+            name: '테스트 동호회',
+            myRole: role,
+            memberCount: 2,
+          )
+          ..members = <ClubMember>[
+            const ClubMember(
+              id: 'visible',
+              name: '표시 회원',
+              role: ClubRole.member,
+              handicap: 0,
+            ),
+            ClubMember(
+              id: 'hidden',
+              name: '블라인드 회원',
+              role: ClubRole.member,
+              handicap: 0,
+              blindAt: DateTime.utc(2026),
+            ),
+          ];
+        await _openClubs(tester, repository);
+        await tester.tap(find.byKey(const Key('club-team-1')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('club-members-link')));
+        await tester.pumpAndSettle();
+        expect(find.text('표시 회원'), findsOneWidget);
+        expect(
+          find.text('블라인드 회원'),
+          role == ClubRole.owner ? findsOneWidget : findsNothing,
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+    },
+  );
+  testWidgets(
     'Hidden OFF overview keeps general statistics and season ranking',
     (WidgetTester tester) async {
       final profile = _profileWithHidden(false);
@@ -46,7 +138,7 @@ void main() {
       );
       await tester.tap(find.byKey(const Key('club-team-1')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('club-records-link')));
+      await tester.tap(find.text('종합 순위'));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('club-overview')), findsOneWidget);
@@ -1187,7 +1279,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('club-team-1')));
     await tester.pumpAndSettle();
-    expect(find.text('동호회 상세'), findsOneWidget);
+    expect(find.text('동호회 기록'), findsOneWidget);
     expect(find.text('팀장'), findsWidgets);
     expect(find.text('3명'), findsOneWidget);
 
@@ -1220,8 +1312,7 @@ void main() {
     await tester.tap(find.byKey(const Key('club-team-1')));
     await tester.pumpAndSettle();
 
-    expect(find.text('동호회 초대'), findsOneWidget);
-    expect(find.text('초대 카드와 링크를 공유하세요'), findsOneWidget);
+    expect(find.text('초대하기'), findsOneWidget);
     await tester.tap(find.byKey(const Key('club-invite-share')));
     await tester.pumpAndSettle();
 
@@ -1232,7 +1323,7 @@ void main() {
     expect(find.byKey(const Key('club-invite-share-close')), findsOneWidget);
   });
 
-  testWidgets('Club detail menu cards keep equal heights at mobile scale', (
+  testWidgets('Club detail integrates records and actions at mobile scale', (
     WidgetTester tester,
   ) async {
     tester.platformDispatcher.textScaleFactorTestValue = 1.2;
@@ -1249,22 +1340,17 @@ void main() {
     await tester.pumpAndSettle();
 
     final List<Key> menuKeys = <Key>[
-      const Key('club-records-link'),
       const Key('club-events-link'),
       const Key('club-members-link'),
       const Key('club-board-link'),
       const Key('club-management-link'),
     ];
-    final Set<double> heights = <double>{};
     for (final Key key in menuKeys) {
-      await tester.scrollUntilVisible(
-        find.byKey(key),
-        120,
-        scrollable: find.byType(Scrollable).first,
-      );
-      heights.add(tester.getSize(find.byKey(key)).height);
+      expect(find.byKey(key), findsOneWidget);
     }
-    expect(heights, <double>{88});
+    expect(find.text('종합 순위'), findsOneWidget);
+    expect(find.text('종합 기록'), findsOneWidget);
+    expect(find.text('상세 기록'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -1275,7 +1361,7 @@ void main() {
     await _openClubs(tester, repository, surfaceSize: const Size(360, 720));
     await tester.tap(find.byKey(const Key('club-team-1')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('club-records-link')));
+    await tester.tap(find.text('종합 순위'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('club-overview')), findsOneWidget);
     expect(find.text('2026 시즌'), findsOneWidget);
@@ -1382,7 +1468,7 @@ void main() {
     await _openClubs(tester, repository);
     await tester.tap(find.byKey(const Key('club-team-1')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('club-records-link')));
+    await tester.tap(find.text('종합 순위'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('상세 기록'));
     await tester.pumpAndSettle();
@@ -1393,7 +1479,7 @@ void main() {
     await tester.tap(shareButton);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('club-result-share-card')), findsOneWidget);
-    expect(find.text('테스트 동호회'), findsOneWidget);
+    expect(find.text('테스트 동호회'), findsWidgets);
     expect(
       find.byKey(Key('club-activity-menu-${testClubActivity.id}')),
       findsOneWidget,
@@ -1485,7 +1571,7 @@ void main() {
     await _openClubs(tester, repository);
     await tester.tap(find.byKey(const Key('club-team-1')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('club-records-link')));
+    await tester.tap(find.text('종합 순위'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('상세 기록'));
     await tester.pumpAndSettle();
@@ -1544,8 +1630,8 @@ void main() {
     expect(find.byKey(const Key('member-role-member-3')), findsNothing);
     expect(find.byKey(const Key('member-remove-member-1')), findsNothing);
     expect(find.byKey(const Key('member-remove-member-2')), findsNothing);
-    expect(find.byKey(const Key('member-blind-member-2')), findsOneWidget);
-    expect(find.byKey(const Key('member-blind-member-3')), findsOneWidget);
+    expect(find.byKey(const Key('member-blind-member-2')), findsNothing);
+    expect(find.byKey(const Key('member-blind-member-3')), findsNothing);
     expect(find.byKey(const Key('member-remove-member-3')), findsOneWidget);
   });
 
@@ -1592,7 +1678,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('club-team-1')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('club-records-link')));
+      await tester.tap(find.text('종합 순위'));
       await tester.pumpAndSettle();
 
       final hiddenRanking = find.byKey(
@@ -1706,7 +1792,7 @@ void main() {
     await _openClubs(tester, repository);
     await tester.tap(find.byKey(const Key('club-team-1')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('club-records-link')));
+    await tester.tap(find.text('종합 순위'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('종합 기록'));
     await tester.pumpAndSettle();
@@ -1767,11 +1853,21 @@ void main() {
       await _openClubs(tester, repository, surfaceSize: const Size(360, 720));
       await tester.tap(find.byKey(const Key('club-team-1')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('club-records-link')));
+      await tester.tap(find.text('종합 순위'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('상세 기록'));
       await tester.pumpAndSettle();
 
+      await tester.scrollUntilVisible(
+        find.byKey(Key('club-activity-${second.id}')),
+        180,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const Key('club-activities-list')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       expect(find.byKey(Key('club-activity-${second.id}')), findsOneWidget);
       expect(
         find.byKey(Key('club-activity-share-${second.id}')),
@@ -1798,7 +1894,7 @@ void main() {
     await _openClubs(tester, repository);
     await tester.tap(find.byKey(const Key('club-team-1')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('club-records-link')));
+    await tester.tap(find.text('종합 순위'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('종합 기록'));
     await tester.pumpAndSettle();
@@ -1914,7 +2010,7 @@ void main() {
     await _openClubs(tester, repository, surfaceSize: const Size(360, 720));
     await tester.tap(find.byKey(const Key('club-team-1')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('club-records-link')));
+    await tester.tap(find.text('종합 순위'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('종합 기록'));
     await tester.pumpAndSettle();
@@ -1971,6 +2067,7 @@ Future<void> _openClubs(
   Size surfaceSize = const Size(600, 1200),
   ClubTeamProfile? profile,
   ClubSeasonRanking? ranking,
+  ClubEvent? upcomingEvent,
 }) async {
   await tester.binding.setSurfaceSize(surfaceSize);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -1984,6 +2081,12 @@ Future<void> _openClubs(
           FakeDashboardRepository(),
         ),
         clubRepositoryProvider.overrideWithValue(clubRepository),
+        clubEventsProvider.overrideWith(
+          (ref, request) async => ClubEventsEnvelope(
+            role: ClubRole.member,
+            events: <ClubEvent>[?upcomingEvent],
+          ),
+        ),
         clubTeamProfileProvider.overrideWith(
           (ref, request) async => profile ?? _profile,
         ),
