@@ -1,14 +1,14 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import React from "react";
 import YearSelector from "@/components/YearSelector";
 import StatsDisplayRow from "@/components/StatsDisplayRow";
-import RadarChart from "@/components/RadarChart";
-import { getPersonalStatisticsData } from "@/lib/personal-statistics";
+import { getPersonalStatisticsData, summarizeIntegratedRecords } from "@/lib/personal-statistics";
 import { calculatePersonalProfile } from "@/lib/personal-profile";
 import styles from "./PersonalPage.module.css";
+import { DashboardShell } from "@/components/dashboard/DashboardUI";
+import PersonalDashboardOverview from "@/components/dashboard/PersonalDashboardOverview";
 
 export const dynamic = 'force-dynamic';
 
@@ -305,148 +305,43 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
     }));
 
     return (
-        <div className={styles.page}>
-            <header className={styles.header}>
-                <h1 className={styles.title}>나의 기록실</h1>
-                <p className={styles.subtitle}>개인 기록과 통계를 확인합니다.</p>
-            </header>
-
-            <YearSelector currentYear={currentYear} activeYears={activeYears} />
+        <DashboardShell>
+            <PersonalDashboardOverview
+                name={user.name}
+                teamNames={user.teamMemberships.map(membership => membership.team.name)}
+                summary={summarizeIntegratedRecords(allIntegratedScores, currentYear)}
+                canAddScore={hasAuthority}
+                radar={profile.radar}
+                yearControl={<YearSelector currentYear={currentYear} activeYears={activeYears} />}
+            />
+            <section id="personal-details" className={styles.page} aria-labelledby="personal-details-title">
+                <header className={styles.header}>
+                    <h2 id="personal-details-title" className={styles.title}>상세 기록과 통계</h2>
+                    <p className={styles.subtitle}>기존의 종목별·팀별 통계와 공식 경기 기록을 확인하세요.</p>
+                </header>
 
             {datasets.length > 0 && (
                 <div className={styles.profileLayout}>
-                    {/* 1. Left: Profile Info */}
                     <div className={styles.profileInfo}>
-                        <div className="text-white/60 text-[10px] font-black tracking-widest mb-1 uppercase">PLAYER PROFILE</div>
-                        <h2 className="text-4xl font-black text-white mb-6 tracking-tight">{user.name} <span className="text-white/40 font-normal">선수</span></h2>
-                        
-                        <div className="bg-white/5 rounded-xl border border-white/10 p-5 space-y-4 shadow-2xl backdrop-blur-sm">
-                            {/* Total Average */}
-                            <div className="flex justify-between items-center pb-3 border-b border-white/10">
-                                <span className="text-white/60 font-bold text-sm">✨ 총평균</span>
-                                <span className="text-2xl font-black text-blue-400">{totalAvg.toFixed(1)}</span>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-4 pt-1">
-                                {/* Regular Stats */}
-                                <div className="space-y-1.5">
-                                    <div className="text-[10px] font-black text-blue-400/80 tracking-tighter uppercase mb-2 border-l-2 border-blue-400/50 pl-2">정기전</div>
-                                    <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="text-white/40 font-bold">평균 :</span>
-                                        <span className="font-black text-white">{regAvg.toFixed(1)}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="text-white/40 font-bold">하이 :</span>
-                                        <span className="font-black text-white">{regMaxScore}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="text-white/40 font-bold">로우 :</span>
-                                        <span className="font-black text-white">{regMinScore}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="text-white/40 font-bold">게임수 :</span>
-                                        <span className="font-black text-white">{regGames} G <span className="text-[10px] text-white/40 font-normal">({regAttendancePct.toFixed(0)}%)</span></span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="text-white/40 font-bold">편차 :</span>
-                                        <span className="font-black text-white">{regHighLow}</span>
-                                    </div>
-                                </div>
-
-                                {/* Tournament Stats */}
-                                <div className="space-y-1.5">
-                                    <div className="text-[10px] font-black text-orange-400/80 tracking-tighter uppercase mb-2 border-l-2 border-orange-400/50 pl-2">대회</div>
-                                    <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="text-white/40 font-bold">평균 :</span>
-                                        <span className="font-black text-white">{offAvg.toFixed(1)}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="text-white/40 font-bold">하이 :</span>
-                                        <span className="font-black text-white">{offMaxScore}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="text-white/40 font-bold">로우 :</span>
-                                        <span className="font-black text-white">{offMinScore}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="text-white/40 font-bold">게임수 :</span>
-                                        <span className="font-black text-white">{offGames} G <span className="text-[10px] text-white/40 font-normal">({officialRecords.length}회)</span></span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs">
-                                        <span className="text-white/40 font-bold">편차 :</span>
-                                        <span className="font-black text-white">{offHighLow}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Medal Awards Section */}
-                            {(goldCount > 0 || silverCount > 0 || bronzeCount > 0) && (
-                                <div className="mt-4 pt-4 border-t border-white/10">
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex flex-col gap-1">
-                                            {(() => {
-                                                const allMedals = [
-                                                    ...Array.from({ length: goldCount }).map((_, i) => ({ type: 'gold', icon: '🥇', color: 'rgba(255,215,0,0.5)' })),
-                                                    ...Array.from({ length: silverCount }).map((_, i) => ({ type: 'silver', icon: '🥈', color: 'rgba(192,192,192,0.5)' })),
-                                                    ...Array.from({ length: bronzeCount }).map((_, i) => ({ type: 'bronze', icon: '🥉', color: 'rgba(205,127,50,0.5)' }))
-                                                ];
-                                                
-                                                const rows = [];
-                                                for (let i = 0; i < allMedals.length; i += 8) {
-                                                    rows.push(allMedals.slice(i, i + 8));
-                                                }
-
-                                                return rows.map((row, rowIdx) => (
-                                                    <div key={rowIdx} className="flex -space-x-3 overflow-visible py-0.5">
-                                                        {row.map((medal, i) => (
-                                                            <span 
-                                                                key={`${medal.type}-${rowIdx}-${i}`} 
-                                                                className="text-2xl filter"
-                                                                style={{ filter: `drop-shadow(0 0 8px ${medal.color})` }}
-                                                            >
-                                                                {medal.icon}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                ));
-                                            })()}
-                                        </div>
-                                        <div className="text-[13px] font-black tracking-wider text-white/90 bg-white/5 px-2.5 py-1 rounded-md border border-white/5 w-fit">
-                                            {goldCount > 0 && <span className="text-yellow-400">금 {goldCount}</span>}
-                                            {silverCount > 0 && <span className="mx-2 text-white/20">/</span>}
-                                            {silverCount > 0 && <span className="text-slate-300">은 {silverCount}</span>}
-                                            {bronzeCount > 0 && <span className="mx-2 text-white/20">/</span>}
-                                            {bronzeCount > 0 && <span className="text-orange-400">동 {bronzeCount}</span>}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                        <h3>선수 프로필</h3>
+                        <p className={styles.profileAverage}>총평균 <strong>{totalAvg.toFixed(1)}</strong></p>
+                        <div className={styles.profileStats}>
+                            <div><h4>정기전</h4><dl>
+                                <div><dt>평균</dt><dd>{regAvg.toFixed(1)}</dd></div>
+                                <div><dt>하이 / 로우</dt><dd>{regMaxScore} / {regMinScore}</dd></div>
+                                <div><dt>게임 수</dt><dd>{regGames} G</dd></div>
+                                <div><dt>출석률</dt><dd>{regAttendancePct.toFixed(0)}%</dd></div>
+                                <div><dt>편차</dt><dd>{regHighLow}</dd></div>
+                            </dl></div>
+                            <div><h4>대회</h4><dl>
+                                <div><dt>평균</dt><dd>{offAvg.toFixed(1)}</dd></div>
+                                <div><dt>하이 / 로우</dt><dd>{offMaxScore} / {offMinScore}</dd></div>
+                                <div><dt>게임 수</dt><dd>{offGames} G</dd></div>
+                                <div><dt>참가 횟수</dt><dd>{officialRecords.length}회</dd></div>
+                                <div><dt>편차</dt><dd>{offHighLow}</dd></div>
+                            </dl></div>
                         </div>
-                    </div>
-
-                    {/* 2. Center: Radar Chart */}
-                    <div className={styles.profileChart}>
-                        <RadarChart 
-                            datasets={datasets} 
-                            labels={['기량(에버)', '포텐셜', '기복', '안정감', '성실']} 
-                            size={500} 
-                        />
-                    </div>
-
-                    {/* 3. Right: Specialized Legend (Stacked vertically, aligned to bottom of chart area) */}
-                    <div className={styles.legend}>
-                            {datasets.map((dataset, idx) => (
-                                <div key={idx} className={styles.legendItem}>
-                                    <span className={styles.legendLabel}>{dataset.label}</span>
-                                    <div
-                                        className={styles.legendBar}
-                                        style={{
-                                            backgroundColor: dataset.color,
-                                            boxShadow: '0 0 12px ' + dataset.color + '66'
-                                        }}
-                                    />
-                                </div>
-                            ))}
+                        {(goldCount > 0 || silverCount > 0 || bronzeCount > 0) && <p className={styles.medals} aria-label="정기전 메달 기록">🥇 금 {goldCount} · 🥈 은 {silverCount} · 🥉 동 {bronzeCount}</p>}
                     </div>
                 </div>
             )}
@@ -458,16 +353,16 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
 
                 <div className={styles.statTables}>
                     {/* 1. 전체 종합 (모든 팀 합산) */}
-                    <div className={`table-responsive !p-0 !bg-white ${styles.tableSurface}`}>
+                    <div tabIndex={0} role="region" aria-label="가로로 스크롤할 수 있는 상세 기록 표" className={`table-responsive !p-0 !bg-white ${styles.tableSurface}`}>
                         <table className={`w-full text-[13px] border-collapse !bg-white !text-[#0f172a] ${styles.dataTable}`} style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>
                             <thead>
                                 <tr className="!bg-[#f2f2f2]" style={{ backgroundColor: '#f2f2f2' }}>
-                                    <th className="p-2 border border-slate-400 !text-[#0f172a] font-black text-left" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>분류 (전체 종합)</th>
-                                    <th className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[60px] sm:w-[80px] text-center" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>게임수</th>
-                                    <th className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[80px] sm:w-[100px] text-center" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>총점</th>
-                                    <th className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[100px] sm:w-[120px] text-center" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>하이(시리즈)</th>
-                                    <th className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[80px] sm:w-[100px] text-center" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>하이(단게임)</th>
-                                    <th className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[60px] sm:w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1', color: '#0f172a' }}>평균</th>
+                                    <th scope="col" className="p-2 border border-slate-400 !text-[#0f172a] font-black text-left" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>분류 (전체 종합)</th>
+                                    <th scope="col" className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[60px] sm:w-[80px] text-center" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>게임수</th>
+                                    <th scope="col" className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[80px] sm:w-[100px] text-center" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>총점</th>
+                                    <th scope="col" className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[100px] sm:w-[120px] text-center" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>하이(시리즈)</th>
+                                    <th scope="col" className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[80px] sm:w-[100px] text-center" style={{ border: '1px solid #94a3b8', color: '#0f172a' }}>하이(단게임)</th>
+                                    <th scope="col" className="p-2 border border-slate-300 !text-[#0f172a] font-black w-[60px] sm:w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1', color: '#0f172a' }}>평균</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -493,16 +388,16 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         const other = teamScores.filter((s: any) => !['정기전', '벙개', '교류전', '상주'].includes(s.gameType || ''));
 
                         return (
-                            <div key={teamGroup.id} className={`table-responsive mt-4 ${styles.tableSurface}`}>
+                            <div key={teamGroup.id} tabIndex={0} role="region" aria-label="가로로 스크롤할 수 있는 상세 기록 표" className={`table-responsive mt-4 ${styles.tableSurface}`}>
                                 <table className={`w-full text-[13px] border-collapse !bg-white !text-slate-900 ${styles.dataTable}`} style={{ backgroundColor: 'white', color: '#0f172a', border: '2px solid #64748b' }}>
                                     <thead>
                                         <tr className="!bg-[#f2f2f2]" style={{ backgroundColor: '#f2f2f2' }}>
-                                            <th className="p-2 border border-slate-400 !text-blue-700 font-black text-left" style={{ border: '1px solid #94a3b8' }}>🛡️ {teamGroup.name}</th>
-                                            <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[60px] sm:w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>게임수</th>
-                                            <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[80px] sm:w-[100px] text-center" style={{ border: '1px solid #94a3b8' }}>총점</th>
-                                            <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[100px] sm:w-[120px] text-center" style={{ border: '1px solid #94a3b8' }}>하이(시리즈)</th>
-                                            <th className="p-2 border border-slate-300 !text-slate-900 font-black w-[80px] sm:w-[100px] text-center" style={{ border: '1px solid #94a3b8' }}>하이(단게임)</th>
-                                            <th className="p-2 border border-slate-300 !text-black font-black w-[60px] sm:w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1' }}>평균</th>
+                                            <th scope="col" className="p-2 border border-slate-400 !text-blue-700 font-black text-left" style={{ border: '1px solid #94a3b8' }}>🛡️ {teamGroup.name}</th>
+                                            <th scope="col" className="p-2 border border-slate-300 !text-slate-900 font-black w-[60px] sm:w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>게임수</th>
+                                            <th scope="col" className="p-2 border border-slate-300 !text-slate-900 font-black w-[80px] sm:w-[100px] text-center" style={{ border: '1px solid #94a3b8' }}>총점</th>
+                                            <th scope="col" className="p-2 border border-slate-300 !text-slate-900 font-black w-[100px] sm:w-[120px] text-center" style={{ border: '1px solid #94a3b8' }}>하이(시리즈)</th>
+                                            <th scope="col" className="p-2 border border-slate-300 !text-slate-900 font-black w-[80px] sm:w-[100px] text-center" style={{ border: '1px solid #94a3b8' }}>하이(단게임)</th>
+                                            <th scope="col" className="p-2 border border-slate-300 !text-black font-black w-[60px] sm:w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1' }}>평균</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -533,14 +428,14 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
 
                 {/* 공식 기록 요약 표 */}
                 <div className={styles.officialSummary}>
-                    <div className={`table-responsive ${styles.tableSurface}`}>
+                    <div tabIndex={0} role="region" aria-label="가로로 스크롤할 수 있는 상세 기록 표" className={`table-responsive ${styles.tableSurface}`}>
                         <table className={`w-full text-xs border-collapse bg-white shadow-sm ${styles.dataTable}`} style={{ border: '2px solid #94a3b8', minWidth: '350px' }}>
                             <thead>
                                 <tr className="bg-slate-200">
-                                    <th className="p-2 border border-slate-400 text-[#0f172a] font-bold" style={{ color: '#0f172a', border: '1px solid #94a3b8' }}>공식 기록 분류</th>
-                                    <th className="p-2 border border-slate-400 text-[#0f172a] font-bold" style={{ color: '#0f172a', border: '1px solid #94a3b8' }}>게임수</th>
-                                    <th className="p-2 border border-slate-400 text-[#0f172a] font-bold" style={{ color: '#0f172a', border: '1px solid #94a3b8' }}>총점</th>
-                                    <th className="p-2 border border-slate-400 text-[#1d4ed8] font-black bg-blue-100" style={{ color: '#1d4ed8', border: '1px solid #94a3b8' }}>평균</th>
+                                    <th scope="col" className="p-2 border border-slate-400 text-[#0f172a] font-bold" style={{ color: '#0f172a', border: '1px solid #94a3b8' }}>공식 기록 분류</th>
+                                    <th scope="col" className="p-2 border border-slate-400 text-[#0f172a] font-bold" style={{ color: '#0f172a', border: '1px solid #94a3b8' }}>게임수</th>
+                                    <th scope="col" className="p-2 border border-slate-400 text-[#0f172a] font-bold" style={{ color: '#0f172a', border: '1px solid #94a3b8' }}>총점</th>
+                                    <th scope="col" className="p-2 border border-slate-400 text-[#1d4ed8] font-black bg-blue-100" style={{ color: '#1d4ed8', border: '1px solid #94a3b8' }}>평균</th>
                                 </tr>
                             </thead>
                             <tbody className="text-center font-bold" style={{ color: '#0f172a' }}>
@@ -578,15 +473,15 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         아직 등록된 공식 경기 기록이 없습니다.
                     </p>
                 ) : (
-                    <div className={`table-responsive !bg-white ${styles.tableSurface}`}>
+                    <div tabIndex={0} role="region" aria-label="가로로 스크롤할 수 있는 상세 기록 표" className={`table-responsive !bg-white ${styles.tableSurface}`}>
                         <table className={`w-full text-[13px] border-collapse !bg-white !text-slate-900 ${styles.dataTable} ${styles.officialRecordsTable}`} style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>
                             <thead>
                                 <tr className="!bg-[#f2f2f2]" style={{ backgroundColor: '#f2f2f2' }}>
-                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[60px] sm:w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>날짜</th>
-                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black text-left" style={{ border: '1px solid #94a3b8' }}>대회 / 경기명</th>
-                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[140px] sm:w-[180px] text-center" style={{ border: '1px solid #94a3b8' }}>게임별 기록</th>
-                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[60px] sm:w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>총점</th>
-                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[60px] sm:w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1' }}>평균</th>
+                                    <th scope="col" className="p-2 border border-slate-400 !text-slate-900 font-black w-[60px] sm:w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>날짜</th>
+                                    <th scope="col" className="p-2 border border-slate-400 !text-slate-900 font-black text-left" style={{ border: '1px solid #94a3b8' }}>대회 / 경기명</th>
+                                    <th scope="col" className="p-2 border border-slate-400 !text-slate-900 font-black w-[140px] sm:w-[180px] text-center" style={{ border: '1px solid #94a3b8' }}>게임별 기록</th>
+                                    <th scope="col" className="p-2 border border-slate-400 !text-slate-900 font-black w-[60px] sm:w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>총점</th>
+                                    <th scope="col" className="p-2 border border-slate-400 !text-slate-900 font-black w-[60px] sm:w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1' }}>평균</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -653,15 +548,15 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                         아직 등록된 점수가 없습니다.
                     </p>
                 ) : (
-                    <div className={`table-responsive !bg-white ${styles.tableSurface}`}>
+                    <div tabIndex={0} role="region" aria-label="가로로 스크롤할 수 있는 상세 기록 표" className={`table-responsive !bg-white ${styles.tableSurface}`}>
                         <table className={`w-full text-[13px] border-collapse !bg-white !text-slate-900 ${styles.dataTable}`} style={{ backgroundColor: 'white', color: '#0f172a', border: '1px solid #94a3b8' }}>
                             <thead>
                                 <tr className="!bg-[#f2f2f2]" style={{ backgroundColor: '#f2f2f2' }}>
-                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[60px] sm:w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>날짜</th>
-                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[50px] sm:w-[70px] text-center" style={{ border: '1px solid #94a3b8' }}>게임수</th>
-                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black text-center" style={{ border: '1px solid #94a3b8' }}>게임별 점수</th>
-                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[60px] sm:w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>총점</th>
-                                    <th className="p-2 border border-slate-400 !text-slate-900 font-black w-[60px] sm:w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1' }}>평균</th>
+                                    <th scope="col" className="p-2 border border-slate-400 !text-slate-900 font-black w-[60px] sm:w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>날짜</th>
+                                    <th scope="col" className="p-2 border border-slate-400 !text-slate-900 font-black w-[50px] sm:w-[70px] text-center" style={{ border: '1px solid #94a3b8' }}>게임수</th>
+                                    <th scope="col" className="p-2 border border-slate-400 !text-slate-900 font-black text-center" style={{ border: '1px solid #94a3b8' }}>게임별 점수</th>
+                                    <th scope="col" className="p-2 border border-slate-400 !text-slate-900 font-black w-[60px] sm:w-[80px] text-center" style={{ border: '1px solid #94a3b8' }}>총점</th>
+                                    <th scope="col" className="p-2 border border-slate-400 !text-slate-900 font-black w-[60px] sm:w-[70px] text-center !bg-[#E7EBF1]" style={{ border: '1px solid #94a3b8', backgroundColor: '#E7EBF1' }}>평균</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -711,6 +606,7 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
                     </div>
                 )}
             </div>
-        </div>
+            </section>
+        </DashboardShell>
     );
 }

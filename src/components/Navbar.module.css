@@ -165,3 +165,12 @@
         animation: none;
     }
 }
+
+/* Only dashboard routes opt into the Phase 1 light surface. */
+:global(body:has([data-dashboard-shell])) .navbar { background: var(--dashboard-surface); border-color: var(--dashboard-border); box-shadow: none; }
+:global(body:has([data-dashboard-shell])) .logo { background: none; -webkit-text-fill-color: var(--dashboard-text); color: var(--dashboard-text); }
+:global(body:has([data-dashboard-shell])) .link { color: var(--dashboard-muted); min-height: 44px; }
+:global(body:has([data-dashboard-shell])) .link:hover { background: var(--dashboard-primary-soft); color: var(--dashboard-primary); }
+:global(body:has([data-dashboard-shell])) .logoutBtn { color: var(--dashboard-danger); min-height: 44px; }
+:global(body:has([data-dashboard-shell])) .menuToggle { width: 44px; height: 44px; background: var(--dashboard-surface); border-color: var(--dashboard-border-strong); }
+@media (max-width: 900px) { :global(body:has([data-dashboard-shell])) .links { background: var(--dashboard-surface); border-color: var(--dashboard-border); box-shadow: 0 12px 24px #0f172a14; } }

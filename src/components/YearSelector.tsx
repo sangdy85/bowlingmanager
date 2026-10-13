@@ -28,10 +28,12 @@ export default function YearSelector({ currentYear, activeYears }: { currentYear
     };
 
     return (
-        <div className={styles.wrap}>
+        <div className={styles.wrap} role="group" aria-label="기록 연도 선택">
             {years.map((year) => (
                 <button
                     key={year}
+                    type="button"
+                    aria-pressed={currentYear === year}
                     onClick={() => handleYearChange(year)}
                     className={`btn ${styles.button} ${currentYear === year ? 'btn-primary' : styles.inactive}`}
                 >
