@@ -28,6 +28,7 @@ class ClubRecordsScreen extends ConsumerStatefulWidget {
     this.targetFilter,
     this.clubName,
     this.embedded = false,
+    this.leadingContent = const <Widget>[],
     super.key,
   });
 
@@ -38,6 +39,7 @@ class ClubRecordsScreen extends ConsumerStatefulWidget {
   final ClubRecordFilter? targetFilter;
   final String? clubName;
   final bool embedded;
+  final List<Widget> leadingContent;
 
   @override
   ConsumerState<ClubRecordsScreen> createState() => _ClubRecordsScreenState();
@@ -81,184 +83,196 @@ class _ClubRecordsScreenState extends ConsumerState<ClubRecordsScreen> {
     );
     final List<int> years = statistics.value?.availableYears ?? <int>[_year];
 
-    return Column(
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 20, 8),
-          child: Row(
-            children: <Widget>[
-              if (!widget.embedded)
-                IconButton(
-                  key: const Key('club-records-back'),
-                  onPressed: context.pop,
-                  icon: const Icon(Icons.arrow_back_rounded),
-                ),
-              const SizedBox(width: 6),
-              const Expanded(child: Text('동호회 기록', style: AppTextStyles.title)),
-              DropdownButton<int>(
-                key: const Key('club-records-year'),
-                value: _year,
-                underline: const SizedBox.shrink(),
-                items: years
-                    .map(
-                      (int year) => DropdownMenuItem<int>(
-                        value: year,
-                        child: Text('$year년'),
-                      ),
-                    )
-                    .toList(growable: false),
-                onChanged: (int? value) {
-                  if (value != null) setState(() => _year = value);
-                },
+    final controls = <Widget>[
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 20, 8),
+        child: Row(
+          children: <Widget>[
+            if (!widget.embedded)
+              IconButton(
+                key: const Key('club-records-back'),
+                onPressed: context.pop,
+                icon: const Icon(Icons.arrow_back_rounded),
               ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-          child: SegmentedButton<int>(
-            segments: const <ButtonSegment<int>>[
-              ButtonSegment<int>(
-                value: 0,
-                icon: Icon(Icons.dashboard_outlined),
-                label: Text('종합 순위'),
-              ),
-              ButtonSegment<int>(
-                value: 1,
-                icon: Icon(Icons.query_stats_rounded),
-                label: Text('종합 기록'),
-              ),
-              ButtonSegment<int>(
-                value: 2,
-                icon: Icon(Icons.event_note_rounded),
-                label: Text('상세 기록'),
-              ),
-            ],
-            selected: <int>{_section},
-            onSelectionChanged: (Set<int> selected) {
-              setState(() => _section = selected.single);
-            },
-          ),
-        ),
-        if (_section != 0)
-          SizedBox(
-            height: 48,
-            child: _section == 1
-                ? ListView.separated(
-                    key: const Key('club-record-filters'),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: ClubRecordFilter.values.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (BuildContext context, int index) {
-                      final ClubRecordFilter filter =
-                          ClubRecordFilter.values[index];
-                      return ChoiceChip(
-                        label: Text(filter.label),
-                        selected: filter == _filter,
-                        onSelected: (_) => setState(() => _filter = filter),
-                      );
-                    },
+            const SizedBox(width: 6),
+            const Expanded(child: Text('동호회 기록', style: AppTextStyles.title)),
+            DropdownButton<int>(
+              key: const Key('club-records-year'),
+              value: _year,
+              underline: const SizedBox.shrink(),
+              items: years
+                  .map(
+                    (int year) => DropdownMenuItem<int>(
+                      value: year,
+                      child: Text('$year년'),
+                    ),
                   )
-                : Stack(
-                    children: <Widget>[
-                      ListView(
-                        key: const Key('club-activity-filters'),
-                        padding: const EdgeInsets.only(left: 20, right: 52),
-                        scrollDirection: Axis.horizontal,
-                        children: <Widget>[
+                  .toList(growable: false),
+              onChanged: (int? value) {
+                if (value != null) setState(() => _year = value);
+              },
+            ),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+        child: SegmentedButton<int>(
+          segments: const <ButtonSegment<int>>[
+            ButtonSegment<int>(
+              value: 0,
+              icon: Icon(Icons.dashboard_outlined),
+              label: Text('종합 순위'),
+            ),
+            ButtonSegment<int>(
+              value: 1,
+              icon: Icon(Icons.query_stats_rounded),
+              label: Text('종합 기록'),
+            ),
+            ButtonSegment<int>(
+              value: 2,
+              icon: Icon(Icons.event_note_rounded),
+              label: Text('상세 기록'),
+            ),
+          ],
+          selected: <int>{_section},
+          onSelectionChanged: (Set<int> selected) {
+            setState(() => _section = selected.single);
+          },
+        ),
+      ),
+      if (_section != 0)
+        SizedBox(
+          height: 48,
+          child: _section == 1
+              ? ListView.separated(
+                  key: const Key('club-record-filters'),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: ClubRecordFilter.values.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (BuildContext context, int index) {
+                    final ClubRecordFilter filter =
+                        ClubRecordFilter.values[index];
+                    return ChoiceChip(
+                      label: Text(filter.label),
+                      selected: filter == _filter,
+                      onSelected: (_) => setState(() => _filter = filter),
+                    );
+                  },
+                )
+              : Stack(
+                  children: <Widget>[
+                    ListView(
+                      key: const Key('club-activity-filters'),
+                      padding: const EdgeInsets.only(left: 20, right: 52),
+                      scrollDirection: Axis.horizontal,
+                      children: <Widget>[
+                        FilterChip(
+                          key: const Key('club-activity-filter-all'),
+                          label: const Text('전체'),
+                          selected:
+                              _activityFilters.length ==
+                              ClubRecordFilter.values.length - 1,
+                          onSelected: (bool selected) => setState(() {
+                            _activityFilters
+                              ..clear()
+                              ..addAll(
+                                selected
+                                    ? ClubRecordFilter.values.where(
+                                        (ClubRecordFilter filter) =>
+                                            filter != ClubRecordFilter.all,
+                                      )
+                                    : const <ClubRecordFilter>[],
+                              );
+                          }),
+                        ),
+                        const SizedBox(width: 8),
+                        for (final ClubRecordFilter filter
+                            in ClubRecordFilter.values.where(
+                              (ClubRecordFilter value) =>
+                                  value != ClubRecordFilter.all,
+                            )) ...<Widget>[
                           FilterChip(
-                            key: const Key('club-activity-filter-all'),
-                            label: const Text('전체'),
-                            selected:
-                                _activityFilters.length ==
-                                ClubRecordFilter.values.length - 1,
+                            key: Key('club-activity-filter-${filter.apiValue}'),
+                            label: Text(filter.label),
+                            selected: _activityFilters.contains(filter),
                             onSelected: (bool selected) => setState(() {
-                              _activityFilters
-                                ..clear()
-                                ..addAll(
-                                  selected
-                                      ? ClubRecordFilter.values.where(
-                                          (ClubRecordFilter filter) =>
-                                              filter != ClubRecordFilter.all,
-                                        )
-                                      : const <ClubRecordFilter>[],
-                                );
+                              if (selected) {
+                                _activityFilters.add(filter);
+                              } else {
+                                _activityFilters.remove(filter);
+                              }
                             }),
                           ),
                           const SizedBox(width: 8),
-                          for (final ClubRecordFilter filter
-                              in ClubRecordFilter.values.where(
-                                (ClubRecordFilter value) =>
-                                    value != ClubRecordFilter.all,
-                              )) ...<Widget>[
-                            FilterChip(
-                              key: Key(
-                                'club-activity-filter-${filter.apiValue}',
-                              ),
-                              label: Text(filter.label),
-                              selected: _activityFilters.contains(filter),
-                              onSelected: (bool selected) => setState(() {
-                                if (selected) {
-                                  _activityFilters.add(filter);
-                                } else {
-                                  _activityFilters.remove(filter);
-                                }
-                              }),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
                         ],
-                      ),
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: IgnorePointer(
-                          child: Semantics(
-                            label: '오른쪽으로 스크롤하면 더 많은 경기 분류가 있습니다.',
-                            child: Container(
-                              key: const Key(
-                                'club-activity-filter-scroll-hint',
+                      ],
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: IgnorePointer(
+                        child: Semantics(
+                          label: '오른쪽으로 스크롤하면 더 많은 경기 분류가 있습니다.',
+                          child: Container(
+                            key: const Key('club-activity-filter-scroll-hint'),
+                            width: 44,
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 8),
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: <Color>[
+                                  Color(0x0007111F),
+                                  AppColors.background,
+                                ],
                               ),
-                              width: 44,
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 8),
-                              decoration: const BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                  colors: <Color>[
-                                    Color(0x0007111F),
-                                    AppColors.background,
-                                  ],
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.chevron_right_rounded,
-                                color: AppColors.textSecondary,
-                              ),
+                            ),
+                            child: const Icon(
+                              Icons.chevron_right_rounded,
+                              color: AppColors.textSecondary,
                             ),
                           ),
                         ),
                       ),
-                    ],
-                  ),
-          ),
-        Expanded(
-          child: switch (_section) {
-            0 => _OverviewBody(
-              request: (userId: user.id, teamId: widget.teamId),
-              year: _year,
-            ),
-            1 => _StatisticsBody(request: request, value: statistics),
-            _ => _ActivitiesBody(
-              request: feedRequest,
-              targetActivityId: widget.targetActivityId,
-              clubName: widget.clubName,
-            ),
-          },
+                    ),
+                  ],
+                ),
         ),
+    ];
+    final body = switch (_section) {
+      0 => _OverviewBody(
+        request: (userId: user.id, teamId: widget.teamId),
+        year: _year,
+      ),
+      1 => _StatisticsBody(request: request, value: statistics),
+      _ => _ActivitiesBody(
+        request: feedRequest,
+        targetActivityId: widget.targetActivityId,
+        clubName: widget.clubName,
+      ),
+    };
+    if (widget.embedded) {
+      return NestedScrollView(
+        key: const Key('club-detail-scroll'),
+        headerSliverBuilder: (context, innerBoxIsScrolled) => <Widget>[
+          SliverToBoxAdapter(
+            child: Column(
+              key: const Key('club-record-controls'),
+              children: <Widget>[...widget.leadingContent, ...controls],
+            ),
+          ),
+        ],
+        body: SizedBox.expand(key: const Key('club-records-body'), child: body),
+      );
+    }
+    return Column(
+      children: <Widget>[
+        ...controls,
+        Expanded(child: body),
       ],
     );
   }
