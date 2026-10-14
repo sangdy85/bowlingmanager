@@ -63,3 +63,7 @@
 .legacyAbout img { max-width: 100%; height: auto; }
 .legacyAbout [class~="overflow-x-auto"] { overflow-x: auto; }
 .legacyAbout [class~="flex-row"] { flex-wrap: wrap; gap: 8px; }
+
+:global(body:has([data-dashboard-shell])) .footer { color: var(--dashboard-muted); border-color: var(--dashboard-border); }
+:global(body:has([data-dashboard-shell])) .footer a { color: var(--dashboard-primary); display: inline-flex; align-items: center; min-height: 44px; }
+:global(body:has([data-dashboard-shell])) .footer a:focus-visible { outline-color: var(--dashboard-focus); }

@@ -1,3 +1,5 @@
+@import "./dashboard-tokens.css";
+
 :root {
   --background: #0b1220;
   --foreground: #f8fafc;

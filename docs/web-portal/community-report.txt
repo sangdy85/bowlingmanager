@@ -1,0 +1,80 @@
+BowlingManager 커뮤니티 구현·검증 보고서
+작성일: 2026-10-13
+
+작업 환경
+- 저장소: C:\Users\user\Documents\ChatGPT\볼링 사이트 & 앱\growth-001
+- 브랜치: codex/release-1.2.1
+- HEAD: 7f42f900952bab6fa6b52df4a10606ffbd7b9368
+- 기존 미커밋 웹 개편, 용품·대회정보 기능, 회원 통합 수정, 모바일 변경을 보존했다.
+- 운영 서버 접근, 운영 DB 수정, 배포, commit/push/merge를 실행하지 않았다.
+
+제공 기능
+- 자유게시판 / 질문과 답변 / 대회 소식 / 용품 이야기의 공개 글 수와 게시판 탐색.
+- 제목·본문 검색, 최신순·오래된순, 15개 단위 페이지 이동과 잘못된 페이지 번호 보정.
+- 로그인 사용자 기준 내가 쓴 글 / 댓글 남긴 글. userId는 클라이언트 입력이 아니라 현재 로그인 세션과 DB의 사용자로 결정한다.
+- 선택한 게시판을 유지한 글쓰기, 게시판별 작성 안내, 작성자 글 수정·소프트 삭제.
+- 댓글 등록·수정·소프트 삭제. 댓글 수정은 현재 DB 권한, 공개 글·댓글 상태, updatedAt를 확인해 오래된 요청의 덮어쓰기를 막는다.
+- 글·댓글 신고와 슈퍼어드민 신고·숨김 관리. 관리자 목록은 20개 단위 페이지 이동으로 기존 100개 상한을 제거했다.
+- 관리 화면의 전체/신고/숨김 필터와 관리자 대시보드 진입 링크.
+- 용품 이야기는 기존 EQUIPMENT 글 ID·댓글·신고를 공유하며 /equipment 상세와 전용 글쓰기로 연결한다.
+- 대회 소식은 참가자 경험 게시판이며 슈퍼어드민의 공식 대회정보 등록 기능과 구분한다.
+- 개인 활동·검색 목록 및 사용자 작성 상세의 검색 색인 정책 유지/보완.
+
+이번 변경 파일
+src/app/actions/community.ts
+src/app/community/page.tsx
+src/app/community/new/page.tsx
+src/app/community/[id]/page.tsx
+src/app/community/[id]/edit/page.tsx
+src/app/community/moderation/page.tsx
+src/app/equipment/[id]/page.tsx (공유 댓글 updatedAt 직렬화)
+src/app/admin/page.tsx (커뮤니티 관리 링크)
+src/components/community/CommunityDiscussion.tsx
+src/components/community/CommunityEditor.tsx
+src/components/community/Community.module.css
+src/lib/community-server.ts
+tests/community-hub.test.cjs
+docs/web-portal/community-report.txt
+
+검증
+- 실제 서버 함수 + 별도 SQLite QA 사본: 비로그인, 타 작성자, 위조 관리자, 권한 철회, 오래된 댓글 수정, 숨김·삭제 상태 차단, 내 글·댓글 활동 필터, 관리자 신고 필터 통과.
+- 관련 27개 node:test 테스트 통과: community hub 1 / competition+public web 22 / equipment 2 / 회원 통합·리그 이름 회귀 2.
+- 기존 public-community 실제 DB 회귀 스크립트 통과: 글/댓글/신고/숨김/소프트 삭제/등록 간격/권한.
+- lint: 오류 0, 기존 경고 17. 신규 커뮤니티 경고 없음.
+- root TypeScript 검사: 통과.
+- production build: 별도 portal-preview-20261013 디렉터리에서 Next CLI로 통과; 내부 lint/type 검사 포함.
+- package.json 및 lock 변경 없음. 현재 schema와 생성 Prisma client는 직전 용품 작업과 동일; 이번 작업 추가 migration 없음. 테스트는 이미 migration된 QA 사본만 사용.
+- Git diff --check 통과. 신규 파일의 끝 공백 검사 별도 확인.
+- 기존 API route 84개 유지. src/app/api, src/lib/band, src/lib/mobile-api, package.json/lock 변경 없음.
+- build ID: f1fJGn8-VitaMudK0AWDd
+- src TS/TSX/CSS 및 schema/package/lock 433개 파일이 실제 미리보기 빌드 소스와 동일.
+- localhost HTTP 총 59항목 통과: community 15 / equipment 12 / competition 14 / 기존 portal 18.
+- HTTP 검사는 UI 시나리오 전에 수행했고 UI 시나리오는 QA DB만 추가 수정했다.
+
+실제 브라우저 확인
+- PC 1280x1000, 태블릿 950x1100, 모바일 390x844: 가로 넘침 없음.
+- 비로그인 공개 목록, 게시판 수, 모바일 카드형 목록 및 검색 도구 확인.
+- 비로그인 내 글/댓글 활동은 로그인으로 이동.
+- 정상 QA USER 로그인 후 댓글 남긴 글에서 일반 글·용품 글을 함께 확인.
+- 본인 댓글 수정 및 수정됨 표시/성공 안내 확인.
+- QUESTION 선택 후 글쓰기의 게시판 기본값 유지, 글 등록, 글 수정 저장, 댓글 등록 성공.
+- 내가 쓴 글에서 본인 글만 표시; 검색 및 오래된순 필터 유지; noindex,nofollow 확인.
+- 신고 접수 성공; 일반 회원의 관리 화면 접근은 404, QA SUPER_ADMIN에서는 신고 사유와 숨김 목록 확인.
+- 브라우저에서 삭제/숨김 명령을 실행하지 않았다. 해당 동작은 실제 함수 회귀 테스트에서 검증했다.
+- 모든 QA 글·사용자·용품 모델은 가상 데이터이며 운영에 생성되지 않았다.
+
+화면 캡처
+scratch/portal-screenshots-20261013/community-pc.png
+scratch/portal-screenshots-20261013/community-mobile.png
+scratch/portal-screenshots-20261013/community-mobile-list.png
+scratch/portal-screenshots-20261013/community-tablet.png
+scratch/portal-screenshots-20261013/community-comment-edit.png
+scratch/portal-screenshots-20261013/community-moderation.png
+
+미리보기 및 남은 사항
+- http://localhost:3107/community 에서 실행 중인 분리된 로컬 QA 빌드로 확인 가능.
+- 이번 추가 개선은 새 schema/migration을 요구하지 않는다. 앞선 신규 커뮤니티/대회정보/용품의 미적용 migration은 운영 반영 시 별도로 검토해야 한다.
+- 운영 배포 및 운영 계정 흐름은 미검증. 외부 OAuth, BAND 게시·푸시 실행 없음.
+- 사진 첨부, 좋아요, 대댓글, 별도 알림은 이번 구현 범위에 포함하지 않았다.
+- 관리자 페이지 이동 코드는 구현됐지만 브라우저 QA 관리자 목록은 4개라 2페이지 화면을 실제 확인하지 않았다.
+- 기존 로그인은 로그인 후 홈으로 이동한다. 로그인 복귀 동작은 이번 작업에서 변경하지 않았다.

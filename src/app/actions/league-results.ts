@@ -95,7 +95,10 @@ export async function getLeagueRoundResults(roundId: string) {
                 individualScores: m.individualScores.map((s: any) => ({
                     id: s.id,
                     userId: s.userId,
-                    playerName: s.playerName,
+                    // Older merges cleared playerName after linking userId.
+                    // Prefer the score-sheet snapshot, then fall back to the
+                    // linked account so public result tables never lose a name.
+                    playerName: s.playerName || s.User?.name || null,
                     teamId: s.teamId,
                     teamSquad: s.teamSquad,
                     handicap: s.handicap,

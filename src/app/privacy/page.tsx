@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import styles from '@/components/public/Public.module.css';
 import PublicNav from '@/components/public/PublicNav';
-import { PUBLIC_ORIGIN } from '@/lib/public-web';
+import { ADS_EXECUTION_ENABLED, PUBLIC_ORIGIN } from '@/lib/public-web';
 
 export const metadata = {
   alternates: { canonical: `${PUBLIC_ORIGIN}/privacy` },
@@ -49,14 +49,15 @@ export default function PrivacyPolicy() {
         <div><h2>사진 인식·모바일 알림·공개 계산기</h2><p>AI 점수판 인식 기능은 요청한 이미지와 인식에 필요한 정보를 Google Gemini 서비스에 전송합니다. 저장 전 인식 결과를 확인하세요. 모바일 푸시에는 등록한 기기 토큰이 사용되며 Firebase Cloud Messaging을 통해 전달됩니다.</p><p>공개 평균 계산기에 입력한 점수는 브라우저에서만 계산하며 저장하거나 서버·분석도구로 전송하지 않습니다.</p></div>
         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3">
           <h3 className="text-lg font-extrabold text-blue-900 mb-2 border-l-4 border-blue-600 pl-3">
-            3. 구글(Google) 애드센스 및 제3자 광고 사업자 쿠키(Cookie) 게재 고지 (필수 고지)
+            3. Google AdSense 및 제3자 광고 쿠키 안내
           </h3>
+          {!ADS_EXECUTION_ENABLED && <p className="text-slate-700 text-sm leading-relaxed">현재 사이트에서는 광고 스크립트를 실행하지 않습니다. 아래 안내는 Google AdSense 광고가 제공되는 경우에 적용됩니다.</p>}
           <p className="text-slate-700 text-sm leading-relaxed">
             Google AdSense 광고가 제공되는 경우, Google과 광고 파트너는 아래와 같이 광고 쿠키를 사용할 수 있습니다.
           </p>
           <ul className="list-disc ml-6 space-y-2 text-slate-600 text-xs md:text-sm">
             <li>
-              <strong>제3자 제공업체 및 광고 네트워크</strong>: 구글을 포함한 제3자 제공업체는 쿠키(Cookie)를 사용하여 사용자의 이전 웹사이트 방문 기록을 바탕으로 맞춤형 광고를 제공합니다.
+              <strong>제3자 광고 사업자</strong>: Google을 포함한 제3자 광고 사업자는 쿠키를 사용하여 사용자의 이전 웹사이트 방문 기록을 바탕으로 광고를 제공할 수 있습니다.
             </li>
             <li>
               <strong>Google 광고 쿠키</strong>: 구글은 광고 쿠키를 사용하여 본 사이트 및 인터넷상의 다른 사이트 방문 정보를 기반으로 사용자에게 적절한 광고를 제공할 수 있습니다.
@@ -80,7 +81,7 @@ export default function PrivacyPolicy() {
               >
                 www.aboutads.info
               </a>
-              ) 웹사이트를 통해 제3자 제공업체의 쿠키 사용을 차단하실 수 있습니다.
+              ) 웹사이트를 통해 참여하는 제3자 광고 사업자의 맞춤형 광고 사용을 관리할 수 있습니다.
             </li>
           </ul>
         </div>
@@ -127,7 +128,7 @@ export default function PrivacyPolicy() {
         </div>
 
         <div className="pt-8 border-t border-slate-200 flex flex-wrap justify-between items-center text-xs text-slate-400">
-          <p>문서 편집: 2026년 09월 30일</p>
+          <p>문서 편집: 2026년 10월 14일</p>
           <div className="flex gap-4">
             <Link href="/terms" className="hover:underline">이용약관</Link>
             <Link href="/disclaimer" className="hover:underline">책임 한계 및 법적 고지</Link>

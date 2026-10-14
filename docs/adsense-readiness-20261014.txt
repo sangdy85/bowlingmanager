@@ -1,0 +1,142 @@
+BowlingManager — AdSense 심사 준비 및 승인된 어제 UI 선택 동기화
+작성일: 2026-10-14 (Asia/Seoul)
+
+현재 브랜치 / Git 상태
+- 저장소: C:\Users\user\Documents\ChatGPT\볼링 사이트 & 앱\growth-001
+- codex/release-1.2.1 / HEAD 7f42f900952bab6fa6b52df4a10606ffbd7b9368 유지.
+- 시작 전 상태: 추적 파일 수정 20개, 미추적 파일/폴더 29항목. 기존 웹 포털·커뮤니티·용품·대회정보, 회원 통합, 모바일 수정 포함.
+- git fetch origin 완료. 최신 origin/main 4045d27917444446449b928713f612ae5643134d를 작업 종료 전 ls-remote로 재확인. HEAD와 origin/main은 107/1로 갈라져 있어 전체 main 교체는 하지 않았다.
+- 사용자가 어제 UI도 통합하도록 추가 승인. 원격 main^ 1299cca -> 4045d27의 UI 29개 파일만 적용. 27개는 현재 파일 해시/patch check 후 적용, admin/page 및 dashboard/page는 기존 공개 대회정보·커뮤니티 링크를 보존하여 수동 통합.
+- 대시보드의 통계/순위 링크는 현재 공개 포털의 커뮤니티 경로 유지. 새 관리자 탐색에도 기존 대회정보·커뮤니티 관리 진입 보존.
+- Git merge/rebase/cherry-pick/checkout/reset/clean/stage/commit/push 실행 없음. 미커밋 상태로 검토 가능.
+- 작업 전 사본/patch: scratch/adsense-20261014/before 및 ui-before.
+- 관련 AGENTS.md는 저장소와 확인한 상위 경로에서 발견되지 않았다.
+
+구조
+- Next.js 15.5.12 / React 19 / App Router(src/app), Pages Router 디렉터리 없음. public 존재.
+- public/ads.txt 단일 파일. 중복 App route 없음. 기존 내용 이미 정확하고 UTF-8 BOM/HTML/중복 행 없음. 파일 삭제/교체하지 않았다.
+- robots는 src/app/robots.ts, sitemap은 src/app/sitemap.ts, metadata/root layout은 src/app/layout.ts.
+
+ads.txt 구현
+- 의도 경로: https://bowlingmanager.co.kr/ads.txt 와 www 동일 경로.
+- 기존 정확한 한 줄 유지:
+google.com, pub-6753153221253393, DIRECT, f08c47fec0942fa0
+- src/lib/public-web.ts의 canonicalHostRedirectUrl에서 URL pathname이 정확히 /ads.txt이면 www redirect 제외. /ads.txt?query 역시 같은 파일을 직접 응답. 다른 공개·회원 경로의 www canonical, path/query 보존 정책 유지.
+- 실제 로컬 production 응답: 200, Content-Type text/plain; charset=UTF-8, Location 없음, HTML 없음, 한 줄 일치.
+- 실제 curl Host root/www, localhost/IP, 프록시 forwarded host, query, Googlebot/Mediapartners-Google/AdsBot-Google 문자열 요청을 검증. User-Agent 모의 요청은 실제 Google 크롤러 IP 접근 성공을 뜻하지 않는다.
+- 현재 운영 읽기 전용 확인: non-www /ads.txt는 308 -> www, www는 200·text/plain·정확한 한 줄. 로컬 수정은 아직 미배포이므로 운영의 무리다이렉트 조건은 미충족 상태.
+- Google은 정상적인 root->www ads.txt redirect를 지원하므로 이 308만으로 AdSense 찾을 수 없음 상태의 원인을 확정하지 않는다. 프록시/캐시/장애/크롤러 로그와 계정의 재확인 상태는 별도 확인 필요.
+
+robots.txt
+- User-agent * / Allow /. 전체 Disallow 없음. /ads.txt, /guide, /about, /privacy, /terms 차단 없음. Googlebot을 별도로 차단하지 않음.
+- 기존 회원·관리·API 경계만 차단. sitemap은 www origin. 현재 정책에 문제가 없어 코드 변경 없음.
+
+개인정보처리방침
+- /privacy 공개 200, 홈 및 공통 Footer 링크 존재.
+- 기존 Google 광고 쿠키·방문 이력 기반 광고·광고 설정 링크 안내 존재. ADS_EXECUTION_ENABLED=false와 맞춰 현재 광고 스크립트 미실행임을 표시하고 조건부 미래 안내로 명확히 했다.
+- 제3자 쿠키 사용은 가능성 표현, aboutads의 선택은 쿠키 전체 차단이 아닌 맞춤형 광고 관리로 정정. 필수 고지라는 과장된 heading 정리. 문서 편집일 2026-10-14.
+- 개인정보의 실제 운영 처리 전반을 법률 검수한 결과가 아니며 다른 수집/보관/책임자 문구는 이번 범위에서 재작성하지 않았다.
+
+이용약관 / 문의
+- /terms 공개 200, Footer에서 접근 가능. 수정 불필요.
+- /inquiry 공개 안내 200, Footer·서비스 FAQ·privacy에서 연결. 실제 등록은 로그인 필요.
+- 공개 문의 이메일은 제공 자료/현재 코드에서 확정하지 않았다. 운영자가 확인한 실제 이메일 또는 비로그인 연락 경로를 공개 안내에 추가하는 개선안 권고; 주소를 임의 생성하지 않았다.
+
+공개 콘텐츠
+- 홈 / 볼링 가이드 13개 / 점수 계산·평균 설명 / 평균 계산기 / /guide?tab=service의 서비스 소개·이용방법·FAQ / privacy / terms 공개 접근 확인. /about은 기존 /guide?tab=service 308 이동 유지.
+- 가이드 총 18개: 공개 13, 비공개 3, 통합 2. 공개 13개 원고에서 lorem ipsum, TODO, placeholder, 테스트용, 공사 중, 작성 예정 검색 결과 없음. 일부 가상 계산 예제는 설명용 데이터로 표시돼 있음. 사실관계 전수 재감사/검수 완료로 보지는 않는다.
+- 운영 홈·guide·평균·문의·신규 공개 페이지의 HTML을 읽기 전용 점검: 모두 200, lorem ipsum/공사 중/작성 예정 발견 없음.
+- 홈의 예정·진행 등록 대회 안내 및 용품/커뮤니티 목록은 빈 상태. 정상 empty state이나 광고 심사 관점에서 충분한 콘텐츠라는 보장은 아니다. 실제 요강·출처·사용 경험을 확인한 콘텐츠를 보강할 필요가 있다. 임의 게시글이나 가짜 후기 생성 없음.
+- 기존 서비스 이용방법의 대회 정보/볼링장 결과 안내 일부는 최신 분리된 화면 명칭과 다시 맞춰볼 필요가 있어 후속 편집 검수 항목으로 남긴다.
+
+AdSense 스크립트 / CSP / hydration
+- adsbygoogle, pagead2.googlesyndication.com 광고 로더 없음. ca-pub-6753153221253393 소유권 metadata는 기존 layout의 google-adsense-account 한 번. 광고 코드 추가 없음.
+- 광고 실행 플래그 false 유지. 코드가 없으므로 중복 광고 초기화/광고 hydration 경로 없음; 모든 앱의 hydration을 전수 보증하는 뜻이 아니다.
+- 코드에서 별도 CSP 설정 발견 없음, 확인한 공개 운영 응답에서도 CSP 헤더 미발견. 프록시 설정 전체·실제 광고 로드 시 CSP 호환은 미검증.
+- 공식 Google 연결 가이드는 meta/ads.txt/코드 스니펫 확인 방법을 안내하므로 현 심사 준비에서 로더를 임의 삽입할 필요는 확인되지 않았다. 실제 광고를 활성화한다면 기존 root metadata는 유지하고 공개 허용 화면용 전용 컴포넌트 한 곳에서 production 조건/제외 화면/동의 설정을 확인한 뒤 로드하는 위치 권고. 현재 승인을 보장하지 않는다.
+
+통합 UI의 보안 보완
+- 실제 HTTP QA에서 /admin/users 비로그인 307 응답 본문에 QA 계정 정보가 직렬화되는 것을 발견했다. 부모 layout 판정만으로는 병렬 페이지 조회를 막지 못했다.
+- 기존 SUPER_ADMIN 판정 그대로 requireAdminPage 공통 함수로 재사용하여 관리자 layout과 4개 조회 페이지의 DB 접근 전에 검사. 로그인 프로바이더·세션·기존 인증 모듈·Server Action 권한·센터 OWNER/MANAGER 기준은 변경하지 않았다.
+- 최종 비로그인 관리자 응답은 QA 이메일을 포함하지 않음. 직접 실제 page 호출 차단 및 기존 layout 역할 테스트 통과. /personal의 loading 스트리밍 200 redirect는 브라우저에서 /login 이동 확인.
+
+검증
+- npm install 불필요. package.json/lock/의존성 변경 없음.
+- lint: 오류 0 / 기존 경고 17.
+- typecheck: 통과(tsc --noEmit --incremental false).
+- production build: 별도 adsense-preview-20261014에서 통과(Build lHvuKLIK7PgPYCgGgJve5). Next build 내부 lint/type 검사도 통과.
+- Windows 경로의 & 때문에 npm wrapper 대신 설치된 Node CLI로 동일 lint/type/Next build 명령 실행. Prisma schema 변경 없음, 기존 generated client와 schema는 포맷 공백 정규화 후 동일하여 generate 재실행 불필요. DB migration/seed/db push 없음.
+- UI+공개웹+adsense 테스트 43개 통과. BAND OAuth·주차 공지·회원 기록·개인 계산·보안 회귀 77개 통과. 실제 BAND 요청/게시/푸시 없음.
+- 로컬 production HTTP 37항목 통과. 공개·정책·sitemap·robots·텍스트 응답·canonical·보호 페이지 포함.
+- 실제 브라우저: 개인정보 안내, QA SUPER_ADMIN 로그인/관리자 UI/소유자·지정 관리자 표시/빈 팀 대시보드, 390x844 모바일 가로 넘침 없음. 비로그인 개인 기록실 -> /login 확인. 센터 생성/삭제/역할 변경/운영 계정 작업은 실행하지 않았다.
+- 브라우저가 /ads.txt 자체를 client 차단으로 열지 못해 UI에서 txt 렌더는 미검증; HTTP/curl 응답 검증은 통과했다. 정책·UI 화면은 직접 시각 검토. 캡처 파일 저장은 브라우저 도구의 파일 접근 제한으로 실패하여 파일 첨부를 만들지 않았다.
+- 기존 API route 84개 유지. API/BAND/mobile API/auth 모듈 수정 없음. 기존 Prisma·mobile 및 다른 미커밋 변경은 시작 전 patch와 비교해 동일함을 확인.
+- diff --check 통과, index stage 없음. 최종 원격 main 4045d27917444446449b928713f612ae5643134d 유지.
+
+운영 배포 전 확인사항
+- 이번 수정은 로컬만 반영. 운영 배포/서비스·DB 변경/SSH 접속 실행 없음.
+- 실제 배포할 때 최신 운영 소스를 다시 비교하여 기존 BAND·참가비·KING PERFECT·회원 이름 수정·커뮤니티/용품/대회정보를 누락시키지 말아야 한다. origin/main 전체 파일로 운영을 교체하면 안 된다.
+- root /ads.txt를 Nginx·외부 프록시가 별도로 redirect/인증/차단하는지 확인. 앱 패치만으로 외부 proxy 정책이 바뀌는 것은 아니다. 실제 Google 크롤러 로그/AdSense의 ads.txt 재확인 및 반영 시점은 별도 확인.
+- 광고 미실행 및 기존 소유권 meta 유지. 운영자 연락 경로·콘텐츠 빈 목록 보강. 이번 변경 자체는 신규 DB migration을 요구하지 않는다.
+
+실제 배포 후 확인 URL
+https://bowlingmanager.co.kr/ads.txt (반드시 직접 200 text/plain)
+https://www.bowlingmanager.co.kr/ads.txt
+https://bowlingmanager.co.kr/robots.txt
+https://www.bowlingmanager.co.kr/robots.txt
+https://www.bowlingmanager.co.kr/sitemap.xml
+https://www.bowlingmanager.co.kr/
+https://www.bowlingmanager.co.kr/privacy
+https://www.bowlingmanager.co.kr/terms
+https://www.bowlingmanager.co.kr/inquiry
+https://www.bowlingmanager.co.kr/guide
+https://www.bowlingmanager.co.kr/guide?tab=service
+https://www.bowlingmanager.co.kr/guide/bowling-scoring-system
+https://www.bowlingmanager.co.kr/guide/average-and-score-distribution
+https://www.bowlingmanager.co.kr/tools/average
+
+참고한 Google 공식 문서
+https://support.google.com/adsense/answer/7679060?hl=ko (200·robots·root 접근·반영 지연)
+https://support.google.com/adsense/answer/9785052?hl=en (root/www redirect 지원)
+https://support.google.com/adsense/answer/7549925?hl=ko (광고 쿠키/정책)
+https://support.google.com/adsense/answer/7584263?hl=ko (사이트 확인 방법과 meta)
+
+작업 파일 (새 파일 포함, 기존 미커밋의 전체 목록과 구분)
+docs/admin-dashboard-renewal-report.txt
+docs/center-manager-associations-report.txt
+docs/ui-ux-phase1-report.txt
+src/app/admin/AdminUI.module.css
+src/app/admin/centers/page.tsx
+src/app/admin/layout.tsx
+src/app/admin/page.tsx
+src/app/admin/teams/page.tsx
+src/app/admin/users/page.tsx
+src/app/dashboard-tokens.css
+src/app/dashboard/page.tsx
+src/app/globals.css
+src/app/personal/PersonalPage.module.css
+src/app/personal/loading.tsx
+src/app/personal/page.tsx
+src/components/Navbar.module.css
+src/components/RadarChart.tsx
+src/components/YearSelector.module.css
+src/components/YearSelector.tsx
+src/components/admin/UserRoleSelect.tsx
+src/components/dashboard/AdminDashboardShell.tsx
+src/components/dashboard/DashboardUI.module.css
+src/components/dashboard/DashboardUI.tsx
+src/components/dashboard/PersonalDashboardOverview.tsx
+src/components/public/Public.module.css
+tests/admin-dashboard-ui.test.cjs
+tests/center-manager-scope-ui.test.cjs
+tests/dashboard-ui.test.cjs
+tests/helpers/dashboard-renderer.cjs
+src/components/dashboard/requireAdminPage.ts
+src/lib/public-web.ts
+src/app/privacy/page.tsx
+tests/public-web.test.cjs
+tests/adsense-readiness.test.cjs
+
+AdSense 직접 코드 diff: public-web +5/-1, privacy +6/-5. ads.txt/robots/sitemap/layout 자체는 변경하지 않음. UI 변경은 위 승인된 원격 커밋을 별도 선택 적용한 것이다. 전체 git diff에는 작업 전 변경도 포함되므로 이번 작업량과 혼동하면 안 된다.
+최종 git status: scratch/adsense-20261014/final-status.txt
+commit 하지 않음 / push 하지 않음 / merge 하지 않음 / 운영 배포 하지 않음.

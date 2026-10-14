@@ -36,3 +36,8 @@
 .inactive:hover {
   background: #23314a;
 }
+
+:global([data-dashboard-shell]) .wrap { flex-wrap: wrap; overflow: visible; margin: 0; }
+:global([data-dashboard-shell]) .button { min-height: 44px; }
+:global([data-dashboard-shell]) .inactive { background: var(--dashboard-surface); color: var(--dashboard-muted); border-color: var(--dashboard-border-strong); }
+:global([data-dashboard-shell]) .inactive:hover { background: var(--dashboard-primary-soft); color: var(--dashboard-primary); }

@@ -4,11 +4,12 @@ import { updateUserRole } from "@/app/actions/admin";
 import { useState } from "react";
 
 interface UserRoleSelectProps {
+    label?: string;
     userId: string;
     initialRole: string;
 }
 
-export default function UserRoleSelect({ userId, initialRole }: UserRoleSelectProps) {
+export default function UserRoleSelect({ userId, initialRole, label = "계정 권한" }: UserRoleSelectProps) {
     const [role, setRole] = useState(initialRole);
     const [isUpdating, setIsUpdating] = useState(false);
 
@@ -28,6 +29,7 @@ export default function UserRoleSelect({ userId, initialRole }: UserRoleSelectPr
     return (
         <select
             name="role"
+            aria-label={label}
             value={role}
             disabled={isUpdating}
             className={`bg-transparent text-xs border border-secondary/20 rounded px-2 py-1 outline-none focus:border-primary transition-colors ${isUpdating ? 'opacity-50' : ''}`}

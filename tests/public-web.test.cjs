@@ -21,12 +21,13 @@ function loadWithMocks(relative,mocks) {
 const {calculateAverage}=load('src/lib/average-calculator.ts');
 const policy=load('src/lib/public-web.ts');
 const {GUIDE_ARTICLES,PUBLISHED_GUIDE_ARTICLES,MERGED_GUIDE_REDIRECTS,findPublishedGuideArticle,findMergedGuideDestination}=load('src/lib/guide-data.ts');
-test('www is the single public origin for canonical metadata, sitemap and robots',()=>{
+test('www is the single public origin for canonical metadata, sitemap and robots',async()=>{
  assert.equal(policy.PUBLIC_ORIGIN,'https://www.bowlingmanager.co.kr');
  assert.equal(policy.CANONICAL_HOSTNAME,'www.bowlingmanager.co.kr');
- const sitemap=loadWithMocks('src/app/sitemap.ts',{
+ const sitemap=await loadWithMocks('src/app/sitemap.ts',{
   '@/lib/guide-data':{PUBLISHED_GUIDE_ARTICLES},
   '@/lib/public-web':policy,
+  '@/lib/prisma':{__esModule:true,default:{competitionNotice:{findMany:async()=>[]}}},
  }).default();
  assert.ok(sitemap.length>0);
  for(const entry of sitemap)assert.match(entry.url,/^https:\/\/www\.bowlingmanager\.co\.kr(?:\/|$)/);
@@ -34,7 +35,7 @@ test('www is the single public origin for canonical metadata, sitemap and robots
  assert.equal(robots.sitemap,'https://www.bowlingmanager.co.kr/sitemap.xml');
  for(const file of ['about','privacy','terms','disclaimer']){
   const source=fs.readFileSync(path.join(__dirname,`../src/app/${file}/page.tsx`),'utf8');
-  assert.ok(source.includes("import { PUBLIC_ORIGIN } from '@/lib/public-web'")||source.includes('import { PUBLIC_ORIGIN } from "@/lib/public-web"'));
+  assert.match(source,/import\s*\{[^}]*\bPUBLIC_ORIGIN\b[^}]*\}\s*from\s*['"]@\/lib\/public-web['"]/);
   assert.equal(source.includes('https://bowlingmanager.co.kr'),false);
  }
 });
@@ -125,7 +126,7 @@ test('Android app URL is absent by default and accepts only the verified Play pa
   '//play.google.com/store/apps/details?id=kr.co.bowlingmanager.app',
  ])assert.equal(policy.safeAndroidAppUrl(invalid),'',invalid);
 });
-test('/app stays noindex with www canonical and outside the sitemap until store launch',()=>{
+test('/app stays noindex with www canonical and outside the sitemap until store launch',async()=>{
  const appPage=fs.readFileSync(path.join(__dirname,'../src/app/app/page.tsx'),'utf8');
  assert.ok(appPage.includes('canonical: `${PUBLIC_ORIGIN}/app`'));
  assert.ok(appPage.includes('robots: { index: false, follow: true }'));
@@ -133,9 +134,10 @@ test('/app stays noindex with www canonical and outside the sitemap until store 
  assert.ok(appPage.includes('Android 앱은 현재 테스트/출시 준비 중입니다.'));
  assert.ok(appPage.includes('href="/register"'));
  assert.ok(appPage.includes('href="/login"'));
- const sitemap=loadWithMocks('src/app/sitemap.ts',{
+ const sitemap=await loadWithMocks('src/app/sitemap.ts',{
   '@/lib/guide-data':{PUBLISHED_GUIDE_ARTICLES},
   '@/lib/public-web':policy,
+  '@/lib/prisma':{__esModule:true,default:{competitionNotice:{findMany:async()=>[]}}},
  }).default();
  assert.equal(sitemap.some(entry=>entry.url===policy.PUBLIC_ORIGIN+'/app'),false);
 });
@@ -203,7 +205,8 @@ test('P0 corrections and current product limits remain explicit',()=>{
  for(const claim of ['오픈 프레임 비율','프레임별 스페어 처리율','스트라이크 비율','마이볼 명칭','레인 변화에 따른 스스코어 관리'])assert.equal(visible.includes(claim),false,claim);
  const about=fs.readFileSync(path.join(__dirname,'../src/components/AboutPageContent.tsx'),'utf8');
  assert.equal(about.includes('프레임별 점수가 자동으로 집계'),false);assert.equal(about.includes('통계학의 표준 편차 공식'),false);assert.ok(about.includes('게임별 최종 점수'));
- for(const phrase of ['234점을 축 점수 10점','평균 230점은 축 점수 9.6점','최고 세션 평균','최저 세션 평균','모집단 또는 표본 표준편차가 아닙니다'])assert.ok(about.includes(phrase),phrase);
+ // The unified service introduction no longer describes the old radar chart.
+ // Keep checking the OCR boundary and absence of the removed guarantees.
  for(const stale of ['230점 에버리지가 100%','상위 하이(High) 스코어의 평균치','순간 폭발력을 진단','수비력을 측정','100% 참사'])assert.equal(about.includes(stale),false,stale);
 });
 test('published scoring example totals 168 using independent bowling bonus calculation',()=>{

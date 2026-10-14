@@ -1,0 +1,4 @@
+import Link from 'next/link';
+import {EQUIPMENT_SOURCES,EQUIPMENT_CHECKED_AT} from '@/lib/portal-data';
+import styles from './Equipment.module.css';
+export default function EquipmentReferences(){return <section className={styles.reference}><h2>제조사 자료와 선택 가이드</h2><p className={styles.hint}>제조사 목록 확인일: {EQUIPMENT_CHECKED_AT} · 회원 글과 구분된 참고 링크입니다.</p><div className={styles.references}>{EQUIPMENT_SOURCES.map(source=><article key={source.url}><h3>{source.title}</h3><p>{source.description}</p><a href={source.url} target="_blank" rel="noopener noreferrer">제조사 원문 확인 ↗</a></article>)}</div><details><summary>용품을 선택하기 전에 확인할 것</summary><p>볼링공은 같은 무게 기준의 제조사 사양, 기존 장비와의 역할 차이, 지공·그립 비용을 확인하세요. 볼링화는 사이즈와 투구 방향, 슬라이드·힐 교체 가능 여부를 확인하세요. 가방은 볼 수와 수납 크기를, 관리용품은 사용 대상과 제조사 안내를 확인하세요. 경기 중 사용 가능 여부는 해당 대회 요강을 확인해주세요.</p><Link href="/guide">장비 선택 가이드 읽기 →</Link></details></section>;}

@@ -74,6 +74,9 @@
     text-decoration: none;
 }
 
+.coreLink { background: rgba(56, 189, 248, 0.09); color: #bae6fd; }
+.coreLink:hover { background: rgba(56, 189, 248, 0.17); color: #e0f2fe; }
+
 .logoutBtn {
     border: 0;
     background: transparent;
@@ -105,7 +108,15 @@
     background: #23314a;
 }
 
-@media (max-width: 900px) {
+.accountMenu { position: relative; }
+.accountMenu summary { cursor: pointer; list-style: none; }
+.accountMenu summary::-webkit-details-marker { display: none; }
+.accountLinks { position: absolute; top: calc(100% + 10px); right: 0; display: flex; flex-direction: column; align-items: stretch; width: 210px; padding: 10px; border: 1px solid #41516e; border-radius: 12px; background: #112034; box-shadow: 0 15px 35px #02061766; }
+.accountLinks .link, .accountLinks .logoutBtn { justify-content: flex-start; min-height: 44px; }
+.accountMenu summary:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2px; }
+
+@media (max-width: 1150px) {
+    .accountLinks { position: static; width: 100%; box-shadow: none; margin-top: 8px; }
     .links {
         display: none;
         position: absolute;
@@ -165,3 +176,12 @@
         animation: none;
     }
 }
+
+/* Only dashboard routes opt into the Phase 1 light surface. */
+:global(body:has([data-dashboard-shell])) .navbar { background: var(--dashboard-surface); border-color: var(--dashboard-border); box-shadow: none; }
+:global(body:has([data-dashboard-shell])) .logo { background: none; -webkit-text-fill-color: var(--dashboard-text); color: var(--dashboard-text); }
+:global(body:has([data-dashboard-shell])) .link { color: var(--dashboard-muted); min-height: 44px; }
+:global(body:has([data-dashboard-shell])) .link:hover { background: var(--dashboard-primary-soft); color: var(--dashboard-primary); }
+:global(body:has([data-dashboard-shell])) .logoutBtn { color: var(--dashboard-danger); min-height: 44px; }
+:global(body:has([data-dashboard-shell])) .menuToggle { width: 44px; height: 44px; background: var(--dashboard-surface); border-color: var(--dashboard-border-strong); }
+@media (max-width: 900px) { :global(body:has([data-dashboard-shell])) .links { background: var(--dashboard-surface); border-color: var(--dashboard-border); box-shadow: 0 12px 24px #0f172a14; } }

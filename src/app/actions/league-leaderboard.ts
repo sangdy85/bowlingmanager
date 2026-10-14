@@ -2,6 +2,24 @@
 
 import prisma from "@/lib/prisma";
 
+type LeagueScoreIdentity = {
+    userId?: string | null;
+    playerName?: string | null;
+    User?: { name?: string | null } | null;
+};
+
+function getLeaguePlayerKey(score: LeagueScoreIdentity) {
+    const userId = score.userId?.trim();
+    if (userId) return `user:${userId}`;
+
+    const guestName = score.playerName?.trim() || 'Unknown';
+    return `guest:${guestName}`;
+}
+
+function getLeaguePlayerName(score: LeagueScoreIdentity) {
+    return score.User?.name?.trim() || score.playerName?.trim() || 'Unknown';
+}
+
 export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: number) {
     const tournament = await prisma.tournament.findUnique({
         where: { id: tournamentId },
@@ -90,7 +108,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
     tournament.leagueRounds.forEach((round: any) => {
         round.matchups.forEach((match: any) => {
             match.individualScores.forEach((s: any) => {
-                const key = s.userId ? `${s.userId}-${s.playerName || ''}` : (s.playerName || 'Unknown');
+                const key = getLeaguePlayerKey(s);
                 if (s.teamSquad) {
                     squadLookup[key] = s.teamSquad;
                 } else {
@@ -117,7 +135,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                 const teamScores = individualScores.filter(s => {
                     if (s.teamId !== teamId) return false;
 
-                    const sKey = s.userId ? `${s.userId}-${s.playerName || ''}` : (s.playerName || 'Unknown');
+                    const sKey = getLeaguePlayerKey(s);
                     const sSquad = s.teamSquad || squadLookup[sKey] || null;
                     const targetSquad = squad || null;
                     return sSquad === targetSquad;
@@ -215,8 +233,9 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
             // Individual Stats (unchanged logic mostly, but use awardMinGames)
             for (const score of match.individualScores) {
                 // Get squad for this score's team in this match
-                // COMPOSITE KEY: Important to prevent different guests sharing the same userId (e.g. admin id) from merging
-                const key = score.userId ? `${score.userId}-${score.playerName || ''}` : (score.playerName || 'Unknown');
+                // A linked member is one person even if a historical display name is
+                // missing or changes. Unlinked guests remain grouped by their name.
+                const key = getLeaguePlayerKey(score);
                 let currentSquad = score.teamSquad || squadLookup[key] || null;
 
                 if (!currentSquad) {
@@ -233,7 +252,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                 const rawTeamName = match.teamAId === score.teamId ? match.teamA?.name : match.teamB?.name;
                 const teamDisplayName = currentSquad ? `${rawTeamName} (${currentSquad})` : (rawTeamName || '-');
 
-                const name = score.playerName || score.User?.name || 'Unknown';
+                const name = getLeaguePlayerName(score);
 
                 if (!individualStats[key]) {
                     individualStats[key] = {
@@ -338,8 +357,8 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
         highGame: [] as any[]
     };
 
-    // getWinnerId must use the same composite key to let different guests win awards
-    const getWinnerId = (p: any) => p.userId ? `${p.userId}-${p.playerName || ''}` : p.playerName;
+    // Keep award allocation on the same identity used by the cumulative table.
+    const getWinnerId = (p: any) => getLeaguePlayerKey({ userId: p.userId, playerName: p.playerName });
 
     // 1-9. Interleaved Award Allocation based on Priority
     const steps = [
@@ -438,7 +457,7 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
     tournament.leagueRounds.forEach((round: any) => {
         round.matchups.forEach((match: any) => {
             match.individualScores.forEach((s: any) => {
-                const key = s.userId ? `${s.userId}-${s.playerName || ''}` : (s.playerName || 'Unknown');
+                const key = getLeaguePlayerKey(s);
                 if (s.teamSquad) squadLookup[key] = s.teamSquad;
                 else {
                     const reg = tournament.registrations.find((r: any) =>
@@ -492,8 +511,7 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                 const curTeamId = score.teamId;
                 if (!curTeamId) continue;
 
-                // COMPOSITE KEY
-                const playerKey = score.userId ? `${score.userId}-${score.playerName || ''}` : (score.playerName || 'Unknown');
+                const playerKey = getLeaguePlayerKey(score);
 
                 // Determine squad/team name for grouping using squadLookup too
                 const squadCandidate = score.teamSquad || squadLookup[playerKey] || (match.teamAId === curTeamId && match.teamAId !== match.teamBId ? (match as any).teamASquad : (match.teamBId === curTeamId && match.teamAId !== match.teamBId ? (match as any).teamBSquad : null));
@@ -516,7 +534,7 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                 if (!dataByTeam[teamKey].players[playerKey]) {
                     dataByTeam[teamKey].players[playerKey] = {
                         userId: score.userId,
-                        name: score.playerName || score.User?.name || 'Unknown',
+                        name: getLeaguePlayerName(score),
                         gamesCount: 0,
                         handicap: score.handicap,
                         totalRawPins: 0,

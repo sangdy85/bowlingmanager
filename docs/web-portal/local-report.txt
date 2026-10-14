@@ -1,0 +1,164 @@
+BowlingManager 공개 웹 포털 개편 — 2026-10-13
+
+구현 기준
+작업 경로: C:\Users\user\Documents\ChatGPT\볼링 사이트 & 앱\growth-001
+브랜치: codex/release-1.2.1
+HEAD: 7f42f900952bab6fa6b52df4a10606ffbd7b9368
+미커밋 이름 복구 수정 3개, 관련 테스트 2개, 다른 작업의 mobile 수정 3개를 보존.
+AGENTS.md: 현재 저장소 및 확인한 상위 작업 경로에 없음.
+
+완료 내용
+홈: 네이비·민트 색상의 포털 구조. 실제 대회·최신 공개 글·용품 자료·핵심 가이드 연결.
+대회 정보 /competitions: 상태 필터, 볼링장/대회 이름 검색, 페이지 이동, 기존 대회 상세 화면 연결.
+용품 정보 /equipment: 제조사 공식 라인업/모델 링크와 볼·신발·가방 선택 체크리스트.
+이용방법 통합 /guide: 볼링 가이드 주제별 필터 + 간결한 서비스 이용방법 탭.
+/about: /guide?tab=service 로 308 영구 이동.
+/stats: 독립 통계/순위 페이지를 정리하고 /community 로 307 이동.
+대회 결과표와 순위, 나의 기록실, 팀 관리 및 모바일 통계는 유지.
+상단 메뉴: 대회 정보 / 볼링 용품 / 커뮤니티 / 이용방법 & 가이드. 로그인 기능은 내 계정 메뉴로 정리.
+공개 커뮤니티 /community: 자유게시판, 질문과 답변, 대회 소식, 용품 이야기.
+검색/페이지 이동, 로그인 글쓰기, 본인·관리자 수정/삭제, 댓글, 신고, 관리자 숨김·복원 구현.
+글/댓글은 일반 텍스트로 렌더링하며 HTML을 실행하지 않음.
+글 1분 간격, 댓글 분당 5건 제한. 신고는 회원/게시글별 중복 방지.
+댓글 수정, 사진 첨부, 좋아요, 알림은 이번 버전에 포함하지 않음.
+신고·숨김 관리에는 최근 최대 100개 게시글을 표시.
+
+데이터 및 migration
+기존 Post/팀 게시판과 분리된 CommunityPost, CommunityComment, CommunityReport 추가.
+migration: prisma/migrations/20261013100000_add_public_community/migration.sql
+추가 테이블·인덱스·외래키만 포함. 기존 테이블/컬럼 삭제·변경 없음.
+별도 SQLite 테스트 DB에서 전체 migration deploy와 실제 함수 저장/권한 검증 완료.
+현재 로컬 일반 DB와 운영 DB에는 새 migration을 적용하지 않음.
+환경파일·비밀키·실제 업로드/운영 데이터를 미리보기로 복사하지 않음.
+테스트용 회원·센터·대회·게시글은 로컬 가상 자료로 명시.
+
+검증
+Prisma generate: PASS.
+lint: 0 errors, 기존 경고 17개. 새 코드의 경고 없음.
+typecheck: PASS.
+production build: PASS, 별도 소스 사본에서 수행.
+npm.cmd run build는 작업 경로의 & 문자로 Windows .cmd 실행 래퍼가 실패.
+package.json과 같은 순서의 Prisma generate, ESLint, TypeScript, Next build를 Node CLI로 실행해 통과.
+public-web / app-links / league-weekly-band / personal-statistics: 45 tests PASS.
+center-guest-merge-display / league-leaderboard-member-identity: PASS.
+public-community: 별도 DB의 실제 서버 함수로 비로그인 차단, 입력 검증, 타인 권한 차단,
+  DB 역할 재확인, 게시글·댓글 저장/삭제, 신고 중복 방지, 숨김·복원, 도배 제한 PASS.
+HTTP: 18 cases PASS. 홈, 대회, 용품, 가이드, 게시판, 로그인, sitemap/robots, 모바일 health,
+  /about 308, /stats 307, 글쓰기/관리 비로그인 이동, 없는 글 404, 반복 검색값 처리 확인.
+브라우저: 홈 → 대회 상태/검색 → 용품 → 가이드/서비스 탭 → 게시판 이동 확인.
+가상 회원의 로그인, 글 등록, 댓글 등록, 본인 글 수정 저장을 실제 UI로 확인.
+모바일 390x844: 메뉴 이동 및 홈/게시판/이용방법 가로 넘침 없음.
+미리보기 재준비 중 임시 테스트 AUTH_SECRET이 바뀌어 이전 로컬 세션 복호화 오류가 있었음.
+  운영 키 변경 없음. 새 로그인으로 정상 인증·작성 동작 확인.
+git diff --check: PASS (기존 Windows LF/CRLF 경고만 있음).
+기존 API 84개 유지. src/app/api, src/lib/band, src/lib/mobile-api 변경 없음.
+package.json 및 lockfile 변경 없음.
+
+미리보기
+http://localhost:3107/
+소스 사본: C:\Users\user\Documents\ChatGPT\볼링 사이트 & 앱\portal-preview-20261013
+임시 DB/검증 결과: scratch/portal-test-environment.json, scratch/portal-http-results.json
+화면 캡처: scratch/portal-screenshots-20261013/home-pc.jpg, home-mobile.jpg,
+  community-mobile.jpg, guide-mobile.jpg
+실제 운영 데이터·회원 로그인·BAND OAuth/게시·푸시 검증은 이번 작업 대상 아님.
+
+콘텐츠 근거와 유지 관리
+2026-10-13 제조사 공식 목록 확인.
+https://www.stormbowling.com/products/equipment/bowling-balls/
+https://www.motivbowling.com/ball-guide/ball-guide.html
+Frenzy Blue/Teal은 공식 Ball Guide에서 모델 존재를 확인해 원문으로 연결.
+상세 제품 페이지는 조사 도구에서 429를 반환해 사양·출시일·성능·가격을 작성하지 않음.
+국내 판매/재고와 실제 사용 후기는 미검증. 상시 수집 피드는 아니며 자료는 편집자가 갱신.
+
+운영 반영 시
+현재 운영 버전과 이 소스를 재비교하고 미커밋 작업 포함 대상 확정 필요.
+DB 백업 후 추가 migration 하나를 기존 절차로 적용해야 공개 커뮤니티를 사용할 수 있음.
+운영 환경변수/업로드 보존, 별도 준비 디렉터리 빌드, 기존 서비스 전환·롤백 준비가 필요.
+운영 적용 및 실사용자 관리 흐름은 미검증.
+commit / push / merge / 운영 배포 수행하지 않음.
+
+이번 작업 파일
+prisma/schema.prisma
+prisma/migrations/20261013100000_add_public_community/migration.sql
+src/app/page.tsx
+src/app/competitions/page.tsx
+src/app/equipment/page.tsx
+src/app/community/page.tsx
+src/app/community/new/page.tsx
+src/app/community/[id]/page.tsx
+src/app/community/[id]/edit/page.tsx
+src/app/community/moderation/page.tsx
+src/app/actions/community.ts
+src/app/guide/page.tsx
+src/app/about/page.tsx
+src/app/stats/page.tsx
+src/app/dashboard/page.tsx
+src/app/layout.tsx
+src/app/sitemap.ts
+src/components/Navbar.tsx
+src/components/Navbar.module.css
+src/components/Footer.tsx
+src/components/public/PublicNav.tsx
+src/components/AboutPageContent.tsx
+src/components/portal/Portal.module.css
+src/components/community/CommunityEditor.tsx
+src/components/community/CommunityDiscussion.tsx
+src/components/community/ModerationButton.tsx
+src/lib/community.ts
+src/lib/portal-data.ts
+src/lib/portal-params.ts
+tests/public-community.test.cjs
+tests/public-web.test.cjs
+docs/web-portal/local-report.txt
+
+2026-10-13 후속 보완: 동호회와 볼링장 핵심 기능 강조
+홈 소개를 '우리 동호회부터, 볼링장의 대회까지.'로 수정하고 두 핵심 진입 버튼 배치.
+첫 본문 섹션에 동호회(파랑), 볼링장/대회 운영(보라) 카드와 개인 기록 바로가기 추가.
+회원 관리·정기전·팀 게시판 및 참가자·레인·점수·결과표를 기존 화면으로 연결.
+상단 메뉴 첫 두 항목과 하단 메뉴에서도 동호회/볼링장 접근 제공.
+대회 정보·용품·공개 커뮤니티·통합 가이드 영역은 유지.
+후속 수정 파일: src/app/page.tsx, src/app/layout.tsx,
+  src/components/Navbar.tsx, Navbar.module.css, Footer.tsx,
+  src/components/portal/Portal.module.css 및 이 보고서.
+후속 변경에서 기능/저장/계산/API/Prisma/모바일 소스 변경 없음.
+production build: PASS, Build ID KmrkfMKmfVqhGWNPIPv-o.
+빌드 내부 lint/type 검사 PASS. 새 오류 없음, 기존 lint 경고 17개 유지.
+공개 웹 테스트 20개 PASS. 로컬 production HTTP 검사 18개 PASS.
+최신 소스와 미리보기 일치: 409개 파일 PASS.
+PC 1280px 및 모바일 390x844 실제 브라우저 확인: 가로 넘침 없음.
+모바일 운영 카드는 1열, 제목 23px 유지. 메뉴에 동호회/볼링장 표시 확인.
+비로그인 동호회 버튼/모바일 동호회 메뉴 → 로그인, 볼링장 버튼 → 기존 목록 확인.
+실제 회원의 관리·저장 흐름은 이번 UI 보완에서 미검증, 운영 접속/배포 없음.
+캡처: scratch/portal-screenshots-20261013/home-core-pc.jpg,
+  home-core-workspaces-pc.jpg, home-core-mobile.jpg, home-core-hero-mobile.jpg.
+기존 미커밋 작업 보존. commit / push / merge / 운영 배포 수행하지 않음.
+
+2026-10-13 첨부 스타일 반영
+홈 hero를 BOWLING, TOGETHER / '볼링의 모든 순간, 여기서 함께.'로 정리.
+네이비 배경·민트 버튼·큰 볼링공 그래픽과 넓은 여백을 유지/보완.
+대회 둘러보기·커뮤니티 참여하기를 주요 버튼으로 배치하고 그 아래에
+동호회 관리·볼링장/대회 운영 바로가기를 함께 배치.
+기존 동호회/볼링장 핵심 카드와 메뉴, 개인 기록 바로가기 유지.
+모바일 한국어 단어와 빠른 메뉴의 줄바꿈 보완.
+수정: src/app/page.tsx, src/components/portal/Portal.module.css, 이 보고서.
+기능/저장/계산/인증/API/Prisma/모바일 추가 변경 없음.
+공개 웹 테스트 20개 PASS, 로컬 HTTP 검사 18개 PASS, diff 검사 PASS.
+최종 build 및 빌드 내 lint/타입 검사 PASS. 기존 lint 경고 17개 유지.
+최신 Build ID: kD56_m7xJDRuuB5q7nWD4. 소스 409개 일치 PASS.
+실제 브라우저 PC 1280px / 태블릿 950px / 모바일 390px 가로 넘침 없음.
+대회/커뮤니티 진입, 비로그인 동호회 → 로그인, 볼링장 → 기존 목록 확인.
+캡처: scratch/portal-screenshots-20261013/home-reference-style-pc.jpg,
+  home-reference-style-tablet.jpg, home-reference-style-mobile.jpg.
+http://localhost:3107/에서 확인 가능. 운영 배포/Git 기록 작업 수행하지 않음.
+
+2026-10-13 홈 주요 버튼 위치 변경
+hero의 주요 버튼을 '동호회 관리 →' / '볼링장, 대회 보기 →'로 변경.
+하단의 중복 운영 바로가기 및 사용되지 않는 CSS 제거.
+비로그인 동호회 → /login, 볼링장·대회 → /centers 실제 이동 확인.
+PC 및 모바일 390px 배치 확인, 가로 넘침 없음.
+공개 웹 테스트 20개, 로컬 HTTP 검사 18개, 빌드 내 lint/타입 검사 및 build PASS.
+기존 lint 경고 17개 유지. diff 검사 PASS. 소스 409개 일치 PASS.
+최신 Build ID: L4EjyNuZUymew-IDD2UCu.
+수정: src/app/page.tsx, src/components/portal/Portal.module.css 및 이 보고서.
+캡처: scratch/portal-screenshots-20261013/home-hero-buttons-pc.jpg, home-hero-buttons-mobile.jpg.
+기존 작업 보존. commit / push / merge / 운영 배포 없음.

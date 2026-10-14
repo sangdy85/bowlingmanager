@@ -21,6 +21,10 @@ model User {
   CenterMember                    CenterMember[]
   LeagueMatchupIndividualScore    LeagueMatchupIndividualScore[]
   posts                           Post[]
+  communityPosts                  CommunityPost[]
+  communityComments               CommunityComment[]
+  communityReports                CommunityReport[]
+  competitionNotices              CompetitionNotice[]
   Score                           Score[]
   teamMemberships                 TeamMember[]
   tournamentRegistrations         TournamentRegistration[]
@@ -48,6 +52,32 @@ model User {
   teamEventAdminAudits            TeamEventAdminAudit[]             @relation("TeamEventAdminAuditActor")
   bandConnections                 BandConnection[]                  @relation("BandConnectionUser")
   requestedBandPosts              BandPost[]                        @relation("BandPostRequester")
+}
+
+// Public notices are independent of center tournament operations and scores.
+model CompetitionNotice {
+  id                    String   @id @default(cuid())
+  title                 String
+  organizer             String
+  format                String
+  registrationStartDate DateTime
+  registrationEndDate   DateTime
+  startDate             DateTime
+  endDate               DateTime
+  eventTime             String
+  venue                 String
+  fee                   String
+  description           String
+  rules                 String
+  registrationUrl       String?
+  relatedUrl            String?
+  published             Boolean  @default(false)
+  createdById           String
+  createdBy             User     @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([published, startDate])
 }
 
 model VerificationToken {
@@ -1019,6 +1049,57 @@ model Post {
   author    User        @relation(fields: [authorId], references: [id])
   team      Team        @relation(fields: [teamId], references: [id])
   images    PostImage[]
+}
+
+// Public community is separate from private team posts.
+model CommunityPost {
+  id        String             @id @default(cuid())
+  category  String
+  title     String
+  content   String
+  equipmentType     String?
+  equipmentCategory String?
+  equipmentBrand    String?
+  equipmentModel    String?
+  equipmentLink     String?
+  status    String             @default("PUBLISHED")
+  authorId  String
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  author    User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments  CommunityComment[]
+  reports   CommunityReport[]
+
+  @@index([status, category, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model CommunityComment {
+  id        String        @id @default(cuid())
+  postId    String
+  authorId  String
+  content   String
+  status    String        @default("PUBLISHED")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId, status, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model CommunityReport {
+  id        String        @id @default(cuid())
+  postId    String
+  authorId  String
+  reason    String
+  createdAt DateTime      @default(now())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, authorId])
+  @@index([createdAt])
 }
 
 model Tournament {

@@ -1,0 +1,63 @@
+/* Namespaced tokens: shared by personal UI and future admin dashboard sections. */
+:root {
+  --dashboard-primary: #2563eb;
+  --dashboard-primary-hover: #1d4ed8;
+  --dashboard-on-primary: #ffffff;
+  --dashboard-primary-soft: #eff6ff;
+  --dashboard-background: #f8fafc;
+  --dashboard-surface: #ffffff;
+  --dashboard-text: #0f172a;
+  --dashboard-muted: #475569;
+  --dashboard-border: #e2e8f0;
+  --dashboard-border-strong: #94a3b8;
+  --dashboard-success: #16a34a;
+  --dashboard-success-text: #166534;
+  --dashboard-success-soft: #f0fdf4;
+  --dashboard-accent: #f59e0b;
+  --dashboard-warning: #92400e;
+  --dashboard-warning-soft: #fffbeb;
+  --dashboard-danger: #b91c1c;
+  --dashboard-danger-soft: #fef2f2;
+  --dashboard-focus: #1d4ed8;
+  --dashboard-disabled: #64748b;
+  --dashboard-disabled-surface: #f1f5f9;
+}
+
+/* An explicit opt-in for the next phase; the default stays light. */
+[data-dashboard-theme="dark"] {
+  --dashboard-on-primary: #0f172a;
+  --dashboard-primary: #93c5fd;
+  --dashboard-primary-hover: #bfdbfe;
+  --dashboard-primary-soft: #172554;
+  --dashboard-background: #0f172a;
+  --dashboard-surface: #1e293b;
+  --dashboard-text: #f8fafc;
+  --dashboard-muted: #cbd5e1;
+  --dashboard-border: #475569;
+  --dashboard-border-strong: #64748b;
+  --dashboard-success-text: #86efac;
+  --dashboard-success-soft: #14532d;
+  --dashboard-warning: #fde68a;
+  --dashboard-warning-soft: #451a03;
+  --dashboard-danger: #fecaca;
+  --dashboard-danger-soft: #450a0a;
+  --dashboard-focus: #93c5fd;
+  --dashboard-disabled: #94a3b8;
+  --dashboard-disabled-surface: #334155;
+}
+
+/* Route-scoped aliases keep the existing application styles intact elsewhere. */
+body:has([data-dashboard-shell]) {
+  --background: var(--dashboard-background);
+  --foreground: var(--dashboard-text);
+  --primary: var(--dashboard-primary);
+  --card: var(--dashboard-surface);
+  --card-elevated: var(--dashboard-surface);
+  --card-foreground: var(--dashboard-text);
+  --secondary: #f1f5f9;
+  --secondary-foreground: var(--dashboard-muted);
+  --border: var(--dashboard-border);
+  --focus-ring: var(--dashboard-focus);
+  background: var(--dashboard-background);
+}
+body:has([data-dashboard-shell]) .container { max-width: 1440px; }

@@ -41,13 +41,20 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
         </button>
 
         <div id="main-navigation" className={`${styles.links} ${isOpen ? styles.linksOpen : ''}`}>
+          <Link href={isLoggedIn ? '/team' : '/login'} className={`${styles.link} ${styles.coreLink}`} onClick={closeMenu}>동호회</Link>
+          <Link href="/centers" className={`${styles.link} ${styles.coreLink}`} onClick={closeMenu}>볼링장</Link>
+          <Link href="/competitions" className={styles.link} onClick={closeMenu}>대회 정보</Link>
+          <Link href="/equipment" className={styles.link} onClick={closeMenu}>볼링 용품</Link>
+          <Link href="/community" className={styles.link} onClick={closeMenu}>커뮤니티</Link>
+          <Link href="/guide" className={styles.link} onClick={closeMenu}>이용방법 & 가이드</Link>
           {isLoggedIn ? (
-            <>
-              <Link href="/about" className={styles.link} onClick={closeMenu}>이용 방법</Link>
-              <Link href="/guide" className={styles.link} onClick={closeMenu}>볼링 가이드</Link>
+            <details className={styles.accountMenu}>
+              <summary className={styles.link}>내 계정 ▾</summary>
+              <div className={styles.accountLinks}>
               {userRole === 'SUPER_ADMIN' ? (
                 <>
                   <Link href="/admin" className={styles.link} onClick={closeMenu}>사이트 관리</Link>
+                  <Link href="/competitions/manage" className={styles.link} onClick={closeMenu}>대회정보 관리</Link>
                   <Link href="/centers" className={styles.link} onClick={closeMenu}>센터/대회 관리</Link>
                   <Link href="/inquiry" className={styles.link} onClick={closeMenu}>문의 관리</Link>
                 </>
@@ -55,8 +62,6 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
                 <>
                   <Link href="/personal" className={styles.link} onClick={closeMenu}>나의 기록실</Link>
                   <Link href="/team" className={styles.link} onClick={closeMenu}>팀 관리</Link>
-                  <Link href="/stats" className={styles.link} onClick={closeMenu}>통계/순위</Link>
-                  <Link href="/centers" className={styles.link} onClick={closeMenu}>볼링장/대회</Link>
                   <Link href="/inquiry" className={styles.link} onClick={closeMenu}>문의하기</Link>
                 </>
               )}
@@ -68,12 +73,10 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
               >
                 로그아웃
               </button>
-            </>
+              </div>
+            </details>
           ) : (
             <>
-              <Link href="/about" className={styles.link} onClick={closeMenu}>이용 방법</Link>
-              <Link href="/guide" className={styles.link} onClick={closeMenu}>볼링 가이드</Link>
-              <Link href="/centers" className={styles.link} onClick={closeMenu}>볼링장/대회</Link>
               <Link href="/login" className={styles.link} onClick={closeMenu}>로그인</Link>
               <Link href="/register" className="btn btn-primary" onClick={closeMenu}>회원가입</Link>
             </>

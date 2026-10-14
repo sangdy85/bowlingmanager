@@ -1,8 +1,10 @@
 import type { MetadataRoute } from 'next';
 import { PUBLISHED_GUIDE_ARTICLES } from '@/lib/guide-data';
 import { PUBLIC_ORIGIN } from '@/lib/public-web';
-export default function sitemap(): MetadataRoute.Sitemap {
+import prisma from '@/lib/prisma';
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
  // Unknown change times are omitted, never replaced with request time.
- const pages=['','/guide','/about','/tools/average','/privacy','/terms','/disclaimer'];
- return [...pages.map(path=>({url:PUBLIC_ORIGIN+path})),...PUBLISHED_GUIDE_ARTICLES.map(article=>({url:PUBLIC_ORIGIN+'/guide/'+article.slug,lastModified:new Date(article.updatedAt||article.date)}))];
+ const pages=['','/guide','/competitions','/equipment','/community','/tools/average','/privacy','/terms','/disclaimer'];
+ const notices = await prisma.competitionNotice.findMany({where:{published:true},select:{id:true,updatedAt:true}});
+ return [...pages.map(path=>({url:PUBLIC_ORIGIN+path})),...PUBLISHED_GUIDE_ARTICLES.map(article=>({url:PUBLIC_ORIGIN+'/guide/'+article.slug,lastModified:new Date(article.updatedAt||article.date)})),...notices.map(notice=>({url:PUBLIC_ORIGIN+'/competitions/'+notice.id,lastModified:notice.updatedAt}))];
 }

@@ -1,0 +1,103 @@
+BowlingManager 공개 대회정보 구현 — 2026-10-13
+
+작업 위치: C:\Users\user\Documents\ChatGPT\볼링 사이트 & 앱\growth-001
+브랜치: codex/release-1.2.1
+기존 모바일/회원 통합/공개 포털 미커밋 작업 보존.
+
+구현
+/competitions: 게시판형 목록(15개/페이지), 검색, 전체/예정·진행/접수 기간/종료 필터.
+목록/달력 전환, 이전·다음 달/이번 달/월 직접 선택.
+달력은 대회일자 기준이며 여러 날짜·월에 걸친 대회도 기간에 맞춰 표시.
+작은 화면에서는 달력의 긴 제목을 3줄까지 표시하고 전체 제목은 링크 접근성 이름과 이달 목록에서 제공.
+/competitions/[id]: 주관사, 형식, 접수 기간, 대회 기간, 시간, 장소, 참가비,
+대회 안내, 대회 요강, 접수 링크 및 관련 링크.
+접수/관련 링크는 별도 탭에서 http(s) 페이지로 이동. 자체 접수/결제 기능은 아님.
+요강은 줄바꿈을 유지하는 일반 텍스트. 파일 자체 업로드는 이번 범위에 없음.
+/competitions/new, /competitions/manage, /competitions/[id]/edit:
+슈퍼어드민 등록/수정/공개·비공개 관리. 기본값 비공개, 내용 보관 후 공개 가능.
+슈퍼어드민 메뉴 및 관리자 대시보드에서 대회정보 관리 연결.
+홈은 공개된 예정·진행 대회 공지를 일정순으로 표시. 기존 동호회/볼링장 카드 유지.
+기존 볼링장 대회 운영은 /centers로 계속 연결하며 경기 생성/점수/계산을 변경하지 않음.
+
+검증과 권한
+GET 페이지 및 Server Action 모두 현재 DB의 SUPER_ADMIN 역할 재확인.
+비로그인 관리자 경로 접근은 로그인으로, 로그인 일반 회원은 공개 목록으로 이동.
+일반 회원/볼링장 관리자/위조된 세션 역할/철회된 슈퍼어드민 쓰기 거부.
+필수 입력, 길이, 존재하는 날짜, 접수·대회 기간 순서, 공개 여부 타입 검사.
+javascript/data URL, 자격증명 포함 URL, 제어문자/역슬래시 URL 차단.
+수정은 updatedAt 조건으로 충돌 감지. 다른 관리자의 수정 내용을 덮어쓰지 않음.
+비공개 공지는 목록/달력/홈/sitemap에서 제외하고 상세 URL은 실제 404 확인.
+일정 상태는 한국 날짜 기준. 날짜만 입력받아 UTC 자정 저장, 날짜 키 기준 렌더링.
+
+DB
+CompetitionNotice 테이블과 User 역관계, 공개/일정 조회 인덱스 추가.
+prisma/migrations/20261013150000_add_competition_notices/migration.sql
+SQL은 새 테이블/인덱스 생성만 포함. 기존 점수·운영 대회 테이블 변경 없음.
+테스트 전용 새 SQLite DB에서 migrate deploy 실행 후 실제 Prisma 함수 검증.
+개발 메인 DB 및 운영 DB에 migration 적용하지 않음.
+운영 반영 시 기존 공개 커뮤니티 migration과 이번 migration 적용 상태를 확인해야 함.
+
+테스트
+Prisma generate PASS (최초 DLL 사용 중 오류는 제 미리보기 서버 종료 후 해결).
+공개 웹 + 공지 정책/실제 DB action 테스트 22개 PASS.
+앱 링크/상주리그 BAND/개인 통계 회귀 25개 PASS.
+기존 회원 통합 이름 표시 및 리더보드 회원 ID 회귀 스크립트 각각 PASS.
+실제 개발 소스 eslint: 오류 0개, 기존 파일 경고 17개. 신규 파일 경고 없음.
+TypeScript 전체 검사 PASS.
+대회 HTTP 검사 14개, 기존 공개 포털 HTTP 검사 18개 PASS.
+비공개/없는 상세 404, 비회원 관리자 페이지 307, 일반 상세/달력 200 확인.
+git diff --check PASS (기존 LF/CRLF 안내만 있음).
+기존 API 84개 유지. src/app/api, src/lib/mobile-api, src/lib/band 변경 없음.
+package.json/lockfile/Firebase/실제 DB/비밀정보 변경 없음.
+
+실제 브라우저
+테스트 슈퍼어드민 로그인 → 등록 → 잘못된 접수 날짜 오류/입력 유지 → 정상 공개 저장.
+수정 저장 → 참가비 변경 → 비공개 → 관리 목록에만 유지 확인.
+테스트 일반 회원 로그인 → 등록 버튼 없음 → 직접 등록 URL 접근 차단 확인.
+비회원 목록/달력 전환, 다음 달, 달력 상세 이동, 링크 목적지 확인.
+실제 외부 접수 제출/결제, 실제 대회 데이터 입력은 실행하지 않음.
+미리보기의 대회/주관사/센터/회원/참가비는 모두 명시된 가상 QA 데이터.
+운영 회원 로그인·운영 등록/조회는 미검증. 운영 접속/배포 없음.
+
+파일
+prisma/schema.prisma
+prisma/migrations/20261013150000_add_competition_notices/migration.sql
+src/lib/competition-notices.ts
+src/lib/competition-notices-server.ts
+src/lib/portal-data.ts
+src/app/actions/competition-notices.ts
+src/app/competitions/page.tsx
+src/app/competitions/new/page.tsx
+src/app/competitions/manage/page.tsx
+src/app/competitions/[id]/page.tsx
+src/app/competitions/[id]/edit/page.tsx
+src/components/competitions/CompetitionRows.tsx
+src/components/competitions/CompetitionCalendar.tsx
+src/components/competitions/CompetitionEditor.tsx
+src/components/competitions/Competitions.module.css
+src/app/page.tsx
+src/app/admin/page.tsx
+src/app/sitemap.ts
+src/components/Navbar.tsx
+tests/competition-notices.test.cjs
+tests/public-web.test.cjs (async sitemap 및 DB 모의 처리 보완)
+docs/web-portal/competition-notices-report.txt
+
+commit / push / merge / 운영 배포 하지 않음.
+
+최종 검증 추가
+production build PASS. Build ID: 0qdxDRYWxf0Y6KOWQkn8H.
+빌드 내부 lint/TypeScript 검사 PASS. 최신 소스 420개와 미리보기 사본 일치 PASS.
+프로젝트 경로의 공백과 &로 npm.cmd 래퍼가 실패하는 기존 환경 특성을 피하기 위해
+Prisma/ESLint/TypeScript/Next의 설치된 Node CLI를 직접 실행(동일 도구·버전).
+최종 실제 HTTP: 대회 14개 + 기존 포털 18개 PASS.
+PC 1280px, 태블릿 950px, 모바일 390px 실제 브라우저 가로 넘침 없음.
+모바일 월 선택 입력과 이동 버튼 정렬/3줄 일정 제목 표시 확인.
+캡처 위치: scratch/portal-screenshots-20261013/
+  competition-list-pc.jpg, competition-list-mobile.jpg
+  competition-calendar-tablet.jpg, competition-calendar-mobile.jpg
+  competition-detail-pc.jpg, competition-editor-pc.jpg
+최종 미리보기: http://localhost:3107/competitions
+달력: http://localhost:3107/competitions?view=calendar
+등록(슈퍼어드민): http://localhost:3107/competitions/new
+등록 관리(슈퍼어드민): http://localhost:3107/competitions/manage

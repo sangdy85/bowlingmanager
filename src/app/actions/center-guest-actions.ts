@@ -150,8 +150,10 @@ export async function mergeCenterGuestStats(centerId: string, guestName: string,
                     playerName: guestName
                 },
                 data: {
-                    userId: targetUserId,
-                    playerName: null
+                    // Keep the name recorded on the score sheet as a historical
+                    // display snapshot. Result tables still need it even after
+                    // the score row is linked to a real account.
+                    userId: targetUserId
                 }
             });
         });

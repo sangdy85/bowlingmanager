@@ -1,0 +1,67 @@
+BowlingManager 공개 웹 포털 운영 배포 완료 — 2026-10-13
+
+실제 적용
+- 운영: user@119.214.25.118:51222, hostname vm-share
+- 앱: /home/user/bowling-score-manager, 기존 PM2 bowling-manager, port 3000
+- Nginx: 기존 http://localhost:3000 upstream 유지. 프록시·방화벽·DNS 변경 없음.
+- 릴리스: public-portal-7f42f900-f210c2852975-20261013
+- 적용 시각 UTC: 2026-10-13T06:22:41.914Z
+- 이전 릴리스: league-identity-hotfix-7f42f900-20261013T003119Z
+- 이전 Build: tYR1jNJnlWNsUoyopZEEb
+- 적용 Build: xm23Z3-z6gUoRkSz2h_II
+- 로컬 Git 기준: 7f42f900952bab6fa6b52df4a10606ffbd7b9368; branch codex/release-1.2.1. 미커밋 소스 56개 runtime 파일 반영. 이 Git 커밋만으로 운영 전체 소스가 일치한다고 표기하지 않았다.
+- 로컬 후보 소스 식별: f210c28529758a9ff98b6b8e46e4b92090927c80c60ce795b912b23225ec35ec
+- 기존 운영 후속 차이를 보존한 실제 배포 소스 식별: 589a5fd839cb1848587e9f4fd0e1833409d8560d7d674abedb9958bbc0a4f780
+
+배포한 기능
+- 홈 포털 및 동호회·볼링장 핵심 기능 진입, 공개 메뉴·푸터.
+- 이용방법·볼링 가이드 통합. 독립 /stats는 커뮤니티로 연결하되 기존 개인 기록·운영 통계·경기 결과 계산 유지.
+- 슈퍼어드민 대회정보 등록·관리, 공개 목록·검색·달력·상세.
+- 회원 용품 소개·후기, 종류/모델 검색, 상세·댓글·신고.
+- 공개 커뮤니티 글/댓글/수정/소프트 삭제, 내 활동, 신고·관리자 숨김 관리.
+- sitemap 및 공개 metadata 반영. 기존 광고·공개 가이드 정책 유지.
+
+보존 및 제외
+- 오늘 운영에 이미 적용된 회원 계정 통합·리그 선수명 표시 수정 3개가 로컬과 일치하여 중복 덮어쓰기하지 않았다.
+- 로컬과 다른 기존 운영의 동호회 초대 페이지 및 모바일 API 3개는 그대로 보존했다. 이번 공개 웹 배포에서 로컬 버전으로 교체하지 않았다.
+- 운영에서 없는 invite 공유 이미지도 이번 웹 개선과 무관하여 추가하지 않았다.
+- 기존 API route 84개와 BAND·주차 공지 UI, PNG 다운로드, 운영 코드의 나머지 파일을 보존했다.
+- 기존 src/generated/prisma 산출물은 운영에 그대로 두었고 새 빌드 준비에서는 사용되지 않는 생성 파일을 제외했다.
+- mobile/ 변경 3개, 로컬 DB·QA 사용자/글/대회·로그·백업·환경/키·업로드는 배포 대상에서 제외했다.
+- 기존 .env 파일들의 해시가 배포 전후 동일함을 확인. 개발용 BAND 암호화 키 복사 없음.
+
+DB
+- 실제 운영 DB: /home/user/bowling-score-manager/prisma/dev.db
+- migration 3개 적용: 20261013100000_add_public_community, 20261013150000_add_competition_notices, 20261013170000_add_equipment_post_fields
+- CommunityPost/Comment/Report, CompetitionNotice 추가 및 CommunityPost 용품 nullable 컬럼 5개 추가. 기존 회원·점수 테이블 삭제/재작성 없음.
+- 서버 DB 백업 사본에서 migration과 기존 테이블 건수 보존을 검증한 뒤 운영 적용.
+- 전환 직전 재백업, 적용 전후 기존 테이블 행 수 일치, quick_check=ok. 완료 migration 총 26개.
+- 운영 테스트 데이터 및 실제 BAND 게시·푸시 생성 없음. 새 대회정보/커뮤니티 데이터는 초기 빈 상태다. 기존 센터의 리그/대회 기록은 원래 운영 화면에 유지됐다.
+
+검증
+- 직전 로컬 커뮤니티·용품·대회정보·공개웹·회원 기록 관련 테스트 27개 및 public-community 실제 QA DB 스크립트 통과. 소스 동일성 확인 후 결과 재사용.
+- 이번 배포 전 BAND OAuth·미설정·선택 주차 공지 관련 모의 회귀 54개 통과. 실제 BAND 성공으로 간주하지 않는다.
+- Linux 서버의 별도 stage에서 npm run build 통과: Prisma generate / lint / typecheck / Next production build 포함. 실제 운영 .next를 빌드 중 덮어쓰지 않았다.
+- stage HTTP 13항목 및 84개 API 목록 일치, 추가 migration 3개 검증, 기존 데이터 보존 통과.
+- 운영 upstream 및 Nginx HTTP 19항목 정상. 기존 공개 종료 대회 결과 포함.
+- 외부 HTTPS 26항목 정상: 기본 도메인 www 308, www 200, 로그인·새 페이지·센터/공개 결과·모바일 health·정적 JS·sitemap/robots·비로그인 작성/관리 접근 제한.
+- 브라우저에서 실제 운영 홈·대회 목록/달력·커뮤니티·용품 정상 표시. 모바일 커뮤니티 390x844 가로 넘침 없음.
+- PM2 pid 76170, online. pm2-user.service active/enabled, 저장 목록에서 기존 user·cwd·npm start 유지. 새 서비스 등록/서버 재부팅 없음.
+- 배포 후 새 PM2 오류 0건. 확인 구간에서 502 없음.
+- 작업 종료 시 Build와 HEAD, 로컬 패치 파일 해시 재확인. 미커밋 변경 보존, git diff --check 통과.
+
+백업 및 롤백
+- /home/user/bowling-backups/public-portal-7f42f900-f210c2852975-20261013-before
+- source/ 환경파일(0600) 이전 .next Prisma Client ecosystem PM2 dump 이전 배포 영수증 보관.
+- database-before.db / database-at-cutover.db, integrity_check 정상.
+- 롤백: bash /home/user/bowling-deploy/public-portal-7f42f900-f210c2852975-20261013/rollback.sh
+- 롤백은 코드·빌드·Prisma Client만 복원하고 DB·환경·업로드를 덮어쓰지 않는다. 추가 테이블·migration 이력은 유지하므로 새 작성 데이터도 삭제하지 않는다.
+- 롤백 문법·경로 검증, 실제 롤백 미실행(정상 배포 유지).
+- 로컬 미커밋 복구 사본: scratch/portal-release-20261013/local-backup
+
+남은 사용자 확인
+- 운영 실사용자 로그인 후 대회정보 등록·게시글/댓글/신고·관리자 숨김은 직접 실행하지 않았다. 로컬 QA 로그인과 실제 함수 테스트로 검증했고 운영에서는 비로그인 흐름만 확인했다.
+- 대회정보 등록: 슈퍼어드민 로그인 후 /competitions/manage.
+- 일반 회원: /community/new 또는 /equipment/new에서 작성.
+- BAND Client ID/Secret 미설정 상태 유지. 실제 OAuth·게시·푸시 미검증/미실행.
+- commit / push / merge 미실행. 현재 운영 소스와 로컬 소스에 보존된 일부 환경/작업 차이는 위에 명시했다.
