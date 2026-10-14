@@ -1,0 +1,105 @@
+BowlingManager GitHub 동기화·운영 반영 기록 — 2026-10-14
+
+로컬: C:\Users\user\Documents\ChatGPT\볼링 사이트 & 앱\growth-001
+작업 브랜치: codex/release-1.2.1
+원격: https://github.com/sangdy85/bowlingmanager/tree/codex/release-1.2.1
+시작 HEAD: 7f42f900952bab6fa6b52df4a10606ffbd7b9368
+검증한 origin/main: 4045d27917444446449b928713f612ae5643134d
+main은 갱신하지 않았고 관련 없는 원격 이력을 merge/rebase/cherry-pick하지 않았다.
+
+Git 기록
+8120487: 웹 포털·커뮤니티·용품·슈퍼어드민 대회정보, 기존 회원 통합 표시 수정, 대시보드 UI와 AdSense 준비, 관련 테스트 및 3개 기존 migration 기록.
+3f00aeb: 기존 Flutter 동호회/기록실 UI 변경 3개를 별도 기록. 모바일 바이너리는 웹 서버에 배포하지 않았다.
+두 커밋을 기존 작업 브랜치에 fast-forward push했다. 환경파일·키·DB·업로드·scratch 산출물은 stage하지 않았다. 기존 추적 중인 백업·이미지를 삭제하거나 이력을 재작성하지 않았다.
+현재 작업 브랜치와 origin/main은 서로 다른 이력이므로 다른 개발 PC도 이 작업 브랜치를 사용해야 한다.
+
+운영 반영
+이전 릴리스: public-portal-7f42f900-f210c2852975-20261013
+이전 Build: xm23Z3-z6gUoRkSz2h_II
+실제 릴리스: site-sync-3f00aeb8-25a12c1d3d63-20261014
+실제 Build: GkrhjsU1BsZZHWcfpU1J2
+배포 완료 시각(UTC): 2026-10-14T08:59:47.942Z
+로컬 소스 커밋: 3f00aeb85bba8dd14c4cfeb51f9154c0ca6e9fb3
+로컬 후보 런타임 해시: 25a12c1d3d635071f93732298251bad7278186a7f0ecdc979e2b05fc319ae52e
+실제 운영 소스 식별 해시: 94e5054ecd0b07a4376495fc84bb22bc8bf89ac81cbf8e34c2d4d3c4745ce580
+운영 경로: /home/user/bowling-score-manager
+실행: 기존 user PM2 bowling-manager, npm start, 포트 3000
+Nginx: 기존 /etc/nginx/sites-enabled/bowling, http://localhost:3000 upstream
+
+운영은 어제 포털 및 DB 변경이 이미 적용된 상태여서 오늘의 UI·AdSense 변경 25개 파일만 반영했다.
+기존 운영 .next를 빌드 중 덮어쓰지 않았다. 별도 stage에서 대상 Linux 플랫폼 npm run build(Prisma generate → lint → typecheck → Next build)를 완료하고 기존 PM2 앱만 전환했다.
+DB migration은 실행하지 않았다. 현행 26개 migration과 schema가 동일하며 3개 포털 migration도 이미 적용돼 있었다.
+DB·운영 환경파일·BAND 암호화 키·업로드를 보존했다. 후보는 일관된 DB 백업 사본과 별도 개발용 인증 비밀값으로 검증했다.
+BAND Client ID/Secret 미설정이며 실제 OAuth·게시·푸시는 실행하지 않았다.
+
+보존한 운영별 차이
+public/images/bowlingmanager-invite.png
+src/app/invite/team/[code]/page.tsx
+src/lib/mobile-api/club-expansion.ts
+src/lib/mobile-api/team-management.ts
+src/lib/mobile-api/teams.ts
+초대 메타데이터와 모바일 API 관련 기존 운영 코드 4개를 이번 UI 작업으로 덮어쓰지 않았다. 기존 운영에 없는 초대 이미지도 추가하지 않았다.
+따라서 위 로컬 소스 커밋을 운영 전체 소스와 완전히 동일한 커밋으로 표시하지 않는다. 런타임 해시는 이 차이를 포함한 실제 배포 소스의 식별 정보다. 이 차이의 통합은 별도 검토가 필요하다.
+기존 BAND 주차 공지 UI·프록시 처리·참가비·KING PERFECT와 API 84개는 유지됐다.
+
+검증
+변경 없는 직전 검증 재사용: UI/공개 웹/AdSense 43 PASS, BAND/주차 공지/회원 통합/개인 기록/권한 회귀 77 PASS.
+추가 실DB 격리 회귀: public-community 1 PASS, community-hub/competition-notices/equipment 5 PASS(공통 테스트 DB 준비 후 순차 실행).
+처음 병렬 실행은 fixture가 준비되는 도중 사본을 읽어 용품 1개 테스트가 실패했으며 fixture 준비 후 단독·순차 실행은 통과했다. 운영 DB에는 테스트하지 않았다.
+Flutter 기존 변경: 테스트 49 PASS, 분석 No issues found. 최초 분석 서버 프로토콜 오류 후 동일 폴더의 C:\bmrc 별칭에서 --no-pub 재실행 통과.
+Linux production build: Prisma generate/lint/typecheck/build 모두 PASS. ESLint 오류 0, 기존 경고 17.
+격리된 Linux stage: API 84개 일치, DB 사본 행 수 보존, 19개 HTTP 체크 PASS.
+운영 upstream/Nginx: 공개 페이지·로그인·모바일 health·공개 종료 대회·정적 JS·양쪽 Host ads.txt PASS.
+외부 HTTPS: 32개 PASS. 기본/www 홈·로그인·가이드·커뮤니티·용품·대회정보·센터·공개 결과·health·robots/sitemap·privacy/terms·정적 JS 확인.
+https://bowlingmanager.co.kr/ads.txt 및 https://www.bowlingmanager.co.kr/ads.txt: 직접 200, text/plain; charset=UTF-8, Location 없음, 아래 정확한 한 줄.
+google.com, pub-6753153221253393, DIRECT, f08c47fec0942fa0
+sitemap URL은 모두 www HTTPS. robots Sitemap 역시 www.
+비로그인 /admin/users: www에서 307 거부; 기본 호스트는 기존 308 www 이동 후 307. 테스트 계정 정보가 응답에 노출되지 않음.
+실제 브라우저: 비로그인 운영 홈 화면과 로그인 링크/이메일·비밀번호·소셜 로그인 화면 확인. 운영 사용자 계정 로그인/관리 작업은 수행하지 않음.
+최종 점검(UTC): 2026-10-14T09:02:51.534Z; PM2 online PID 95401, pm2-user.service active/enabled, 저장 목록 1개. 새로운 자동 시작 서비스는 중복 등록하지 않았다.
+운영 소스·Build 및 환경파일 해시 재검증 일치, 검증 기간 새 앱 오류 0, HTTP 502 없음.
+
+백업·롤백
+백업: /home/user/bowling-backups/site-sync-3f00aeb8-25a12c1d3d63-20261014-before
+소스·기존 .next·Prisma client·환경파일(600)·PM2 설정/저장 목록·기존 릴리스 기록·일관된 DB 백업(database-before.db/database-at-cutover.db)을 보관했다.
+롤백(기존 운영 user로 SSH 접속 후):
+bash '/home/user/bowling-deploy/site-sync-3f00aeb8-25a12c1d3d63-20261014/rollback.sh'
+이 스크립트는 이전 소스·빌드와 기존 앱만 복구한다. 운영 DB·환경파일·업로드는 되돌리지 않는다.
+
+반영한 파일
+src/app/admin/AdminUI.module.css
+src/app/admin/centers/page.tsx
+src/app/admin/layout.tsx
+src/app/admin/page.tsx
+src/app/admin/teams/page.tsx
+src/app/admin/users/page.tsx
+src/app/dashboard/page.tsx
+src/app/globals.css
+src/app/personal/PersonalPage.module.css
+src/app/personal/page.tsx
+src/app/privacy/page.tsx
+src/components/Navbar.module.css
+src/components/RadarChart.tsx
+src/components/YearSelector.module.css
+src/components/YearSelector.tsx
+src/components/admin/UserRoleSelect.tsx
+src/components/public/Public.module.css
+src/lib/public-web.ts
+src/app/dashboard-tokens.css
+src/app/personal/loading.tsx
+src/components/dashboard/AdminDashboardShell.tsx
+src/components/dashboard/DashboardUI.module.css
+src/components/dashboard/DashboardUI.tsx
+src/components/dashboard/PersonalDashboardOverview.tsx
+src/components/dashboard/requireAdminPage.ts
+
+두 개발 PC의 다음 작업
+안전한 공통 기준: origin/codex/release-1.2.1. main에는 자동 합치지 않는다.
+다른 PC에서 git status 확인 후 기존 미커밋 수정부터 보존하고 git fetch origin으로 받는다.
+같은 작업 브랜치이고 변경이 없을 때만 git pull --ff-only origin codex/release-1.2.1을 사용한다.
+브랜치가 다르거나 이력이 갈라져 있으면 reset/force push 대신 먼저 차이를 비교한다. 이 작업에서는 다른 PC의 실제 동기화 완료를 확인하지 않았다.
+
+미검증
+실제 사용자 로그인·센터/동호회 관리자 작업, 실제 BAND OAuth·게시·푸시, Google 크롤러의 재수집 및 AdSense 심사 상태 변경은 미검증이다.
+광고 스크립트는 기존 비활성 설정을 유지했다. ads.txt 접근 정상은 승인 보장이 아니다.
+운영과 로컬의 위 4개 코드/1개 이미지 차이는 향후 정합성 작업 대상으로 명시해 보존한다.
