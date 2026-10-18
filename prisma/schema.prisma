@@ -717,6 +717,8 @@ model TeamCompetitionTeam {
   name            String
   captainMemberId String
   draftOrder      Int
+  captainSelectionOrder Int?
+  selectedDraftOrder Int?
   lanePriority    Int?
   teamHandicap    Int                          @default(0)
   createdAt       DateTime                     @default(now())
@@ -726,6 +728,8 @@ model TeamCompetitionTeam {
   draftPicks      TeamCompetitionDraftPick[]
 
   @@unique([eventId, generation, draftOrder])
+  @@unique([eventId, generation, captainSelectionOrder])
+  @@unique([eventId, generation, selectedDraftOrder])
   @@unique([eventId, generation, captainMemberId])
   @@unique([eventId, generation, lanePriority])
   @@index([eventId, generation])

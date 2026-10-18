@@ -139,6 +139,10 @@ class _ClubTeamCompetitionCardState
         const SizedBox(height: 12),
         _managerActions(state),
       ],
+      if (state.captainOrderSelection case final ClubCaptainOrderSelection selection) ...<Widget>[
+        const SizedBox(height: 16),
+        _captainOrderPanel(selection),
+      ],
       if (const <String>{
         'TEAMS_FINALIZED',
         'LANES_ASSIGNED',
@@ -252,6 +256,72 @@ class _ClubTeamCompetitionCardState
     ],
   );
 
+  Widget _captainOrderPanel(ClubCaptainOrderSelection selection) =>
+      Card.outlined(
+        key: const Key('captain-order-selection-panel'),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text('팀원 지명 순서 선택', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              const Text('관리자가 팀장을 선정한 순서대로 각 팀장이 원하는 지명 순서를 선택합니다.'),
+              ...selection.captains.map((captain) => ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(child: Text('${captain.selectionOrder}')),
+                    title: Text(captain.captainName),
+                    subtitle: Text(captain.selectedDraftOrder == null
+                        ? '지명 순서 미선택'
+                        : '지명 순서 ${captain.selectedDraftOrder}번 확정'),
+                  )),
+              if (!selection.complete) ...<Widget>[
+                const SizedBox(height: 8),
+                Text(selection.canChoose
+                    ? '내 차례입니다. 남은 번호 중 원하는 순서를 선택하세요.'
+                    : '${selection.nextCaptainName ?? '다음'} 팀장의 선택을 기다리고 있습니다.'),
+                if (selection.canChoose) ...<Widget>[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: selection.availableOrders.map((order) =>
+                        OutlinedButton(
+                          key: Key('captain-order-choice-$order'),
+                          onPressed: _working ? null : () => _chooseDraftOrder(order),
+                          child: Text('$order번 지명'),
+                        )).toList(),
+                  ),
+                ],
+              ] else const Text('모든 팀장이 지명 순서를 확정했습니다.'),
+            ],
+          ),
+        ),
+      );
+
+  Future<void> _chooseDraftOrder(int order) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('팀원 지명 순서 확정'),
+        content: Text('$order번 순서로 팀원을 뽑으시겠습니까? 확정 후 변경할 수 없습니다.'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('확정'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _run(<String, dynamic>{'action': 'CHOOSE_DRAFT_ORDER', 'draftOrder': order});
+  }
+
   Widget _managerActions(ClubTeamCompetitionState state) {
     final List<Widget> actions = <Widget>[];
     switch (state.status) {
@@ -268,7 +338,7 @@ class _ClubTeamCompetitionCardState
         actions.add(
           FilledButton(
             onPressed: _working ? null : () => _configureCaptains(state),
-            child: const Text('팀장과 드래프트 순서 지정'),
+            child: const Text('팀장 선정'),
           ),
         );
         actions.add(
@@ -282,7 +352,7 @@ class _ClubTeamCompetitionCardState
       case 'DRAFT_READY':
         actions.add(
           FilledButton(
-            onPressed: _working
+            onPressed: _working || state.captainOrderSelection?.complete == false
                 ? null
                 : () => _run(<String, dynamic>{'action': 'START_DRAFT'}),
             child: const Text('드래프트 시작'),
@@ -436,7 +506,7 @@ class _ClubTeamCompetitionCardState
       builder: (BuildContext context) => StatefulBuilder(
         builder: (BuildContext context, StateSetter setDialogState) =>
             AlertDialog(
-              title: const Text('팀장과 순서 지정'),
+              title: const Text('팀장 선정'),
               content: SizedBox(
                 width: 420,
                 child: ListView(
@@ -450,7 +520,7 @@ class _ClubTeamCompetitionCardState
                           value: order >= 0,
                           title: Text(participant.name),
                           subtitle: order >= 0
-                              ? Text('드래프트 순서 ${order + 1}')
+                              ? Text('지명 순서 선택 우선권 ${order + 1}')
                               : null,
                           onChanged: (bool? checked) => setDialogState(() {
                             if (checked == true) {

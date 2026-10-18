@@ -111,6 +111,28 @@ export async function getTeamCompetitionState(actorUserId: string, teamId: strin
     const currentTeam = turn ? teams.find((item) => item.draftOrder === turn.draftOrder) ?? null : null;
     const actorMember = event.team.members.find((item) => item.userId === actorUserId)!;
     const isManager = event.team.ownerId === actorUserId || event.team.User.some((item) => item.id === actorUserId);
+    // Draft selection priority is independent of the Snake Draft pick order.
+    // Legacy competition teams have NULL selection priority and skip this step.
+    const selectionTeams = teams.filter((item) => item.captainSelectionOrder != null)
+        .sort((a, b) => a.captainSelectionOrder! - b.captainSelectionOrder!);
+    const nextSelectionTeam = selectionTeams.find((item) => item.selectedDraftOrder == null) ?? null;
+    const selectedOrders = new Set(selectionTeams.map((item) => item.selectedDraftOrder));
+    const captainOrderSelection = selectionTeams.length === 0 ? null : {
+        required: true, complete: !nextSelectionTeam,
+        nextSelectionOrder: nextSelectionTeam?.captainSelectionOrder ?? null,
+        nextCaptainMemberId: nextSelectionTeam?.captainMemberId ?? null,
+        nextCaptainName: nextSelectionTeam ? displayName(nextSelectionTeam.captain) : null,
+        canChoose: nextSelectionTeam?.captainMemberId === actorMember.id,
+        availableOrders: Array.from({ length: teams.length }, (_, i) => i + 1)
+            .filter((order) => !selectedOrders.has(order)),
+        captains: selectionTeams.map((item) => ({
+            captainMemberId: item.captainMemberId,
+            captainName: displayName(item.captain),
+            selectionOrder: item.captainSelectionOrder!,
+            selectedDraftOrder: item.selectedDraftOrder,
+        })),
+    };
+
     let result: Awaited<ReturnType<typeof calculateResults>>;
     if (event.competitionStatus !== "PUBLISHED") {
         result = await calculateResults(event);
@@ -136,7 +158,7 @@ export async function getTeamCompetitionState(actorUserId: string, teamId: strin
             captainMemberId: currentTeam.captainMemberId,
             captainName: displayName(currentTeam.captain),
         } : null,
-        plan,
+        plan, captainOrderSelection,
         laneNumbers: [...new Set(event.laneSlots.map((slot) => slot.laneNumber))].sort((a, b) => a - b),
         laneSlots: event.laneSlots.map((slot) => ({ id: slot.id, laneNumber: slot.laneNumber, position: slot.position })),
         teams: teams.map((team) => serializeTeam(team, event)),
@@ -169,6 +191,7 @@ export async function updateTeamCompetition(actorUserId: string, teamId: string,
     switch (body.action) {
         case "LOCK_ATTENDANCE": return lockAttendance(actorUserId, teamId, eventId);
         case "CONFIGURE_CAPTAINS": return configureCaptains(actorUserId, teamId, eventId, body.captains);
+        case "CHOOSE_DRAFT_ORDER": return chooseDraftOrder(actorUserId, teamId, eventId, body.draftOrder);
         case "MANUAL_ASSIGN_TEAMS": return manualAssignTeams(actorUserId, teamId, eventId, body.captains, body.assignments);
         case "START_DRAFT": return startDraft(actorUserId, teamId, eventId);
         case "PICK": return pickParticipant(actorUserId, teamId, eventId, body.participantId ?? body.memberId);
@@ -398,6 +421,7 @@ async function configureCaptains(actorUserId: string, teamId: string, eventId: s
             const team = await tx.teamCompetitionTeam.create({ data: {
                 eventId, generation: event.draftGeneration, name: `TEAM ${captain.draftOrder}`,
                 captainMemberId: captain.memberId, draftOrder: captain.draftOrder,
+                captainSelectionOrder: captain.draftOrder,
             } });
             await tx.teamCompetitionParticipant.update({
                 where: { id: participantByMember.get(captain.memberId)! },
@@ -409,7 +433,7 @@ async function configureCaptains(actorUserId: string, teamId: string, eventId: s
                 dedupeKey: `${MOBILE_NOTIFICATION_TYPES.teamCaptainSelected}:${eventId}:${event.draftGeneration}:${captain.memberId}`,
                 type: MOBILE_NOTIFICATION_TYPES.teamCaptainSelected,
                 title: "팀장으로 선정되었습니다",
-                body: `${event.title}에서 ${captain.draftOrder}팀 팀장으로 선정되었습니다.`,
+                body: `${event.title} 팀장 선정 완료. ${captain.draftOrder}번째로 선수 지명 순서를 선택할 수 있습니다.`,
                 teamId, eventId, target: "TEAM_DRAFT",
             }]);
         }
@@ -417,10 +441,81 @@ async function configureCaptains(actorUserId: string, teamId: string, eventId: s
     return { status: "DRAFT_READY" };
 }
 
+// Only the next captain may choose an unused order. Every mutation is atomic;
+// rows from previous draft generations and legacy events remain unchanged.
+async function chooseDraftOrder(actorUserId: string, teamId: string, eventId: string, rawOrder: unknown) {
+    if (!Number.isSafeInteger(rawOrder) || (rawOrder as number) < 1) {
+        throw new TeamCompetitionError("INVALID_DRAFT_ORDER", "선택할 순서를 확인해주세요.", 400);
+    }
+    const order = rawOrder as number;
+    try {
+        return await prisma.$transaction(async (tx) => {
+            const event = await tx.teamEvent.findFirst({ where: {
+                id: eventId, teamId, team: { isActive: true, members: { some: { userId: actorUserId } } },
+            }, include: competitionInclude });
+            if (!event) throw new TeamCompetitionError("EVENT_NOT_FOUND", "일정을 찾을 수 없습니다.", 404);
+            requireTeamCompetition(event);
+            if (event.competitionStatus !== "DRAFT_READY") throw stateError();
+            const teams = currentTeams(event);
+            const selecting = teams.filter((item) => item.captainSelectionOrder != null)
+                .sort((a, b) => a.captainSelectionOrder! - b.captainSelectionOrder!);
+            if (teams.length < 2 || selecting.length !== teams.length) {
+                throw new TeamCompetitionError("DRAFT_ORDER_NOT_REQUIRED", "기존 대회의 순서 선택 단계가 아닙니다.", 409);
+            }
+            const current = selecting.find((item) => item.selectedDraftOrder == null);
+            if (!current) throw new TeamCompetitionError("DRAFT_ORDER_COMPLETE", "이미 모든 선택이 완료되었습니다.", 409);
+            const member = event.team.members.find((item) => item.userId === actorUserId);
+            if (!member || current.captainMemberId !== member.id) {
+                throw new TeamCompetitionError("NOT_CURRENT_CAPTAIN", "지금 차례인 팀장만 순서를 선택할 수 있습니다.", 403);
+            }
+            if (order > teams.length || selecting.some((item) => item.selectedDraftOrder === order)) {
+                throw new TeamCompetitionError("DRAFT_ORDER_TAKEN", "이미 선택되었거나 유효하지 않은 순서입니다.", 409);
+            }
+            const claimed = await tx.teamCompetitionTeam.updateMany({
+                where: { id: current.id, eventId, generation: event.draftGeneration, selectedDraftOrder: null },
+                data: { selectedDraftOrder: order },
+            });
+            if (claimed.count !== 1) throw new TeamCompetitionError("DRAFT_ORDER_CONFLICT", "순서가 변경되었습니다. 다시 확인해주세요.", 409);
+            const updated = selecting.map((item) => item.id === current.id ? { ...item, selectedDraftOrder: order } : item);
+            if (updated.every((item) => item.selectedDraftOrder != null)) {
+                // Avoid unique-key violations when permuting 1..N: park all rows
+                // temporarily in N+1..2N, then assign confirmed 1..N values.
+                for (const item of updated) {
+                    await tx.teamCompetitionTeam.update({
+                        where: { id: item.id },
+                        data: { draftOrder: teams.length + item.captainSelectionOrder! },
+                    });
+                }
+                for (const item of updated) {
+                    await tx.teamCompetitionTeam.update({
+                        where: { id: item.id },
+                        data: { draftOrder: item.selectedDraftOrder!, name: `TEAM ${item.selectedDraftOrder}` },
+                    });
+                }
+                return { status: "DRAFT_READY", complete: true, selectedDraftOrder: order };
+            }
+            return { status: "DRAFT_READY", complete: false, selectedDraftOrder: order };
+        });
+    } catch (error) {
+        if (error instanceof TeamCompetitionError) throw error;
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+            throw new TeamCompetitionError("DRAFT_ORDER_TAKEN", "다른 팀장이 해당 순서를 먼저 선택했습니다.", 409);
+        }
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+            throw new TeamCompetitionError("DRAFT_ORDER_CONFLICT", "동시 선택이 발생했습니다. 새로고침 후 다시 선택하세요.", 409);
+        }
+        throw error;
+    }
+}
+
 async function startDraft(actorUserId: string, teamId: string, eventId: string) {
     const event = await loadEvent(actorUserId, teamId, eventId); requireManager(event, actorUserId); requireTeamCompetition(event);
     if (event.competitionStatus !== "DRAFT_READY") throw stateError();
     const teams = currentTeams(event); const participants = currentParticipants(event); const plan = draftPlan(participants.length, teams.length);
+    if (teams.some((item) => item.captainSelectionOrder != null) &&
+        teams.some((item) => item.captainSelectionOrder == null || item.selectedDraftOrder == null)) {
+        throw new TeamCompetitionError("DRAFT_ORDER_PENDING", "팀장 전원의 선수 지명 순서 선택이 완료되어야 시작할 수 있습니다.", 409);
+    }
     if (plan.draftTotal === 0) {
         const remaining = participants.some((item) => !item.competitionTeamId);
         const status = remaining ? "LUCKY_DRAW" : "TEAMS_FINALIZED";

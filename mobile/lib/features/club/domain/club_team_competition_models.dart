@@ -364,12 +364,70 @@ class ClubTeamCompetitionResults {
   }
 }
 
+// Nullable at the parent state level for compatibility with older servers.
+class ClubCaptainOrderMember {
+  const ClubCaptainOrderMember({
+    required this.captainMemberId,
+    required this.captainName,
+    required this.selectionOrder,
+    required this.selectedDraftOrder,
+  });
+  final String captainMemberId;
+  final String captainName;
+  final int selectionOrder;
+  final int? selectedDraftOrder;
+
+  factory ClubCaptainOrderMember.fromJson(Map<String, dynamic> json) =>
+      ClubCaptainOrderMember(
+        captainMemberId: _string(json['captainMemberId']),
+        captainName: _string(json['captainName']),
+        selectionOrder: _positiveInt(json['selectionOrder']),
+        selectedDraftOrder: _nullablePositiveInt(json['selectedDraftOrder']),
+      );
+}
+
+class ClubCaptainOrderSelection {
+  const ClubCaptainOrderSelection({
+    required this.complete,
+    required this.canChoose,
+    required this.nextSelectionOrder,
+    required this.nextCaptainName,
+    required this.availableOrders,
+    required this.captains,
+  });
+  final bool complete;
+  final bool canChoose;
+  final int? nextSelectionOrder;
+  final String? nextCaptainName;
+  final List<int> availableOrders;
+  final List<ClubCaptainOrderMember> captains;
+
+  factory ClubCaptainOrderSelection.fromJson(Map<String, dynamic> json) {
+    if (json['required'] != true || json['complete'] is! bool ||
+        json['canChoose'] is! bool ||
+        (json['nextCaptainName'] != null && json['nextCaptainName'] is! String) ||
+        json['availableOrders'] is! List ||
+        (json['availableOrders'] as List).any((item) => item is! int || item < 1)) {
+      throw const FormatException('Invalid captain order selection');
+    }
+    return ClubCaptainOrderSelection(
+      complete: json['complete'] as bool,
+      canChoose: json['canChoose'] as bool,
+      nextSelectionOrder: _nullablePositiveInt(json['nextSelectionOrder']),
+      nextCaptainName: json['nextCaptainName'] as String?,
+      availableOrders: List<int>.unmodifiable((json['availableOrders'] as List).cast<int>()),
+      captains: _list(json['captains'], ClubCaptainOrderMember.fromJson),
+    );
+  }
+}
+
 class ClubTeamCompetitionState {
   const ClubTeamCompetitionState({
     required this.generation,
     required this.status,
     required this.canManage,
     required this.isCurrentCaptain,
+    this.captainOrderSelection,
     required this.currentTurn,
     required this.laneNumbers,
     required this.laneSlots,
@@ -383,6 +441,7 @@ class ClubTeamCompetitionState {
   final String status;
   final bool canManage;
   final bool isCurrentCaptain;
+  final ClubCaptainOrderSelection? captainOrderSelection;
   final ClubDraftTurn? currentTurn;
   final List<int> laneNumbers;
   final List<ClubTeamLaneSlot> laneSlots;
@@ -392,7 +451,8 @@ class ClubTeamCompetitionState {
   final String? myTeam;
   final ClubTeamCompetitionResults results;
 
-  bool get polling => status == 'DRAFT_IN_PROGRESS' || status == 'LUCKY_DRAW';
+  bool get polling => status == 'DRAFT_IN_PROGRESS' || status == 'LUCKY_DRAW' ||
+      (status == 'DRAFT_READY' && captainOrderSelection?.complete == false);
 
   factory ClubTeamCompetitionState.fromJson(Map<String, dynamic> json) {
     final Object? rawLaneNumbers = json['laneNumbers'] ?? const <Object>[];
@@ -429,6 +489,9 @@ class ClubTeamCompetitionState {
       status: json['status'] as String,
       canManage: json['canManage'] as bool,
       isCurrentCaptain: json['isCurrentCaptain'] as bool,
+      captainOrderSelection: json['captainOrderSelection'] == null
+          ? null
+          : ClubCaptainOrderSelection.fromJson(_map(json['captainOrderSelection'])),
       currentTurn: json['currentTurn'] == null
           ? null
           : ClubDraftTurn.fromJson(_map(json['currentTurn'])),
