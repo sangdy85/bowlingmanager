@@ -7,3 +7,5 @@
 .compactHeader.compactHeader{padding:8px 0 12px}.compactHeader.compactHeader p{max-width:none;word-break:keep-all;margin:8px 0}.toolbar>div{margin:0}
 .calendarControls.calendarControls form{flex:0 0 auto}.calendarControls.calendarControls input{width:170px}.calendarControls a,.calendarControls button{white-space:nowrap;flex-shrink:0}
 @media(max-width:650px){.calendarEvent{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}}
+
+.sourceLink{color:#086d5b;font-weight:750;text-decoration:underline;text-underline-offset:3px}.sourceLink:focus-visible{outline:3px solid #087d68;outline-offset:4px}

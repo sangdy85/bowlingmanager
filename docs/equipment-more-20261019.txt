@@ -1,0 +1,68 @@
+BowlingManager — 제조사 제품 원고 추가 2차
+확인일: 2026-10-19
+작업 경로: growth-001 / 브랜치 codex/release-1.2.1
+기준 HEAD: f434dd7e604d5fc0495a80d61f1586b9220dbb24
+미리보기 Build ID: 9Fo_TeX4yns7KauhDsVjs
+
+결과
+- 기존 12종에 6종 추가, 총 18종. 볼링공 11 / 볼링화 2 / 가방 2 / 관리용품 3.
+- 각 제품: 공식 사양, 소개 3문단, 구매 전 확인사항 3개, 실제 사진, 제조사 링크.
+- 사진은 공식 제품 페이지가 연결한 대표 사진으로 대조. 원본을 변경하지 않고 로컬 파일로 저장하고 기존 Next Image 표시 재사용.
+- 제조사 설명과 독립 시험·회원 후기를 구분. 국내 재고·가격·공인·실제 사용 경험을 만들어 넣지 않음.
+- 애매한 가방 크기 단위는 임의 환산하지 않음. 출시일이 없는 신발·가방·관리용품은 날짜를 채워 넣지 않음.
+- Primal Ghost 후보는 수집한 공식 목록 링크가 404여서 채택하지 않음. 정상 접근 가능한 Forge Fuel을 확인해 작성.
+
+추가 제품 / 공식 출처
+MOTIV Forge Fuel
+https://www.motivbowling.com/products/balls/medium-heavy-oil/forge-fuel.html
+Hammer Black Widow Mania
+https://hammerbowling.com/products/black-widow-mania
+Brunswick Slingshot Black
+https://brunswickbowling.com/products/shoes/slingshot-black
+MOTIV Vault 3-Ball Roller Silver
+https://www.motivbowling.com/products/bags/3-ball-bags/vault-3-ball-roller-silver.html
+Brunswick Reactivate Shammy Pad
+https://brunswickbowling.com/products/accessories/ball-maintenance/reactivate-shammy-pad
+Brunswick Easy Glide Ball Cup
+https://brunswickbowling.com/products/accessories/ball-maintenance/easy-glide-ball-cup
+
+핵심 확인
+- Forge Fuel: 공식 해외 출시 2026-09-16, Detonator / Leverage MXT Solid / 1000 Grit LSS, 16 lb RG 2.47·DIFF .054. 15 lb DIFF .055와 구분.
+- Black Widow Mania: 공식 해외 출시 2025-01-16, Gas Mask / HK22-Cohesion Pearl, 16 lb 2.510/.048/.015. 2026 신제품으로 소개하지 않음.
+- Slingshot: 양쪽 Pure Slide 솔, Black·Black Wide(2E) 품번 구분. 한국 사이즈 임의 환산 없음.
+- Vault: 신발 수납과 포켓 4개, 별도 판매 잠금장치 구분. 국내 보증을 해외 안내로 확정하지 않음.
+- Shammy: 표면 오일 닦기 용도로 소개. 내부 오일 제거·점수 향상·복원 보장 없음.
+- Ball Cup: 표면 관리용 받침과 세척제·패드 용도 구분. 대회 중 관리 허용을 임의로 확정하지 않음.
+
+이번 변경 파일
+content/equipment/manufacturers-20261019.json
+tests/public-page-content.test.cjs (18종·분류별 수·사진 검증 기준 갱신)
+public/images/equipment/ (신규 PNG 6개)
+docs/equipment-more-20261019.txt
+기존 UI 컴포넌트, sitemap 생성 로직 및 회원 기능 코드 변경 없음.
+
+검증 결과
+- 공개 웹 실제 컴포넌트 렌더링·검색·분류·사진·메타데이터·sitemap 관련 테스트 38/38 통과.
+- 18개 사진 해독 가능, 크기 일치, 해시 서로 다름, 출처·확인일 존재.
+- 별도 미리보기 디렉터리의 Next 15.5.12 production build 통과. 내부 lint·TypeScript 검사 통과.
+- 기존 lint 경고 17개, 새 경고 0. package/lockfile 변경·설치 없음.
+- 제품 목록·상세·필터·후기 분리·검색·404·sitemap·작성 로그인 경계·ads.txt HTTP 검사 29개 통과.
+- 원본 18개와 최적화 18개 사진 응답 모두 HTTP 200, 이미지 MIME·해독 정상.
+- 실제 브라우저 PC 1280×900에서 새 제품 사진 6개 로딩과 3열 목록 확인.
+- 가방 사진 클릭→상세 원고·사양·출처 확인. 모바일 390×844에서도 사진·제목 줄바꿈 정상, 문서 가로 넘침 없음.
+- 임시 브라우저 viewport는 원래 크기로 복구.
+- 기존 회원 용품 DB 테스트는 직전 2/2 통과 결과 재사용. 관련 업무 로직 변경 없음; 이번 작업에서 DB 변경 테스트 실행하지 않음.
+- git diff --check 통과. 기존 제품 12종 데이터·사진 정보 완전 일치.
+- 기존 모바일 등 미커밋 11개, 홈·대회·회원 업무·인증·스키마·패키지 관련 보존 검사 통과.
+
+검증 자료
+scratch/equipment-more-20261019/catalogue-before.json : 이전 12종 백업
+scratch/equipment-more-20261019/images.json : 새 사진 원본 URL·크기·SHA256
+scratch/equipment-more-20261019/tests.log / build.log
+scratch/equipment-more-20261019/http-results.json / http-photos.json
+http://127.0.0.1:3121/equipment#manufacturer-equipment : 로컬 미리보기
+
+범위와 미검증
+- 로컬 원고 반영·검증까지만 완료. 운영 서비스·DB에 접근하거나 배포하지 않음.
+- 실제 사용 후기, 국내 가격·재고·입고·공인 및 사진 재배포 허락은 별도로 확정하지 않음.
+- commit / push / merge / 운영 배포 하지 않음.

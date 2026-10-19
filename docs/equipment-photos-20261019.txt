@@ -1,0 +1,75 @@
+BowlingManager — 제조사 제품 추가 및 사진 미리보기
+확인일: 2026-10-19
+브랜치: codex/release-1.2.1
+Git HEAD: f434dd7e604d5fc0495a80d61f1586b9220dbb24
+격리 미리보기 Build ID: VOA5331PET70lcjYLb125
+미리보기: http://127.0.0.1:3121/equipment#manufacturer-equipment
+
+적용 범위
+- 제조사 소개 7종에 5종을 추가해 총 12종: 볼링공 9, 볼링화 1, 가방 1, 관리용품 1.
+- 12종 모두 공식 제품 페이지에서 연결된 실제 제품 사진을 확인해 저장. AI 생성 이미지·가상 사용 후기 없음.
+- 목록 카드와 제품 상세에 사진, 사진 출처와 제조사 공식 제품 링크 표시.
+- Next Image의 반응형 크기 및 최적화 사용. 카드 사진은 지연 로딩, 상세 사진은 우선 로딩.
+- 사진 영역은 object-fit:contain으로 원본 비율 유지. 로딩 실패 시 안내 및 공식 링크 제공.
+- 기존 7종의 텍스트·사양은 그대로 유지. 기존 회원 글, 후기, 검색·분류·작성·권한 로직 유지.
+
+추가한 제품과 공식 출처
+1. Storm ROCKET A.I.
+   https://www.stormbowling.com/storm-rocket-ai-bowling-ball
+2. Hammer Fallout
+   https://hammerbowling.com/products/fallout
+3. MOTIV Frenzy Blue / Teal
+   https://www.motivbowling.com/products/balls/entry-level/frenzy-blue-teal.html
+4. Ebonite Game Breaker 5 Hybrid
+   https://ebonite.com/products/game-breaker-5-hybrid
+5. Brunswick Infinity Quest Pearl
+   https://brunswickbowling.com/products/balls/current/infinity-quest-pearl
+
+정보 처리
+- 제조사 공식 사양·출시일만 요약. 브랜드별 성능 설명은 제조사 설명임을 구분.
+- MOTIV Frenzy는 15 lb 수치, 다른 볼은 각 표에 명시한 16 lb 수치로 구분.
+- 해외 출시일은 국내 입고·가격·재고 확인을 뜻하지 않음.
+- 기존 Reckoning의 출시 예정 표기 유지.
+- 사진별 원본 URL, 크기, 브랜드·확인일은 제품 JSON의 image에 기록.
+- 원본 내려받기 SHA256·HTTP MIME·크기 검증 기록은 scratch/equipment-photos-20261019/images.json.
+
+이번 변경 파일
+content/equipment/manufacturers-20261019.json
+src/components/equipment/ManufacturerEquipment.tsx
+src/components/equipment/ManufacturerEquipment.module.css
+src/components/equipment/ProductPhoto.tsx (신규)
+src/app/equipment/products/[slug]/page.tsx
+tests/public-page-content.test.cjs
+public/images/equipment/ (제품 사진 12개)
+docs/equipment-photos-20261019.txt
+
+검증
+- 실제 공개 페이지/컴포넌트와 기존 공개 웹 테스트: 38/38 통과.
+- 별도 신규 테스트 DB의 community lifecycle 회귀 통과; 용품 기능 2/2 통과.
+- 원본 사진 12개: 해독 가능, 크기 일치, 서로 다른 해시, 공식 출처 정보 존재 확인.
+- 빈 사진 데이터의 안내 UI 렌더링 확인. 실제 네트워크 장애로 onError를 발생시키는 브라우저 시나리오는 별도 수행하지 않음.
+- ESLint: 오류 0, 기존 경고 17; 새 경고 없음.
+- TypeScript: 실제 작업 트리 tsc --noEmit --incremental false 통과.
+- Production build: 별도 미리보기 경로에서 Next 15.5.12 빌드 통과. Next 빌드 내부 lint/type 검사도 통과.
+- PowerShell의 & 포함 경로 제약으로 npm wrapper 대신 설치된 동일 Node CLI를 직접 사용.
+- 제품 페이지·분류·후기 분리·검색·404·sitemap·로그인 경계·ads.txt HTTP 검증 23개 통과.
+- 12종 카드/상세의 사진 경로 확인; 원본 및 Next 최적화 사진 응답 총 24건 HTTP 200, image MIME·이미지 해독 확인.
+- 기존 대회정보 HTTP 15개, 대회 상세 공식 링크 5개·예고 링크 3개 유지 확인.
+- 실제 비로그인 브라우저: PC 1280×900 3열, 모바일 390×844 1열; 문서 가로 넘침 없음.
+- PC에서 목록 사진 12개 모두 로딩 완료 확인. 모바일 볼링화 필터와 사진, 상세 사진·사양 표시 확인.
+- 사진 클릭→상세, 목록 복귀, MOTIV 검색 및 새 제품 상세 사진 확인.
+- 브라우저 viewport는 검증 후 원래 크기로 복구. 화면은 도구에서 육안 확인했으며 별도 스크린샷 파일은 첨부하지 않음.
+- git diff --check 통과.
+
+보존 범위
+- 작업 시작 전 모바일 관련 미커밋 파일 11개 해시 일치.
+- 홈, 공유 레이아웃·내비게이션, 인증, middleware, package/lockfile, Prisma schema 변경 없음.
+- 이전 대회 콘텐츠 및 구현, 회원 용품/커뮤니티 업무 로직 해시 일치.
+- API route 84개 유지. 운영 DB·운영 환경변수·BAND 기능 변경 없음.
+
+미완료/운영 확인
+- 로컬 구현·격리 미리보기 검증까지 수행. 운영 반영하지 않음.
+- 국내 판매·재고·가격 및 제조사 자료의 향후 변경은 확인되지 않은 항목.
+- 실제 계정 로그인·운영 회원 작성 흐름은 이번 브라우저 확인 대상이 아님; 관련 기능은 별도 테스트 DB 회귀로 확인.
+- 제조사 이미지의 재배포 허락·라이선스 조건은 제품 페이지 연결과 별도로 확정하지 않음.
+- commit / push / merge / 운영 배포 하지 않음.

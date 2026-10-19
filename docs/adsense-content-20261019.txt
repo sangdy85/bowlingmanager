@@ -1,0 +1,65 @@
+BowlingManager — 용품·대회·커뮤니티 공개 콘텐츠 보강 (2026-10-19)
+
+작업 범위
+사용자가 홈 화면 구성을 그대로 유지하도록 정정했다. 홈·가이드·공유 내비게이션을 바꾸지 않고 /equipment, /competitions, /community 세 페이지의 내용을 보완했다.
+브랜치: codex/release-1.2.1 / 기준 HEAD: f434dd7e604d5fc0495a80d61f1586b9220dbb24
+git fetch origin 후 origin/main은 4045d27917444446449b928713f612ae5643134d이며 현재 브랜치와 110/1로 분기된 상태다. 원격 이력을 임의 merge/reset하지 않았다.
+작업 전 모바일/API 등 변경·신규 파일 11개를 해시 기록하고 그대로 보존했다.
+
+문제 판단
+사용자가 최신 AdSense 거절 사유도 '가치가 별로 없는 콘텐츠'라고 확인했다.
+2026-10-19 읽기 전용 운영 HTTP 확인: 홈·용품·커뮤니티에 빈 데이터 안내가 나타났고 /ads.txt는 기본 주소에서 200 text/plain으로 접근됐다. 대회 정보 페이지도 200 응답이었다.
+Google은 특정 문제 URL을 제시하지 않았으므로 이 세 페이지가 실제 거절 원인이라고 확정하지 않는다. 기술적 정상 접근과 콘텐츠 품질은 구분한다.
+'글 20~25개'는 확인한 Google 자격 요건에 정해진 승인 기준으로 나오지 않는다. 글 수를 맞추거나 가짜 후기·대회를 생성하는 방식으로 대응하지 않았다.
+
+수정 내용
+/equipment: 볼링공·볼링화·가방·관리용품 비교표, 매장 질문, 두 공의 제품표 비교 순서, 견적/피팅/교환 메모, 기존 공개 장비 가이드와의 연결. 회원 후기와 편집 안내를 구분했다. 구매 목적·피팅 부분은 USBC와 Storm 원문을 확인했고 원문 확인 날짜를 명시했다.
+/competitions: 참가 자격·접수 시작/마감·집합 시간·경기 방식·핸디/동점/시상·비용·변경 공지 확인 순서를 정리했다. 등록 일정 게시판과 /centers의 운영 대회/결과 화면을 구분했다. 30,000+5,000+7,000=42,000원은 가상 예산 예시로 명확히 표시했다. 공식 규정이나 실제 대회 비용으로 소개하지 않는다.
+/community: 맥락 있는 질문·연습 기록 작성법, 후기의 사용 조건/협찬 관계/출처와 개인정보 확인 항목, 펼쳐서 활용할 질문 메모 양식을 추가했다. 빈 양식임을 표시했으며 실제 회원 게시글이나 사용 후기를 만들지 않았다.
+각 페이지 상단에 기존 목록과 새 자료로 이동하는 링크를 추가했다. 기존 검색·필터·정렬·달력·등록/글쓰기·관리 권한·쿼리·저장 로직은 유지했다.
+새 CSS module은 세 페이지에만 연결된다. 홈과 공유 CSS/레이아웃은 변경하지 않았다. 모바일 표는 자체 가로 스크롤을 제공하며 표 헤더 의미와 키보드 포커스를 유지한다.
+
+수정 파일
+src/app/community/page.tsx
+src/app/competitions/page.tsx
+src/app/equipment/page.tsx
+src/components/public/ReadingGuides.tsx
+src/components/public/ReadingGuides.module.css
+tests/public-page-content.test.cjs
+docs/adsense-content-20261019.txt (이 보고서)
+
+검증 자료
+작업 전 보호 해시: scratch/adsense-content-20261019/before.json
+원본 복구 사본: scratch/adsense-content-20261019/before/ (검사 대상에 섞이지 않도록 .snapshot 확장자)
+공개 페이지/ads.txt/robots/가이드 테스트: 28 PASS. 실제 server page/하위 component를 모의 DB와 함께 렌더링해 글이 없는 상태, 기존 회원 글, 검색/페이지 이동, 대회 목록·달력, SUPER_ADMIN 등록 진입, 내 글 로그인 경계, 검색/개인 화면 noindex, 공개 가이드 연결, 예산 예시 산술을 확인했다.
+기존 게시판·대회정보·용품 저장/권한 회귀: public-community 1 PASS, community-hub/competition-notices/equipment 5 PASS. 별도 테스트 DB에서 fixture 준비 후 순차 실행했다.
+lint: 오류 0, 기존 경고 17. 새 경고 없음.
+TypeScript: PASS. 최초에는 백업한 TSX 사본이 tsconfig 검사 범위에 들어가 상대 import 오류 1개를 냈다. 원본 사본을 .snapshot 확장자로 보존해 제외한 뒤 다시 통과했다. 애플리케이션 코드나 검사 설정을 완화하지 않았다.
+production build: 별도 QA 프로젝트에서 최종 결과를 확인해 보고서 하단에 기록한다. package 설치/의존성 변경 없음. 기존 Prisma client와 현행 schema 일치 확인. schema/migration 변경·운영 migration 실행 없음.
+실제 HTTP: 16 PASS, scratch/adsense-content-20261019/http-results.json. /equipment, 검색/필터, /competitions 목록/달력, /community 검색, 공개 가이드 3개, 홈·로그인·health·ads.txt·비로그인 작성/내 글 차단 확인.
+브라우저: 비로그인 PC 1280px 및 모바일 390×844에서 세 페이지의 자료·목록·달력·질문 양식 펼침을 확인했다. 모바일 문서 폭 375px로 가로 넘침이 없었으며 용품 표 540px는 표 컨테이너 284px 안에서 스크롤했다. QA 화면의 회원·대회·제품 데이터는 가상 fixture이며 운영에 입력하지 않았다.
+보호 범위: scratch/adsense-content-20261019/preservation.json. 기존 미커밋 파일 11개 동일, 홈/공유 레이아웃/인증/Prisma/package 동일.
+
+출처 및 검토 범위
+Google 자격 요건: https://support.google.com/adsense/answer/9724?hl=ko
+Google 심사 준비 안내: https://support.google.com/adsense/answer/12176698?hl=en
+Google 게시자 정책 (인벤토리 가치): https://support.google.com/adsense/answer/10502938?hl=ko
+구매 목적·피팅: https://bowl.com/news/ball-selection-for-entry-level-bowlers
+구매 전 질문: https://www.stormbowling.com/read/questions-before-buying-new-bowling-ball
+비교표·문의 질문·양식은 편집 제안이다. 제조사 추천/전문가 검수/공식 대회 규정으로 표현하지 않는다.
+
+남은 항목
+실제 대회 요강, 운영자가 확보한 제품 정보, 실제 회원의 경험과 질문은 지속적으로 쌓아야 한다. 이번에는 DB 글을 인위적으로 늘리지 않았다.
+기존 공개 가이드 13개의 전체 사실관계·출처를 이번 작업에서 다시 전수 검수한 것은 아니다. 기존 WEB-ADS 감사와 별개로 변경된 외부 규정/링크는 추가 검토 대상이다.
+이 세 페이지 보완만으로 사이트 전체의 심사 준비가 끝났다고 판단하지 않는다. Google의 실제 재수집·계정 상태·심사 결과는 미검증이며 승인을 보장하지 않는다.
+운영은 읽기 전용으로 확인했으며 이번 수정의 commit/push/배포는 하지 않았다. 운영 반영 뒤 실제 HTTPS 화면과 크롤러 접근을 별도로 확인해야 한다.
+
+최종 확인
+production build PASS (빌드 내부 lint/typecheck 포함), Build 7XPgv_whKQpDEi6jb2mWl.
+최종 후보와 실제 수정 파일 5개의 해시 일치. API 라우트 84개 유지. 최종 HTTP 16건 재실행 PASS.
+최종 PC/모바일의 세 안내 앵커는 문서 상단 104px로 이동하여 고정 헤더 아래 표시됨. 모바일 문서 폭 375px, viewport 390px로 가로 넘침 없음. 표 첫 열은 볼링 가방/관리용품이 한 줄로 표시되도록 보정.
+로컬 미리보기: http://127.0.0.1:3121/equipment#equipment-checklist, /competitions#entry-checklist, /community#posting-guide. 별도 QA DB이며 운영 데이터가 아님.
+실제 화면 이미지를 도구 출력으로 확인했으나 이미지 파일 저장은 브라우저 도구의 EPERM으로 불가했다. 존재하지 않는 스크린샷 파일을 결과로 첨부하지 않았다.
+commit/push/운영 배포 없음.
+
+후속 요청 반영 (2026-10-19): 사용자가 일반 참가 안내 대신 제조사 실제 대회 공지를 요청하여 대회 체크리스트·가상 예산 부분은 제거했다. 용품·커뮤니티 보완과 홈 구성은 유지한다. 공식 공지 4건의 원고·출처·로컬 등록 검증은 docs/competition-notices-20261019.txt를 참고한다. 위의 이전 대회 체크리스트 설명은 최초 작업 이력이며 현재 화면의 내용이 아니다.

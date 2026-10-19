@@ -1,0 +1,181 @@
+제조사 공식 제품 소개 보강 · 2026-10-19
+
+작업 폴더: C:/Users/user/Documents/ChatGPT/볼링 사이트 & 앱/growth-001
+브랜치: codex/release-1.2.1
+기준 HEAD: f434dd7e604d5fc0495a80d61f1586b9220dbb24
+
+공식 제품표 7건을 공개 소개 글로 작성. 회원 계정이나 가짜 후기를 생성하지 않음. 원문 문장·이미지 전체 복제 없이 공개 사양을 정리하고 독자가 구매 전 비교할 항목을 추가함. 편집 소개와 회원 후기, 제조사 성능 설명과 독립 시험을 구분함. 국내 출시·가격·재고·보증 적용은 미확인. 해외 출시일을 국내 출시일로 쓰지 않음. Reckoning은 확인일 기준 해외 출시 예정 표시.
+
+각 볼 수치는 16 lb 기준을 명시. Storm의 기본 표가 16 lb이므로 임의로 15 lb 값으로 옮기지 않음. MOTIV 공식 페이지는 429 응답으로 이번 제품 소개에서 제외함. 전체 제조사 전수 조사 완료를 뜻하지 않음.
+
+구현
+- content/equipment/manufacturers-20261019.json: 원고·사양·비교 메모·출처 URL.
+- src/lib/manufacturer-equipment.ts: 읽기 전용 원고 조회·검색·용품 종류 필터. REVIEW에서 제조사 소개 제외.
+- src/components/equipment/ManufacturerEquipment.tsx 및 CSS: 공식 제품 소개 카드. 소개 상세와 제조사 링크를 각각 제공.
+- src/app/equipment/products/[slug]/page.tsx: 공개 상세, 공식 링크, 사양, 설명, 비교 메모, 회원 후기 이동, unknown slug notFound.
+- src/app/equipment/page.tsx: 기존 회원 소개/후기를 보존한 별도 제조사 소개 영역과 이동 링크.
+- src/app/sitemap.ts: 공개 제품 글 7개 www canonical URL 포함.
+- tests/public-page-content.test.cjs 및 tests/public-web.test.cjs: 실제 렌더·경로·필터·원문·색인 회귀 검증.
+
+회원 저장/권한/댓글/신고, API, Prisma schema/migration, 모바일, BAND, 홈 구성은 수정하지 않음. 운영 DB와 QA DB에 제품 글을 삽입하지 않음. 원고는 소스와 함께 전달되는 편집 콘텐츠이며 운영 반영 전.
+
+==================================================
+Hammer Reckoning · 해외 출시 예정 사양 살펴보기
+공식 원문: https://hammerbowling.com/products/reckoning
+로컬 경로: /equipment/products/hammer-reckoning
+자료 확인: 2026-10-19
+커버: HK22C² Solid · Solid Reactive
+코어: Vindicator
+공장 표면: 500, 1000 Siaair Micro Pad
+비교 무게: 16 lb
+16 lb RG / DIFF / ASY: 2.488 / 0.045 / 0.014
+제조사 무게 범위: 12~16 lb
+
+Reckoning은 Hammer가 해외 출시일을 2026년 11월 19일로 공지한 제품이다. 10월 19일 확인 기준 출시 예정 정보이며, 국내 입고나 판매 개시가 확인된 제품으로 안내하지 않는다.
+
+제조사는 Heavy oil 조건과 이른 중간 레인 반응을 지향하는 제품으로 설명한다. 이는 제조사의 설계 설명이며 BowlingManager의 투구 시험 결과가 아니다. Vindicator 코어와 HK22C² Solid 커버, 공장 표면을 기존 장비와 함께 비교할 수 있다.
+
+구매 전 메모
+- 표의 수치는 16 lb 기준이다. 15 lb 등 다른 구매 무게는 원문에서 별도로 확인한다.
+- 국내 출시일·공인 여부·판매 재고·지공 포함 견적은 수입사와 판매처에 확인한다.
+- 공이 많이 휜다는 설명을 모든 레인에서의 높은 점수나 초보자 적합성으로 해석하지 않는다.
+
+==================================================
+Hammer Zero Mercy Tour · 투어 계열의 사양 비교
+공식 원문: https://hammerbowling.com/products/zero-mercy-tour
+로컬 경로: /equipment/products/hammer-zero-mercy-tour
+자료 확인: 2026-10-19
+커버: C² Tour Edition · Solid Reactive
+코어: Obsession Tour
+공장 표면: 500, 1000 Siaair Micro Pad
+비교 무게: 16 lb
+16 lb RG / DIFF / ASY: 2.484 / 0.029 / 0.011
+제조사 무게 범위: 12~16 lb
+
+Zero Mercy Tour의 제조사 해외 출시일은 2026년 9월 17일이다. 공식 표는 Obsession Tour 코어와 C² Tour Edition 커버를 명시하며, 공장 표면은 500·1000 Siaair로 안내한다.
+
+제조사는 중간~많은 오일과 중간 레인·백엔드 반응을 제품의 방향으로 설명한다. 같은 브랜드의 다른 Tour 모델과 이름이 비슷하더라도 커버·표면·구매 무게의 수치가 같은지 확인해야 한다. 이 글은 직접 사용 후기가 아닌 제품표 요약이다.
+
+구매 전 메모
+- 비교표는 16 lb 값이며 15 lb 값과 섞지 않는다.
+- RG·DIFF 한 항목으로 훅의 크기나 내 투구 적합성을 확정하지 않는다.
+- 기존 공의 역할과 원하는 반응을 설명하고 피팅·표면 관리 계획을 프로숍과 확인한다.
+
+==================================================
+Storm Phaze II Pearl · 기존 솔리드 모델과 구분할 점
+공식 원문: https://www.stormbowling.com/storm-phaze-ii-pearl-bowling-ball
+로컬 경로: /equipment/products/storm-phaze-ii-pearl
+자료 확인: 2026-10-19
+커버: TX-25 Pearl Reactive
+코어: Velocity · 대칭형
+공장 표면: Power Edge
+공식 제품표 기준 무게: 16 lb
+16 lb RG / DIFF: 2.48 / 0.051
+색상: Red / Blue / Purple
+
+Phaze II Pearl은 TX-25 Pearl 커버와 Velocity 코어를 사용하는 Storm 제품이다. 공식 해외 출시일은 2025년 11월 28일이며, 기존 Phaze II Solid와 같은 제품으로 묶어 설명하지 않는다.
+
+제조사는 Phaze II Solid와 !Q Tour 계열 사이의 라인업을 보완하는 모델로 소개한다. 색상이 비슷하더라도 제품명에 Pearl이 있는지, 커버와 Power Edge 표면이 맞는지 확인하면 혼동을 줄일 수 있다.
+
+구매 전 메모
+- 현재 공식 페이지에 표시된 16 lb의 RG 2.48·DIFF 0.051을 정리했다. 다른 무게에 그대로 적용하지 않는다.
+- 국내 유통 제품과 제조사 해외 제품의 모델·색상·표면이 일치하는지 확인한다.
+- 제조사의 반응 설명은 사용자의 회전·속도·레인·지공 조건에 대한 결과 보장이 아니다.
+
+==================================================
+Brunswick Crown Victory · 하이브리드 커버와 무게별 수치
+공식 원문: https://brunswickbowling.com/products/balls/current/crown-victory
+로컬 경로: /equipment/products/brunswick-crown-victory
+자료 확인: 2026-10-19
+커버: HK22 - Savvy Hook Hybrid · Hybrid Reactive
+코어: Tiered Hexagon
+공장 표면: 500, 1000, 1500 Siaair / Crown Factory Compound
+비교 무게: 16 lb
+16 lb RG / DIFF: 2.549 / 0.038
+제조사 무게 범위: 12~16 lb
+
+Crown Victory는 Brunswick의 HK22 - Savvy Hook Hybrid 커버와 Tiered Hexagon 코어 제품이다. 공식 해외 출시일은 2025년 4월 17일이다. 제목이 비슷한 다른 Crown 모델과 제품표를 섞지 않도록 정확한 모델명을 확인한다.
+
+공식 표에서 16 lb의 RG·DIFF는 2.549·0.038, 15 lb는 2.540·0.045다. 같은 모델도 무게에 따라 값이 달라지므로 이 글의 16 lb 표를 다른 무게의 구매 판단에 그대로 대입하지 않는다. 제조사 Performance Index는 해당 브랜드의 분류이며 타사 점수표와 같은 척도로 보지 않는다.
+
+구매 전 메모
+- 공장 표면과 현재 사용 중인 공의 표면을 구분한다.
+- 12~13 lb는 별도 코어 이미지가 제공되므로 원문에서 구매 무게의 구조를 확인한다.
+- 해외 제품 정보와 국내 재고·가격·보증 적용 조건을 구분해 문의한다.
+
+==================================================
+Dexter SST 8 Power-Frame BOA · 교체 솔과 힐 확인
+공식 원문: https://www.dexterbowling.com/en/sst-8-power-frame-boa-25860.html?dwvar_25860_color=Black
+로컬 경로: /equipment/products/dexter-sst-8-power-frame-boa
+자료 확인: 2026-10-19
+확인한 모델: Black · DP0001801 / 25860
+조임 방식: BOA Fit System
+갑피: Power-Frame KPU overmold
+공식 슬라이드 구성: 교체식 S8 솔 / H5 saw-tooth 힐
+포함품: 슈즈 프로텍터 1개
+구성 특성: 좌·우 투구 방향에 대응하는 SST 기술
+
+Dexter 공식 Black 제품 페이지는 BOA 조절 방식, Power-Frame KPU 갑피와 교체식 솔·힐을 안내한다. 슬라이드 신발의 기본 구성은 S8 솔과 H5 saw-tooth 힐이며, 슈즈 프로텍터 1개가 포함된다고 명시한다.
+
+구매 전에는 모델명만 보지 말고 판매되는 색상·폭·사이즈·동봉 부품을 함께 대조한다. 제조사가 좌·우 투구 방향에 대응하는 SST 기술을 안내하더라도 실제 솔·힐 배치와 교체 방법을 확인한 뒤 사용해야 한다. 착용감이나 슬라이드 적합성을 직접 시험한 후기는 아니다.
+
+구매 전 메모
+- 미국 사이즈를 국내 치수로 임의 환산하지 않고 판매처의 실측·교환 조건을 확인한다.
+- 호환되는 교체 부품 종류와 별도 구매 품목을 확인한다.
+- 이 모델의 구성을 모든 SST·BOA 모델에 동일하게 적용하지 않는다.
+
+==================================================
+Brunswick Hybrid Triple Roller · 볼 3개 운반용 구성
+공식 원문: https://brunswickbowling.com/products/bags/roller-bags/hybrid-triple-roller
+로컬 경로: /equipment/products/brunswick-hybrid-triple-roller
+자료 확인: 2026-10-19
+수납 안내: Holds three balls only · 볼 3개
+바퀴: 5-inch PVC wheels
+손잡이: 인출식 손잡이
+소재: 600D material
+공식 표기 크기: 12″ L × 10″ D × 29″ H
+품번 / 색상: 59-123401-002 · Black / Blue
+
+Hybrid Triple Roller의 제조사 표는 볼 3개 전용 수납과 5인치 PVC 바퀴, 인출식 손잡이, 내부를 볼 수 있는 상단 구성을 안내한다. 제품표의 크기는 인치 단위 그대로 정리했다.
+
+특히 원문이 공 3개만 수납한다고 명시하므로 신발·의류까지 들어가는 일체형 가방처럼 소개하지 않는다. 이동용 가방을 비교할 때는 볼 수뿐 아니라 필요한 신발·용품을 별도로 운반해야 하는지 확인하는 데 도움이 되는 정보다.
+
+구매 전 메모
+- 차량 적재 공간과 보관 위치를 실제 제품 크기와 대조한다.
+- 계단 이동이나 공을 넣은 상태의 취급 편의는 직접 확인한다.
+- 제조사 보증 안내와 국내 판매처의 적용·수리 조건을 별도로 확인한다.
+
+==================================================
+Brunswick Big B Cleaner · 볼 표면 관리용품 확인
+공식 원문: https://brunswickbowling.com/products/accessories/ball-maintenance/big-b-bowling-ball-cleaner
+로컬 경로: /equipment/products/brunswick-big-b-cleaner
+자료 확인: 2026-10-19
+제품 구분: 볼링공 세척용 관리용품
+제조사 설명: 볼 표면의 오일·벨트 자국 세척
+적용 대상 안내: 제조사는 모든 유형의 볼링공을 안내
+8 fl oz 품목: 56-B60715-008 · 237 mL
+32 fl oz 품목: 56-B60815-032 · 1 QT
+1 GAL 품목: 56-B60815-128 · 3.78 L
+
+Brunswick는 Big B Cleaner를 볼 표면의 오일과 벨트 자국을 청소하는 제품으로 소개한다. 모든 유형의 볼링공에 사용할 수 있다고 제조사가 설명하지만, 실제 사용량·방법·주의사항은 보유 제품의 라벨과 제조사 안전자료를 우선 확인한다.
+
+이 소개는 표면 관리용품의 공개 정보를 정리한 것이며, 공 내부의 오일 제거 효과나 점수 회복을 보장하지 않는다. 제품 페이지에서 안내하는 안전자료도 함께 확인할 수 있다.
+
+구매 전 메모
+- 같은 이름이라도 용량과 품번이 맞는지 확인한다.
+- 경기 중 사용 가능 여부는 이 제품 소개만으로 판단하지 말고 참가 대회 규정을 확인한다.
+- 다른 세척제와의 혼합 비율이나 임의 가열 방법은 이 글에서 제안하지 않는다.
+
+
+최종 검증 결과
+- 공개 웹 관련 테스트 39개 통과, 기존 용품 저장/권한/댓글/신고 회귀 테스트 2개 통과(총 41개).
+- 기존 용품 테스트 첫 실행은 재사용 fixture의 중복 글 때문에 실패. 새 격리 DB에서 기존 테스트 그대로 다시 통과했으며 기존 테스트 환경 포인터를 복원함. 운영/미리보기 DB의 회원 글은 수정하지 않음.
+- production Next build 성공. 빌드 내 lint 및 TypeScript 검사 완료. 기존 경고 17개 그대로, 새 경고 없음.
+- 최종 로컬 Build ID: QQVeOI5W6BzxfK4qFFPm3
+- 실제 HTTP 검사 18개 통과: 제품 7건의 상세·공식 링크·canonical, 종류·검색·REVIEW 구분, unknown slug 404/noindex, sitemap, 비로그인 작성 차단, ads.txt.
+- 기존 대회 HTTP 검사 15개 및 대회 상세 5건/사전 안내 3건 공식 링크 검사도 통과.
+- 실제 PC 1280×900 목록과 상세 이동, 모바일 390×844 상세 및 볼링화/후기 필터 확인. 가로 넘침 없음. 후기 화면의 제조사 바로가기도 INTRO로 정상 전환.
+- 기존 대회 구현·원고·링크 파일 해시 일치. 홈/공유 layout/인증/Prisma/package, 기존 미커밋 작업 11개 보존. API route 84개 유지.
+- 의존성 추가 없음. Prisma schema 및 migration 변경 없음.
+- git diff --check 통과. commit, push, merge, 운영 배포 실행하지 않음.
+- 로컬 확인: http://127.0.0.1:3121/equipment#manufacturer-equipment
