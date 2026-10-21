@@ -6,12 +6,12 @@ import styles from './ManufacturerEquipment.module.css';
 import ProductPhoto from './ProductPhoto';
 import portal from '@/components/portal/Portal.module.css';
 
-export default function ManufacturerEquipment({q, category, type, page: requestedPage = 1, memberPage = 1}: {q: string; category: string; type: string; page?: number; memberPage?: number}) {
+export default function ManufacturerEquipment({q, category, type, brand = '', page: requestedPage = 1, memberPage = 1}: {q: string; category: string; type: string; brand?: string; page?: number; memberPage?: number}) {
     if (type === 'REVIEW') return null;
-    const {products, total, page, pages} = pageManufacturerEquipment(q, category, type, requestedPage);
-    const href = (next: number) => '/equipment?' + new URLSearchParams({q, category, type, page: String(memberPage), productPage: String(next)}) + '#manufacturer-equipment';
+    const {products, total, page, pages} = pageManufacturerEquipment(q, category, type, requestedPage, brand);
+    const href = (next: number) => '/equipment?' + new URLSearchParams({q, category, type, brand, page: String(memberPage), productPage: String(next)}) + '#manufacturer-equipment';
     return <section className={styles.section} id="manufacturer-equipment" aria-labelledby="manufacturer-equipment-heading">
-        <header><p className={styles.label}>PRODUCT NOTES · CHECK THE SOURCE</p><h2 id="manufacturer-equipment-heading">제조사·판매처 자료로 살펴보는 볼링 용품</h2><p>제조사·MK·브런스윅 코리아·진승 쇼핑몰·트윈스스포츠의 제품표를 확인해 사양과 비교할 점을 정리했습니다. 직접 사용 후기와 구분하며, 각 제품에 자료 출처와 원문 링크를 표시합니다.</p><p className={styles.meta}>최근 자료 추가: {MANUFACTURER_EQUIPMENT_CHECKED_AT} · 조건에 맞는 제품 {total}개 · {page}/{pages}페이지</p></header>
+        <header><p className={styles.label}>PRODUCT NOTES · CHECK THE SOURCE</p><h2 id="manufacturer-equipment-heading">제조사·판매처 자료로 살펴보는 볼링 용품</h2><p>제조사·로드필드 공식몰·MK·브런스윅 코리아·진승 쇼핑몰·트윈스스포츠의 제품표를 확인해 사양과 비교할 점을 정리했습니다. 직접 사용 후기와 구분하며, 각 제품에 자료 출처와 원문 링크를 표시합니다.</p><p className={styles.meta}>최근 자료 추가: {MANUFACTURER_EQUIPMENT_CHECKED_AT} · 조건에 맞는 제품 {total}개 · {page}/{pages}페이지</p></header>
         {products.length ? <div className={equipment.grid}>{products.map(product => <article className={equipment.card} key={product.slug}>
             <Link className={styles.photoLink} href={'/equipment/products/' + product.slug}><ProductPhoto image={product.image} /></Link>
             <p className={styles.photoCredit}><span>{product.brand}</span><a href={product.sourceUrl} target="_blank" rel="noopener noreferrer">사진: {product.sourceLabel} ↗</a></p>
