@@ -48,21 +48,11 @@ export default async function PersonalPage(props: { searchParams: Promise<{ year
             select: { gameDate: true }
         }),
         prisma.leagueMatchupIndividualScore.findMany({
-            where: {
-                OR: [
-                    { userId: user.id },
-                    { AND: [{ playerName: user.name }, { teamId: { in: user.teamMemberships.map((tm: any) => tm.teamId) } }] }
-                ]
-            },
+            where: { userId: user.id },
             select: { LeagueMatchup: { select: { round: { select: { date: true } } } } }
         }),
         prisma.tournamentScore.findMany({
-            where: {
-                OR: [
-                    { registration: { userId: user.id } },
-                    { AND: [{ registration: { guestName: user.name } }, { registration: { teamId: { in: user.teamMemberships.map((tm: any) => tm.teamId) } } }] }
-                ]
-            },
+            where: { registration: { userId: user.id } },
             select: { round: { select: { date: true } } }
         })
     ]);

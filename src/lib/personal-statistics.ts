@@ -56,37 +56,13 @@ async function getPersonalStatisticsDataBetween(
     // --- 추가: 공식 기록 조회 (상주리그 & 대회) ---
     const userTeamIds = user.teamMemberships.map((tm) => tm.teamId);
 
+    // Official identity is established on membership/score writes, never inferred at read time.
     // 1. 상주리그 기록
     const currentTeamNames = user.teamMemberships.map((tm) => tm.team.name);
 
     const leagueScores = await db.leagueMatchupIndividualScore.findMany({
         where: {
-            OR: [
-                {
-                    AND: [
-                        { userId: user.id },
-                        {
-                            OR: [
-                                { playerName: null },
-                                { playerName: '' },
-                                { playerName: { contains: user.name } }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    AND: [
-                        { playerName: { contains: user.name } },
-                        { teamId: { in: userTeamIds } }
-                    ]
-                },
-                {
-                    AND: [
-                        { playerName: { contains: user.name } },
-                        { Team: { name: { in: currentTeamNames } } }
-                    ]
-                }
-            ],
+            userId: user.id,
             LeagueMatchup: {
                 round: {
                     date: {
@@ -111,32 +87,7 @@ async function getPersonalStatisticsDataBetween(
     // 2. 대회 기록 (챔프전/이벤트전)
     const tournamentScores = await db.tournamentScore.findMany({
         where: {
-            OR: [
-                {
-                    AND: [
-                        { registration: { userId: user.id } },
-                        {
-                            OR: [
-                                { registration: { guestName: null } },
-                                { registration: { guestName: '' } },
-                                { registration: { guestName: { contains: user.name } } }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    AND: [
-                        { registration: { guestName: { contains: user.name } } },
-                        { registration: { teamId: { in: userTeamIds } } }
-                    ]
-                },
-                {
-                    AND: [
-                        { registration: { guestName: { contains: user.name } } },
-                        { registration: { guestTeamName: { in: currentTeamNames } } }
-                    ]
-                }
-            ],
+            registration: { userId: user.id },
             round: {
                 date: {
                     gte: startOfYear,

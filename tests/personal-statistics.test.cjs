@@ -213,14 +213,21 @@ test('unrelated user IDs and null Score userId are excluded', async () => {
     assert.equal(summary.gameCount, 0);
 });
 
-test('legacy official name plus active team ID/name fallback is preserved', async () => {
+test('unlinked guests and same-name accounts/teams are not inferred into personal records', async () => {
     const { summary } = await calculate({ leagueMatchupIndividualScore: [
         league({ userId: null, playerName: user.name }),
         league({ id: 'same-name-team', userId: 'other', teamId: 'old-team', playerName: user.name }),
         league({ id: 'excluded', userId: null, teamId: 'foreign-team', Team: { name: 'Other' }, playerName: user.name }),
     ], tournamentScore: [tournament({ registration: { ...tournament().registration,
         userId: null, guestName: user.name, guestTeamName: 'Fixture Team' } })] });
-    assert.equal(summary.gameCount, 3);
+    assert.equal(summary.gameCount, 0);
+});
+
+test('a verified user link remains valid after a player or team display name changes', async () => {
+    const { summary } = await calculate({ leagueMatchupIndividualScore: [
+        league({ playerName: '경기 당시 이름', teamId: 'previous-team', Team: { name: '이전 팀명' } }),
+    ], tournamentScore: [tournament({ registration: { ...tournament().registration, guestName: '경기 당시 이름' } })] });
+    assert.equal(summary.gameCount, 2);
 });
 
 test('malformed/duplicate/out-of-range years rejected and missing year defaults to current year', () => {

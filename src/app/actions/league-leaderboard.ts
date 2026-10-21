@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 
 type LeagueScoreIdentity = {
+    teamId?: string | null;
     userId?: string | null;
     playerName?: string | null;
     User?: { name?: string | null } | null;
@@ -13,7 +14,7 @@ function getLeaguePlayerKey(score: LeagueScoreIdentity) {
     if (userId) return `user:${userId}`;
 
     const guestName = score.playerName?.trim() || 'Unknown';
-    return `guest:${guestName}`;
+    return `guest:${JSON.stringify([score.teamId || null, guestName.normalize('NFC')])}`;
 }
 
 function getLeaguePlayerName(score: LeagueScoreIdentity) {
@@ -72,6 +73,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
 
     // 2. Initialize Individual Stats Map
     const individualStats: Record<string, {
+        teamId: string;
         userId: string | null;
         playerName: string;
         teamName: string;
@@ -256,6 +258,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
 
                 if (!individualStats[key]) {
                     individualStats[key] = {
+                        teamId: score.teamId,
                         userId: score.userId,
                         playerName: name,
                         teamName: teamDisplayName,
@@ -358,7 +361,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
     };
 
     // Keep award allocation on the same identity used by the cumulative table.
-    const getWinnerId = (p: any) => getLeaguePlayerKey({ userId: p.userId, playerName: p.playerName });
+    const getWinnerId = (p: any) => getLeaguePlayerKey(p);
 
     // 1-9. Interleaved Award Allocation based on Priority
     const steps = [

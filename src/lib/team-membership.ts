@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { PUBLIC_ORIGIN } from "@/lib/public-web";
+import { linkCenterTeamGuestRecords } from "@/lib/center-league-identity";
 
 export const TEAM_CODE_LENGTH = 6;
 
@@ -30,6 +31,7 @@ export type TeamMembershipDependencies = {
     updateMemberAlias(memberId: string, alias: string): Promise<void>;
     createMembership(userId: string, teamId: string, alias: string | null): Promise<void>;
     migrateUserRecords(userId: string, teamId: string): Promise<void>;
+    linkCenterRecords?(userId: string, teamId: string): Promise<void>;
 };
 
 export type JoinTeamResult = {
@@ -83,6 +85,9 @@ const defaultDependencies: TeamMembershipDependencies = {
         await prisma.teamMember.create({ data: { userId, teamId, alias } });
     },
     async migrateUserRecords(userId, teamId) {
+        const team = await prisma.team.findUnique({ where: { id: teamId }, select: { centerId: true } });
+        // A center team joins historical records by center/team/name, never by moving all of a user's records.
+        if (team?.centerId) return;
         try {
             await Promise.all([
                 prisma.score.updateMany({ where: { userId }, data: { teamId } }),
@@ -95,6 +100,12 @@ const defaultDependencies: TeamMembershipDependencies = {
             // remains valid even if a legacy record cannot be linked.
             console.error("Migration failed:", error);
         }
+    },
+    async linkCenterRecords(userId, teamId) {
+        await prisma.$transaction(async tx => {
+            const team = await tx.team.findUnique({ where: { id: teamId }, select: { centerId: true } });
+            if (team?.centerId) await linkCenterTeamGuestRecords(tx, team.centerId, teamId, userId);
+        });
     },
 };
 
@@ -121,6 +132,7 @@ export async function joinTeamByCode(
 
     const existing = await dependencies.findMembership(input.userId, team.id);
     if (existing) {
+        await dependencies.linkCenterRecords?.(input.userId, team.id);
         return {
             status: "ALREADY_MEMBER",
             team: teamSummary(team, input.userId, team._count.members),
@@ -147,6 +159,7 @@ export async function joinTeamByCode(
     }
 
     await dependencies.createMembership(input.userId, team.id, newAlias);
+    await dependencies.linkCenterRecords?.(input.userId, team.id);
     await dependencies.migrateUserRecords(input.userId, team.id);
 
     return {

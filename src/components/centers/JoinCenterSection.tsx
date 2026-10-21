@@ -44,7 +44,7 @@ export default function JoinCenterSection({
         try {
             const result = await joinCenter(centerId, selectedTeamId || null, userName); // Use userName as alias by default
             if (result.success) {
-                alert(currentMember ? "정보가 수정되었습니다." : "가입이 완료되었습니다.");
+                alert(result.message);
                 setIsModalOpen(false);
                 router.refresh();
             } else {
@@ -111,6 +111,7 @@ export default function JoinCenterSection({
                                 />
                                 <p className={styles.help}>
                                     * 현재 로그인된 계정의 이름으로 가입됩니다.
+                                    같은 볼링장·팀·이름으로 남긴 과거 경기 기록은 계정에 자동 연결됩니다.
                                 </p>
                             </div>
 

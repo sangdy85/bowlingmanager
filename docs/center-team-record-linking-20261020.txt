@@ -1,0 +1,56 @@
+센터·팀·이름 기반 리그 기록 자동 연결 — 2026-10-20
+
+작업 기준: codex/release-1.2.1 / 530dca6e84fc7e9b6517d94db6e156028c4b4aa8
+기존 회원 ID / 미가입 게스트 모델을 유지한다. 사용자 요청에 따라 일치 여부는 실제 센터 ID + 등록 팀 ID + DB 계정 이름(앞뒤 공백 제거, NFC 정규화)으로 판단한다. 화면에서 전달한 별명이나 다른 센터의 같은 팀 이름은 매칭 근거로 사용하지 않는다.
+
+동작
+- 미가입 선수: 팀 + 이름으로 여러 주차의 기록을 누적한다. 다른 팀의 동명 게스트는 별도 인물로 집계한다.
+- 점수 입력: 대회 등록 명단과 해당 센터 팀 소속 회원을 조회해 일치 계정이 하나면 자동 연결한다. 기존 연결은 유지한다.
+- 센터 가입/소속 변경: 팀이 실제 센터 소속인지 서버에서 검사한다. 기존 센터 회원도 팀원 등록과 과거 기록 연결 단계를 수행한다.
+- 팀 코드 가입: 실제 센터 팀인 경우 같은 공통 연결 함수를 사용한다. 다른 팀의 기존 경기 기록 teamId를 일괄 덮어쓰지 않는다. 일반 동호회 가입의 기존 처리 방식은 유지한다.
+- 관리자 센터 회원 추가: 해당 사용자가 이미 소속된 센터 팀의 과거 기록을 연결한다.
+- 과거 리그 점수와 단일 게스트 대회 등록에 userId만 설정한다. 점수/핸디/원래 이름/매치업 총점/승점은 수정하지 않는다. 등록 참가자, 참가비 및 점수 하위 데이터를 삭제하지 않는다.
+- 개인 기록실의 연도 목록 및 웹/모바일 공통 공식 기록 조회는 연결된 userId로 조회한다. 이름 일부 또는 같은 팀 표시명만으로 타인의 기록을 포함하던 조건을 제거했다. 점수 정규화와 평균 계산은 유지한다.
+
+보류 조건
+- 같은 팀에 동명 계정이 여러 개이거나 다른 계정으로 이미 연결된 동명 기록이 있으면 자동 귀속하지 않는다.
+- 같은 매치업의 중복 선수 행, 이미 해당 계정의 대회 등록이 존재하는 경우, 같은 대회에 동명 게스트 등록이 여러 개 있는 경우는 관리자 확인 대상으로 남긴다. 임의로 첫 등록을 고르거나 삭제/병합하지 않는다.
+- teamId 없이 팀 이름 문자열만 남은 기록, 오타·개명·다른 이름 표기 기록은 자동 추정하지 않는다.
+- 기존에 가입 완료된 회원의 미연결 과거 기록은 해당 센터 소속 정보 저장 또는 기존 팀 코드 재확인 경로에서 재시도할 수 있다. 운영 전체의 일괄 데이터 보정은 이번 로컬 작업에 포함하지 않는다.
+- 동명이인 구분이 필요한 경우 저장 화면에서 회원 또는 게스트를 명시적으로 선택할 수 있다.
+
+검증
+- 최종 영향 범위 회귀 테스트: 187개 통과. 실제 Prisma/서버 액션을 별도 임시 SQLite DB에서 실행했고 운영 DB는 사용하지 않았다.
+- 테스트 포함: 비로그인 차단, 센터/팀 불일치 차단, 여러 주차 누적, 가입 후 개인 기록 노출, 현재 단일/일괄 점수 저장 자동 연결, 기존 센터 회원 소속 변경, 반복 가입 멱등성, 동명이인 미귀속 및 개인 조회 제외, 중복 등록/중복 경기 보류, 참가자·점수 보존, 팀 코드 가입, 관리자 추가, 다른 센터/팀 기록 보존, BAND/대회/모바일 회귀.
+- Prisma generate 성공. schema/migration/API 라우트/Flutter/BAND 소스/의존성 변경 없음.
+- 기존 별도 미커밋 작업 11개는 SHA-256 비교 결과 변경 없음.
+- TypeScript 검사 성공. lint 오류 0개(기존 경고 17개).
+- production build 및 브라우저 최종 결과는 아래 검증 완료 기록에 기재한다.
+
+변경 파일
+src/lib/center-league-identity.ts
+src/lib/league-score-identity.ts
+src/lib/team-membership.ts
+src/lib/personal-statistics.ts
+src/app/actions/center-members.ts
+src/app/actions/league-actions.ts
+src/app/actions/league-results.ts
+src/app/actions/league-leaderboard.ts
+src/app/personal/page.tsx
+src/components/centers/JoinCenterSection.tsx
+src/components/tournaments/RoundBulkResultEditor.tsx
+tests/center-league-auto-link.test.cjs
+tests/league-score-identity-save.test.cjs
+tests/center-guest-merge-display.test.cjs
+tests/personal-statistics.test.cjs
+
+보존/범위
+기존 미커밋 사본: scratch/league-auto-link-20261020/before (소스 백업 확장자 .snapshot)
+검증 로그: scratch/league-auto-link-20261020/
+커밋/푸시/운영 배포/운영 데이터 수정은 수행하지 않았다. 기존에 완료된 앞선 운영 복구와 구분되는 이번 후속 로컬 구현 보고서다.
+
+검증 완료 기록
+production build 성공: KAZZHOQqPFbsFszNuT2YP
+API 라우트 84개: 누락 없음. 로컬 src 파일 451개와 빌드 대상 사본 SHA-256 일치.
+브라우저: 격리된 127.0.0.1:3122 QA 페이지의 가상 데이터로 자동 모드/회원 선택/게스트 지정/이름 수정 후 자동 모드 복귀 확인. 팀 합계 1890 유지, 콘솔 오류 0. 브라우저에서는 저장/실제 사용자 가입을 수행하지 않았으며 저장 및 가입은 실제 액션+격리 DB 테스트로 검증.
+임시 QA 서버는 검증 후 종료. QA 전용 페이지는 별도 폴더에만 있고 실제 저장소 src에는 추가하지 않음.

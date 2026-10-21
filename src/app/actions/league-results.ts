@@ -1,6 +1,8 @@
 'use server';
 
 import prisma from "@/lib/prisma";
+import { getLeagueMemberOptions } from "@/lib/league-score-identity";
+import { getCenterLeagueMembers } from "@/lib/center-league-identity";
 
 export async function getLeagueRoundResults(roundId: string) {
     try {
@@ -8,7 +10,10 @@ export async function getLeagueRoundResults(roundId: string) {
             where: { id: roundId },
             include: {
                 tournament: {
-                    select: { name: true, settings: true, type: true, teamHandicapLimit: true, manualTeamHandicaps: true, reportNotice: true }
+                    select: {
+                        centerId: true, name: true, settings: true, type: true, teamHandicapLimit: true, manualTeamHandicaps: true, reportNotice: true,
+                        registrations: { select: { userId: true, teamId: true, squad: true, user: { select: { name: true } } } }
+                    }
                 },
                 matchups: {
                     include: {
@@ -62,6 +67,8 @@ export async function getLeagueRoundResults(roundId: string) {
             date: round.date,
             tournamentName: round.tournament.name,
             tournamentType: round.tournament.type,
+            registeredPlayers: [...getLeagueMemberOptions(round.tournament.registrations || []),
+                ...await getCenterLeagueMembers(prisma, round.tournament.centerId)],
             teamHandicapLimit,
             participants: round.participants.map((p: any) => ({
                 id: p.id,

@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { verifyCenterAdmin } from "@/lib/auth-utils";
 import { LEAGUE_TEMPLATES } from "@/lib/league-templates";
 import { getEffectiveRoundDate, getKSTDay, getKSTDateString, parseKSTDate } from "@/lib/tournament-utils";
+import { getLeagueMemberOptions, preserveLeagueScoreIdentities } from "@/lib/league-score-identity";
+import { getCenterLeagueMembers } from "@/lib/center-league-identity";
 
 /**
  * Fisher-Yates Shuffle Algorithm to randomize team assignments
@@ -299,6 +301,8 @@ export async function updateLeagueRoundDate(roundId: string, newDateStr: string)
 
 export async function updateLeagueMatchupResult(matchupId: string, data: {
     teamAScores: {
+        id?: string;
+        identityMode?: 'GUEST';
         userId?: string;
         playerName?: string;
         teamId: string;
@@ -309,6 +313,8 @@ export async function updateLeagueMatchupResult(matchupId: string, data: {
         score3: number;
     }[];
     teamBScores: {
+        id?: string;
+        identityMode?: 'GUEST';
         userId?: string;
         playerName?: string;
         teamId: string;
@@ -322,7 +328,8 @@ export async function updateLeagueMatchupResult(matchupId: string, data: {
     const matchup = (await (prisma as any).leagueMatchup.findUnique({
         where: { id: matchupId },
         include: {
-            round: { include: { tournament: true } },
+            round: { include: { tournament: { include: { registrations: { include: { user: { select: { name: true } } } } } } } },
+            individualScores: { include: { User: { select: { name: true } } } },
             teamA: true,
             teamB: true
         }
@@ -331,8 +338,10 @@ export async function updateLeagueMatchupResult(matchupId: string, data: {
     if (!matchup) throw new Error("Matchup not found");
     await verifyCenterAdmin(matchup.round.tournament.centerId);
 
-    const teamAScores = data.teamAScores;
-    const teamBScores = data.teamBScores;
+    const members = [...getLeagueMemberOptions(matchup.round.tournament.registrations),
+        ...await getCenterLeagueMembers(prisma, matchup.round.tournament.centerId)];
+    const teamAScores = preserveLeagueScoreIdentities(data.teamAScores, matchup.individualScores, members);
+    const teamBScores = preserveLeagueScoreIdentities(data.teamBScores, matchup.individualScores, members);
     const allIndividualScores = [...teamAScores, ...teamBScores];
 
     // Score validation (>300)
@@ -437,11 +446,26 @@ export async function updateLeagueRoundResults(roundId: string, results: {
 }[]) {
     const round = (await (prisma as any).leagueRound.findUnique({
         where: { id: roundId },
-        include: { tournament: true }
+        include: {
+            tournament: { include: { registrations: { include: { user: { select: { name: true } } } } } },
+            matchups: { include: { individualScores: { include: { User: { select: { name: true } } } } } }
+        }
     })) as any;
 
     if (!round) throw new Error("Round not found");
     await verifyCenterAdmin(round.tournament.centerId);
+
+    const members = [...getLeagueMemberOptions(round.tournament.registrations),
+        ...await getCenterLeagueMembers(prisma, round.tournament.centerId)];
+    results = results.map(result => {
+        const matchup = round.matchups.find((item: any) => item.id === result.matchupId);
+        if (!matchup) throw new Error('해당 주차의 경기만 저장할 수 있습니다.');
+        return {
+            ...result,
+            teamAScores: preserveLeagueScoreIdentities(result.teamAScores, matchup.individualScores, members),
+            teamBScores: preserveLeagueScoreIdentities(result.teamBScores, matchup.individualScores, members),
+        };
+    });
 
     // Score validation (>300) for all matchups in the bulk update
     results.forEach(res => {

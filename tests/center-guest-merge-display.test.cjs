@@ -83,7 +83,9 @@ async function testResultFallsBackToLinkedAccountName() {
         }
     };
     const action = loadTypeScript('src/app/actions/league-results.ts', {
-        '@/lib/prisma': { __esModule: true, default: prisma }
+        '@/lib/prisma': { __esModule: true, default: prisma },
+        '@/lib/league-score-identity': loadTypeScript('src/lib/league-score-identity.ts', {}),
+        '@/lib/center-league-identity': { getCenterLeagueMembers: async () => [] },
     });
 
     const result = await action.getLeagueRoundResults('round-1');

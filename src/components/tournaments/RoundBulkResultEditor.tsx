@@ -6,6 +6,7 @@ import { updateLeagueRoundResults } from '@/app/actions/league-actions';
 import * as XLSX from 'xlsx';
 import { uploadRawLaneScores } from '@/app/actions/raw-score-actions';
 import { calculateGameLaneAssignments } from '@/lib/lane-movement';
+import { changeLeaguePlayerName, type LeagueMemberOption } from '@/lib/league-score-identity';
 
 interface User {
     id: string;
@@ -24,6 +25,7 @@ interface Team {
 
 interface IndividualScore {
     id?: string;
+    identityMode?: 'GUEST';
     userId?: string | null;
     playerName?: string | null;
     teamId: string;
@@ -57,6 +59,7 @@ interface RoundBulkResultEditorProps {
         roundNumber: number;
         date: Date | null;
         matchups: Matchup[];
+        registeredPlayers?: LeagueMemberOption[];
         moveLaneType?: string;
         moveLaneCount?: number;
         startLane?: number;
@@ -114,12 +117,9 @@ export default function RoundBulkResultEditor({
     const handlePlayerChange = (matchupId: string, team: 'teamA' | 'teamB', index: number, field: keyof IndividualScore, value: any) => {
         setResults(prev => {
             const teamResults = [...prev[matchupId][team]];
-            const updatedRow = { ...teamResults[index], [field]: value };
-
-            // If playerName is manually changed, clear userId to prevent wrong name from being shown in leaderboard
-            if (field === 'playerName') {
-                updatedRow.userId = null;
-            }
+            const updatedRow = field === 'playerName'
+                ? changeLeaguePlayerName(teamResults[index], value)
+                : { ...teamResults[index], [field]: value };
 
             teamResults[index] = updatedRow;
             return {
@@ -129,6 +129,24 @@ export default function RoundBulkResultEditor({
                     [team]: teamResults
                 }
             };
+        });
+    };
+
+    const handleMemberSelection = (matchupId: string, team: 'teamA' | 'teamB', index: number, userId: string) => {
+        setResults(prev => {
+            const rows = [...prev[matchupId][team]];
+            const row = rows[index];
+            const member = round.registeredPlayers?.find(option => option.userId === userId
+                && option.teamId === row.teamId && (option.allSquads || option.squad === (row.teamSquad || null)));
+            if (userId === '__choose__') {
+                rows[index] = { ...row, userId: null, identityMode: undefined };
+                return { ...prev, [matchupId]: { ...prev[matchupId], [team]: rows } };
+            }
+            if (userId && !member) return prev;
+            rows[index] = member
+                ? { ...row, userId: member.userId, playerName: member.name, identityMode: undefined }
+                : { ...row, userId: null, identityMode: 'GUEST' };
+            return { ...prev, [matchupId]: { ...prev[matchupId], [team]: rows } };
         });
     };
 
@@ -528,6 +546,8 @@ export default function RoundBulkResultEditor({
             const dataToSave = Object.entries(results).map(([matchupId, teamData]) => ({
                 matchupId,
                 teamAScores: teamData.teamA.map(s => ({
+                    id: s.id,
+                    identityMode: s.identityMode,
                     userId: s.userId || undefined,
                     playerName: s.playerName || undefined,
                     teamId: s.teamId,
@@ -536,6 +556,8 @@ export default function RoundBulkResultEditor({
                     score1: s.score1, score2: s.score2, score3: s.score3,
                 })),
                 teamBScores: teamData.teamB.map(s => ({
+                    id: s.id,
+                    identityMode: s.identityMode,
                     userId: s.userId || undefined,
                     playerName: s.playerName || undefined,
                     teamId: s.teamId,
@@ -620,6 +642,9 @@ export default function RoundBulkResultEditor({
                 </div>
             </div>
 
+            <p className="rounded-xl border border-slate-300 bg-slate-50 p-4 text-sm text-slate-700">
+                같은 볼링장·팀에 이름이 일치하는 회원이 한 명이면 저장할 때 자동 연결됩니다. 미가입 선수는 팀과 이름으로 누적되며, 동명 회원은 아래에서 직접 선택해주세요.
+            </p>
             <div className="space-y-20">
                 {[...round.matchups]
                     .sort((a, b) => {
@@ -638,6 +663,10 @@ export default function RoundBulkResultEditor({
                             const s = isRight ? stat.teamB : stat.teamA;
                             const res = isRight ? stat.resultsB : stat.resultsA;
                             const pts = isRight ? stat.pointsB : stat.pointsA;
+                            const members = [...new Map((round.registeredPlayers || [])
+                                .filter(member => member.teamId === team?.id && (member.allSquads
+                                    || member.squad === ((isRight ? matchup.teamBSquad : matchup.teamASquad) || null)))
+                                .map(member => [member.userId, member])).values()];
 
                             return (
                                 <div className="flex-1 flex flex-col bg-white border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] overflow-hidden rounded-2xl">
@@ -676,6 +705,21 @@ export default function RoundBulkResultEditor({
                                                             lang="ko"
                                                             inputMode="search"
                                                         />
+                                                        {members.length > 0 && (
+                                                            <select
+                                                                aria-label={`${team?.name || ''} ${rowIdx + 1}번 선수 회원 연결`}
+                                                                value={r.userId || (r.identityMode === 'GUEST' ? '' : '__choose__')}
+                                                                onChange={e => handleMemberSelection(matchup.id, teamKey, rowIdx, e.target.value)}
+                                                                className="w-full h-8 px-1 text-xs text-slate-700 bg-slate-50 border border-slate-300 rounded-md"
+                                                            >
+                                                                <option value="__choose__">이름으로 자동 연결</option>
+                                                                <option value="">동명이인 · 게스트로 저장</option>
+                                                                {r.userId && !members.some(member => member.userId === r.userId) && (
+                                                                    <option value={r.userId}>{r.playerName} · 연결됨</option>
+                                                                )}
+                                                                {members.map(member => <option key={member.userId} value={member.userId}>{member.name} · 회원</option>)}
+                                                            </select>
+                                                        )}
                                                     </td>
                                                     <td className="p-1 border-r border-black/10">
                                                         <input
