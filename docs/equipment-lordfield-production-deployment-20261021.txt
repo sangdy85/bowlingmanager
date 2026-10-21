@@ -1,0 +1,94 @@
+BowlingManager Lordfield catalogue and manufacturer filters - 2026-10-21
+
+Source commit: bc03732f502423532fb14ed280c4660dad35defa
+GitHub branch: codex/release-1.2.1
+Actual deployment: 2026-10-21 14:45:05 KST (2026-10-21T05:45:05.507Z).
+Release: lordfield-bc03732-87178065a63a-20261021
+Build: 9AgqANTOf3-LJMB74WETs
+Previous release: lottery-central-30af28b-6f750861a419-20261021
+Previous build: lULc5Yo0QLlUJFPjuuROK
+
+Source and content:
+https://www.lordfield.com/product/list.html?cate_no=23
+All 18 listing pages and all 212 detail pages checked, cross-referenced against
+official brand categories: SWAG 104 / LORDFIELD 36 / LANE MASTERS 72.
+212 additional catalogue entries; all previous 547 retained unchanged.
+Total 759 equipment entries: 752 bowling balls and 7 other equipment entries.
+Same-name separate source IDs (GEEK MEME, GEEK and WIPER) remain separate;
+official item numbers are displayed rather than inferring identical products.
+Verified names, brand categories, source URLs and available weight options are
+recorded. No release dates inferred from image paths. Image-only cover/core/RG/
+Diff numbers have not been comprehensively reviewed and were not transcribed.
+65 source listings expose weight options; the other 147 explicitly say that
+selectable weights were not confirmed. No performance or current-stock claims.
+Original primary-photo sources and credits retained. WebP quality84 keeps the
+source dimensions, without generated product features. 212 photos total
+10,005,694 bytes versus 111,462,749 original bytes.
+
+Changes:
+- content/equipment/lordfield-20261021.json and public/images/equipment/lordfield/*.
+- src/lib/manufacturer-equipment.ts: catalogue integration, case-normalized
+  maker groups/counts and brand filtering before 24-product pagination.
+- src/app/equipment/page.tsx and EquipmentBrandFilter.tsx: maker sub-filters
+  below equipment categories, selected query state, search/pager preservation.
+- ManufacturerEquipment.tsx and its CSS: source credit, pagination brand state,
+  desktop wrapping and mobile two-column accessible filter buttons.
+- tests/public-page-content.test.cjs and tests/public-web.test.cjs.
+Member review queries, write permissions and member pagination remain intact.
+MK's unverified hard-ball category is not presented as a manufacturer.
+
+Verification:
+- Local public/content regression: 47 pass. Full lint: 0 errors, 17 existing
+  warnings. TypeScript pass. Isolated local production build pass.
+- Linux candidate: Prisma generate, full lint/typecheck/production build pass;
+  122 public/race/UI tests pass with zero failures.
+- Candidate HTTP: 278 checks pass, including all 212 new details, all 32 catalogue
+  pages, brands, previous brands, images, sitemap and existing public results.
+- Production upstream HTTP: 39 checks pass. External base/www HTTPS: 34 pass.
+- PC and mobile browsers confirm actual production filters and product photos;
+  no horizontal overflow at 390px. Source links and actual local detail checked.
+- PM2 bowling-manager online, user user, cwd /home/user/bowling-score-manager,
+  listening on port3000. pm2-user.service active/enabled, no startup changes.
+- Nginx configured proxy http://localhost:3000; direct and Nginx responses200.
+- Final audit 2026-10-21T05:45:27.241Z: new stderr bytes0, new error lines0.
+
+Deployment scope and preservation:
+Only 218 runtime files applied onto the freshly checked operating source:
+4 existing public equipment files and 214 new component/data/photo files.
+1069 unrelated baseline files, all84 APIs, proxy-origin handling and the
+previous central race standings are preserved. Operating Git HEAD remains
+1299cca08dd2ec6cc04457e0234d369f90a643be; the entire hybrid operating tree is
+not claimed equal to source commit bc03732. The218 applied files match it.
+No migration: 26 applied migrations, none pending. DB86 tables; row counts
+unchanged during stopped-app switch and SQLite quick_check ok.
+Environment hashes preserved; uploads and operating data retained. BAND remains
+unconfigured. No actual OAuth, posting, push, login/admin mutation or race save.
+
+Backup:
+/home/user/bowling-backups/lordfield-bc03732-87178065a63a-20261021-before
+Rollback (source/build/receipt only, never restores or resets the DB):
+bash /home/user/bowling-deploy/lordfield-bc03732-87178065a63a-20261021/rollback.sh
+The previous runtime build and consistent DB snapshots are preserved. Retain
+the new release's stage/node_modules because built server files may reference it.
+Existing deploy-bowling.sh would merge and build in the live path; this scoped
+rollout used the established isolated candidate and guarded cutover instead.
+
+Disk:
+Reclaimed 1,307,469,852 bytes from exactly three verified .next/cache/webpack
+directories (two old identity stages and live build cache). No runtime build,
+source, dependencies, uploads, DB or backup was deleted. Candidate compiler
+cache also removed after successful HTTP checks. Remaining1,102,831,616 bytes
+at final audit. Review space before another isolated build.
+
+Git:
+Source and photographs explicitly staged (220 files), reviewed and pushed.
+No main update, merge, force push, history rewrite or unrelated branch changes.
+Documentation follows in a separate commit and does not require a redeploy.
+
+Production URLs:
+https://www.bowlingmanager.co.kr/equipment?category=BALL&brand=swag
+https://www.bowlingmanager.co.kr/equipment?category=BALL&brand=lordfield
+https://www.bowlingmanager.co.kr/equipment?category=BALL&brand=lane+masters
+
+Ignored local evidence: scratch/lordfield-20261021 and
+scratch/lordfield-release-20261021 (including PC/mobile production captures).

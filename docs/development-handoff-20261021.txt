@@ -1,3 +1,14 @@
+LATEST LORDFIELD / MANUFACTURER FILTER ROLLOUT (2026-10-21 14:45 KST)
+Source bc03732 is pushed to codex/release-1.2.1 and deployed as
+lordfield-bc03732-87178065a63a-20261021; Build 9AgqANTOf3-LJMB74WETs.
+212 Lordfield official-store balls added (SWAG104/LORDFIELD36/LANE MASTERS72);
+manufacturer filters, 759 total equipment entries, previous547 preserved.
+Linux122 tests and278 candidate/39 operating/34 external HTTP checks pass.
+No migration, operating environment/uploads/data preserved; PM2 online and
+pm2-user.service active/enabled. See
+docs/equipment-lordfield-production-deployment-20261021.txt for backup/rollback,
+content limits and disk constraints. The older release records below are history.
+
 LATER CENTRAL-STANDINGS ROLLOUT (2026-10-21)
 Source patch 30af28b is now deployed as lottery-central-30af28b-6f750861a419-20261021
 Build lULc5Yo0QLlUJFPjuuROK. See docs/lottery-central-production-deployment-20261021.txt.
