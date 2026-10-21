@@ -1,0 +1,19 @@
+볼링공 레이스 이름표 축소 / 확대 줌 조정 — 2026-10-20
+기준: codex/release-1.2.1 / 530dca6e84fc7e9b6517d94db6e156028c4b4aa8
+기존 미커밋 107개 파일 보존. 이 작업에서 기존 파일 6개만 수정; 나머지 101개는 SHA256 동일.
+변경 소스: src/lib/lottery-race-labels.ts, src/components/tournaments/lottery-race-scene.ts, src/components/tournaments/lottery-race-canvas.ts
+변경 테스트: tests/lottery-race-names.test.cjs, tests/lottery-race-scene.test.cjs, tests/lottery-race.test.cjs
+확대 시 공 위 이름표 글자: PC 32→16px, 태블릿 26→13px, 모바일 22→11px. 높이·상단 오프셋·패딩·모서리·간격도 절반. 일반 화면 11px 유지.
+3D/2D 모두 확대 추적 화면에서 기존 줌에 1.1배. 전체 맵은 코스 맞춤 배율 유지. 결승 줌/각도/슬로모션 유지.
+실시간 순위 및 중앙 당첨자 명단 글자 크기는 유지. 전원 완주 후 명단 공개 유지. 엔진/저장/후보 로직 변경 없음.
+관련 테스트 71/71 통과. lint exit 0 (기존 경고 17개, 오류 0). typecheck exit 0. production build exit 0.
+Build: I-cCungMpFjJPP8kzdSux
+git diff --check 및 이번 수정 파일 no-index 공백 검사 통과 (Windows CRLF 허용).
+격리 미리보기: http://127.0.0.1:3138/qa/lottery-race?mode=village
+미리보기는 가상 SQLite 데이터만 사용. src/content 465개 파일이 작업 소스와 동일. API 라우트 84개 유지.
+HTTP: QA 9종/로그인/헬스 11경로 및 정적 파일 16개 모두 200.
+브라우저: PC 1280x720, 모바일 390x844 확대 화면 확인. 모바일 선두 5명 이름표 확인; 가로 넘침 없음.
+가상 47명/5명 추첨: 20초 PC 화면 / 32초 모바일 화면 명단 없음, 42초 3명 도착 시 명단 없음, 48초 전원 완주 후 중앙 5명 표시. 전체 맵 맞춤 표시 확인. 콘솔 오류/경고 없음.
+운영 접근, 실제 저장, DB/Prisma/모바일/BAND 변경, commit/push/배포 실행하지 않음.
+증빙: scratch/lottery-half-labels-20261020/tests.log, lint.log, typecheck.log, build.log, http-results.json, task.diff, preservation-check.json
+보충: 저장소 기본 git diff --check는 exit 0. core.autocrlf=false 및 엄격한 공백 옵션을 별도로 적용한 전체 검사에서는 기존 다른 작업의 trailing whitespace가 보고됨(exit 2); 이번 수정 파일의 독립 no-index 검사는 이상 없음. 기존 파일을 정리하거나 변경하지 않음.

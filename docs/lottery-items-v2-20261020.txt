@@ -1,0 +1,58 @@
+볼링공 레이스 아이템 재구성 / 이름 표시 확대 — 2026-10-20
+
+기준: codex/release-1.2.1 / HEAD 530dca6
+작업 시작 당시 미커밋·미추적 파일 97개 보존.
+
+변경
+- 요청 목록에 따른 11종으로 교체. 총 100개 배치 유지.
+- 거터 1.5초 정지, 터키 X 3개와 선두 1/2/3위 대상 1초 정지.
+- 드라이존: 3초간 유지되는 구간, 진입한 타 공에 3초 속도 1/1.8.
+- 스트라이크 2초 1.5배, 스플릿 앞 두 공 2초 속도 1/1.8.
+- 핀샷 짧은 밀침 후 1초 이동 제어 차단, 킹핀 선두 1.5초 정지.
+- 퍼펙트 방해 해제 및 1.5초 1.5배, 첫 1초 공격 방어.
+- 스페어 2초 내 공격 한 번 방어.
+- 볼링핀 즉시 속도 0 후 점진 재가속.
+- 고속회전 2초 2배, 접촉 타 공을 연속 위치 이동으로 밀침(순간이동 없음).
+- 가속·감속 효과는 각각 가장 강한 배율 사용. 정지 효과는 가속보다 우선.
+- 아이템 초 단위는 기존과 동일하게 공통 경기 시뮬레이션 시간 기준. 슬로모션도 동일 시계를 사용.
+- 카메라 수평 거리를 18% 늘려 시작 시 내려다보는 각도를 약 4도 낮춤.
+- 기존 중간 이후 반대편 전환과 추격 그룹 프레이밍 유지.
+- 이름표: 화면 여유/이름 길이에 맞춘 분산 배치, 연결선, 겹침 방지.
+- 공간 부족 시 약 4초 간격(일반 재생 환산) 순환, 선두/선택 참가자 우선.
+- 표시 상한 PC 120 / 모바일 60, 실제 표시는 화면 안 공과 배치 여유에 따름.
+- 공 위치를 덮는 이름표 슬롯은 제외. 글자 길이에 맞춰 간격을 줄이고 긴 이름은 축약.
+- 3D와 2D 호환 렌더러가 같은 규칙 및 이름 배치 사용.
+
+변경 파일
+src/lib/lottery-race-items.ts (신규 실제 아이템 규칙)
+src/lib/lottery-race-labels.ts (신규 공통 이름 배치)
+src/lib/lottery-race.ts (시뮬레이션 연결)
+src/components/tournaments/lottery-race-scene.ts
+src/components/tournaments/lottery-race-canvas.ts
+src/components/tournaments/LotteryRace.tsx
+tests/lottery-race.test.cjs
+tests/lottery-race-scene.test.cjs
+tests/lottery-race-names.test.cjs (신규)
+docs/lottery-items-v2-20261020.txt
+
+검증
+관련 테스트 56/56 통과. 실제 함수·렌더러 테스트 사용.
+아이템 시간 경계/정지/배율/방어/지속 구간/재가속/충돌 검증.
+공 위치를 가리지 않는 이름 배치 검증 추가.
+50초 전원 완주, 1~20명 당첨, 저장 시 중복 방지 및 제외 규칙 유지.
+이름 겹침/경계/긴 이름/순환 검증 및 실제 3D 다수 이름 출력 확인.
+Lint: 0 errors / 기존 17 warnings. TypeScript 통과.
+PC 47명 전원 완주 및 5명 당첨 확인. 브라우저 error/warn 없음, 가로 overflow 없음.
+Production build 통과(exit 0), Build ID: ox8n2KzPx5dRwMr0ZDXin.
+86개 정적 페이지 생성 완료. 11개 QA/로그인/health 및 16개 정적 파일 응답 모두 HTTP 200.
+모바일 390×844: 여러 이름과 공을 함께 표시, 197명 전원 완주 및 20명 당첨 확인.
+3D 정상, 브라우저 error/warn 없음, 가로 overflow 없음. 11종 안내 펼쳐 확인.
+결과 저장 미실행. 기본 viewport 및 READY 화면으로 복원.
+미리보기: http://127.0.0.1:3132/qa/lottery-race?mode=village
+
+보존
+기존 변경 97개 중 작업 범위의 6개만 수정, 다른 91개 SHA-256 일치.
+현재 src/content 464개 파일과 검증 미리보기 일치.
+모바일/API/인증/BAND/Prisma/DB 및 실제 경기 결과/저장 업무 로직 변경 없음.
+운영 접속·데이터 저장·commit·push·배포 실행 없음.
+검증 자료: scratch/lottery-items-v2-20261020/

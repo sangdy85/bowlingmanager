@@ -1,0 +1,15 @@
+확대 카메라 각도/줌 조정 — 2026-10-20
+기준: codex/release-1.2.1 / 530dca6e84fc7e9b6517d94db6e156028c4b4aa8
+변경: src/components/tournaments/lottery-race-scene.ts, src/components/tournaments/lottery-race-canvas.ts, tests/lottery-race-scene.test.cjs, tests/lottery-race.test.cjs
+확대 추적 화면에서 기존 확대 배율 1.1에 1.05를 추가 곱함(일반 대비 1.155). 기존 확대 화면보다 5% 추가 확대.
+확대 시 피치 10도 추가 하강. 기존 결승 피치 10도와 합산(확대 결승에서는 20도). 전체 맵은 고정 각도/맞춤 배율 유지.
+출발 전/완주 후 확대 전환도 각도 즉시 반영. 경기 중 카메라 기존 easing 유지.
+줄인 이름표, 추첨/저장/후보/아이템/시간/전원 완주 후 명단 공개 로직 변경 없음.
+기존 108개 파일 중 이번 4개만 변경, 나머지 104개 SHA256 동일.
+테스트 73/73 통과. lint 오류 0/기존 경고 17. typecheck 통과. production build exit 0.
+격리 가상 데이터 build z8WqWG3IRUTcn_ausxtWg
+http://127.0.0.1:3139/qa/lottery-race?mode=village
+격리 preview와 src/content 465개 소스 일치. HTTP QA/로그인/헬스 11경로 및 정적 파일 16개 모두 200.
+브라우저 PC 1280x720, 모바일 390x844 확인. 확대 화면, 게임 진행, 첫 도착 슬로모션, 결승선 노출 및 가로 넘침 없음 확인.
+git diff --check exit 0. 이번 수정 파일 별도 no-index 공백 검사 통과.
+기존 운영/DB/Prisma/모바일/BAND 변경 없음. commit/push/배포 없음.

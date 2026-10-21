@@ -1,0 +1,63 @@
+볼링공 레이스 — 1위 도착 슬로모션 / 결승 추가 줌인
+작성: 2026-10-20
+
+작업 기준
+- 경로: C:\Users\user\Documents\ChatGPT\볼링 사이트 & 앱\growth-001
+- 브랜치: codex/release-1.2.1
+- HEAD: 530dca6e84fc7e9b6517d94db6e156028c4b4aa8
+- 기존 미커밋·미추적 파일 103개의 해시와 수정 대상 원본을 scratch/lottery-first-finish-20261020에 보관.
+
+반영 내용
+1. 첫 도착 약 2초 전부터 자동 카메라를 결승 구도로 전환해 먼저 자리를 잡는다.
+2. 1위가 실제 결승선을 통과하면 3초간 슬로모션. 최저 0.25배, 진입·복귀에는 기존 부드러운 보간 유지.
+3. 첫 도착부터 0.8초에 걸쳐 기존 화면보다 추가 20% 확대. 기존 1.15배와 합쳐 1.38배 투영 줌. 결승 확대는 후속 주자의 도착 중에도 유지.
+4. 전체 맵은 기존 배율을 유지. 특정 참가자 선택도 유지. 2D 호환 모드에도 같은 결승/줌 기준 적용.
+5. 경기 목표는 약 50초이며 45~55초 범위를 허용. 출발 전에 공통 재생 속도를 정하고 끝까지 유지하므로 정확히 50초를 맞추기 위한 막판 개인 가속을 하지 않는다.
+6. 1인 경기 등 전원이 일찍 들어온 경우도 첫 도착 연출 3초를 유지. 준비 3초와 종료 확인 1초는 경기 시간과 별도.
+7. PC 선두 10명/모바일 선두 5명 이름표, 선택 참가자 강조, 실내 볼링장 배경, 아이템 11종/100개, 후속 주자 완주, 당첨 인원/제외/저장 로직 유지.
+
+수정/추가 파일
+- src/lib/lottery-race.ts: 첫 도착 기준 시각, 결승 카메라 전환 시각, 45~55초 재생 시간 계산.
+- src/lib/lottery-race-view.ts (신규): 3D/2D 공통 결승 카메라·추가 줌 상태. 원시 이동이 끝난 1인 경기도 실제 재생 시간으로 확대.
+- src/components/tournaments/LotteryRace.tsx: 실제 재생 시각 전달 및 시간/슬로모션 안내.
+- src/components/tournaments/RoundLuckyDrawTab.tsx: 약 50초/45~55초 안내.
+- src/components/tournaments/lottery-race-scene.ts: 자동 결승 구도 및 추가 줌.
+- src/components/tournaments/lottery-race-canvas.ts: 2D 호환 모드의 결승 구도/줌.
+- tests/lottery-race.test.cjs: 첫 도착 트리거, 시간 범위, 1인 경기, 보간/완주/당첨 유지 검증.
+- tests/lottery-race-scene.test.cjs: 실제 WebGL 렌더러의 결승 구도/정확한 추가 줌/전체 맵 및 모바일 투영 검증.
+- 본 보고서.
+
+검증
+- 관련 테스트 63/63 통과. 대상: lottery-race, lottery-race-names, lottery-race-scene, lottery-and-lane-ui, side-game-announcement.
+- src 전체 ESLint: 오류 0, 기존 경고 17. 새 오류 없음.
+- TypeScript --noEmit --incremental false: 종료 0.
+- Next production build: 종료 0. Build ID: Y6lQRDAhMWUM6al07_yya.
+- 빌드는 lottery-first-finish-preview-20261020 별도 디렉터리에서 수행. 실제 src/content 465개 파일이 작업 소스와 동일함을 확인. 검증용 QA 페이지는 미리보기 디렉터리에만 존재.
+- git diff --check 통과. 미추적 파일까지 원본과 비교한 별도 공백 검사도 통과(CRLF 줄바꿈 인정).
+- 수정 전후 1/5/47/197명, seed 42의 실제 runners(모든 위치/레인/효과 샘플), order, events, pickups가 모두 동일함을 직접 비교.
+- 해당 재생 시간 예시: 51.14초 / 46.24초 / 50.91초 / 50.89초. 당첨 인원 설정을 바꿔도 첫 도착 시점과 경기 시간은 동일.
+- API 라우트 84개 유지. 기존 변경 파일 중 이번 대상 7개만 변경, 나머지 96개 해시 동일. 공통 연출 파일 1개와 본 보고서만 추가.
+- mobile, Prisma, API, 인증, BAND, DB, 환경변수 파일 수정 없음. 기존 업무 로직 변경 없음.
+
+브라우저
+- 미리보기: http://127.0.0.1:3135/qa/lottery-race?mode=village
+- 가상 데이터/분리된 SQLite 및 생성한 테스트 인증 설정만 사용. 운영 DB/계정과 연결하지 않음.
+- PC 1280px: 첫 도착 1/47명 상태에서 FIRST FINISH / 1위 도착 / 3초 슬로모션·결승 20% 줌 표시를 확인. 확대 구도에 결승선과 후속 주자가 보임.
+- PC: 47/47명 완주, 당첨 5명, 가로 넘침 없음, 브라우저 오류/경고 없음.
+- 모바일 390x844: 실제 경기 진행과 확대 결승 구도, 47/47명 완주 및 당첨 5명 확인. 마지막 화면 시간 약 51초. 가로 넘침 없음, 브라우저 오류/경고 없음.
+- 모바일의 3초짜리 첫 도착 배지는 도구 호출 사이에 지나가 직접 캡처하지 못했음. 모바일 투영/줌과 첫 도착 트리거는 실제 렌더러·함수 테스트로 별도 검증했고 PC에서는 실제 배지를 확인함.
+- 모바일 완주 후 전체 맵 전환 정상. 임시 뷰포트 설정을 해제하고 출발 대기 화면으로 복원.
+- production 빌드의 검증 화면 9종, 로그인, mobile health 총 11개 응답 및 정적 파일 16개 모두 HTTP 200.
+- 실제 사용자 로그인/실제 추첨 결과 저장은 실행하지 않음. 저장 버튼 미클릭.
+
+보존 및 미실행
+- 운영 접근·DB 변경·실제 BAND 게시·푸시·운영 배포 없음.
+- commit / push / merge 없음.
+- 기존 개발 서버와 운영 .next는 건드리지 않음. 이번에 만든 3135 개발 서버만 종료 후 같은 격리 디렉터리의 production 빌드로 교체.
+- 현재 로컬 미리보기 서버를 유지함. 운영 반영 여부와는 별개.
+
+검증 자료
+scratch/lottery-first-finish-20261020/
+- baseline.json, *.snapshot, task.diff, preservation-check.json
+- tests.log, lint.log, typecheck.log, build.log, build-result.json
+- owned-diff-check.txt, diff-check.log, movement-preservation.json, http-results.json

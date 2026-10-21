@@ -1,0 +1,42 @@
+이름표·줌 조정 — 2026-10-20
+
+기준: growth-001 / codex/release-1.2.1 / HEAD 530dca6
+
+변경
+- PC 선두 이름표 6명 → 10명, 모바일 3명 → 5명.
+- 별도 추적한 참가자의 강조 이름표 유지.
+- 밀집 시 가까운 가로/세로 위치로 조정. 대규모 순환 그리드는 사용하지 않음.
+- 3D 기본/추적 카메라 투영 배율 1.15 적용. 기존 시선·카메라 각도·후반 반대편 전환 유지.
+- 2D 호환 모드 추적 배율도 1.15 적용.
+- 전체 맵 배율은 변경하지 않음.
+- 아이템/시뮬레이션/당첨/저장 로직과 볼링장 배경 유지.
+
+수정 파일
+src/lib/lottery-race-labels.ts
+src/lib/lottery-race-geometry.ts
+src/components/tournaments/lottery-race-scene.ts
+src/components/tournaments/lottery-race-canvas.ts
+tests/lottery-race-names.test.cjs
+tests/lottery-race-scene.test.cjs
+docs/lottery-zoom15-20261020.txt
+
+검증
+관련 테스트 59/59 통과.
+밀집 상태의 PC 10명 / 모바일 5명 이름표 및 비겹침/화면 경계 검사.
+실제 렌더러의 1.15배 투영 행렬, 전체 맵 원래 배율 검증.
+현재 src/content 464개가 검증 미리보기 소스와 일치.
+Lint 통과: 0 errors / 기존 17 warnings. TypeScript 통과.
+Production build 통과(exit 0), Build ID: h6bni-b7FcARavVGtKC7N.
+11개 QA/로그인/health 및 16개 정적 파일 HTTP 200.
+PC 시작 장면에서 10명 이름표와 확대 구도 확인.
+모바일 390×844에서 5명 이름표 및 확대 구도 확인, 가로 overflow 없음.
+전체 맵은 코스 전체가 보이는 기존 배율 유지 확인.
+47명 전원 완주 및 5명 당첨, 브라우저 error/warn 없음.
+결과 저장 미실행. 기본 viewport와 READY 화면으로 복원.
+미리보기: http://127.0.0.1:3134/qa/lottery-race?mode=village
+
+보존
+시작 시 미커밋·미추적 102개 중 요청 범위 6개만 수정, 다른 96개 SHA-256 일치.
+경기 엔진/아이템/API/인증/BAND/모바일/Prisma/운영 데이터 변경 없음.
+운영 접속, 결과 저장, commit/push/배포 없음.
+자료: scratch/lottery-zoom15-20261020/

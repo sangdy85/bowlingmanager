@@ -1,0 +1,42 @@
+볼링공 레이스 후반 카메라 개선 — 2026-10-20
+
+작업 경로: growth-001
+브랜치: codex/release-1.2.1
+기준 HEAD: 530dca6e84fc7e9b6517d94db6e156028c4b4aa8
+
+변경
+- 선두가 코스 50%를 통과하면 68%까지 반대편으로 180도 부드럽게 회전.
+- 후반에는 진행 방향 뒤쪽으로 시선을 두어 결승선과 추격 그룹을 함께 표시.
+- 자동 추적 시 후반 그룹 기준을 상위 25%에서 중앙 그룹으로 확장.
+- 세로 화면의 후반 시야 확대. 전체 맵의 고정 방향은 유지.
+- 아이템에 의한 역주행이나 참가자 수동 선택 때문에 카메라 방향이 되돌아가지 않음.
+- 카메라 표시만 변경. 레이스 시뮬레이션, 50초, 아이템 12종/100개, 당첨/저장 로직 유지.
+- WebGL을 사용할 수 없는 환경의 기존 2D 호환 모드는 유지.
+
+수정 파일
+src/components/tournaments/lottery-race-scene.ts
+tests/lottery-race-scene.test.cjs
+docs/lottery-reverse-camera-20261020.txt
+
+검증
+관련 테스트 48/48 통과.
+Lint 통과: 0 errors, 기존 warnings 17개.
+TypeScript 통과.
+PC 가상 47명: 초반, 후반 반대편 구도, 결승선/추격 그룹 동시 표시 확인.
+47명 전원 완주, 5명 당첨. 가로 overflow 없음. 브라우저 error/warn 없음.
+모바일 390×844: 197명 전원 완주, 20명 당첨. 후반 반대편 시점과 결승선/추격 그룹 표시 확인.
+전체 맵 전환 즉시 정상. 가로 overflow 없음. 브라우저 error/warn 없음.
+결과 저장은 실행하지 않음. PC/mobile 검증 후 기본 viewport 및 READY 화면 복원.
+
+보존
+작업 시작 당시 변경/미추적 파일 96개 중 이번 카메라·테스트 2개만 수정.
+다른 기존 변경 94개는 SHA-256 일치. API route 84개 유지.
+모바일/API/인증/BAND/Prisma/DB 변경 없음.
+검증 미리보기 소스와 현재 src/content 462개 파일 일치.
+운영 접속/데이터 저장/커밋/push/배포 없음.
+
+검증 자료: scratch/lottery-reverse-camera-20261020/
+
+Production build 통과 (exit 0), Build ID: 9KAcLZ4wsyh2l256Qfr3I
+11개 QA/로그인/health 응답과 16개 정적 파일 모두 HTTP 200.
+미리보기: http://127.0.0.1:3131/qa/lottery-race?mode=village

@@ -1,0 +1,41 @@
+BowlingManager 레이스 추첨 운영 반영 — 2026-10-20
+작업 저장소: C:\Users\user\Documents\ChatGPT\볼링 사이트 & 앱\growth-001
+브랜치: codex/release-1.2.1
+Git 기준: 530dca6e84fc7e9b6517d94db6e156028c4b4aa8 (미커밋 레이스 패치 11개 파일 배포, commit/push/merge 없음)
+운영 접속: user@119.214.25.118:51222 / hostname vm-share
+운영 경로: /home/user/bowling-score-manager / Node upstream 3000 / Nginx http://localhost:3000
+기존 릴리스: league-score-identity-530dca6-119b1632837c-20261020
+기존 Build: VsRdVMY5MsJzzMgqAXLk7
+신규 릴리스: bowling-race-530dca6-0c3f0108a8d8-20261020
+신규 Build: qbtMox71_4PQTy1L2MrpN
+실제 전환 시각(UTC): 2026-10-20T08:11:17.568Z
+실제 전환 시각(KST): 2026. 10. 20. PM 5:11:17
+소스 식별 SHA256: 0c3f0108a8d80e114fa596faf9cad97e361f5e02dbc12bef8431942a3695a45f
+반영: CHAMP/EVENT 행운권을 볼링공 레이스로 변경. 약 45~55초, 100개 아이템/11종, 나머지도 완주. 전원 완주 후 중앙 당첨자. PC 선두10/모바일5 이름표. 축소된 확대 이름표 PC16/태블릿13/모바일11px. 확대시 기본 대비1.155배(이전확대 대비 추가5%), 각도추가10도. 결승 기존 확대/각도/슬로모션 유지.
+제외: 회원/점수 귀속 신규 작업, 볼링용품 수집 신규 작업, 모바일 작업 및 기타 로컬 미커밋 변경. 기존 운영 구현 유지.
+배포 방법: 기존 운영 runtime 소스 전체를 별도 준비 디렉터리에 복사하고 지정11개만 패치; Linux 서버에서 tests/npm run build 후 후보3108 점검, .next 전환, 기존 bowling-manager만 재시작. 개발 QA 라우트/DB/로컬 환경파일 미배포.
+수정 파일:
+- src/components/tournaments/RoundLuckyDrawTab.tsx
+- src/components/tournaments/LotteryRace.tsx
+- src/components/tournaments/LotteryRace.module.css
+- src/components/tournaments/lottery-race-canvas.ts
+- src/components/tournaments/lottery-race-scene.ts
+- src/lib/lottery-race.ts
+- src/lib/lottery-race-course.ts
+- src/lib/lottery-race-geometry.ts
+- src/lib/lottery-race-items.ts
+- src/lib/lottery-race-labels.ts
+- src/lib/lottery-race-view.ts
+검증: 서버 관련 테스트73/73; Prisma generate, lint, typecheck, Next production build 통과. > bowling-score-manager@0.1.0 build | > prisma generate && npm run lint && npm run typecheck && next build | ✔ Generated Prisma Client (v5.22.0) to ./node_modules/@prisma/client in 1.10s | > bowling-score-manager@0.1.0 lint | > eslint src --ext .ts,.tsx | ✖ 17 problems (0 errors, 17 warnings) | > bowling-score-manager@0.1.0 typecheck | > tsc --noEmit --incremental false |  ✓ Compiled successfully in 74s
+기존 API84개 보존. 변경 외 운영runtime 파일 해시 유지. 운영 환경파일 hash 동일. 기존BAND 미설정 유지, 개발용 키 복사 없음.
+운영 DB: migration 미실행; 86개 테이블 행수 동일, quick_check ok. 코드/빌드 전환 전후 운영 데이터 보존.
+백업: /home/user/bowling-backups/bowling-race-530dca6-0c3f0108a8d8-20261020-before
+롤백 명령: bash /home/user/bowling-deploy/bowling-race-530dca6-0c3f0108a8d8-20261020/rollback.sh
+롤백은 소스/빌드/릴리스 기록만 복원, DB를 되돌리지 않음. 이번 배포는 DB 호환성 변경 없음.
+서비스: PM2 bowling-manager online, PID 209694, pm2-user.service active/enabled User=user, 기존 저장목록 운영 경로 일치. 자동 시작 변경/중복등록 없음.
+외부 HTTPS 16개 검사 통과: 기본/www 홈·로그인·센터·health·ads.txt·공개 대회·leaderboard·레이스 번들. canonical redirect 후 정상200, ads.txt 양쪽호스트 직접200.
+내부 upstream/Nginx 및 로그인 정적파일13개200. 새 오류 로그0건. 외부 검사502없음.
+미검증: 실제 운영 사용자 로그인 후 관리 동작/실제 참가자 추첨/결과 저장. 실제 BAND OAuth/게시/푸시 미실행.
+로컬 기존 109개 작업 파일 SHA256 모두 유지. git diff --check 및 카메라 변경 no-index 검사 이전 검증 통과.
+Git stage/commit/push/merge 실행하지 않음. 운영 DB migration/seed/reset 및 운영 데이터 수정 테스트 실행하지 않음.
+근거: scratch/lottery-release-20261020/preflight.json, manifest.json, stage-check.json, production-result.json, external-check.json, server-reconfirmed.json, final-git-status.txt, final-diff-stat.txt

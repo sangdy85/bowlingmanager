@@ -1,0 +1,44 @@
+볼링장 배경 / 간결한 이름표 복원 — 2026-10-20
+
+경로: growth-001 / codex/release-1.2.1 / HEAD 530dca6
+
+변경
+- 이름 그리드와 대규모 순환 표시 제거.
+- PC 선두 6명, 모바일 선두 3명 및 별도 선택 참가자만 표시.
+- 공 위에 가까이 배치하고 겹치는 이름만 짧게 위치 조정.
+- 숲/집/강/다리/잔디 제거.
+- 네이비 실내 바닥, 우드 연습 레인, 핀, 거터와 LED 라인 추가.
+- 점수 모니터, 볼 리턴, 좌석과 낮은 벽으로 볼링장 분위기 구성.
+- 3D와 2D 호환 화면 모두 같은 실내 테마 적용.
+- 11종 아이템, 100개 배치, 50초 경기, 반대편 카메라 전환 유지.
+
+수정 파일
+src/lib/lottery-race-labels.ts
+src/components/tournaments/lottery-race-scene.ts
+src/components/tournaments/lottery-race-canvas.ts
+src/components/tournaments/LotteryRace.module.css
+tests/lottery-race-names.test.cjs
+tests/lottery-race-scene.test.cjs
+docs/lottery-bowling-arena-20261020.txt
+
+검증
+관련 테스트 57/57 통과. 실제 이름 배치/렌더러를 대상으로 검증.
+아이템/레이스/당첨/제외/저장 관련 기존 회귀 유지.
+현재 검증 폴더의 src/content 464개 파일이 작업 소스와 일치.
+Lint 통과: 0 errors / 기존 17 warnings. TypeScript 통과.
+PC 47명 전원 완주 및 5명 당첨 확인.
+실내 배경과 적은 이름표, 후반 반대편 카메라 확인. 브라우저 error/warn 없음.
+Production build 통과 (exit 0), Build ID: zBzev5tFuIX_pcRQX8JzS.
+11개 QA/로그인/health 및 16개 정적 파일 HTTP 200.
+모바일 390×844: 적은 이름표와 실내 배경 확인.
+선두 밖 참가자(인덱스196)를 선택해 이름 강조와 카메라 추적 확인 후 자동 추적으로 복원.
+197명 전원 완주 및 20명 당첨, 브라우저 error/warn 없음, 가로 overflow 없음.
+결과 저장 미실행. 기본 viewport 및 READY 화면으로 복원.
+미리보기: http://127.0.0.1:3133/qa/lottery-race?mode=village
+
+보존
+작업 시작 변경/미추적 파일 101개 중 요청 범위 6개만 수정.
+다른 기존 작업 95개 SHA-256 일치.
+레이스 엔진/아이템 규칙/코스/인증/API/BAND/모바일/Prisma/운영 데이터 변경 없음.
+운영 접속/결과 저장/commit/push/배포 없음.
+검증 자료: scratch/lottery-bowling-arena-20261020/
