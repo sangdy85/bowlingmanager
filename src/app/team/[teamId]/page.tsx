@@ -14,6 +14,7 @@ import TeamMemberManager from "@/components/TeamMemberManager";
 import TeamGuestManager from "@/components/TeamGuestManager";
 import styles from "./TeamDetail.module.css";
 import { DashboardShell } from "@/components/dashboard/DashboardUI";
+import { getRegularAttendanceStarts, teamActivityDateKey } from "@/lib/team-records";
 
 interface TeamPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -59,18 +60,19 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
     const resolvedSearchParams = await searchParams;
     const currentYear = resolvedSearchParams.year
         ? parseInt(resolvedSearchParams.year as string)
-        : new Date().getFullYear();
+        : Number(teamActivityDateKey(new Date()).slice(0, 4));
 
     // available years logic
     const allTeamScores = await prisma.score.findMany({
         where: { teamId: teamId },
-        select: { gameDate: true }
+        select: { gameDate: true, userId: true, gameType: true }
     });
-    const distinctYears = Array.from(new Set(allTeamScores.map(s => s.gameDate.getFullYear())));
+    const distinctYears = Array.from(new Set(allTeamScores.map(s => Number(teamActivityDateKey(s.gameDate).slice(0, 4)))));
+    const regularAttendanceStarts = [...getRegularAttendanceStarts(allTeamScores)];
 
     // Team Stats Logic
-    const startOfYear = new Date(`${currentYear}-01-01T00:00:00.000Z`);
-    const endOfYear = new Date(`${currentYear}-12-31T23:59:59.999Z`);
+    const startOfYear = new Date(`${currentYear}-01-01T00:00:00+09:00`);
+    const endOfYear = new Date(`${currentYear}-12-31T23:59:59.999+09:00`);
 
     const scoresRaw = await prisma.score.findMany({
         where: {
@@ -223,6 +225,7 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
 
                     <TeamStatsContainer
                         scores={scores}
+                        regularAttendanceStarts={regularAttendanceStarts}
                         ownerId={team.ownerId}
                         managerIds={team.managers.map(m => m.id)}
                         teamName={team.name}

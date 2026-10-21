@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import TeamYearlyStats, { GAME_TYPES } from './TeamYearlyStats';
 import DailyScoreTable from './DailyScoreTable';
+import { calculateTeamAttendance, getRegularAttendanceStarts, teamActivityDateKey } from '@/lib/team-records';
 
 interface ScoreWithUser {
     id: string;
@@ -18,6 +19,7 @@ interface ScoreWithUser {
 }
 
 interface TeamStatsContainerProps {
+    regularAttendanceStarts?: [string, string][];
     scores: ScoreWithUser[];
     currentYear: number;
     teamName: string;
@@ -29,8 +31,9 @@ interface TeamStatsContainerProps {
     members?: { id: string; name: string }[];
 }
 
-export default function TeamStatsContainer({ scores, currentYear, teamName, isOwner, isManager, teamId, ownerId, managerIds, members = [] }: TeamStatsContainerProps) {
+export default function TeamStatsContainer({ scores, currentYear, teamName, isOwner, isManager, teamId, ownerId, managerIds, members = [], regularAttendanceStarts }: TeamStatsContainerProps) {
     const [selectedTypes, setSelectedTypes] = useState<string[]>(["정기전"]);
+    const attendanceStarts = useMemo(() => getRegularAttendanceStarts(scores, new Map(regularAttendanceStarts)), [scores, regularAttendanceStarts]);
 
     const toggleType = (type: string) => {
         setSelectedTypes(prev =>
@@ -83,7 +86,7 @@ export default function TeamStatsContainer({ scores, currentYear, teamName, isOw
 
         // 2. Identify Total Regular Game Dates
         const regularGameDates = new Set(
-            regularScores.map(s => new Date(s.gameDate).toISOString().split('T')[0])
+            regularScores.map(s => teamActivityDateKey(new Date(s.gameDate)))
         );
         const totalRegularDays = regularGameDates.size;
         if (totalRegularDays === 0) return null;
@@ -99,7 +102,7 @@ export default function TeamStatsContainer({ scores, currentYear, teamName, isOw
             }
 
             userStats[s.userId].totalScore += s.score;
-            userStats[s.userId].attendedDates.add(new Date(s.gameDate).toISOString().split('T')[0]);
+            userStats[s.userId].attendedDates.add(teamActivityDateKey(new Date(s.gameDate)));
         });
 
         // 4. Calculate Stats and Find Ace
@@ -107,7 +110,7 @@ export default function TeamStatsContainer({ scores, currentYear, teamName, isOw
         let maxAvg = -1;
 
         Object.entries(userStats).forEach(([userId, stat]) => {
-            const attendanceRate = stat.attendedDates.size / totalRegularDays;
+            const attendanceRate = calculateTeamAttendance(regularGameDates, stat.attendedDates, attendanceStarts.get(userId)).attendanceRaw;
 
             // Criteria: Attendance >= 80%
             if (attendanceRate >= 0.80) {
@@ -125,7 +128,7 @@ export default function TeamStatsContainer({ scores, currentYear, teamName, isOw
         });
 
         return currentAceId;
-    }, [scores]);
+    }, [scores, attendanceStarts]);
 
     // Recent Game Rankings Calculation
     const recentRankings = useMemo(() => {
@@ -136,10 +139,10 @@ export default function TeamStatsContainer({ scores, currentYear, teamName, isOw
         // 2. Find Most Recent Date
         const sortedDates = Array.from(new Set(rankingScores.map(s => s.gameDate.getTime()))).sort((a, b) => b - a);
         if (sortedDates.length === 0) return {};
-        const mostRecentDateStr = new Date(sortedDates[0]).toISOString().split('T')[0];
+        const mostRecentDateStr = teamActivityDateKey(new Date(sortedDates[0]));
 
         // 3. Filter Scores for Recent Date
-        const targetScores = rankingScores.filter(s => new Date(s.gameDate).toISOString().split('T')[0] === mostRecentDateStr);
+        const targetScores = rankingScores.filter(s => teamActivityDateKey(new Date(s.gameDate)) === mostRecentDateStr);
 
         // 4. Calculate Averages
         const userAverages: { userId: string; avg: number }[] = [];
@@ -173,6 +176,7 @@ export default function TeamStatsContainer({ scores, currentYear, teamName, isOw
             <div className="mb-12">
                 <TeamYearlyStats
                     scores={filteredScores}
+                    regularAttendanceStarts={attendanceStarts}
                     currentYear={currentYear}
                     teamName={teamName}
                     selectedTypes={selectedTypes}

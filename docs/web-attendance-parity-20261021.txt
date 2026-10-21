@@ -1,0 +1,33 @@
+배포 전 로컬 검증 기록 — 이후 운영 결과는 별도 배포 보고서에 기록합니다.
+
+웹·앱 동호회 출석률 통일 — 2026-10-21 / 로컬 구현 및 검증 완료
+기준 HEAD: a6456630881c46df8ff2771b9adb5331a952497b
+로컬 Build: M34Ceij5vqZlzAiN3t8Mx
+
+수정: 웹의 연도 전체 기준 출석률을 회원별 최초 정기전 참가일 기준으로 통일.
+전년도 참가 이력을 조회해 올해 첫 참가일로 출석 시작일을 잘못 재설정하지 않음.
+한국시간(KST) 기준 연도 조회·출석 날짜·월별 기록·최근 경기 날짜 통일.
+앱의 기존 첫 참가일 및 출석 계산을 순수 함수로 분리해 웹과 앱이 공동 사용. 앱의 계산 결과/응답 구조 유지.
+ACE 출석 조건도 같은 기준 적용. 80% 임계값 및 평균 점수 비교 방식 유지.
+웹 표에 첫 정기전부터 계산하고 하루 여러 게임도 한 번 출석한다는 안내 추가.
+
+파일:
+src/app/team/[teamId]/page.tsx
+src/components/TeamStatsContainer.tsx
+src/components/TeamYearlyStats.tsx
+src/lib/team-records.ts
+tests/helpers/dashboard-renderer.cjs
+tests/web-team-attendance.test.cjs
+
+검증: 관련 테스트 90개 통과, production build와 내장 lint/TypeScript 검사 통과. 기존 경고 17개, 새 오류 없음.
+중도 참가·이후 결석·게스트만 있는 활동일·하루 여러 게임·전년도 이력·KST 월/연도 경계·복수 유형 필터·정기전 없는 회원·ACE·비로그인 차단 검증.
+실제 서버 페이지를 mock DB로 실행해 KST 연도 범위와 전체 이력 전달도 검증. 운영 DB 접속 없음.
+실제 브라우저 가상 팀: 기존 회원 100.0%(3/3), 중도 참가 회원 100.0%(2/2) 일치. 게임 수 9/6, 총점 1620/1320 유지.
+PC/모바일 렌더링 확인, 모바일 페이지 가로 넘침 없음. 표 내부 가로 스크롤 유지.
+빌드 소스와 현재 4개 수정 소스 해시 일치, API 84개 보존, git diff --check 통과.
+
+미리보기: http://localhost:3157/team/attendance-comparison-fixture?year=2026
+별도 Temp 테스트 DB의 가상 기록만 사용. 실제 사용자 경기 점수/운영 데이터 변경 없음.
+mobile/, src/lib/mobile-api/, src/app/api/, 인증, Prisma schema/migrations, BAND 수정 없음.
+개인 기록실 오각형의 성실 지표는 이번 동호회 출석률 통일 범위에 포함하지 않음.
+이번 수정의 commit/push/운영 배포는 하지 않음. 운영의 실제 사용자별 비교는 미검증.

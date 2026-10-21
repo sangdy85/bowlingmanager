@@ -65,6 +65,36 @@ export const teamActivityDateKey = (value: Date) => new Date(value.getTime() + 9
     .toISOString().slice(0, 10);
 const oneDecimal = (value: number) => Number(value.toFixed(1));
 
+export function getRegularAttendanceStarts(
+    scores: readonly { gameDate: Date; userId: string | null; gameType?: string | null }[],
+    allTimeStarts: ReadonlyMap<string, string> = new Map(),
+) {
+    const starts = new Map(allTimeStarts);
+    for (const score of scores) {
+        if (!score.userId || normalizeTeamGameType(score.gameType ?? null) !== "정기전") continue;
+        const date = teamActivityDateKey(score.gameDate);
+        const existing = starts.get(score.userId);
+        if (!existing || date < existing) starts.set(score.userId, date);
+    }
+    return starts;
+}
+
+export function calculateTeamAttendance(
+    activeDates: ReadonlySet<string>,
+    attendedDates: ReadonlySet<string>,
+    attendanceStart: string | undefined,
+) {
+    const eligibleDates = attendanceStart ? [...activeDates].filter(date => date >= attendanceStart) : [];
+    const attendedEligibleDates = attendanceStart ? [...attendedDates].filter(date => date >= attendanceStart) : [];
+    const attendanceRaw = eligibleDates.length > 0 ? attendedEligibleDates.length / eligibleDates.length : 0;
+    return {
+        attendanceRaw,
+        attendanceRate: oneDecimal(attendanceRaw * 100),
+        attended: attendedEligibleDates.length,
+        activityCount: eligibleDates.length,
+    };
+}
+
 export function calculateTeamStatistics(
     scores: TeamRecordScore[],
     members: TeamRecordMember[],
@@ -74,13 +104,7 @@ export function calculateTeamStatistics(
     const filteredScores = filterTeamRecordScores(scores, filter);
     const memberNames = new Map(members.map((member) => [member.userId, member.name]));
     const activeDates = new Set(filteredScores.map((score) => teamActivityDateKey(score.gameDate)));
-    const regularAttendanceStarts = new Map(allTimeRegularAttendanceStarts);
-    for (const score of scores) {
-        if (!score.userId || normalizeTeamGameType(score.gameType) !== "정기전") continue;
-        const date = teamActivityDateKey(score.gameDate);
-        const existing = regularAttendanceStarts.get(score.userId);
-        if (!existing || date < existing) regularAttendanceStarts.set(score.userId, date);
-    }
+    const regularAttendanceStarts = getRegularAttendanceStarts(scores, allTimeRegularAttendanceStarts);
     const stats = new Map<string, {
         userId: string;
         id: string;
@@ -117,25 +141,12 @@ export function calculateTeamStatistics(
 
     const activityCount = activeDates.size;
     const rawMemberRows = [...stats.values()].map((stat) => {
-        const attendanceStart = regularAttendanceStarts.get(stat.userId);
-        const eligibleDates = attendanceStart
-            ? [...activeDates].filter((date) => date >= attendanceStart)
-            : [];
-        const attendedEligibleDates = attendanceStart
-            ? [...stat.attendedDates].filter((date) => date >= attendanceStart)
-            : [];
-        const memberActivityCount = eligibleDates.length;
-        const attendanceRaw = memberActivityCount > 0
-            ? attendedEligibleDates.length / memberActivityCount
-            : 0;
+        const attendance = calculateTeamAttendance(activeDates, stat.attendedDates, regularAttendanceStarts.get(stat.userId));
         const averageRaw = stat.gameCount > 0 ? stat.total / stat.gameCount : 0;
         return {
             id: stat.id,
             name: stat.name,
-            attendanceRaw,
-            attendanceRate: oneDecimal(attendanceRaw * 100),
-            attended: attendedEligibleDates.length,
-            activityCount: memberActivityCount,
+            ...attendance,
             gameCount: stat.gameCount,
             monthlyAverages: stat.months.map((month) => month.count > 0
                 ? Math.round(month.total / month.count)

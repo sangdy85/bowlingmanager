@@ -9,7 +9,7 @@ const React = nativeRequire('react');
 const { renderToStaticMarkup } = nativeRequire('react-dom/server');
 const postcss = nativeRequire('postcss');
 
-function createRenderer({ records = [], authenticated = true, hasTeam = true, manager = true, name = '테스트 볼러', role = 'USER', pathname, admin = {} } = {}) {
+function createRenderer({ records = [], authenticated = true, hasTeam = true, manager = true, name = '테스트 볼러', role = 'USER', pathname, admin = {}, moduleOverrides = {} } = {}) {
   let currentPath = pathname || '/personal';
   const styles = new Map();
   const cache = new Map();
@@ -30,6 +30,7 @@ function createRenderer({ records = [], authenticated = true, hasTeam = true, ma
     'next/link': ({ children, href, ...props }) => React.createElement('a', { href, ...props }, children),
     'next/navigation': { usePathname: () => currentPath, redirect: destination => { throw new Error(`REDIRECT:${destination}`); }, useRouter: () => ({ push() {} }), useSearchParams: () => new URLSearchParams('year=2026') },
     'next-auth/react': { signOut() {} },
+    ...moduleOverrides,
   };
   function load(filename) {
     if (cache.has(filename)) return cache.get(filename).exports;
