@@ -4,9 +4,11 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { updateBowlingCenter } from "@/app/actions/center";
 import styles from "./CenterEdit.module.css";
+import BandIntegrationSettings from "@/components/centers/BandIntegrationSettings";
 
-export default async function CenterEditPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CenterEditPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ band?: string }> }) {
     const { id } = await params;
+    const { band } = await searchParams;
     const session = await auth();
     if (!session?.user?.id) {
         redirect("/login");
@@ -14,7 +16,12 @@ export default async function CenterEditPage({ params }: { params: Promise<{ id:
 
     const center = await prisma.bowlingCenter.findUnique({
         where: { id },
-        include: { managers: true }
+        include: {
+            managers: true,
+            bandConnection: {
+                select: { bandKey: true, bandName: true, bandCoverUrl: true, enabled: true, autoRecruitment: true, autoFinalResult: true, doPush: true, connectedAt: true }
+            }
+        }
     });
 
     if (!center) notFound();
@@ -101,6 +108,15 @@ export default async function CenterEditPage({ params }: { params: Promise<{ id:
                     </button>
                 </div>
             </form>
+
+            <BandIntegrationSettings
+                centerId={id}
+                oauthResult={band}
+                connection={center.bandConnection ? {
+                    ...center.bandConnection,
+                    connectedAt: center.bandConnection.connectedAt.toISOString(),
+                } : null}
+            />
         </div>
     );
 }

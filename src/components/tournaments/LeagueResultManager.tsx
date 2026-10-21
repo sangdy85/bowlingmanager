@@ -1,5 +1,6 @@
 'use client';
 import { formatKSTDayLabel } from '@/lib/tournament-utils';
+import LeagueWeeklyBandButton, { type LeagueWeeklyBandPost } from './LeagueWeeklyBandButton';
 
 interface Matchup {
     id: string;
@@ -24,13 +25,17 @@ interface LeagueResultManagerProps {
     tournamentId: string;
     rounds: Round[];
     isManager: boolean;
+    bandConnected?: boolean;
+    bandPosts?: LeagueWeeklyBandPost[];
 }
 
 export default function LeagueResultManager({
     centerId,
     tournamentId,
     rounds,
-    isManager
+    isManager,
+    bandConnected = false,
+    bandPosts = [],
 }: LeagueResultManagerProps) {
     const isRoundFinished = (matchups: Matchup[]) => {
         return matchups.length > 0 && matchups.every(m => m.status === 'FINISHED');
@@ -213,6 +218,15 @@ export default function LeagueResultManager({
                                         </a>
                                     )}
                                 </div>
+                                {isManager && finished && (
+                                    <LeagueWeeklyBandButton
+                                        centerId={centerId}
+                                        tournamentId={tournamentId}
+                                        roundId={round.id}
+                                        connected={bandConnected}
+                                        latestPost={bandPosts.find(post => post.roundId === round.id && post.type === 'LEAGUE_WEEKLY_RESULT')}
+                                    />
+                                )}
                             </div>
                         );
                     })}

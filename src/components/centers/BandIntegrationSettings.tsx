@@ -1,0 +1,90 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { disconnectCenterBand, selectCenterBand, sendBandTestPostAction, updateBandPreferences } from '@/app/actions/band-actions';
+import type { BandSummary } from '@/lib/band/types';
+import styles from './BandIntegrationSettings.module.css';
+
+type SafeConnection = {
+    bandKey: string | null; bandName: string | null; bandCoverUrl: string | null;
+    enabled: boolean; autoRecruitment: boolean; autoFinalResult: boolean; doPush: boolean;
+    connectedAt: string;
+} | null;
+
+export default function BandIntegrationSettings({ centerId, connection, oauthResult }: {
+    centerId: string; connection: SafeConnection; oauthResult?: string;
+}) {
+    const router = useRouter();
+    const [bands, setBands] = useState<BandSummary[]>([]);
+    const [selected, setSelected] = useState(connection?.bandKey || '');
+    const [prefs, setPrefs] = useState({
+        enabled: connection?.enabled ?? true,
+        autoRecruitment: connection?.autoRecruitment ?? false,
+        autoFinalResult: connection?.autoFinalResult ?? false,
+        doPush: connection?.doPush ?? false,
+    });
+    const [busy, setBusy] = useState(false);
+    const [message, setMessage] = useState(oauthResult === 'connected' ? 'BAND 인증을 완료했습니다. 게시할 BAND를 선택해주세요.' : '');
+    const [isError, setIsError] = useState(Boolean(oauthResult && oauthResult !== 'connected'));
+
+    const run = async (task: () => Promise<{ success: boolean; message: string }>) => {
+        setBusy(true);
+        try {
+            const result = await task();
+            setMessage(result.message);
+            setIsError(!result.success);
+            if (result.success) router.refresh();
+        }
+        catch { setMessage('요청을 처리하지 못했습니다. 로그인과 센터 관리 권한을 확인해주세요.'); setIsError(true); }
+        finally { setBusy(false); }
+    };
+
+    const loadBands = async () => {
+        setBusy(true);
+        try {
+            const response = await fetch(`/api/integrations/band/bands?centerId=${encodeURIComponent(centerId)}`);
+            const body = await response.json();
+            if (!response.ok) throw new Error(body.error || 'BAND 목록을 불러오지 못했습니다.');
+            setBands(body.bands || []); setMessage('게시할 BAND를 선택해주세요.'); setIsError(false);
+        } catch (error) { setMessage(error instanceof Error ? error.message : 'BAND 목록 조회에 실패했습니다.'); setIsError(true); }
+        finally { setBusy(false); }
+    };
+
+    return <section className={styles.panel} aria-labelledby="band-settings-title">
+        <div className={styles.header}>
+            <div><h2 id="band-settings-title" className={styles.title}>NAVER BAND 자동 게시</h2><p className={styles.description}>기본값은 자동 게시 꺼짐입니다. 필요한 시점에 관리자가 별도로 자동 게시를 활성화할 수 있습니다.</p></div>
+            {connection && <span className={styles.badge}>연결됨</span>}
+        </div>
+        {message && <p className={`${styles.message} ${isError ? styles.error : ''}`}>{message}</p>}
+        {!connection ? <a className={styles.button} href={`/api/integrations/band/connect?centerId=${encodeURIComponent(centerId)}`}>NAVER BAND 연결</a> : <div className={styles.stack}>
+            <div className={styles.box}>
+                <p><strong>게시 BAND:</strong> {connection.bandName || '선택 전'}</p>
+                <div className={styles.row}>
+                    <button className={`${styles.button} ${styles.secondary}`} disabled={busy} onClick={loadBands}>내 BAND 불러오기</button>
+                    {bands.length > 0 && <><select className={styles.select} value={selected} onChange={e => setSelected(e.target.value)} aria-label="게시할 BAND">
+                        <option value="">BAND 선택</option>{bands.map(b => <option key={b.bandKey} value={b.bandKey}>{b.name}{b.memberCount != null ? ` (${b.memberCount}명)` : ''}</option>)}
+                    </select><button className={styles.button} disabled={busy || !selected} onClick={() => run(() => selectCenterBand(centerId, selected))}>선택 저장</button></>}
+                </div>
+            </div>
+            <div className={`${styles.box} ${styles.checks}`}>
+                <label className={styles.check}><input type="checkbox" checked={prefs.enabled} onChange={e => setPrefs({ ...prefs, enabled: e.target.checked })}/> BAND 게시 기능 사용</label>
+                <label className={styles.check}><input type="checkbox" checked={prefs.autoRecruitment} onChange={e => setPrefs({ ...prefs, autoRecruitment: e.target.checked })}/> 모집 공개 시 자동 게시</label>
+                <label className={styles.check}><input type="checkbox" checked={prefs.autoFinalResult} onChange={e => setPrefs({ ...prefs, autoFinalResult: e.target.checked })}/> 대회 종료 시 최종 결과 자동 게시</label>
+                <label className={styles.check}><input type="checkbox" checked={prefs.doPush} onChange={e => setPrefs({ ...prefs, doPush: e.target.checked })}/> BAND 멤버에게 게시 알림 보내기</label>
+                <button className={styles.button} disabled={busy} onClick={() => {
+                    const enablingAuto = (prefs.autoRecruitment && !connection?.autoRecruitment) ||
+                        (prefs.autoFinalResult && !connection?.autoFinalResult);
+                    const enablingPush = prefs.doPush && !connection?.doPush;
+                    if ((enablingAuto || enablingPush) &&
+                        !confirm('자동 게시 또는 BAND 알림을 활성화하면 대회 상태 변경 시 실제 글과 알림이 발행될 수 있습니다. 설정을 저장하시겠습니까?')) return;
+                    run(() => updateBandPreferences(centerId, prefs));
+                }}>자동 게시 설정 저장</button>
+            </div>
+            <div className={styles.row}>
+                <button className={`${styles.button} ${styles.secondary}`} disabled={busy || !connection.bandKey} onClick={() => { if (confirm('선택한 BAND에 실제 테스트 게시글이 올라갑니다. 계속하시겠습니까?')) run(() => sendBandTestPostAction(centerId)); }}>테스트 글 게시</button>
+                <button className={`${styles.button} ${styles.danger}`} disabled={busy} onClick={() => { if (confirm('BAND 연결을 해제하시겠습니까?')) run(() => disconnectCenterBand(centerId)); }}>연결 해제</button>
+            </div>
+        </div>}
+    </section>;
+}
