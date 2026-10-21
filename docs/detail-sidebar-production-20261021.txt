@@ -1,0 +1,57 @@
+BowlingManager — Clean Navy 상세 사이드 메뉴 GitHub 기록 및 운영 배포
+
+배포 완료: 2026. 10. 21. PM 4:37:54 KST (실제 전환 시각)
+브랜치: codex/release-1.2.1
+소스 커밋: bcee8d30152fa4508a800d3d9d128ce5fe9e6483
+커밋 내용: Clean Navy 디자인, 공통 헤더 폭 정렬, 동호회·볼링장 상세 사이드 메뉴, 관련 테스트 및 이전 검증 기록(42개 파일).
+원격: https://github.com/sangdy85/bowlingmanager/tree/codex/release-1.2.1
+main 변경/merge/rebase/force push 없음. 원격 main 4045d27은 합치지 않음.
+
+실제 운영 릴리스: detail-sidebar-bcee8d3-525c86272d24-20261021
+Build ID: Q2v_DZmap84rDYB3AIxus
+이전 릴리스: clean-navy-b7499c4-afff27b8fa61-20261021
+이전 Build ID: gu7_rjpuXcT2gEapDlcry
+운영 기존 Git HEAD는 유지. 전체 운영 트리가 커밋과 일치한다고 주장하지 않으며, 최신 운영 기준에 검증된 4개 파일만 반영한 hybrid 릴리스.
+배포 패치 SHA256: 525c86272d24ee1ab0b6498fc63379bb06183568a291515904857ae8fe751953
+운영 반영 파일:
+- src/app/centers/[id]/CenterDetail.module.css
+- src/app/centers/[id]/page.tsx
+- src/app/team/[teamId]/TeamDetail.module.css
+- src/app/team/[teamId]/page.tsx
+
+운영 방식 및 보존
+- vm-share / user / /home/user/bowling-score-manager / 기존 3000 포트.
+- 최신 운영과 로컬을 비교: 기존 Clean Navy 파일은 이미 같았고 상세 페이지 TSX/CSS 4개만 달랐음.
+- API 84개, 상품 759개, 나머지 소스 1283개 보존. 기존 BAND·모바일·대회·PNG 다운로드 로직 유지.
+- 별도 후보 디렉터리와 복사한 DB로 Linux 빌드. 운영 .next를 빌드로 덮어쓰지 않음.
+- 26개 migration 일치, 새 migration 없음. DB migration/seed 실행 안 함.
+- 전환 중 86개 테이블 행 수 동일. SQLite quick_check ok. 환경파일 해시 동일, 업로드 유지.
+- BAND 미설정 유지. 개발용 BAND 키 복사 및 실제 OAuth/게시/푸시 실행 안 함.
+- 가용 공간 확보를 위해 경로 검증 후 Webpack compiler cache만 제거. 기존 런타임 파일·이미지·백업은 삭제하지 않음.
+- 동일 dependency/schema이므로 node_modules와 생성 Prisma client 재사용. Prisma validate 통과.
+- PM2 bowling-manager online; pm2-user.service active/enabled. 기존 자동 시작 설정 유지, 추가 등록 및 서버 재부팅 없음.
+
+검증
+- 로컬 및 Linux 후보 회귀 테스트 각각 101개 통과.
+- 최신 로컬 production build(내장 lint/TypeScript 포함) 통과. 기존 lint 경고 17개, 오류 없음.
+- Linux lint 및 TypeScript 포함 production build 통과.
+- 격리 후보 HTTP 279개 / 운영 upstream HTTP 40개 / 외부 HTTPS 34개 + 추가 5개 통과.
+- 기본/www 홈, 로그인, health, 공개 결과, 볼링장 상세, 상품/제조사 필터/이미지, robots/sitemap/ads.txt, 정적 CSS 정상.
+- 실제 운영 장안퍼펙트볼링센터: PC 1600px·모바일 390px에서 사이드 메뉴 및 현재 메뉴 강조 확인.
+- PC 헤더/본문 시작 92.5px, 끝 1492.5px 일치. 모바일 시작 12px, 끝 363px 일치. 가로 넘침 없음.
+- 로컬 가상 계정: 동호회 상세·팀원 관리·센터 관리자 상세 확인. PC 1600/1280 및 모바일 390/320에서 정렬/넘침 확인.
+- 운영 DB의 사용자 로그인·관리 저장·점수 입력·PNG 다운로드 실행은 미검증. 운영 데이터 생성/변경 테스트 안 함.
+- 배포 후 오류 로그 증가 0바이트, 새 오류/502 없음(최종 감사 시점). 장기간 관찰 및 재부팅 실험은 미실행.
+- 최초 HTTP 검사에서 HTML 속성 순서에 의존한 검사 오탐 발생. 검사만 수정해 같은 후보 재검증 통과. 운영 소스 변경이나 추가 build 없음.
+
+복구 및 운영 기록
+백업: /home/user/bowling-backups/detail-sidebar-bcee8d3-525c86272d24-20261021-before
+일관성 DB 백업: /home/user/bowling-backups/detail-sidebar-bcee8d3-525c86272d24-20261021-before/database-before.db 및 database-at-cutover.db
+롤백 명령: bash /home/user/bowling-deploy/detail-sidebar-bcee8d3-525c86272d24-20261021/rollback.sh
+롤백은 해당 릴리스일 때만 소스/빌드/배포 기록을 복구하며 DB는 되돌리지 않음.
+운영 기록: /home/user/bowling-score-manager/.deployment-release.json
+상세 감사: /home/user/bowling-deploy/detail-sidebar-bcee8d3-525c86272d24-20261021/final-audit.json
+검증 시 가용 공간: 약 573 MiB. 복구용 기존 릴리스/백업은 유지.
+
+GitHub 소스 push 완료. 이 보고서는 별도 문서 커밋으로 같은 브랜치에 기록함.
+다른 PC에서는 codex/release-1.2.1 브랜치를 받아야 이번 변경을 사용할 수 있음. 기존 로컬 수정은 보존한 뒤 전환/갱신할 것.
