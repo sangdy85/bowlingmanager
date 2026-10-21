@@ -1,0 +1,63 @@
+BowlingManager 웹·앱 동호회 출석률 통일 — GitHub 및 운영 배포 결과
+배포 완료: 2026. 10. 21. PM 5:44:22 KST (실제 운영 전환 시각)
+소스 커밋: bc60e8ee12599b2af26412113a943aad4de0527a
+브랜치: codex/release-1.2.1 / 원격: https://github.com/sangdy85/bowlingmanager
+main 변경·merge·rebase·force push 없음.
+
+운영 릴리스: attendance-bc60e8e-e1b723830573-20261021
+Build ID: YkDTCZOa6KV-53EgDxf1x
+이전 릴리스: detail-sidebar-bcee8d3-525c86272d24-20261021
+이전 Build: Q2v_DZmap84rDYB3AIxus
+패치 SHA256: e1b7238305736856b7653692782cf31759f75ff1c317ea7e45c5278c8a0b16e0
+운영은 최신 운영 기준에 커밋의 4개 수정 소스를 반영한 hybrid 릴리스. 전체 운영 Git 트리가 커밋과 일치한다는 의미가 아님.
+
+적용 내용
+- 동호회 웹 출석률을 본인의 최초 정기전 참가일 이후 활동 기준으로 앱과 통일.
+- 전체 이력에서 최초 정기전 날짜를 찾으므로 전년도 참가 이력도 반영.
+- 한국시간으로 연도 조회·날짜·월별 집계 및 최근 경기 날짜를 처리. 같은 날 여러 게임도 출석 1회.
+- 웹과 앱이 공통 출석 순수 함수를 사용. 앱 계산 결과와 응답 계약은 유지.
+- ACE 출석 80% 조건에도 같은 기준 적용. 80% 임계값과 평균 점수 비교 방식 유지.
+- 동호회 표에 계산 기준 안내 추가. 개인 기록실 오각형의 성실 지표는 이번 범위 밖.
+반영 소스:
+- src/app/team/[teamId]/page.tsx
+- src/components/TeamStatsContainer.tsx
+- src/components/TeamYearlyStats.tsx
+- src/lib/team-records.ts
+
+보존·백업·롤백
+- vm-share / user / /home/user/bowling-score-manager / 기존 포트 3000.
+- API 84개 및 나머지 소스 1283개 유지. Flutter·모바일 API 파일·인증·BAND·Prisma schema/migrations 변경 없음.
+- 기존 상품 759개, 다운로드 및 대회 기능 유지. 실제 BAND OAuth/게시/푸시는 미실행.
+- 환경파일 해시 동일, 업로드 보존. 전환 구간 86개 테이블 행 수 동일, SQLite quick_check ok.
+- 새 migration 없음. 운영 migration·seed·DB reset·경기 점수 수정 없음.
+- 별도 후보와 복사 DB로 Linux 검증. dependencies/schema 동일하여 기존 Prisma client 재사용, Prisma validate 통과.
+- 공간 제한으로 후보 build 중에만 webpack filesystem cache를 비활성화. 후보 next.config.mjs 원본을 finally로 복구했고 운영 설정 해시도 동일함.
+- 빌드가 실행 중인 운영 .next를 덮어쓰지 않도록 분리. 원래 운영 코드·빌드·설정·DB 일관성 백업 완료.
+백업: /home/user/bowling-backups/attendance-bc60e8e-e1b723830573-20261021-before
+DB 백업: database-before.db 및 database-at-cutover.db
+롤백: bash /home/user/bowling-deploy/attendance-bc60e8e-e1b723830573-20261021/rollback.sh
+롤백은 해당 릴리스일 때만 소스/빌드/배포 기록을 복구하고 DB는 무작정 되돌리지 않음.
+
+검증 및 기존 실패 구분
+- 로컬 관련 테스트 90/90 통과, lint/TypeScript 포함 production build 통과. 기존 lint 경고 17개.
+- Linux 후보 전체 90개: 88개 통과, 2개 실패. 두 실패는 수정 전 운영 코드에서도 동일하게 재현했으며 새 실패는 0개.
+- 기존 실패 1: blind member profile is owner-only and denied before loading scores (모바일 프로필 접근 조건).
+- 기존 실패 2: dashboard keeps a started event through its KST date and moves on at midnight (모바일 당일 일정 유지 조건).
+- 두 모바일 소스의 운영/로컬 해시가 다름을 확인. 이번 배포에서는 기존 운영 버전을 보존했으며 임의 통합하지 않음.
+- 출석률·팀 통계·웹 화면 직접 관련 Linux 테스트 60/60 통과. Linux lint·TypeScript 포함 build 통과.
+- 운영 DB의 읽기 전용 복사본: 2026년 6개 팀·39명에서 실제 웹 컴포넌트와 앱 계산의 출석률·게임 수·총점·평균 일치. 6명의 개인별 분모가 기존 연도 전체 분모와 달라짐.
+- 이름·개인 점수를 로그에 출력하지 않았고 스냅샷 검증도 DB 수정 없이 진행.
+- 후보 HTTP 279개, 운영 upstream HTTP 40개, 외부 HTTPS 34개 및 추가 4개 통과.
+- 기본/www 홈·로그인·health·공개 결과·정적 파일·상품/필터/이미지·robots/sitemap/ads.txt 정상.
+- 비로그인 동호회 상세가 로그인으로 이동하며 기록을 노출하지 않는 것 확인.
+- PM2 bowling-manager online, pm2-user.service active/enabled. 기존 자동 시작 설정 유지.
+- 최종 감사에서 새 오류 로그 증가 0바이트, 502 없음. 장기간 관찰 및 재부팅 실험은 미실행.
+- 로컬 PC/모바일 가상 데이터 UI 확인 완료. 실제 운영 계정 로그인 후 개별 화면을 여는 검증은 미실행.
+
+남은 항목
+- 기존 모바일 회귀 테스트 2건과 운영/로컬 해당 소스 정합성은 별도 검토 필요. 이번 출석률 패치에서는 변경하지 않음.
+- 실제 계정에서 동호회 상세를 새로고침해 수정된 출석률 확인 권장. 경기/회원/점수 저장 작업은 테스트하지 않음.
+- 최종 가용 공간 약 336MiB. 복구용 백업·이전 릴리스는 유지.
+운영 배포 기록: /home/user/bowling-score-manager/.deployment-release.json
+최종 감사: /home/user/bowling-deploy/attendance-bc60e8e-e1b723830573-20261021/final-audit.json
+이 문서는 별도 문서 커밋으로 같은 작업 브랜치에 기록. 다른 PC는 codex/release-1.2.1을 동기화해야 함.
