@@ -1,0 +1,79 @@
+BowlingManager two-PC development handoff (2026-10-21)
+
+Repository: https://github.com/sangdy85/bowlingmanager
+Working branch: codex/release-1.2.1
+Git starting point: 530dca6e84fc7e9b6517d94db6e156028c4b4aa8
+
+SOURCE COMMITS
+fdb950f fix(league): link historical team records without losing player identities
+59a3861 feat(lottery): add bowling ball item races and finish camera controls
+a39ce8c feat(equipment): publish sourced ball catalogues with photos and pagination
+4cbbed4 feat(mobile): improve recent averages and club event sharing
+
+All 604 initially changed source, content, photo, test and documentation files
+were preserved and explicitly staged in four functional commits. No bulk add.
+The diagnostic league report was anonymized; original snapshots remain in the
+ignored local scratch/git-sync-20261021/before directory.
+No environment files, secrets, database, uploads, backups, build output or
+scratch artifacts were added. Previously tracked runtime files are unchanged.
+No main merge, force push, history rewriting or production redeployment.
+
+VERIFICATION
+- Backend/web: 275 tests passed, zero failures (20 test files).
+- Flutter analyze --no-pub: no issues through the existing C:/bmrc junction.
+- Flutter unit/widget tests: 27 passed (five test files).
+- Reused successful production build: jnJtfyHT9MFtwF2LrQymo.
+  SHA256 comparison verified 474 source/content/config/schema/package files
+  against that build. Afterwards only a redundant trailing blank line in
+  lottery-race-course.ts and report/document text changed; executable code did not.
+- Existing lint: zero errors, 17 existing warnings. Typecheck and Prisma generate passed.
+- GitHub API check: repository Actions workflows 0, repository webhooks 0.
+  This is not a claim about every possible third-party integration.
+
+LAST VERIFIED OPERATING DEPLOYMENT (SAVED RECEIPT)
+Release: equipment-mk-brunswick-530dca6-831947a9fb9f-20261021
+Build: EKMw-qLcefNXsVt1JQmSg
+Git base: 530dca6e84fc7e9b6517d94db6e156028c4b4aa8 plus the recorded working-tree deployment patch.
+Do not label any new Git commit as the operating commit without source comparison.
+This Git synchronization did not connect to, rebuild or restart production.
+Local historical-record auto-link and mobile updates are not all represented in
+that saved operating deployment. Do not assume GitHub and production are identical.
+Source differences from that saved manifest (not a fresh live inspection):
+  public/images/bowlingmanager-invite.png [not-in-saved-operating-source-manifest]
+  src/app/actions/center-members.ts [different]
+  src/app/actions/league-actions.ts [different]
+  src/app/actions/league-leaderboard.ts [different]
+  src/app/actions/league-results.ts [different]
+  src/app/invite/team/[code]/page.tsx [different]
+  src/app/personal/page.tsx [different]
+  src/components/centers/JoinCenterSection.tsx [different]
+  src/components/tournaments/RoundBulkResultEditor.tsx [different]
+  src/lib/center-league-identity.ts [not-in-saved-operating-source-manifest]
+  src/lib/league-score-identity.ts [different]
+  src/lib/lottery-race-course.ts [different]
+  src/lib/mobile-api/club-expansion.ts [different]
+  src/lib/mobile-api/dashboard.ts [different]
+  src/lib/mobile-api/team-management.ts [different]
+  src/lib/mobile-api/teams.ts [different]
+  src/lib/personal-statistics.ts [different]
+  src/lib/team-membership.ts [different]
+
+CONTINUE ON ANOTHER PC
+1. Check git status and git branch --show-current; preserve any local edits first.
+2. git fetch origin
+3. If the branch already exists:
+   git switch codex/release-1.2.1
+   git pull --ff-only origin codex/release-1.2.1
+   Otherwise:
+   git switch --track origin/codex/release-1.2.1
+   If branches diverge or edits conflict, stop to compare. Do not reset or force.
+4. Use Node 20; npm.cmd ci; npx.cmd prisma generate.
+   For mobile, install the Flutter SDK required by pubspec and run flutter pub get.
+5. Configure each PC's private development environment and isolated database.
+   Secrets, operating database and local QA fixtures are not transferred by Git.
+   Never copy a development BAND encryption key over an operating key.
+6. Commit/push this branch before switching PCs; fetch/pull before editing on the
+   other PC. origin/main does not contain this work branch's complete feature set.
+
+Operating OAuth login, BAND posting/push and real-user authenticated flows were
+not exercised by this Git synchronization. No operating database was modified.
