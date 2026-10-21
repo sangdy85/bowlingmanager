@@ -116,6 +116,17 @@ test('event list scope accepts upcoming and past while preserving legacy all', (
   assert.equal(past.orderBy[0].eventDate, 'desc');
 });
 
+test('event lists switch from current to past only at midnight KST, independent of kickoff', () => {
+  const eventDate = new Date('2026-10-18T15:00:00.000Z'); // October 19 KST
+  for (const now of ['2026-10-18T15:00:00.000Z', '2026-10-19T05:00:00.000Z', '2026-10-19T14:59:59.999Z']) {
+    assert.ok(eventDate >= service.teamEventListQuery('UPCOMING', new Date(now)).date.gte);
+    assert.equal(eventDate < service.teamEventListQuery('PAST', new Date(now)).date.lt, false);
+  }
+  const midnight = new Date('2026-10-19T15:00:00.000Z');
+  assert.equal(eventDate >= service.teamEventListQuery('UPCOMING', midnight).date.gte, false);
+  assert.ok(eventDate < service.teamEventListQuery('PAST', midnight).date.lt);
+});
+
 test('lane slots enforce range and event-local uniqueness', () => {
   assert.deepEqual(service.parseLaneSlots({ slots: [
     { laneNumber: 1, position: 1 }, { laneNumber: 24, position: 6 },

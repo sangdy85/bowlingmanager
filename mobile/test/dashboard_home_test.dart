@@ -68,14 +68,14 @@ void main() {
       );
     await _pumpAuthenticatedApp(tester, repository);
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('리그'),
-      500,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('개인'), findsOneWidget);
-    expect(find.text('리그'), findsOneWidget);
-    expect(find.text('대회'), findsOneWidget);
+    for (final label in <String>['개인', '리그', '대회']) {
+      await tester.scrollUntilVisible(
+        find.text(label),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text(label), findsOneWidget);
+    }
     expect(tester.takeException(), isNull);
   });
 
@@ -110,6 +110,7 @@ void main() {
     await tester.pump();
     expect(find.text('202.0'), findsWidgets);
     expect(find.text('최근 경기 AVG'), findsOneWidget);
+    expect(find.byKey(const Key('recent-average-line-chart')), findsOneWidget);
     expect(find.text('2게임'), findsOneWidget);
     expect(find.text('총점 404'), findsOneWidget);
     expect(find.text('AVG 202.0'), findsOneWidget);

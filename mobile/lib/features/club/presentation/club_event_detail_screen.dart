@@ -10,6 +10,7 @@ import 'package:bowlingmanager_mobile/features/club/presentation/club_event_admi
 import 'package:bowlingmanager_mobile/features/club/presentation/club_team_competition_card.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_team_results_card.dart';
 import 'package:bowlingmanager_mobile/features/club/presentation/club_event_competition_card.dart';
+import 'package:bowlingmanager_mobile/features/club/share/club_event_share.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +33,7 @@ class ClubEventDetailScreen extends ConsumerStatefulWidget {
 
 class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
   bool _working = false;
+  bool _sharing = false;
   String _attendanceFilter = 'ATTENDING';
   bool _initialSectionHandled = false;
   final GlobalKey _competitionKey = GlobalKey();
@@ -53,6 +55,13 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
       appBar: AppBar(
         title: const Text('일정 상세'),
         actions: <Widget>[
+          if (state.value case final ClubEvent event)
+            IconButton(
+              key: const Key('club-event-share'),
+              tooltip: '일정 공유',
+              onPressed: _sharing ? null : () => _shareEvent(event),
+              icon: const Icon(Icons.share_outlined),
+            ),
           if (state.value?.canManage == true)
             PopupMenuButton<String>(
               onSelected: (String value) {
@@ -199,6 +208,26 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _shareEvent(ClubEvent event) async {
+    if (_sharing) return;
+    final RenderBox? box = context.findRenderObject() as RenderBox?;
+    final Rect? origin = box == null || !box.hasSize
+        ? null
+        : box.localToGlobal(Offset.zero) & box.size;
+    setState(() => _sharing = true);
+    try {
+      await shareClubEvent(event, sharePositionOrigin: origin);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('일정을 공유하지 못했습니다. 다시 시도해주세요.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
   }
 
   List<Widget> _teamResultWidgets(

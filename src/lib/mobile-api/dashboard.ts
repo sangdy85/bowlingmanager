@@ -264,7 +264,8 @@ const defaultDependencies: MobileDashboardDependencies = {
                 },
             },
         });
-        const selected = candidates.find((event) => eventDateTime(event.eventDate, event.eventTime) >= now);
+        // The query includes today's events until midnight KST, even after kickoff.
+        const selected = candidates[0];
         if (!selected) return null;
 
         const attendance = selected.attendances[0];

@@ -238,6 +238,50 @@ test('dashboard returns the additive next event without changing legacy metrics'
     assert.equal(result.gameCount, 0);
 });
 
+test('dashboard keeps a started event through its KST date and moves on at midnight', async (t) => {
+    t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-19T14:59:59.999Z') });
+    const user = { id: 'user-a', name: '볼러', teamMemberships: [team('one', 'MEMBER')] };
+    const event = (id, date) => ({
+        id, teamId: 'one', title: id, eventDate: new Date(`${date}T00:00:00+09:00`),
+        eventTime: '09:00', location: '볼링장', gameType: '정기전',
+        attendanceEnabled: true, laneDrawEnabled: false, laneDrawMode: 'BULK',
+        laneDrawStatus: 'NOT_STARTED', competitionEnabled: false, competitionType: null,
+        competitionStatus: 'DRAFT', team: { name: 'one', bowlerHiddenEnabled: false },
+        attendances: [], laneAssignments: [], competitionTeams: [], eventCompetitionParticipants: [],
+        _count: { attendances: 0, guests: 0 },
+    });
+    const events = [event('yesterday', '2026-10-18'), event('today', '2026-10-19'), event('tomorrow', '2026-10-20')];
+    const queries = [];
+    const statistics = loadTs('src/lib/personal-statistics.ts', { '@/lib/prisma': {} });
+    const service = loadTs('src/lib/mobile-api/dashboard.ts', {
+        '@/lib/prisma': {
+            user: { findUnique: async () => user },
+            score: { findMany: async () => [] },
+            teamMember: { findMany: async () => [] },
+            teamEvent: { findMany: async (query) => {
+                queries.push(query);
+                return events.filter((item) => item.eventDate >= query.where.eventDate.gte);
+            } },
+        },
+        '@/lib/personal-statistics': {
+            ...statistics,
+            getPersonalStatisticsData: async () => ({ integratedRecords: [], officialRecords: [] }),
+            getAllPersonalStatisticsData: async () => ({ allRecords: [] }),
+        },
+    });
+    const beforeMidnight = await service.getMobileDashboard('user-a', 2026);
+    assert.equal(beforeMidnight.nextEvent.eventId, 'today');
+    assert.equal(beforeMidnight.nextEvent.dateTime, '2026-10-19T00:00:00.000Z');
+    assert.equal(queries[0].where.eventDate.gte.toISOString(), '2026-10-18T15:00:00.000Z');
+    assert.deepEqual(queries[0].where.teamId.in, ['one']);
+    assert.deepEqual(queries[0].orderBy, [{ eventDate: 'asc' }, { eventTime: 'asc' }, { id: 'asc' }]);
+
+    t.mock.timers.setTime(Date.parse('2026-10-19T15:00:00.000Z'));
+    assert.equal((await service.getMobileDashboard('user-a', 2026)).nextEvent.eventId, 'tomorrow');
+    t.mock.timers.setTime(Date.parse('2026-10-20T15:00:00.000Z'));
+    assert.equal((await service.getMobileDashboard('user-a', 2026)).nextEvent, null);
+});
+
 test('dashboard preserves calendar season dates and prioritizes explicit member ranking', () => {
     assert.equal(dashboard.dashboardSeasonDateKey(new Date('2024-12-31T15:00:00.000Z')), '2025-01-01');
     assert.equal(dashboard.dashboardSeasonDateKey(new Date('2025-12-30T15:00:00.000Z')), '2025-12-31');

@@ -11,6 +11,7 @@ import 'package:bowlingmanager_mobile/features/club/application/club_event_provi
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_models.dart';
 import 'package:bowlingmanager_mobile/features/home/application/dashboard_providers.dart';
 import 'package:bowlingmanager_mobile/features/home/domain/dashboard.dart';
+import 'package:bowlingmanager_mobile/features/home/presentation/recent_average_chart.dart';
 import 'package:bowlingmanager_mobile/features/onboarding/application/onboarding_providers.dart';
 import 'package:bowlingmanager_mobile/features/records/share/score_share_data.dart';
 import 'package:bowlingmanager_mobile/features/records/share/score_share_preview_sheet.dart';
@@ -172,7 +173,7 @@ class _DashboardContent extends StatelessWidget {
           const SizedBox(height: 28),
           const _SectionTitle(title: '최근 경기 AVG'),
           const SizedBox(height: 12),
-          _TrendCard(sessions: dashboard.recentSessions),
+          RecentAverageChart(sessions: dashboard.recentSessions),
           const SizedBox(height: 28),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1267,93 +1268,6 @@ class _EmptyTeamCard extends StatelessWidget {
           child: Text(
             '가입한 동호회가 없습니다.',
             style: TextStyle(color: AppColors.textSecondary),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TrendCard extends StatelessWidget {
-  const _TrendCard({required this.sessions});
-
-  final List<GameSession> sessions;
-
-  @override
-  Widget build(BuildContext context) {
-    if (sessions.isEmpty) {
-      return const Card(
-        child: SizedBox(
-          height: 120,
-          child: Center(
-            child: Text(
-              '최근 기록이 없습니다.',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
-        ),
-      );
-    }
-
-    final List<GameSession> visibleSessions = sessions
-        .take(7)
-        .toList(growable: false)
-        .reversed
-        .toList(growable: false);
-    final double chartMaximum = visibleSessions.fold<double>(
-      300,
-      (maximum, session) =>
-          session.average > maximum ? session.average : maximum,
-    );
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
-        child: SizedBox(
-          height: 120,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: visibleSessions.asMap().entries.map((
-              MapEntry<int, GameSession> entry,
-            ) {
-              final bool latest = entry.key == visibleSessions.length - 1;
-              final double heightFactor = (entry.value.average / chartMaximum)
-                  .clamp(0.04, 1.0)
-                  .toDouble();
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: <Widget>[
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.bottomCenter,
-                          child: FractionallySizedBox(
-                            heightFactor: heightFactor,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: latest
-                                    ? AppColors.primaryBright
-                                    : AppColors.surfaceElevated,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        entry.value.average.toStringAsFixed(1),
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
           ),
         ),
       ),

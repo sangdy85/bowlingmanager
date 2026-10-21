@@ -1253,7 +1253,7 @@ class _ClubSeasonRankingGridState extends State<ClubSeasonRankingGrid> {
       child: SizedBox(
         height: (_headerHeight + widget.rows.length * _rowHeight).clamp(
           _headerHeight,
-          460,
+          600,
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1359,7 +1359,7 @@ class _ClubSeasonRankingGridState extends State<ClubSeasonRankingGrid> {
                   child: SizedBox(
                     width: rightWidth,
                     height: (_headerHeight + widget.rows.length * _rowHeight)
-                        .clamp(_headerHeight, 460),
+                        .clamp(_headerHeight, 600),
                     child: Column(
                       children: <Widget>[
                         _GridCell(
