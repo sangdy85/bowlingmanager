@@ -1,0 +1,54 @@
+진승 쇼핑몰 볼링공 정보 추가 — 2026-10-20
+
+작업: growth-001 / codex/release-1.2.1 / HEAD 530dca6
+출처: https://bowlingkoreamall.com/shop/big_section.php?cno1=1001
+
+수집 및 반영
+목록 3페이지의 43개 제품을 각각 상세 페이지와 대조했다. 기존 ROCKET A.I. 1종은 원문 링크를 추가하고 42종을 새로 작성해, 기존 18종을 포함한 카탈로그는 총 60종(볼링공 53, 볼링화 2, 가방 2, 관리용품 3)이다.
+브랜드는 STORM / ROTO GRIP / 900 GLOBAL이며, 신제품 42종이라는 뜻이 아니라 사이트에 새로 소개한 제품 42종이다. 출시일은 확인하지 않은 채 만들지 않았다.
+각 신규 글에는 대표 사진, 실제 커버·코어·공장 표면, 같은 계열 제품과의 구분점, 구매 전 확인 항목과 원문 링크를 제공한다. 진승 쇼핑몰 자료는 제조사 직접 자료·회원 후기와 구분해서 표시한다.
+가격·재고·구매 가능한 무게는 변할 수 있어 고정값으로 게시하지 않았다. 무게별 RG/DIFF 수치는 새 원고에 추정해 채우지 않았고 원문 사양표 확인을 안내했다.
+원문 제품 이미지는 변경 없이 로컬 정적 파일로 보관했고, 기존 Next Image로 목록·상세에 표시한다. 원본 사진 42개의 출처 URL·크기·확인일은 제품 데이터에 남겼다. 기존 18종 JSON은 바이트 단위로 동일하다.
+
+주요 사양 구분
+- EQUINOX HYBRID: A2S Hybrid (OCR의 A25 오독을 원본 이미지로 교정)
+- CONCEPT / CONCEPT PURPLE: ARC / ARC+ Pearl
+- TROPICAL SURGE SILVER/PURPLE / BLACK/BLUE/PINK: Reactor Pearl / Solid
+- MIX-BLACKOUT: U1S Hybrid Urethane. 다른 여러 MIX 색상의 Pearl과 구분
+- ICE 30 SNOW WHITE: Solid Polyester. 외관을 보고 Pearl로 추정하지 않음
+- 일반 PITCH BLACK과 78/U: Controll Solid / Controll 2-78 구분. 대회 사용 가능 여부 보장 없음
+
+변경 파일
+content/equipment/koreamall-20261020.json
+public/images/equipment/koreamall/ (42개)
+src/lib/manufacturer-equipment.ts
+src/components/equipment/ManufacturerEquipment.tsx
+src/app/equipment/products/[slug]/page.tsx
+src/app/equipment/page.tsx
+src/app/sitemap.ts
+tests/public-page-content.test.cjs
+tests/public-web.test.cjs
+이 보고서
+
+검증
+공개 제품·기존 회원 용품 기능 23개, 공개 웹·AdSense 회귀 23개, 새 커뮤니티 테스트 DB 생성 및 실제 액션 검증 1개: 총 47개 통과.
+실제 서버 페이지/컴포넌트 렌더링, 43개 출처 커버리지, ROCKET 중복 방지, 기존 원고/사진 보존, 60개 사진 해독·중복 없음, 후기 분리·검색·404·canonical·robots·sitemap을 검증했다.
+초기 회원 용품 테스트는 이전 실행의 상품 글이 남은 테스트 DB를 복사해 실패했다. 기존 도구로 새 임시 SQLite DB를 만든 뒤 동일 테스트가 통과했다. 제품 처리 로직은 변경하지 않았다.
+초기 별도 빌드는 상속된 DATABASE_URL 때문에 격리 DB 경로가 올바르지 않아 실패했다. 미리보기 전용 절대 DB 경로를 명시하고 재검증했다. 테스트 중 생긴 빈 파일만 확인 후 정리했으며 기존 DB·환경파일은 보존했다.
+
+보존 범위
+작업 시작 전 28개 미커밋 파일은 SHA-256 비교에서 동일하다. 앞선 회원 기록 자동 연결, Flutter, 모바일 API 및 기존 테스트 수정을 유지했다.
+홈, 로그인/인증, 경기 계산·저장, BAND, Prisma schema/migration, package/lockfile 변경 없음. 운영 서비스·DB 접근 및 데이터 변경 없음.
+commit / push / merge / 운영 배포를 하지 않았다.
+
+자료
+scratch/equipment-koreamall-20261020/source-products.json : 43종 수집 원문·사진 및 사양 이미지 해시
+scratch/equipment-koreamall-20261020/ : 원문 대조, 테스트·빌드·HTTP 검증 자료 (Git 제외)
+로컬 미리보기: http://127.0.0.1:3123/equipment#manufacturer-equipment
+
+최종 검증 완료
+Production build: K5O-YNgWmgtgE699-U03a / exit 0. 내부 lint·TypeScript 통과, 기존 경고 17개(새 경고 없음).
+HTTP 136건 통과: 신규 상세 42종, 원본/최적화 사진 84건, ROCKET 링크·검색·후기·분류·404·sitemap·ads.txt·robots 포함.
+실제 브라우저: 1265 px 기본 화면에서 3열 60종 목록, 상세 사진·사양·출처·원문 링크 및 목록 복귀 확인. 문서 가로 넘침 없음, 콘솔 오류 0. 모바일 viewport 검증은 이번 작업에서 수행하지 않음.
+최종 src·content·제품 사진 515개와 빌드 입력 SHA-256 일치. API 84개 유지. 기존 미커밋 파일 28개 해시 일치.
+미리보기 서버는 사용자가 확인할 수 있도록 127.0.0.1:3123에 유지. 가상 테스트 DB 사용. 운영 미배포.

@@ -1,0 +1,975 @@
+{
+  "checkedAt": "2026-10-21",
+  "sourceName": "트윈스스포츠",
+  "listingUrl": "https://www.twinssport.co.kr/shop/list.php?ca_id=10",
+  "listingTotal": 23,
+  "editorialNote": "첫 목록16종과 더보기7종의 상세 본문·대표사진 확인. 판매처 설명과 독립 시험을 구분하며 가격·재고·출시일·대회 사용 허용을 보장하지 않음.",
+  "products": [
+    {
+      "slug": "motiv-jackal-howl",
+      "brand": "MOTIV",
+      "model": "Jackal Howl",
+      "category": "BALL",
+      "title": "MOTIV Jackal Howl · 자칼하울",
+      "summary": "트윈스스포츠가 리액티브 HF5 재질로 소개한 자칼하울. 레드·블루·블랙 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1735147890",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 자칼하울"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "리액티브 HF5"
+        ],
+        [
+          "색상(판매처 표기)",
+          "레드·블루·블랙"
+        ]
+      ],
+      "paragraphs": [
+        "자칼 하울은 판매처가 HF5 재질로 소개한 자칼 계열 모델이다. 본문에는 V2 코어에 대한 설명도 있지만, 코어명 철자와 무게별 구성은 원문 사양 이미지에서 다시 확인하는 편이 좋다.",
+        "자칼이라는 계열명만으로 다른 자칼 모델과 같은 커버라고 판단하지 않는다. 비교할 때는 하울이라는 모델명과 HF5 표기를 함께 기록해 두면 제품을 구분하기 쉽다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-jackal-howl.png",
+        "alt": "MOTIV Jackal Howl 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1735147890/thumb-JackalHowlFront1080_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-venom-exj",
+      "brand": "MOTIV",
+      "model": "Venom EXJ",
+      "category": "BALL",
+      "title": "MOTIV Venom EXJ · 베놈 EXJ",
+      "summary": "트윈스스포츠가 MXC Solid Reactive 재질로 소개한 베놈 EXJ. 퍼플·그린 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1735380299",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 베놈 EXJ"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "MXC Solid Reactive"
+        ],
+        [
+          "색상(판매처 표기)",
+          "퍼플·그린"
+        ]
+      ],
+      "paragraphs": [
+        "베놈 EXJ는 트윈스스포츠가 MXC Solid Reactive 재질로 안내하는 제품이다. 판매처는 베놈 쇼크와의 커버 차이를 설명하므로, 베놈이라는 이름이 같더라도 동일한 제품으로 취급하지 않는다.",
+        "상품명에는 한정판이라는 안내가 포함돼 있다. 사은품이나 판매 구성은 바뀔 수 있으므로 이 소개에서는 고정 혜택으로 게시하지 않고 제품 사양과 현재 구매 조건을 분리해 확인하도록 한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-venom-exj.png",
+        "alt": "MOTIV Venom EXJ 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1735380299/thumb-MTVBVIPVMVenomEXJFrontLogo1080_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-raptor-altitude",
+      "brand": "MOTIV",
+      "model": "Raptor Altitude",
+      "category": "BALL",
+      "title": "MOTIV Raptor Altitude · 랩터 앨티튜드",
+      "summary": "트윈스스포츠가 Infusion™ HV Pearl Reactive 재질로 소개한 랩터 앨티튜드. 퍼플·블루·그린 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1782297755",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 랩터 앨티튜드"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "Infusion™ HV Pearl Reactive"
+        ],
+        [
+          "색상(판매처 표기)",
+          "퍼플·블루·그린"
+        ]
+      ],
+      "paragraphs": [
+        "랩터 앨티튜드의 본문에 명시된 커버는 Infusion HV Pearl Reactive다. 판매처의 색상 안내와 대표 사진을 함께 제공해 랩터 계열의 다른 제품과 구분할 수 있도록 했다.",
+        "랩터 러쉬와 스카이 랩터도 별도 모델로 소개돼 있다. 같은 랩터 이름을 사용하더라도 커버명·마감·구매 무게를 각각 대조해야 하며, 이번 글에서 확인하지 않은 코어 수치는 채워 넣지 않았다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-raptor-altitude.png",
+        "alt": "MOTIV Raptor Altitude 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1782297755/thumb-RaptorAltitudeFront1000x1000_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-trident-odyssey",
+      "brand": "MOTIV",
+      "model": "Trident Odyssey",
+      "category": "BALL",
+      "title": "MOTIV Trident Odyssey · 트라이던트 오딧세이",
+      "summary": "트윈스스포츠가 coercion™ FYS Solid Reactive 재질로 소개한 트라이던트 오딧세이. 네이비·블루·레드 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1782296982",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 트라이던트 오딧세이"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "coercion™ FYS Solid Reactive"
+        ],
+        [
+          "색상(판매처 표기)",
+          "네이비·블루·레드"
+        ]
+      ],
+      "paragraphs": [
+        "트라이던트 오딧세이는 판매처 본문에 coercion FYS Solid Reactive라고 적혀 있는 모델이다. 네이비·블루·레드 색상과 트라이던트 로고를 제품 식별 자료로 함께 확인할 수 있다.",
+        "단순히 솔리드라는 구분만으로 다른 공과 반응이 같다고 볼 수 없다. 비교할 제품의 정확한 커버명과 공장 마감, 구매할 무게의 코어 표기를 원문에서 나란히 확인하는 방식이 유용하다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-trident-odyssey.png",
+        "alt": "MOTIV Trident Odyssey 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1782296982/thumb-MTVBTDODYTridentOdysseyFront1000x1000_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-primal-rage-evolution",
+      "brand": "MOTIV",
+      "model": "Primal Rage Evolution",
+      "category": "BALL",
+      "title": "MOTIV Primal Rage Evolution · 프라이멀 레이지 에볼루션",
+      "summary": "트윈스스포츠가 FYJ 리액티브 펄 재질로 소개한 프라이멀 레이지 에볼루션. 레드 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1734369091",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 프라이멀 레이지 에볼루션"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "FYJ 리액티브 펄"
+        ],
+        [
+          "색상(판매처 표기)",
+          "레드"
+        ]
+      ],
+      "paragraphs": [
+        "프라이멀 레이지 에볼루션은 판매처가 FYJ 펄 재질과 임펄스 V2 코어를 설명하는 모델이다. 원문은 중간 오일 조건의 제품으로 소개하지만, 이는 판매처의 제품 안내이며 실제 사용자 시험 결과를 뜻하지 않는다.",
+        "이전 프라이멀 레이지와 에볼루션은 이름을 구분해 확인한다. 비슷한 붉은 외관만 보고 같은 모델로 판단하기보다 에볼루션 표기와 커버 사양을 확인해 구매 목록을 정리하는 편이 좋다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-primal-rage-evolution.png",
+        "alt": "MOTIV Primal Rage Evolution 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1734369091/thumb-MTVBPREVOPrimalRageEvolutionFront1080_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-raptor-rush",
+      "brand": "MOTIV",
+      "model": "Raptor Rush",
+      "category": "BALL",
+      "title": "MOTIV Raptor Rush · 랩터 러쉬",
+      "summary": "트윈스스포츠가 리액티브 펄 재질로 소개한 랩터 러쉬. 골드 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1732954847",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 랩터 러쉬"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "리액티브 펄"
+        ],
+        [
+          "색상(판매처 표기)",
+          "골드"
+        ]
+      ],
+      "paragraphs": [
+        "랩터 러쉬는 판매처가 골드 색상의 펄 재질 제품으로 소개한다. 본문에는 대칭 코어와 헤비 오일 조건에 대한 설명이 있으나, 그 설명을 모든 레인에서의 성능 보장으로 확대하지 않는다.",
+        "앨티튜드·스카이 랩터와 비교한다면 같은 계열명보다 정확한 커버와 표면 처리를 먼저 대조한다. 원문의 RG·차동값은 무게 기준이 함께 확인돼야 하므로 이 글에서는 단일 숫자로 옮기지 않았다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-raptor-rush.png",
+        "alt": "MOTIV Raptor Rush 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1732954847/thumb-1732962554_8669_MTVBRPRSHRaptorRushFront1080_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-ripcord-launch",
+      "brand": "MOTIV",
+      "model": "Ripcord Launch",
+      "category": "BALL",
+      "title": "MOTIV Ripcord Launch · 립코드 런치",
+      "summary": "트윈스스포츠가 리액티브 펄 재질로 소개한 립코드 런치. 퍼플·네이비·핑크 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1675159215",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 립코드 런치"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "리액티브 펄"
+        ],
+        [
+          "색상(판매처 표기)",
+          "퍼플·네이비·핑크"
+        ]
+      ],
+      "paragraphs": [
+        "립코드 런치는 판매처 본문에서 펄 재질과 대칭 Torx V2 코어를 소개하는 모델이다. 원문은 중간 오일 상황에 관한 설명을 제공하며, 이 글은 해당 자료를 제품 구분에 필요한 항목 위주로 정리했다.",
+        "립코드 플라이트는 별도의 커버명을 가진 모델이다. 런치와 플라이트를 단순 색상 옵션으로 생각하지 말고, 커버·코어·마감 표기를 각각 비교한 뒤 선택한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-ripcord-launch.png",
+        "alt": "MOTIV Ripcord Launch 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1675159215/thumb-MTVBRCLNCRipcordLaunchFront1000x1000_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-supra-gt",
+      "brand": "MOTIV",
+      "model": "Supra GT",
+      "category": "BALL",
+      "title": "MOTIV Supra GT · 수프라 GT",
+      "summary": "트윈스스포츠가 리액티브 펄 재질로 소개한 수프라 GT. 그린·블랙·그레이 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1732966601",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 수프라 GT"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "리액티브 펄"
+        ],
+        [
+          "색상(판매처 표기)",
+          "그린·블랙·그레이"
+        ]
+      ],
+      "paragraphs": [
+        "수프라 GT는 판매처가 펄 재질과 쿼드파이어 V2 코어를 설명하는 제품이다. 수프라 랠리와의 차이에 대한 소개도 있으므로 GT라는 세부 모델명을 함께 확인해야 한다.",
+        "원문에는 여러 무게의 코어 수치에 관한 설명이 포함된다. 구매할 무게가 정해지면 그 무게의 사양표를 직접 확인하고, 다른 무게의 수치를 하나의 대표값처럼 비교하지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-supra-gt.png",
+        "alt": "MOTIV Supra GT 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1732966601/thumb-MTVBSPPRLSupraGTFront1080_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-subzero-forge",
+      "brand": "MOTIV",
+      "model": "Subzero Forge",
+      "category": "BALL",
+      "title": "MOTIV Subzero Forge · 서브제로 포지",
+      "summary": "트윈스스포츠가 리액티브 솔리드 재질로 소개한 서브제로 포지. 스카이블루·화이트·블루 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1732964652",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 서브제로 포지"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "리액티브 솔리드"
+        ],
+        [
+          "색상(판매처 표기)",
+          "스카이블루·화이트·블루"
+        ]
+      ],
+      "paragraphs": [
+        "서브제로 포지는 판매처가 솔리드 재질로 구분하고 디토네이터 코어와 레버리지 MXC 커버를 설명하는 모델이다. 포지라는 계열 이름 뒤의 서브제로 표기가 제품 구분의 핵심이다.",
+        "뉴클리어 포지는 펄, 포지 엠버는 하이브리드로 안내된다. 같은 포지 계열이라도 솔리드·펄·하이브리드를 각각 확인해 비교표를 만들고, 외관의 색상만으로 용도를 정하지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-subzero-forge.png",
+        "alt": "MOTIV Subzero Forge 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1732964652/thumb-MTVBFGSUBSubzeroForgeFrontLogo1080_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-pride-liberty",
+      "brand": "MOTIV",
+      "model": "Pride Liberty",
+      "category": "BALL",
+      "title": "MOTIV Pride Liberty · 프라이드 리버티",
+      "summary": "트윈스스포츠가 리액티브 하이브리드 재질로 소개한 프라이드 리버티. 레드·네이비·블루 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1732964784",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 프라이드 리버티"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "리액티브 하이브리드"
+        ],
+        [
+          "색상(판매처 표기)",
+          "레드·네이비·블루"
+        ]
+      ],
+      "paragraphs": [
+        "프라이드 리버티는 판매처가 하이브리드 재질과 비대칭 도미니언 코어를 설명하는 제품이다. 중간 오일 조건에 대한 원문 소개는 선택 참고 자료로 구분해 읽는다.",
+        "프라이드 다이너스티는 솔리드로 소개되는 다른 모델이다. 프라이드 계열을 비교할 때는 리버티와 다이너스티의 이름, 커버 구분, 현재 표면 상태를 각각 적어 두면 혼동을 줄일 수 있다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-pride-liberty.png",
+        "alt": "MOTIV Pride Liberty 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1732964784/thumb-MTVBPDLIBPrideLibertyFront1080_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-top-thrill-blue-green",
+      "brand": "MOTIV",
+      "model": "Top Thrill Blue Green",
+      "category": "BALL",
+      "title": "MOTIV Top Thrill Blue Green · 탑 스릴 블루그린",
+      "summary": "트윈스스포츠가 XP 리액티브 펄 재질로 소개한 탑 스릴 블루그린. 블루·그린 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1630904964",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 탑 스릴 블루그린"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "XP 리액티브 펄"
+        ],
+        [
+          "색상(판매처 표기)",
+          "블루·그린"
+        ]
+      ],
+      "paragraphs": [
+        "탑 스릴 블루그린은 판매처가 XP 펄 재질로 표시한 색상 모델이다. 원문은 건조한 레인에 관한 제품 설명을 제공하지만 특정 스코어나 일정한 훅 크기를 보장하지는 않는다.",
+        "탑 스릴 퍼플레드 역시 XP 펄로 안내된다. 두 페이지의 색상과 구매 가능한 무게를 각각 확인하고, 색상만 다르다는 이유로 모든 무게의 코어 구성이 같다고 추정하지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-top-thrill-blue-green.png",
+        "alt": "MOTIV Top Thrill Blue Green 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1630904964/thumb-MTVBTHTBGTopThrillGrnBluBallBoxLabelImage_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-top-thrill-purple-red",
+      "brand": "MOTIV",
+      "model": "Top Thrill Purple Red",
+      "category": "BALL",
+      "title": "MOTIV Top Thrill Purple Red · 탑 스릴 퍼플레드",
+      "summary": "트윈스스포츠가 XP 리액티브 펄 재질로 소개한 탑 스릴 퍼플레드. 퍼플·레드 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1630904587",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 탑 스릴 퍼플레드"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "XP 리액티브 펄"
+        ],
+        [
+          "색상(판매처 표기)",
+          "퍼플·레드"
+        ]
+      ],
+      "paragraphs": [
+        "탑 스릴 퍼플레드는 판매처 본문의 XP 펄 표기를 기준으로 소개했다. 퍼플·레드 조합은 블루그린 모델과 구분할 수 있는 시각적 정보이며, 색상 자체가 성능 등급을 의미하지는 않는다.",
+        "블루그린과 비교할 때는 같은 XP 표기뿐 아니라 구매할 무게의 사양과 구성도 대조한다. 원하는 색상이 실제로 주문 가능한지는 제품 링크에서 현재 옵션을 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-top-thrill-purple-red.png",
+        "alt": "MOTIV Top Thrill Purple Red 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1630904587/thumb-MTVBTHTPRTopThrillPrpRedBallBoxLabelImage_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-nuclear-forge",
+      "brand": "MOTIV",
+      "model": "Nuclear Forge",
+      "category": "BALL",
+      "title": "MOTIV Nuclear Forge · 뉴클리어 포지",
+      "summary": "트윈스스포츠가 리액티브 펄 재질로 소개한 뉴클리어 포지. 그린·네이비·블루 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1732964969",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 뉴클리어 포지"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "리액티브 펄"
+        ],
+        [
+          "색상(판매처 표기)",
+          "그린·네이비·블루"
+        ]
+      ],
+      "paragraphs": [
+        "뉴클리어 포지는 판매처가 펄 재질로 구분하고 디토네이터 코어 및 HVP 커버에 대해 설명하는 제품이다. 원문은 중간보다 많은 오일 조건을 안내하므로 그 분류를 출처와 함께 참고한다.",
+        "서브제로 포지와 포지 엠버는 이름과 커버 구분이 다른 제품이다. 보유한 포지 계열 공과 비교할 때 정확한 모델명, 커버, 공장 마감과 현재 표면을 따로 기록하는 편이 낫다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-nuclear-forge.png",
+        "alt": "MOTIV Nuclear Forge 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1732964969/thumb-MTVBFGNCLNuclearForgeFront1080x1080_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-allegiant-sniper",
+      "brand": "MOTIV",
+      "model": "Allegiant Sniper",
+      "category": "BALL",
+      "title": "MOTIV Allegiant Sniper · 엘리전트 스나이퍼",
+      "summary": "트윈스스포츠가 폴리우레탄 재질로 소개한 엘리전트 스나이퍼. 오렌지 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1732966237",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 엘리전트 스나이퍼"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "폴리우레탄"
+        ],
+        [
+          "색상(판매처 표기)",
+          "오렌지"
+        ]
+      ],
+      "paragraphs": [
+        "엘리전트 스나이퍼는 판매처가 폴리우레탄 재질과 Hollow-Point 코어를 설명하는 스페어용 제품이다. 이 재질 표기를 일반 폴리에스터나 다른 우레탄 제품의 표기로 임의 변경하지 않았다.",
+        "같은 스나이퍼 계열의 미드나잇·레이저 모델과는 색상과 제품명을 구분한다. 스페어용이라는 분류가 자동 성공을 뜻하는 것은 아니며, 원하는 무게와 지공 조건을 원문에서 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-allegiant-sniper.png",
+        "alt": "MOTIV Allegiant Sniper 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1732966237/thumb-MTVBSPALGAllegiantSniperFront1000x1000_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-midnight-sniper",
+      "brand": "MOTIV",
+      "model": "Midnight Sniper",
+      "category": "BALL",
+      "title": "MOTIV Midnight Sniper · 미드나잇 스나이퍼",
+      "summary": "트윈스스포츠가 폴리우레탄 재질로 소개한 미드나잇 스나이퍼. 블랙·그레이 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1736330189",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 미드나잇 스나이퍼"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "폴리우레탄"
+        ],
+        [
+          "색상(판매처 표기)",
+          "블랙·그레이"
+        ]
+      ],
+      "paragraphs": [
+        "미드나잇 스나이퍼는 블랙·그레이 색상과 폴리우레탄 재질로 안내되는 제품이다. 판매처 설명에는 Hollow-Point 코어가 함께 소개돼 있어 해당 원문을 제품 비교의 출발점으로 삼을 수 있다.",
+        "상품명에 우레탄과 하드볼이라는 단어가 함께 등장하므로, 짧은 검색 제목보다 상세의 실제 재질 표기를 우선 확인한다. 엘리전트·레이저 스나이퍼와도 정확한 모델명을 구분해 선택한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-midnight-sniper.png",
+        "alt": "MOTIV Midnight Sniper 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1736330189/thumb-MTVBSPGKMidnightSniperFront1000x1000_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-laser-sniper",
+      "brand": "MOTIV",
+      "model": "Laser Sniper",
+      "category": "BALL",
+      "title": "MOTIV Laser Sniper · 레이저 스나이퍼",
+      "summary": "트윈스스포츠가 폴리우레탄 재질로 소개한 레이저 스나이퍼. 네온 그린 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1732966363",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 레이저 스나이퍼"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "폴리우레탄"
+        ],
+        [
+          "색상(판매처 표기)",
+          "네온 그린"
+        ]
+      ],
+      "paragraphs": [
+        "레이저 스나이퍼는 판매처가 네온 그린 색상의 폴리우레탄 제품으로 소개한다. 본문은 Hollow-Point 코어와 스페어 처리 용도를 설명하며, 이 소개는 그러한 판매처 자료를 요약한 것이다.",
+        "엘리전트의 오렌지, 미드나잇의 블랙·그레이와 구분되는 색상 모델이다. 같은 계열 안에서도 선택 무게의 코어 구성과 구매 조건은 개별 제품 페이지에서 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-laser-sniper.png",
+        "alt": "MOTIV Laser Sniper 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1732966363/thumb-MTVBSPLSRLaserSniperFront1000x1000_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-sky-raptor",
+      "brand": "MOTIV",
+      "model": "Sky Raptor",
+      "category": "BALL",
+      "title": "MOTIV Sky Raptor · 스카이 랩터",
+      "summary": "트윈스스포츠가 리액티브 펄 재질로 소개한 스카이 랩터. 블루·네이비·그레이 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1732965853",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 스카이 랩터"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "리액티브 펄"
+        ],
+        [
+          "색상(판매처 표기)",
+          "블루·네이비·그레이"
+        ]
+      ],
+      "paragraphs": [
+        "스카이 랩터는 판매처가 펄 재질과 어페이션 V2 코어를 소개하는 모델이다. 원문의 헤비 오일 분류는 판매처의 제품 설명으로 표시하며 독립 성능 평가처럼 제시하지 않는다.",
+        "랩터 러쉬·앨티튜드와 함께 비교할 수 있지만 이름 일부가 같다고 같은 커버는 아니다. 스카이라는 세부 모델명과 정확한 커버·표면 정보를 원문 사양 이미지에서 대조한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-sky-raptor.png",
+        "alt": "MOTIV Sky Raptor 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1732965853/thumb-SkyRaptorFront1000x1000_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-ripcord-flight",
+      "brand": "MOTIV",
+      "model": "Ripcord Flight",
+      "category": "BALL",
+      "title": "MOTIV Ripcord Flight · 립코드 플라이트",
+      "summary": "트윈스스포츠가 Turmoil™ Max Solid 재질로 소개한 립코드 플라이트. 스카이블루 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1782297995",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 립코드 플라이트"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "Turmoil™ Max Solid"
+        ],
+        [
+          "색상(판매처 표기)",
+          "스카이블루"
+        ]
+      ],
+      "paragraphs": [
+        "립코드 플라이트의 본문에는 Turmoil Max Solid 커버가 명시돼 있다. 스카이블루 색상과 플라이트라는 이름을 함께 확인하면 립코드 런치와 제품을 구분할 수 있다.",
+        "상세 본문의 기술 설명이 짧은 제품이므로 확인하지 않은 코어값이나 성능 순위를 보충하지 않았다. 구매할 무게의 코어 구성과 공장 마감은 원문 사양 이미지 또는 판매처 문의로 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-ripcord-flight.png",
+        "alt": "MOTIV Ripcord Flight 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1782297995/thumb-MTVBRCFLTRipcordFlightFront1000x1000_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-blue-tank",
+      "brand": "MOTIV",
+      "model": "Blue Tank",
+      "category": "BALL",
+      "title": "MOTIV Blue Tank · 블루 탱크",
+      "summary": "트윈스스포츠가 M3 Pearl MCP 재질로 소개한 블루 탱크. 블루 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1739714782",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 블루 탱크"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "M3 Pearl MCP"
+        ],
+        [
+          "색상(판매처 표기)",
+          "블루"
+        ]
+      ],
+      "paragraphs": [
+        "블루 탱크는 판매처가 M3 Pearl MCP 재질과 할로겐 V2 코어를 설명하는 모델이다. MCP라는 구체적인 표기를 남겨, 제목에 우레탄이 포함된 다른 제품과 구분해 볼 수 있도록 했다.",
+        "탱크 옐로우재킷의 M5, 탱크 램페이지 펄의 Frixion M6와는 재질 명칭이 다르다. 계열명만으로 같은 재질이라고 묶지 말고 선택 제품의 커버 표기를 비교한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-blue-tank.png",
+        "alt": "MOTIV Blue Tank 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1739714782/thumb-MTVBTKBLUBlueTankFront1000x1000_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-tank-rampage-pearl",
+      "brand": "MOTIV",
+      "model": "Tank Rampage Pearl",
+      "category": "BALL",
+      "title": "MOTIV Tank Rampage Pearl · 탱크 램페이지 펄",
+      "summary": "트윈스스포츠가 Frixion™ M6 Pearl MCP 재질로 소개한 탱크 램페이지 펄. 버건디 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1735378996",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 탱크 램페이지 펄"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "Frixion™ M6 Pearl MCP"
+        ],
+        [
+          "색상(판매처 표기)",
+          "버건디"
+        ]
+      ],
+      "paragraphs": [
+        "탱크 램페이지 펄은 판매처가 Frixion M6 Pearl MCP 재질과 기어 V2 코어를 소개하는 제품이다. 원문의 표면 마감 안내는 판매 당시 정보이므로 실제 구매품의 표면과 함께 확인한다.",
+        "블루 탱크나 옐로우재킷과 비교할 때 MCP 뒤의 세부 명칭과 펄 구분을 함께 적어 둔다. 판매처의 최상급 표현을 객관적인 성능 순위나 대회 사용 허용으로 옮기지는 않았다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-tank-rampage-pearl.png",
+        "alt": "MOTIV Tank Rampage Pearl 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1735378996/thumb-MTVBTKBSTankRampageFront1000x1000_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-pride-dynasty",
+      "brand": "MOTIV",
+      "model": "Pride Dynasty",
+      "category": "BALL",
+      "title": "MOTIV Pride Dynasty · 프라이드 다이너스티",
+      "summary": "트윈스스포츠가 리액티브 솔리드 재질로 소개한 프라이드 다이너스티. 오렌지·네이비·블루 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1732965680",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 프라이드 다이너스티"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "리액티브 솔리드"
+        ],
+        [
+          "색상(판매처 표기)",
+          "오렌지·네이비·블루"
+        ]
+      ],
+      "paragraphs": [
+        "프라이드 다이너스티는 판매처가 솔리드 재질과 비대칭 코어를 설명하는 프라이드 계열 모델이다. 원문의 중간 오일 설명은 제품을 비교할 때 참고할 수 있는 판매처 분류다.",
+        "리버티는 하이브리드로 안내되므로 두 제품을 단순 색상 차이로 취급하지 않는다. 보유 공과의 역할을 비교하려면 정확한 커버, 구매 무게, 공장 마감과 사용 중인 표면 상태를 함께 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-pride-dynasty.png",
+        "alt": "MOTIV Pride Dynasty 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1732965680/thumb-MTVBPDDYNPrideDynastyFront1080x1080_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-tank-yellowjacket",
+      "brand": "MOTIV",
+      "model": "Tank Yellowjacket",
+      "category": "BALL",
+      "title": "MOTIV Tank Yellowjacket · 탱크 옐로우재킷",
+      "summary": "트윈스스포츠가 M5 마이크로셀 폴리머 재질로 소개한 탱크 옐로우재킷. 옐로우 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1693311506",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 탱크 옐로우재킷"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "M5 마이크로셀 폴리머"
+        ],
+        [
+          "색상(판매처 표기)",
+          "옐로우"
+        ]
+      ],
+      "paragraphs": [
+        "탱크 옐로우재킷은 판매처가 M5 마이크로셀 폴리머 재질과 듀라맥스 첨가제에 대해 설명하는 제품이다. 우레탄이라는 검색 분류만으로 재질을 단순화하지 않고 구체적인 MCP 표기를 남겼다.",
+        "블루 탱크의 M3 Pearl, 램페이지 펄의 M6 Pearl과 비교할 때 세부 커버명을 구분한다. 색상 선택과 기술 사양 비교를 분리하고, 대회에 사용할 계획이면 주최 측 장비 규정을 별도로 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-tank-yellowjacket.png",
+        "alt": "MOTIV Tank Yellowjacket 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1693311506/thumb-MTVBTKYELTankYellowJacketFront1000x1000_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    },
+    {
+      "slug": "motiv-forge-ember",
+      "brand": "MOTIV",
+      "model": "Forge Ember",
+      "category": "BALL",
+      "title": "MOTIV Forge Ember · 포지 엠버",
+      "summary": "트윈스스포츠가 리액티브 하이브리드 재질로 소개한 포지 엠버. 레드·그레이·블랙 색상과 원문 제품 정보를 정리했습니다.",
+      "sourceUrl": "https://www.twinssport.co.kr/shop/item.php?it_id=1663060721",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 모델명",
+          "모티브 포지 엠버"
+        ],
+        [
+          "재질·커버(판매처 표기)",
+          "리액티브 하이브리드"
+        ],
+        [
+          "색상(판매처 표기)",
+          "레드·그레이·블랙"
+        ]
+      ],
+      "paragraphs": [
+        "포지 엠버는 판매처가 하이브리드 재질, 디토네이터 코어와 MXC 하이브리드 커버를 설명하는 모델이다. 원문에서 중간부터 많은 오일 조건으로 안내하는 내용을 제품 비교 자료로 구분했다.",
+        "같은 포지 계열의 뉴클리어와 서브제로는 각각 펄·솔리드로 소개된다. 엠버라는 이름과 하이브리드 구분을 함께 확인하고, 현재 표면 상태가 공장 마감과 같은지도 구매 전에 대조한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성·RG·DIFF와 공장 마감을 원문의 사양 이미지에서 확인한다. 무게별 기준을 확인하지 않은 숫자를 대표값으로 사용하지 않는다.",
+        "원문의 가격·재고·무게 옵션·사은품·지공 포함 여부는 달라질 수 있다. 제품 링크에서 현재 주문 조건과 교환·보증 안내를 다시 확인한다.",
+        "판매처 상품명의 공인구 표기를 특정 대회의 장비 허용 보장으로 해석하지 않는다. 참가 대회의 현행 규정과 사용 장비 조건을 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/twins/motiv-forge-ember.png",
+        "alt": "MOTIV Forge Ember 제품 사진 · 트윈스스포츠",
+        "width": 550,
+        "height": 550,
+        "sourceUrl": "https://www.twinssport.co.kr/data/item/1663060721/thumb-MTVBFGMBRForgeEmberFront1000x10001_550x550.png",
+        "credit": "트윈스스포츠 · MOTIV",
+        "checkedAt": "2026-10-21"
+      }
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+진승 쇼핑몰 볼링공 자료 운영 반영 — 2026-10-20
+원인: 앞선 레이스 배포에서 로컬 상품 자료 변경을 제외하여 운영에는 기존18종만 존재. 이번에 상품 변경만 추가 반영.
+저장소: C:\Users\user\Documents\ChatGPT\볼링 사이트 & 앱\growth-001 / codex/release-1.2.1 / HEAD 530dca6e84fc7e9b6517d94db6e156028c4b4aa8
+기존 운영 릴리스: bowling-race-530dca6-0c3f0108a8d8-20261020
+기존 Build: qbtMox71_4PQTy1L2MrpN
+신규 운영 릴리스: equipment-koreamall-530dca6-de6016def98d-20261020
+신규 Build: r78JEOCFhwhPjRBoouXZi
+실제 배포 시각(KST): 2026. 10. 20. PM 5:30:34
+원문: https://bowlingkoreamall.com/shop/big_section.php?cno1=1001
+신규 볼링공42종 + 기존18종 = 전체 용품60종(볼링공53종). 기존ROCKET A.I.는 중복 생성 없이 진승 원문 링크 추가. 목록43종 원문 연결.
+변경48개: 앱/컴포넌트/자료 연결5개, 자료JSON1개, 사진42개.
+- src/app/equipment/page.tsx
+- src/app/equipment/products/[slug]/page.tsx
+- src/app/sitemap.ts
+- src/components/equipment/ManufacturerEquipment.tsx
+- src/lib/manufacturer-equipment.ts
+- content/equipment/koreamall-20261020.json
+- public/images/equipment/koreamall/900-global-portal.jpg
+- public/images/equipment/koreamall/roto-grip-attention-78-u.jpg
+- public/images/equipment/koreamall/roto-grip-attention-b-p.jpg
+- public/images/equipment/koreamall/roto-grip-exit-rush.jpg
+- public/images/equipment/koreamall/roto-grip-gem-blue-sapphire.jpg
+- public/images/equipment/koreamall/roto-grip-gremlin-tour-x.png
+- public/images/equipment/koreamall/roto-grip-hustle-sos.jpg
+- public/images/equipment/koreamall/roto-grip-hustle-vp.jpg
+- public/images/equipment/koreamall/roto-grip-transform-pearl.jpg
+- public/images/equipment/koreamall/storm-code-crush.png
+- public/images/equipment/koreamall/storm-concept-purple.jpg
+- public/images/equipment/koreamall/storm-concept.jpg
+- public/images/equipment/koreamall/storm-epic-summit.png
+- public/images/equipment/koreamall/storm-equinox-hybrid.jpg
+- public/images/equipment/koreamall/storm-hy-road-boost.jpg
+- public/images/equipment/koreamall/storm-hy-road.png
+- public/images/equipment/koreamall/storm-ice-30-flame.jpg
+- public/images/equipment/koreamall/storm-ice-30-snow-white.jpg
+- public/images/equipment/koreamall/storm-ice-storm-cotton-candy.png
+- public/images/equipment/koreamall/storm-ice-storm-marble.jpg
+- public/images/equipment/koreamall/storm-ice-storm-purple-white.jpg
+- public/images/equipment/koreamall/storm-iq-focus.jpg
+- public/images/equipment/koreamall/storm-iq-tour-78-u.jpg
+- public/images/equipment/koreamall/storm-level-up.jpg
+- public/images/equipment/koreamall/storm-lock-axis.jpg
+- public/images/equipment/koreamall/storm-lock-on.jpg
+- public/images/equipment/koreamall/storm-mix-blackout.jpg
+- public/images/equipment/koreamall/storm-mix-daybreak.jpg
+- public/images/equipment/koreamall/storm-mix-r-w-n.jpg
+- public/images/equipment/koreamall/storm-mix-sky-cobalt-violet.png
+- public/images/equipment/koreamall/storm-mix-teal.jpg
+- public/images/equipment/koreamall/storm-mix-ultra-silver.jpg
+- public/images/equipment/koreamall/storm-monsoon.jpg
+- public/images/equipment/koreamall/storm-phaze-crimson.jpg
+- public/images/equipment/koreamall/storm-physix-burst.jpg
+- public/images/equipment/koreamall/storm-pitch-black-78-u.jpg
+- public/images/equipment/koreamall/storm-pitch-black.png
+- public/images/equipment/koreamall/storm-prime-gate.jpg
+- public/images/equipment/koreamall/storm-the-code-black.png
+- public/images/equipment/koreamall/storm-tropical-surge-black-blue-pink.jpg
+- public/images/equipment/koreamall/storm-tropical-surge-silver-purple.jpg
+- public/images/equipment/koreamall/storm-ultimate-motor.jpg
+구성: 출처 표기, 대표 사진, 커버/코어/표면 설명, 구매 전 확인사항, 원문 링크. 원문 가격/재고/출시일/대회 사용 허용을 추정해 추가하지 않음.
+검증: 로컬 public tests35 통과; Linux 레이스/공개페이지 합계108 통과. npm run build 내 Prisma generate/lint/typecheck/Next build 통과. > bowling-score-manager@0.1.0 build | > prisma generate && npm run lint && npm run typecheck && next build | ✔ Generated Prisma Client (v5.22.0) to ./node_modules/@prisma/client in 1.04s | > bowling-score-manager@0.1.0 lint | > eslint src --ext .ts,.tsx | ✖ 17 problems (0 errors, 17 warnings) | > bowling-score-manager@0.1.0 typecheck | > tsc --noEmit --incremental false |  ✓ Compiled successfully in 74s
+후보 및 운영내부 각각 HTTP148건 통과: 60개 상세, 원본사진42, 최적화사진42, 검색/사이트맵/404.
+외부 HTTPS 상품 HTTP148건과 일반서비스16건 통과. 원문 링크43개/카탈로그 중복 없음. ads.txt, 로그인, health, 공개대회/leaderboard, 레이스JS 정상.
+실제 브라우저: 운영 /equipment#manufacturer-equipment 에 카드60개/조건60개 확인. 새 !Q FOCUS 사진 로딩 및 원문링크 확인. PC/모바일390px 상세 가로넘침 없음, 콘솔오류 없음.
+보존: 레이스11개 파일 포함 모든 변경외 운영runtime 파일 해시 동일. API84개 유지. 환경파일 hash동일, DB86개 테이블 행수 유지, migration 없음. 모바일/BAND/사용자 기록 로직 미변경.
+서비스: bowling-manager online, pm2-user.service User=user active/enabled. 자동시작 변경 없음. 새 오류로그0건.
+백업: /home/user/bowling-backups/equipment-koreamall-530dca6-de6016def98d-20261020-before
+롤백: bash /home/user/bowling-deploy/equipment-koreamall-530dca6-de6016def98d-20261020/rollback.sh
+롤백은 바로 이전 레이스 운영버전의 코드/빌드 복원. DB는 되돌리지 않음.
+미검증/미실행: 실제 회원 로그인 후 후기 작성/실제 대회 추첨/결과 저장, BAND OAuth/게시/푸시. 공개카탈로그 소개이며 회원 후기 게시물 건수를 임의로 늘리지 않음.
+로컬 기존110개 파일 SHA256 유지. commit/push/merge 없음. 운영DB migration/seed/reset 없음.
+배포 범위 외의 회원귀속/모바일 등 미커밋 변경은 미배포.
+증빙: scratch/equipment-koreamall-release-20261020/manifest.json, preflight.json, stage-check.json, production-result.json, external-equipment-check.json, external-check.json, server-reconfirmed.json, final-git-status.txt

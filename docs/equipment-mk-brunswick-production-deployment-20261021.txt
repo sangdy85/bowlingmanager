@@ -1,0 +1,32 @@
+BowlingManager MK / Brunswick Korea production rollout — 2026-10-21
+Deployed: 2026-10-21 11:00:13 KST (actual server receipt; no earlier release time rewritten).
+Release: equipment-mk-brunswick-530dca6-831947a9fb9f-20261021
+Build: EKMw-qLcefNXsVt1JQmSg
+Previous release: equipment-twins-530dca6-3cabc9a367f0-20261021
+Previous build: V5IIefJkzv7JTMVHCS8eG
+Git base: 530dca6e84fc7e9b6517d94db6e156028c4b4aa8; uncommitted working-tree patch 831947a9fb9f45cec99222e1089f80574be09a0a3f96b70f38411c74eb2ba680 (not a newly committed production revision).
+
+Products: MK382 source listings + Brunswick Korea88 source listings fully accounted for. New464 + preserved83 =547 equipment products (540 balls /7 others). Duplicate4 source listings merged into corresponding entries;2 source listings linked to existing products.
+469 operating files:3 public equipment modules +2 data bundles +464 real source photos. No dependency,API,mobile,auth,BAND,schema/migration change.
+
+Backups and rollback:
+/home/user/bowling-backups/equipment-mk-brunswick-530dca6-831947a9fb9f-20261021-before
+bash /home/user/bowling-deploy/equipment-mk-brunswick-530dca6-831947a9fb9f-20261021/rollback.sh
+Operating source/build,server-only private environment files,PM2 saved list/systemd unit and consistent SQLite snapshots backed up. Restore script restores source/build/receipt only; it does not replace DB. Rollback unused.
+Prepared from freshly verified latest live source; all3 target modules matched pre-task originals. Existing deploy script inspected; working-tree patch transported rather than falsely claiming git pull deploys uncommitted work.
+Built/tested in separate Linux stage before switching. No development build,local .env,key,fixture DB,uploads or mobile output copied into operating app.
+
+Verification:
+Local114 tests pass,Prisma generate/lint/typecheck/production build pass.17 existing lint warnings,0errors. Local build jnJtfyHT9MFtwF2LrQymo after IPv4-first retry of existing external Google font download.
+Linux npm run build performs Prisma generate+lint+typecheck+Next build:pass.114 tests pass. All84 existing API routes/source hashes preserved.
+Stage HTTP1044 checks,production upstream1044 checks,external www HTTPS1044 checks:pass. All547 details/all23 list pages/all464 new original image assets,2 optimized image samples,source links,sitemap,search,review separation,unknown404 checked.
+General12 external checks across base/www:home/login/centers/mobile-health/ads.txt/race bundle. Non-www canonical redirect as configured;ads.txt remains direct200 text/plain. Login13 static assets200;upstream and Nginx200.
+One checker initially used internal .next URL; corrected verification metadata to actual /_next/static URL,rerun12checks pass. No runtime change required. Warm-up health connection refusal during planned PM2 restart cleared before successful cutover.
+PM2 bowling-manager online pid 226440 at /home/user/bowling-score-manager,port3000. pm2-user.service active/enabled,existing saved list cwd correct;no automatic-start changes/no duplicate registrations/no reboot.
+BAND unconfigured as before. Environment hashes unchanged. DB86 tables,row counts unchanged,quick_check ok,migration not executed. No posts/push/OAuth,draw/result save,or operating test data created.
+New stderr bytes 0;new error lines 0.
+Browser actual www:547 products,24 cards/page,first photos loaded;PC and390x844 mobile no overflow/console errors. Local preview detail/original source links and next5to6 pagination verified. Viewport reset;actual www catalogue left open.
+
+Remaining limits: no independent testing of product performance or image-internal technical charts;current stock/prices/event legality not guaranteed. Source omissions/conflicts are marked (see content report). No real authenticated user management/BAND flow tested.
+Final reconfirmation: same operating build/release,all469 candidate hashes unchanged;131 unrelated initial local files unchanged. git diff --check0. Full local status saved at scratch/equipment-mk-brunswick-release-20261021/final-git-status.txt.
+No commit,push or merge.

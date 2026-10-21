@@ -129,30 +129,32 @@ test('early announcements render their full source-backed copy and remain separa
     assert(!registering.includes('upcoming-announcements-title'));
 });
 
-const manufacturerBundle = require('../content/equipment/manufacturers-20261019.json');
+const escapeHtml = value => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#x27;');
+const allProducts = fixture().load('src/lib/manufacturer-equipment.ts').MANUFACTURER_EQUIPMENT;
 test('manufacturer catalogue preserves review separation and actual category/search filtering', async () => {
     const f = fixture(), products = f.load('src/lib/manufacturer-equipment.ts');
-    assert.equal(products.searchManufacturerEquipment().length, 18);
-    assert.equal(products.searchManufacturerEquipment('', 'BALL', 'INTRO').length, 11);
+    assert.equal(products.searchManufacturerEquipment().length, 547);
+    assert.equal(products.searchManufacturerEquipment('', 'BALL', 'INTRO').length, 540);
     for (const [category, count] of [['SHOES', 2], ['BAG', 2], ['ACCESSORY', 3]]) assert.equal(products.searchManufacturerEquipment('', category).length, count);
-    assert.equal(products.searchManufacturerEquipment('RECKONING').length, 1);
+    assert(products.searchManufacturerEquipment('RECKONING').some(p => p.slug === 'hammer-reckoning'));
     assert.equal(products.searchManufacturerEquipment('', '', 'REVIEW').length, 0);
     const html = await f.render('equipment');
-    assert(html.includes('제조사 자료로 살펴보는 볼링 용품'));
+    assert(html.includes('제조사·판매처 자료로 살펴보는 볼링 용품'));
     assert(html.includes('회원 소개·후기'));
-    for (const product of manufacturerBundle.products) assert(html.includes('/equipment/products/' + product.slug));
+    for (const product of allProducts.slice(0, 24)) assert(html.includes('/equipment/products/' + product.slug));
+    assert(!html.includes('/equipment/products/' + allProducts[24].slug));
     const review = await fixture().render('equipment', {type: 'REVIEW'});
     assert(!review.includes('id="manufacturer-equipment"'));
     assert(review.includes('href="/equipment/new"'));
 });
 test('manufacturer product routes render real copy, official links and canonical metadata without member impersonation', async () => {
     const route = fixture().load('src/app/equipment/products/[slug]/page.tsx');
-    assert.equal(route.generateStaticParams().length, 18);
-    for (const product of manufacturerBundle.products) {
+    assert.equal(route.generateStaticParams().length, 547);
+    for (const product of allProducts) {
         const params = Promise.resolve({slug: product.slug});
         const html = renderToStaticMarkup(await route.default({params}));
-        assert(html.includes(product.title));
-        assert(html.includes('제조사 공식 제품 페이지'));
+        assert(html.includes(escapeHtml(product.title)));
+        assert(html.includes(product.sourceLinkLabel));
         assert(html.includes(product.sourceUrl.replaceAll('&', '&amp;')));
         assert(html.includes('직접 사용 후기나 독립 성능 시험 결과가 아닙니다'));
         assert(!html.includes('댓글 0'));
@@ -165,22 +167,23 @@ test('manufacturer product routes render real copy, official links and canonical
     await assert.rejects(() => route.default({params: Promise.resolve({slug: 'missing-product'})}), /NOT_FOUND/);
     assert.equal((await route.generateMetadata({params: Promise.resolve({slug: 'missing-product'})})).robots.index, false);
 });
-test('every authored product cites a manufacturer and clearly scopes ball numbers by weight', () => {
-    assert.equal(new Set(manufacturerBundle.products.map(p => p.slug)).size, 18);
-    for (const product of manufacturerBundle.products) {
+test('every authored product cites its actual source and scopes any ball numbers by weight', () => {
+    assert.equal(new Set(allProducts.map(p => p.slug)).size, 547);
+    for (const product of allProducts) {
         const url = new URL(product.sourceUrl);
         assert.equal(url.protocol, 'https:');
-        assert(['www.stormbowling.com', 'hammerbowling.com', 'brunswickbowling.com', 'www.dexterbowling.com', 'www.motivbowling.com', 'ebonite.com'].includes(url.hostname));
+        assert(['www.stormbowling.com', 'hammerbowling.com', 'brunswickbowling.com', 'www.dexterbowling.com', 'www.motivbowling.com', 'ebonite.com', 'bowlingkoreamall.com', 'www.twinssport.co.kr', 'mkbowling.com', 'smartstore.naver.com'].includes(url.hostname));
         assert.equal(url.username, ''); assert.equal(url.password, '');
-        if (product.category === 'BALL') assert(product.specs.some(([label]) => /(?:15|16) lb RG/.test(label)));
+        if (product.category === 'BALL' && product.sourceBadge === '제조사 자료 정리') assert(product.specs.some(([label]) => /(?:15|16) lb RG/.test(label)));
     }
 });
 
-test('catalogue photos are distinct, decodable local assets with manufacturer attribution on cards and details', async () => {
+test('catalogue photos are distinct, decodable local assets with actual source attribution on cards and details', async () => {
     const sharp = require('sharp'), crypto = require('node:crypto'), hashes = new Set();
-    const catalogue = await fixture().render('equipment');
+    const cataloguePages = await Promise.all(Array.from({length: Math.ceil(allProducts.length / 24)}, (_, i) => fixture().render('equipment', {productPage: String(i + 1)})));
+    const catalogue = cataloguePages.join('');
     const route = fixture().load('src/app/equipment/products/[slug]/page.tsx');
-    for (const product of manufacturerBundle.products) {
+    for (const product of allProducts) {
         const photo = product.image;
         assert(photo.src.startsWith('/images/equipment/'));
         const bytes = fs.readFileSync(path.join(__dirname, '../public', photo.src));
@@ -189,15 +192,72 @@ test('catalogue photos are distinct, decodable local assets with manufacturer at
         assert(meta.width >= 300 && meta.height >= 300);
         hashes.add(crypto.createHash('sha256').update(bytes).digest('hex'));
         assert.equal(new URL(photo.sourceUrl).protocol, 'https:');
-        assert.equal(photo.credit, product.brand);
-        assert.equal(photo.checkedAt, manufacturerBundle.checkedAt);
+        assert(photo.credit.includes(product.brand));
+        assert.equal(photo.checkedAt, product.checkedAt);
         for (const html of [catalogue, renderToStaticMarkup(await route.default({params: Promise.resolve({slug: product.slug})}))]) {
             assert(html.includes(encodeURIComponent(photo.src)), 'optimized photo: ' + product.slug);
-            assert(html.includes(photo.alt.replaceAll('&', '&amp;')));
+            assert(html.includes(escapeHtml(photo.alt)));
             assert(html.includes('사진:'));
         }
     }
-    assert.equal(hashes.size, 18, 'different products must not reuse the same photo');
+    assert.equal(hashes.size, 546, 'only MK explicitly documented PLATINUM / WHITE original photo is shared');
+});
+
+test('all 43 Korea Mall listings are represented once without duplicating ROCKET A.I.', async () => {
+    const mall = require('../content/equipment/koreamall-20261020.json');
+    assert.equal(mall.products.length + mall.existingLinks.length, mall.listingTotal);
+    assert.equal(mall.listingTotal, 43);
+    assert.equal(mall.products.length, 42);
+    assert.equal(new Set([...mall.products.map(p => p.sourceUrl), ...mall.existingLinks.map(p => p.sourceUrl)]).size, 43);
+    assert.equal(allProducts.filter(p => p.slug === 'storm-rocket-ai').length, 1);
+    const f = fixture(), catalog = f.load('src/lib/manufacturer-equipment.ts');
+    assert.equal(catalog.searchManufacturerEquipment('900 GLOBAL').length, 1);
+    assert.equal(catalog.searchManufacturerEquipment('ROTO GRIP', 'BALL').filter(p=>p.brand==='ROTO GRIP').length, 8);
+    const page = f.load('src/app/equipment/products/[slug]/page.tsx');
+    const rocket = renderToStaticMarkup(await page.default({params:Promise.resolve({slug:'storm-rocket-ai'})}));
+    assert(rocket.includes('제조사 공식 제품 페이지'));
+    assert(rocket.includes(mall.existingLinks[0].sourceUrl));
+    const original = require('../content/equipment/manufacturers-20261019.json');
+    for (const old of original.products) {
+        const current = catalog.manufacturerEquipment(old.slug);
+        for (const key of ['title','summary','specs','paragraphs','checks','image','sourceUrl','releaseDate']) assert.deepEqual(current[key],old[key]);
+    }
+});
+
+test('Korea Mall copy distinguishes similar models and never presents retailer material as a manufacturer test or a dated launch', async () => {
+    const mall = require('../content/equipment/koreamall-20261020.json');
+    const f=fixture(), route=f.load('src/app/equipment/products/[slug]/page.tsx');
+    for (const p of mall.products) {
+        const url = new URL(p.sourceUrl);
+        assert.equal(url.hostname,'bowlingkoreamall.com');
+        assert.equal(url.pathname,'/shop/detail.php');
+        assert(/^[A-F0-9]{32}$/.test(url.searchParams.get('pno')));
+        assert.equal(p.releaseDate,null);
+        assert.equal(p.category,'BALL');
+        assert(p.specs.some(([k,v])=>k==='커버' && v));
+        assert(p.specs.some(([k,v])=>k==='코어' && v));
+        assert(p.specs.some(([k,v])=>k==='공장 표면' && v));
+        const html=renderToStaticMarkup(await route.default({params:Promise.resolve({slug:p.slug})}));
+        assert(html.includes('판매처 자료 정리'));
+        assert(html.includes('진승 쇼핑몰 제품 페이지'));
+        assert(!html.includes('제조사 공식 제품 페이지'));
+        assert(!html.includes('제조사 해외 출시일'));
+        assert(!/\d{2,3},000원|점수 향상 보장|실제 사용해/.test(html));
+    }
+    const cover = slug=>mall.products.find(p=>p.slug===slug).specs.find(([k])=>k==='커버')[1];
+    assert.equal(cover('storm-equinox-hybrid'),'A2S Hybrid Reactive');
+    assert.notEqual(cover('storm-concept'),cover('storm-concept-purple'));
+    assert.notEqual(cover('storm-pitch-black'),cover('storm-pitch-black-78-u'));
+    assert.notEqual(cover('storm-tropical-surge-silver-purple'),cover('storm-tropical-surge-black-blue-pink'));
+    assert.equal(cover('storm-ice-30-snow-white'),'Solid Polyester');
+    assert.equal(cover('storm-mix-blackout'),'U1S Hybrid Urethane');
+});
+
+test('adding new retailer material does not change the check date of untouched manufacturer products', async () => {
+    const entries=await fixture().load('src/app/sitemap.ts').default();
+    for (const [slug,date] of [['motiv-forge-fuel','2026-10-19'],['storm-rocket-ai','2026-10-20'],['storm-iq-focus','2026-10-20']]) {
+        assert.equal(entries.find(e=>e.url.endsWith('/equipment/products/'+slug)).lastModified.toISOString().slice(0,10),date);
+    }
 });
 
 test('product photo has an accessible missing-image fallback', () => {
@@ -210,6 +270,58 @@ test('product photo has an accessible missing-image fallback', () => {
 test('sitemap publishes the editorial product URLs and preserves existing competition URLs', async () => {
     const f = fixture({notices: [{id: 'preserved-notice', updatedAt: new Date('2026-10-19')} ]});
     const entries = await f.load('src/app/sitemap.ts').default();
-    for (const product of manufacturerBundle.products) assert(entries.some(e => e.url.endsWith('/equipment/products/' + product.slug)));
+    for (const product of allProducts) assert(entries.some(e => e.url.endsWith('/equipment/products/' + product.slug)));
     assert(entries.some(e => e.url.endsWith('/competitions/preserved-notice')));
+});
+
+
+test('Twins catalogue covers all 23 listing products with real local photographs and honest retailer attribution',async()=>{
+ const twins=require('../content/equipment/twins-20261021.json'),f=fixture(),catalog=f.load('src/lib/manufacturer-equipment.ts'),route=f.load('src/app/equipment/products/[slug]/page.tsx');
+ assert.equal(twins.listingTotal,23);assert.equal(twins.products.length,23);assert.equal(new Set(twins.products.map(p=>p.sourceUrl)).size,23);
+ assert.equal(catalog.searchManufacturerEquipment('트윈스스포츠').length,23);assert.equal(catalog.searchManufacturerEquipment('스나이퍼','BALL').length,3);assert.equal(catalog.searchManufacturerEquipment('트윈스스포츠','','REVIEW').length,0);
+ for(const p of twins.products){assert.equal(p.brand,'MOTIV');assert.equal(p.category,'BALL');assert.equal(p.releaseDate,null);assert.equal(p.paragraphs.length,2);assert.equal(new URL(p.sourceUrl).hostname,'www.twinssport.co.kr');assert.equal(new URL(p.sourceUrl).pathname,'/shop/item.php');assert(/^\d+$/.test(new URL(p.sourceUrl).searchParams.get('it_id')));assert(p.image.sourceUrl.includes('/data/item/'));assert(!p.image.sourceUrl.includes('/img/og'));assert(p.specs.some(([key,value])=>key==='재질·커버(판매처 표기)'&&value));assert(!/\d[\d,]*원|성능 보장/.test(p.summary));const html=renderToStaticMarkup(await route.default({params:Promise.resolve({slug:p.slug})}));assert(html.includes('트윈스스포츠 제품 페이지'));assert(html.includes('판매처 자료 정리'));assert(html.includes(p.sourceUrl.replaceAll('&','&amp;')));assert(!html.includes('제조사 해외 출시일'));assert(!html.includes('제조사 공식 제품 페이지'));}
+});
+
+test('Twins addition preserves the previous sixty product originals and their per-product dates',async()=>{
+ const f=fixture(),catalog=f.load('src/lib/manufacturer-equipment.ts'),old=[...require('../content/equipment/koreamall-20261020.json').products,...require('../content/equipment/manufacturers-20261019.json').products];assert.equal(old.length,60);for(const p of old){const current=catalog.manufacturerEquipment(p.slug);for(const key of ['title','summary','specs','paragraphs','checks','image','sourceUrl','releaseDate'])assert.deepEqual(current[key],p[key]);}
+ const entries=await f.load('src/app/sitemap.ts').default();for(const p of require('../content/equipment/twins-20261021.json').products){const entry=entries.find(e=>e.url==='https://www.bowlingmanager.co.kr/equipment/products/'+p.slug);assert(entry);assert.equal(entry.lastModified.toISOString().slice(0,10),'2026-10-21');}assert.equal(entries.find(e=>e.url.endsWith('/equipment/products/storm-iq-focus')).lastModified.toISOString().slice(0,10),'2026-10-20');
+});
+
+
+test('MK all 382 source listings are accounted for with safe specs, variants and preserved existing product', async () => {
+ const bundle=require('../content/equipment/mk-20261021.json'), f=fixture(), catalog=f.load('src/lib/manufacturer-equipment.ts');
+ assert.equal(bundle.listingTotal,382);assert.equal(bundle.products.length,378);assert.equal(bundle.listingCoverage.length,382);assert.equal(new Set(bundle.listingCoverage.map(p=>p.sourceUrl)).size,382);
+ for(const item of bundle.listingCoverage){const p=catalog.manufacturerEquipment(item.slug);assert(p);assert([p.sourceUrl,...p.additionalSources.map(s=>s.url)].includes(item.sourceUrl));}
+ const byId=id=>bundle.products.find(p=>new URL(p.sourceUrl).searchParams.get('wr_id')===id);
+ for(const id of ['147','7','6']){const p=byId(id);assert(!p.specs.some(([k])=>/코어|공장 표면/.test(k)));assert(p.paragraphs.some(t=>/확인|뒤바뀐/.test(t)));}
+ assert(byId('143').paragraphs.some(t=>t.includes('비어')));assert(byId('232').paragraphs.some(t=>t.includes('같은 대표사진')));
+ assert.notEqual(byId('167').slug,byId('165').slug);assert.notEqual(byId('84').slug,byId('61').slug);
+ for(const p of bundle.products){assert.equal(p.releaseDate,null);assert.equal(p.category,'BALL');assert(!p.specs.some(([k])=>/RG|DIFF|RD/.test(k)));assert.equal(new URL(p.sourceUrl).hostname,'mkbowling.com');assert.equal(p.image.checkedAt,'2026-10-21');}
+ assert.equal(catalog.MANUFACTURER_EQUIPMENT.filter(p=>p.slug==='hammer-black-widow-mania').length,1);
+});
+
+test('Brunswick Korea accounts for all 88 listings without inventing image-only technical specifications', async () => {
+ const bundle=require('../content/equipment/brunswick-korea-20261021.json'),catalog=fixture().load('src/lib/manufacturer-equipment.ts');
+ assert.equal(bundle.listingTotal,88);assert.equal(bundle.products.length,86);assert.equal(bundle.listingCoverage.length,88);assert.equal(new Set(bundle.listingCoverage.map(p=>p.sourceUrl)).size,88);
+ for(const item of bundle.listingCoverage){const p=catalog.manufacturerEquipment(item.slug);assert(p);assert([p.sourceUrl,...p.additionalSources.map(s=>s.url)].includes(item.sourceUrl));}
+ const team=bundle.products.find(p=>p.sourceUrl.endsWith('/13781550724'));assert(!team.specs.some(([k])=>k.includes('외피')));assert(team.paragraphs.some(t=>t.includes('재질을 확정하지')));
+ const crown=bundle.products.find(p=>p.sourceUrl.endsWith('/13781753217'));assert(crown.additionalSources[0].url.endsWith('/13431095759'));
+ for(const p of bundle.products){assert.equal(p.releaseDate,null);assert(!p.specs.some(([k])=>/RG|DIFF|코어/.test(k)));assert.equal(new URL(p.sourceUrl).hostname,'smartstore.naver.com');assert.equal(new URL(p.image.sourceUrl).hostname,'shop-phinf.pstatic.net');assert(p.checks.some(t=>t.includes('출시일')));}
+ assert.equal(catalog.MANUFACTURER_EQUIPMENT.filter(p=>p.slug==='brunswick-infinity-quest-pearl').length,1);
+});
+
+test('product pagination covers every product once, preserves filters and is separate from member pagination', async () => {
+ const f=fixture(),catalog=f.load('src/lib/manufacturer-equipment.ts'),seen=[];
+ for(let page=1;page<=23;page++){const result=catalog.pageManufacturerEquipment('','','',page);assert.equal(result.page,page);assert.equal(result.total,547);assert(result.products.length<=24);seen.push(...result.products.map(p=>p.slug));}
+ assert.deepEqual(seen,allProducts.map(p=>p.slug));assert.equal(new Set(seen).size,547);
+ assert.equal(catalog.pageManufacturerEquipment('','','',Infinity).page,1);assert.equal(catalog.pageManufacturerEquipment('','','',-2).page,1);assert.equal(catalog.pageManufacturerEquipment('','','',9999).page,23);
+ assert.equal(catalog.pageManufacturerEquipment('','','REVIEW',3).total,0);
+ const html=await f.render('equipment',{q:'래디컬',category:'BALL',type:'INTRO',productPage:'1',page:'3'});
+ const next=html.match(/href="([^"]+)"[^>]*>다음 제품/);assert(next);const url=new URL(next[1].replaceAll('&amp;','&'),'https://example.test');assert.equal(url.searchParams.get('q'),'래디컬');assert.equal(url.searchParams.get('category'),'BALL');assert.equal(url.searchParams.get('type'),'INTRO');assert.equal(url.searchParams.get('productPage'),'2');assert.equal(url.searchParams.get('page'),'3');
+ assert.equal(f.calls.find(c=>c.name==='posts').args.skip,24);assert.equal(f.calls.find(c=>c.name==='posts').args.take,12);
+});
+
+test('the previous 83 product texts, pictures and original source check dates stay intact', () => {
+ const catalog=fixture().load('src/lib/manufacturer-equipment.ts');const previous=['manufacturers-20261019','koreamall-20261020','twins-20261021'].flatMap(name=>require('../content/equipment/'+name+'.json').products);assert.equal(previous.length,83);
+ for(const p of previous){const current=catalog.manufacturerEquipment(p.slug);for(const key of ['title','summary','specs','paragraphs','checks','image','sourceUrl','releaseDate'])assert.deepEqual(current[key],p[key]);}
 });

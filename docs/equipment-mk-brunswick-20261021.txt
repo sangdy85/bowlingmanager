@@ -1,0 +1,40 @@
+BowlingManager MK / Brunswick Korea catalogue — 2026-10-21
+Local branch: codex/release-1.2.1; Git base: 530dca6e84fc7e9b6517d94db6e156028c4b4aa8.
+Existing dirty work preserved. Only five existing files modified by this task; 131 other baseline files unchanged.
+
+Sources and coverage:
+MK https://mkbowling.com/bbs/board.php?bo_table=prd_ball : 20 pages /382 detail pages;378 new entries,1 existing product source link,3 merged duplicate listing source links.
+Brunswick Korea https://smartstore.naver.com/brunswickkorea/category/e8bedf6488d24a07bba203806aab858b?cp=1 :3 pages40+40+8 /88 detail pages;86 new entries,1 existing source link,1 merged listing.
+User completed Naver sign-in directly. Only public product data collected; no credentials, cookies, private account information or customer reviews exported.
+All470 source URLs are accounted for through listingCoverage and actual product source/additionalSources.
+Previous83 originals retained;464 added;547 equipment products total,540 balls plus7 other equipment.
+
+Content / photo decisions:
+MK: same-name/same-colour MAGENTA URETHANE, PURPLE PEARL URETHANE and Swerve posts grouped with both source links and note that source specifications may differ. Distinct X9 T / Mild Blood / LIT / ICON colours or covers kept separate.
+BLACK WIDOW MANIA and Infinity Quest Pearl link to existing manufacturer entries. Both Crown78U listings grouped based on matching model, SKU, outer material and weight.
+MK wrong/missing spec fields explicitly flagged for147,7,6,143. Weight-specific RG/RD/Diff omitted rather than silently correcting source numeric typos. No performance/release/stock claims invented.
+MK232 and226 share an upstream representative photo; original used with explicit colour/photo warning for232. This is the only shared photo across547 products (546 distinct hashes).
+MK hard category is not a brand: branded MK hard classification pending original verification. Brunswick Team Brunswick hard/reactive conflict disclosed, outer material omitted.
+Brunswick specifications limited to actual public product-info text (brand, kind, material, SKU, weights). Image-internal technical charts not independently transcribed/verified. Listing year not treated as confirmed manufacturer launch date.
+464 local new source photos decoded successfully. No AI photos or synthetic user reviews. All original product check dates kept; only linked manufacturer entry updatedAt changes to reflect added source.
+
+Changes:
+content/equipment/mk-20261021.json;content/equipment/brunswick-korea-20261021.json;public/images/equipment/mk/*;public/images/equipment/brunswick-korea/*.
+src/lib/manufacturer-equipment.ts: bundles/source linking and bounded24-item pagination.
+src/components/equipment/ManufacturerEquipment.tsx;src/app/equipment/page.tsx: source credits and independent productPage. Existing member page/count/filter/auth/data behaviour retained.
+Tests:tests/public-page-content.test.cjs;tests/public-web.test.cjs.
+
+Local verification:
+114 public/race/UI regression tests pass. Prisma generate pass. Lint0errors,17 pre-existing warnings. Typecheck pass. diff --check pass.
+Isolated build passed: jnJtfyHT9MFtwF2LrQymo. First attempt stalled fetching existing Google Inter font; verified official IPv4 HTTP200 and retried only isolated build with --dns-result-order=ipv4first. No application font or TLS change.
+Isolated path:C:\Users\user\Documents\ChatGPT\볼링 사이트 & 앱\equipment-mk-brunswick-preview-20261021
+HTTP1044 checks pass: all547 details,all23 product pages,no missing/duplicate cards,new464 original assets,2 optimized image samples,search/review separation,sitemap,home/login/centers/mobile-health/ads.txt/missing404.
+Browser PC:24 cards,loaded photos,real detail/original link;next page5to6 works,no horizontal overflow or console errors. Mobile390x844 detail:photo/title/source action visible,no overflow. Browser viewport reset.
+Test fixture contains only explicitly labelled imaginary member posts in isolated preview. Not copied to production.
+
+Operating candidate: equipment-mk-brunswick-530dca6-831947a9fb9f-20261021
+Patch469 files only (3 runtime source modules,2 data bundles,464 photos). No package/dependency/API/auth/BAND/mobile/schema/migration change.
+Production status: pending separate server build and verification at report creation; see production deployment report for final outcome.
+No commit, push or merge.
+
+Final operating rollout: equipment-mk-brunswick-530dca6-831947a9fb9f-20261021 / EKMw-qLcefNXsVt1JQmSg;see docs/equipment-mk-brunswick-production-deployment-20261021.txt.

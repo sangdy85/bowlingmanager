@@ -1,0 +1,53 @@
+트윈스스포츠 볼링공 콘텐츠 추가 및 운영 배포 — 2026-10-21
+저장소: C:\Users\user\Documents\ChatGPT\볼링 사이트 & 앱\growth-001 / codex/release-1.2.1 / 530dca6e84fc7e9b6517d94db6e156028c4b4aa8
+출처: https://www.twinssport.co.kr/shop/list.php?ca_id=10
+수집: 첫 화면16종 + 더보기7종 =23종. 더보기 종료 응답까지 확인. 각각 상세 본문과 대표 사진 확인.
+반영: MOTIV 볼링공23개 신규. 기존 용품60개 유지 → 전체83개(볼링공76, 그 외7). 회원 후기 DB 게시물과 편집 카탈로그를 구분함.
+카탈로그 원고: 원문에 적힌 재질/커버·색상·제품명, 계열별 구분점과 구매 전 확인사항. 확인되지 않은 코어 수치·RG·DIFF·출시일·가격·재고·대회 사용허용을 만들지 않음. 판매처 자료로 명시.
+이미지: 공통 OG 로고를 제외하고 각 상품 슬라이더의 실제 대표 사진23개를 저장. 550px 이미지 원본 바이트 보존, 중복23/23 및 크기/형식 확인. 출처URL/credit/확인일을 JSON에 기록.
+수정: src/lib/manufacturer-equipment.ts, src/components/equipment/ManufacturerEquipment.tsx, tests/public-page-content.test.cjs, tests/public-web.test.cjs. 신규 content/equipment/twins-20261021.json 및 public/images/equipment/twins/23개.
+보존: 작업 전111개 파일 중 위4개 외107개 SHA256 동일. 기존60개 원고·사진·확인일 동일. API84/최신레이스/인증/모바일/BAND/계산/저장/Prisma 보호.
+테스트: 실제 공개페이지/사진/검색/원문/기존원고 보존37개 통과. Linux 서버 레이스·공개웹 합계110/110 통과.
+lint: exit0, 기존 경고17개·오류0. TypeScript 최종 exit0. 초기 검사는 이 대화에서 만든 scratch 백업/운영비교 사본의 .ts/.tsx를 함께 컴파일해 실패; 해당 사본만 .snapshot으로 보존하고 restore-paths.json을 작성한 뒤 재검사 통과. 실제 소스 또는 tsconfig를 우회 변경하지 않음.
+production build: 서버 npm run build 내 Prisma generate/lint/typecheck/Next build 통과. > bowling-score-manager@0.1.0 build | > prisma generate && npm run lint && npm run typecheck && next build | ✔ Generated Prisma Client (v5.22.0) to ./node_modules/@prisma/client in 1.15s | > bowling-score-manager@0.1.0 lint | > eslint src --ext .ts,.tsx | ✖ 17 problems (0 errors, 17 warnings) | > bowling-score-manager@0.1.0 typecheck | > tsc --noEmit --incremental false |  ✓ Compiled successfully in 72s
+후보/운영 내부/외부 HTTPS 상품검사 각각217건 통과: 전체83개 상세, 판매처 사진65개 원본 및 최적화, 카탈로그·원문링크·검색·사이트맵·404. 이전 점검 도구의 slug 수 기대값60을83으로 수정 후 재검증.
+일반서비스 기본/www HTTPS16건 통과. upstream/Nginx/로그인 및 정적13파일/public tournament/leaderboard/mobile health/ads.txt/레이스JS200.
+실제 브라우저: 운영 목록 카드83개/확인일2026-10-21, Jackal Howl/Venom EXJ/Raptor Altitude 첫 카드 사진 확인. 자칼 하울 상세의 사진 로딩과 트윈스 원문 링크 확인. 모바일390x844 가로넘침 없음, 콘솔오류 없음.
+기존 운영 릴리스: equipment-koreamall-530dca6-de6016def98d-20261020
+기존 Build: r78JEOCFhwhPjRBoouXZi
+신규 운영 릴리스: equipment-twins-530dca6-3cabc9a367f0-20261021
+신규 Build: V5IIefJkzv7JTMVHCS8eG
+소스패치 SHA256: 3cabc9a367f0e115adf5c3b1ff3bb5d1502ff7c0d50489860b5be91dafddc97d
+실제 배포시각(KST): 2026. 10. 21. AM 10:22:41
+운영 경로: /home/user/bowling-score-manager / user@vm-share / upstream3000. PM2 bowling-manager online, pm2-user.service User=user active/enabled. 자동시작 변경/중복등록 없음.
+운영 환경파일 hash 동일. DB86개 테이블 행수 동일/quick_check ok. migration/seed/reset 없음. 실제 계정 연결·추첨·저장·후기등록·BAND 게시/푸시 미실행.
+백업: /home/user/bowling-backups/equipment-twins-530dca6-3cabc9a367f0-20261021-before
+롤백: bash /home/user/bowling-deploy/equipment-twins-530dca6-3cabc9a367f0-20261021/rollback.sh
+롤백은 직전60종+레이스의 코드/빌드만 복원하며 운영DB를 되돌리지 않음.
+작업 종료 전 운영 릴리스 재확인 성공. 배포 후보 생성 이후 로컬 135개 파일 hash 동일. git commit/push/merge 없음.
+판매처 목록은 확인 시점의23종이며 이후 목록·재고 변경은 자동동기화하지 않음. 특정 구매의견이나 대회공인 사용을 보장하지 않음.
+제품 원문:
+- Jackal Howl https://www.twinssport.co.kr/shop/item.php?it_id=1735147890
+- Venom EXJ https://www.twinssport.co.kr/shop/item.php?it_id=1735380299
+- Raptor Altitude https://www.twinssport.co.kr/shop/item.php?it_id=1782297755
+- Trident Odyssey https://www.twinssport.co.kr/shop/item.php?it_id=1782296982
+- Primal Rage Evolution https://www.twinssport.co.kr/shop/item.php?it_id=1734369091
+- Raptor Rush https://www.twinssport.co.kr/shop/item.php?it_id=1732954847
+- Ripcord Launch https://www.twinssport.co.kr/shop/item.php?it_id=1675159215
+- Supra GT https://www.twinssport.co.kr/shop/item.php?it_id=1732966601
+- Subzero Forge https://www.twinssport.co.kr/shop/item.php?it_id=1732964652
+- Pride Liberty https://www.twinssport.co.kr/shop/item.php?it_id=1732964784
+- Top Thrill Blue Green https://www.twinssport.co.kr/shop/item.php?it_id=1630904964
+- Top Thrill Purple Red https://www.twinssport.co.kr/shop/item.php?it_id=1630904587
+- Nuclear Forge https://www.twinssport.co.kr/shop/item.php?it_id=1732964969
+- Allegiant Sniper https://www.twinssport.co.kr/shop/item.php?it_id=1732966237
+- Midnight Sniper https://www.twinssport.co.kr/shop/item.php?it_id=1736330189
+- Laser Sniper https://www.twinssport.co.kr/shop/item.php?it_id=1732966363
+- Sky Raptor https://www.twinssport.co.kr/shop/item.php?it_id=1732965853
+- Ripcord Flight https://www.twinssport.co.kr/shop/item.php?it_id=1782297995
+- Blue Tank https://www.twinssport.co.kr/shop/item.php?it_id=1739714782
+- Tank Rampage Pearl https://www.twinssport.co.kr/shop/item.php?it_id=1735378996
+- Pride Dynasty https://www.twinssport.co.kr/shop/item.php?it_id=1732965680
+- Tank Yellowjacket https://www.twinssport.co.kr/shop/item.php?it_id=1693311506
+- Forge Ember https://www.twinssport.co.kr/shop/item.php?it_id=1663060721
+근거: scratch/equipment-twins-20261021/source-products.json, photo-contact-sheet.png, public-tests.log, typecheck-verified.log, preservation.json, task.diff; scratch/equipment-twins-release-20261021/manifest.json, stage-check.json, production-result.json, external-equipment-check.json, external-check.json, server-reconfirmed.json, final-git-status.txt

@@ -26,7 +26,7 @@ test('www is the single public origin for canonical metadata, sitemap and robots
  assert.equal(policy.CANONICAL_HOSTNAME,'www.bowlingmanager.co.kr');
  const sitemap=await loadWithMocks('src/app/sitemap.ts',{
   '@/lib/guide-data':{PUBLISHED_GUIDE_ARTICLES},
-  '@/lib/manufacturer-equipment':loadWithMocks('src/lib/manufacturer-equipment.ts',{'../../content/equipment/manufacturers-20261019.json':require('../content/equipment/manufacturers-20261019.json')}),
+  '@/lib/manufacturer-equipment':loadWithMocks('src/lib/manufacturer-equipment.ts',{'../../content/equipment/manufacturers-20261019.json':require('../content/equipment/manufacturers-20261019.json'),'../../content/equipment/koreamall-20261020.json':require('../content/equipment/koreamall-20261020.json'),'../../content/equipment/twins-20261021.json':require('../content/equipment/twins-20261021.json'),'../../content/equipment/mk-20261021.json':require('../content/equipment/mk-20261021.json'),'../../content/equipment/brunswick-korea-20261021.json':require('../content/equipment/brunswick-korea-20261021.json')}),
   '@/lib/public-web':policy,
   '@/lib/prisma':{__esModule:true,default:{competitionNotice:{findMany:async()=>[]}}},
  }).default();
@@ -137,7 +137,7 @@ test('/app stays noindex with www canonical and outside the sitemap until store 
  assert.ok(appPage.includes('href="/login"'));
  const sitemap=await loadWithMocks('src/app/sitemap.ts',{
   '@/lib/guide-data':{PUBLISHED_GUIDE_ARTICLES},
-  '@/lib/manufacturer-equipment':loadWithMocks('src/lib/manufacturer-equipment.ts',{'../../content/equipment/manufacturers-20261019.json':require('../content/equipment/manufacturers-20261019.json')}),
+  '@/lib/manufacturer-equipment':loadWithMocks('src/lib/manufacturer-equipment.ts',{'../../content/equipment/manufacturers-20261019.json':require('../content/equipment/manufacturers-20261019.json'),'../../content/equipment/koreamall-20261020.json':require('../content/equipment/koreamall-20261020.json'),'../../content/equipment/twins-20261021.json':require('../content/equipment/twins-20261021.json'),'../../content/equipment/mk-20261021.json':require('../content/equipment/mk-20261021.json'),'../../content/equipment/brunswick-korea-20261021.json':require('../content/equipment/brunswick-korea-20261021.json')}),
   '@/lib/public-web':policy,
   '@/lib/prisma':{__esModule:true,default:{competitionNotice:{findMany:async()=>[]}}},
  }).default();
