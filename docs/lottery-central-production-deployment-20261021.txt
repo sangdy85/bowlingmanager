@@ -1,0 +1,67 @@
+BowlingManager central race standings rollout - 2026-10-21
+
+Actual deployment: 2026-10-21 13:36:31 KST (2026-10-21T04:36:31.475Z).
+Release: lottery-central-30af28b-6f750861a419-20261021
+Build: lULc5Yo0QLlUJFPjuuROK
+Previous release: equipment-mk-brunswick-530dca6-831947a9fb9f-20261021
+Previous build: EKMw-qLcefNXsVt1JQmSg
+Source patch commit: 30af28b51aae7685c8ac55fdafa4e3c43e2c23ef
+Working branch: codex/release-1.2.1
+
+Runtime scope: src/components/tournaments/LotteryRace.tsx and LotteryRace.module.css.
+Central completed-race panel now lists every finisher in actual arrival order,
+with selected winners highlighted. The left board keeps its original top six.
+Local 43-person checks fit all entries without scrolling at 1280x720, 667px
+wide and 390x844 mobile. Large fields retain safe overflow; closing/reopening
+results is supported. Saved draw, calculation, API and item/race logic unchanged.
+New actual-component SSR regression: tests/lottery-race-ranking.test.cjs.
+
+Production was prepared from the freshly verified live source, preserving all
+1071 unrelated source/assets/config files and all 84 API routes.
+Operating repository HEAD at preflight: 1299cca08dd2ec6cc04457e0234d369f90a643be.
+The complete operating tree is not claimed equal to Git commit 30af28b; only the
+two reviewed UI files from that commit were applied onto the previous live
+release. Local identity auto-link/mobile features were not deployed in this patch.
+No merge, main update, force push or full development-tree replacement.
+
+Verification:
+- Linux stage: 116 tests pass; Prisma generate, full lint (0 errors, 17 existing
+  warnings), TypeScript and production build pass via npm run build.
+- Isolated stage HTTP 27 checks pass, with live production unchanged during build.
+- Production upstream HTTP 27 checks pass; Nginx localhost:3000 proxy response 200.
+- External base/www HTTPS 30 checks pass, including home/login/public results,
+  mobile health, guide/community/competitions, catalogue pagination/products,
+  and byte hashes of the new race JavaScript and CSS.
+- Full 547-product catalogue preserved; first 24 and final 19 unique product links
+  checked. An initial checker counted three links per card; corrected to distinct
+  destinations and rerun. No runtime source change was needed for that correction.
+- PM2 bowling-manager online, operating user user, cwd /home/user/bowling-score-manager,
+  application listening on 3000. pm2-user.service active/enabled; startup unchanged.
+- Environment files/hash preserved, BAND still unconfigured. No OAuth/posts/push.
+- No migration; DB 86 tables, counts unchanged during stopped-app source switch,
+  consistent backup integrity/operating quick_check ok. No operating test writes.
+- New PM2 stderr bytes 0; new error lines 0. Final release/source reconfirmed at
+  2026-10-21T04:41:02.004Z.
+
+Backup: /home/user/bowling-backups/lottery-central-30af28b-6f750861a419-20261021-before
+Rollback: bash /home/user/bowling-deploy/lottery-central-30af28b-6f750861a419-20261021/rollback.sh
+Backups include operating source, runtime build, private server environment,
+PM2 saved list/systemd unit and consistent SQLite snapshots. Build cache was
+excluded from the duplicate backup; original previous-next remains available.
+Rollback restores source/build/receipt and does not restore or reset the DB.
+
+Disk: initial fixed 3 GiB guard stopped before changes; measured space budgeting
+allowed a separate build with 512 MiB reserve while keeping existing backups.
+The optional stage-dependency cleanup was stopped BEFORE rename/deletion when
+compiled server files referenced that directory. Retain /home/user/bowling-deploy/lottery-central-30af28b-6f750861a419-20261021/stage
+and its node_modules for this release. No existing backups were deleted.
+Remaining free: 946 MiB.
+Older release retention/disk cleanup needs separate review of runtime and rollback
+references; this deployment did not delete them.
+
+Limits: authenticated production administration and a real lottery draw/save
+were not performed. Browser checks used clearly fictional local participants.
+Actual BAND OAuth/posting/push remains unverified and was not executed.
+
+GitHub: source commit 30af28b pushed to codex/release-1.2.1. A separate documentation
+commit records this rollout; documentation-only changes need no rebuild.
