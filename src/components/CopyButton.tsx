@@ -18,7 +18,7 @@ export default function CopyButton({ text }: { text: string }) {
     return (
         <button
             onClick={handleCopy}
-            className="text-xs bg-muted hover:bg-muted/80 px-2 py-1 rounded border border-border transition-colors w-[60px]"
+            className="btn btn-secondary copy-button"
             title="코드를 클립보드에 복사"
         >
             {copied ? (

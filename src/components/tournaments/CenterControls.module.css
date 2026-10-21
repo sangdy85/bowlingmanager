@@ -27,7 +27,7 @@
 .workspace input::placeholder, .workspace textarea::placeholder { color: #64748b; opacity: 1; font-weight: 400; }
 .workspace :is(input, select, textarea):hover:not(:disabled) { border-color: #64748b; }
 .workspace :is(input, select, textarea):focus-visible {
-    outline: 3px solid #93c5fd;
+    outline: 3px solid var(--border-strong);
     outline-offset: 2px;
     border-color: var(--control-focus);
     background: #fff;
@@ -35,13 +35,13 @@
     box-shadow: none;
 }
 .workspace textarea { min-height: 120px; resize: vertical; }
-.workspace :is(input[type=checkbox], input[type=radio]) { width: 19px; height: 19px; accent-color: #2563eb; vertical-align: middle; flex-shrink: 0; cursor: pointer; }
+.workspace :is(input[type=checkbox], input[type=radio]) { width: 19px; height: 19px; accent-color: var(--primary); vertical-align: middle; flex-shrink: 0; cursor: pointer; }
 .workspace input[type=file]:not(:global(.hidden)) { max-width: 100%; font-size: 14px; }
-.workspace input::file-selector-button { border: 1px solid #94a3b8; border-radius: 8px; padding: 10px 14px; margin-right: 12px; background: #eff6ff; color: #1e40af; font: inherit; cursor: pointer; }
+.workspace input::file-selector-button { border: 1px solid #94a3b8; border-radius: 8px; padding: 10px 14px; margin-right: 12px; background: var(--primary-soft); color: var(--primary); font: inherit; cursor: pointer; }
 .workspace :is(input, select, textarea):disabled { background: #e2e8f0; color: #475569; cursor: not-allowed; opacity: .8; }
 .workspace input[readonly] { background: #f1f5f9; }
 
-.workspace :is(button, a):focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; }
+.workspace :is(button, a):focus-visible { outline: 3px solid var(--border-strong); outline-offset: 3px; }
 .workspace button:disabled { cursor: not-allowed; opacity: .5; box-shadow: none; }
 .workspace :global(.btn), .workspace button[class*="bg-"], .workspace button[class*="text-"], .workspace form button {
     display: inline-flex;
@@ -64,11 +64,11 @@
     box-shadow: 0 2px 4px #0f172a08;
 }
 .workspace :global(.btn-primary), .workspace button:is([class~="bg-primary"], [class~="bg-blue-600"], [class~="bg-slate-900"]), .workspace form button[type=submit] {
-    background: #2563eb;
-    border-color: #2563eb;
+    background: var(--primary);
+    border-color: var(--primary);
     color: #fff;
 }
-.workspace :global(.btn-secondary) { background: #eaf2ff; border-color: #93b4df; color: #1e40af; }
+.workspace :global(.btn-secondary) { background: var(--primary-soft); border-color: #93b4df; color: var(--primary); }
 .workspace button:is([class~="bg-red-50"], [class~="bg-red-600"], [class~="btn-destructive"]) { background: #fff1f2; border-color: #fda4af; color: #be123c; }
 .workspace :global(.btn):hover:not(:disabled), .workspace form button:hover:not(:disabled) { filter: brightness(.96); text-decoration: none; }
 
@@ -88,13 +88,13 @@
 .formPanel { position: relative; }
 .formPanel > :global(.absolute) { position: absolute; top: 20px; right: 20px; }
 .formPanel > h3 { padding-right: 72px; margin-bottom: 24px; }
-.formPanel p { font-size: 13px; line-height: 1.7; color: #cbd5e1; }
+.formPanel p { font-size: 13px; line-height: 1.7; color: var(--muted); }
 .formPanel > :global(.flex) { flex-wrap: wrap; gap: 10px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #64748b66; }
 .formPanel :global(.bg-background) { padding: 20px; border: 1px solid #64748b66; border-radius: 14px; }
 
 .form { display: grid; gap: 24px; }
 .form > div { min-width: 0; }
-.form > :is([class~="space-y-4"], [class~="space-y-6"]) { padding: 20px; background: #0b142580; border: 1px solid #40516c; border-radius: 14px; }
+.form > :is([class~="space-y-4"], [class~="space-y-6"]) { padding: 20px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
 
 .overlay { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 24px; background: #020617b3; backdrop-filter: blur(4px); }
 .dialog { width: min(100%, 720px); max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; background: #fff; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 20px; box-shadow: 0 24px 80px #02061766; padding: 28px; }

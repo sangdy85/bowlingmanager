@@ -1,14 +1,14 @@
 /* Namespaced tokens: shared by personal UI and future admin dashboard sections. */
 :root {
-  --dashboard-primary: #2563eb;
-  --dashboard-primary-hover: #1d4ed8;
+  --dashboard-primary: #087d68;
+  --dashboard-primary-hover: #066352;
   --dashboard-on-primary: #ffffff;
-  --dashboard-primary-soft: #eff6ff;
-  --dashboard-background: #f8fafc;
+  --dashboard-primary-soft: #e6f3ef;
+  --dashboard-background: #f3f6fa;
   --dashboard-surface: #ffffff;
-  --dashboard-text: #0f172a;
-  --dashboard-muted: #475569;
-  --dashboard-border: #e2e8f0;
+  --dashboard-text: #172e47;
+  --dashboard-muted: #53697f;
+  --dashboard-border: #d5dfe9;
   --dashboard-border-strong: #94a3b8;
   --dashboard-success: #16a34a;
   --dashboard-success-text: #166534;
@@ -18,7 +18,7 @@
   --dashboard-warning-soft: #fffbeb;
   --dashboard-danger: #b91c1c;
   --dashboard-danger-soft: #fef2f2;
-  --dashboard-focus: #1d4ed8;
+  --dashboard-focus: #087d68;
   --dashboard-disabled: #64748b;
   --dashboard-disabled-surface: #f1f5f9;
 }
@@ -48,6 +48,7 @@
 
 /* Route-scoped aliases keep the existing application styles intact elsewhere. */
 body:has([data-dashboard-shell]) {
+  --site-content-width: 1440px;
   --background: var(--dashboard-background);
   --foreground: var(--dashboard-text);
   --primary: var(--dashboard-primary);
@@ -60,4 +61,3 @@ body:has([data-dashboard-shell]) {
   --focus-ring: var(--dashboard-focus);
   background: var(--dashboard-background);
 }
-body:has([data-dashboard-shell]) .container { max-width: 1440px; }

@@ -26,10 +26,10 @@ export default function RootLayout({
     <html lang="ko">
       <body className={inter.className}>
         <AuthContext>
-          <div className="min-h-screen bg-background text-foreground flex flex-col justify-between">
+          <div className="site-shell min-h-screen bg-background text-foreground flex flex-col justify-between">
             <div>
               <Navbar />
-              <main className="container mx-auto px-4 py-8">
+              <main id="main-content" className="site-main container mx-auto px-4 py-8">
                 {children}
               </main>
             </div>

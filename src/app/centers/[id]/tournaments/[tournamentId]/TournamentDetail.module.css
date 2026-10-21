@@ -10,14 +10,14 @@
   align-items: center;
   gap: 0.55rem;
   margin-bottom: 0.8rem;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.78rem;
   font-weight: 750;
   text-decoration: none;
 }
 
 .back:hover {
-  color: #fff;
+  color: var(--foreground);
   text-decoration: none;
 }
 
@@ -26,9 +26,9 @@
   width: 1.9rem;
   height: 1.9rem;
   place-items: center;
-  border: 1px solid #3b4a62;
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: #172033;
+  background: var(--card);
 }
 
 .hero {
@@ -37,13 +37,12 @@
   justify-content: space-between;
   gap: 1.2rem;
   margin-bottom: 1.25rem;
-  border: 1px solid #30425d;
+  border: 1px solid var(--border);
   border-radius: 1.05rem;
   background:
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.18), transparent 22rem),
-    linear-gradient(145deg, #19263d, #101827);
+    var(--card);
   padding: 1.3rem;
-  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 .heroMain {
@@ -70,13 +69,14 @@
 }
 
 .typeBadge {
-  color: #fff;
+  color: var(--primary);
+  background: var(--primary-soft);
 }
 
 .statusBadge {
-  border: 1px solid #3b4a62;
-  background: rgba(15, 23, 42, 0.45);
-  color: #cbd5e1;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--secondary-foreground);
 }
 
 .statusDot {
@@ -92,12 +92,12 @@
 }
 
 .statusDotOngoing {
-  background: #3b82f6;
+  background: var(--primary);
 }
 
 .title {
   margin: 0;
-  color: #f8fafc;
+  color: var(--foreground);
   font-size: clamp(1.7rem, 5vw, 2.55rem);
   font-weight: 950;
   letter-spacing: -0.05em;
@@ -109,7 +109,7 @@
   flex-wrap: wrap;
   gap: 0.5rem 1rem;
   margin-top: 0.8rem;
-  color: #a7b6c9;
+  color: var(--muted);
   font-size: 0.78rem;
   font-weight: 650;
 }
@@ -151,10 +151,10 @@
 
 .section {
   overflow: hidden;
-  border: 1px solid #2f405a;
+  border: 1px solid var(--border);
   border-radius: 0.95rem;
-  background: linear-gradient(180deg, #172238, #111a2b);
-  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.15);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
 }
 
 .sectionHeader {
@@ -163,20 +163,20 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.9rem 1rem;
-  border-bottom: 1px solid #2c3a52;
-  background: rgba(59, 130, 246, 0.07);
+  border-bottom: 1px solid var(--border);
+  background: var(--primary-soft);
 }
 
 .sectionTitle {
   margin: 0;
-  color: #f8fafc;
+  color: var(--foreground);
   font-size: 1rem;
   font-weight: 900;
 }
 
 .sectionHint {
   margin: 0.2rem 0 0;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.72rem;
   font-weight: 650;
 }
@@ -190,7 +190,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0;
   margin-top: 1rem;
-  border: 1px solid #2f405a;
+  border: 1px solid var(--border);
   border-radius: 0.8rem;
   overflow: hidden;
 }
@@ -201,8 +201,8 @@
   gap: 0.7rem;
   min-height: 3rem;
   align-items: center;
-  border-right: 1px solid #2c3a52;
-  border-bottom: 1px solid #2c3a52;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
   padding: 0.65rem 0.75rem;
 }
 
@@ -211,14 +211,14 @@
 }
 
 .infoLabel {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.68rem;
   font-weight: 800;
 }
 
 .infoValue {
   min-width: 0;
-  color: #e2e8f0;
+  color: var(--foreground);
   font-size: 0.76rem;
   font-weight: 800;
   overflow-wrap: anywhere;
@@ -247,14 +247,14 @@
 
 .sideTitle {
   margin: 0 0 0.65rem;
-  color: #f8fafc;
+  color: var(--foreground);
   font-size: 0.92rem;
   font-weight: 900;
 }
 
 .sideText {
   margin: 0;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.75rem;
   line-height: 1.55;
 }

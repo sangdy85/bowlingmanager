@@ -28,13 +28,13 @@
 }
 
 .inactive {
-  background: #172033;
-  color: #cbd5e1;
-  border-color: #334155;
+  background: var(--card);
+  color: var(--muted);
+  border-color: var(--border);
 }
 
 .inactive:hover {
-  background: #23314a;
+  background: var(--card);
 }
 
 :global([data-dashboard-shell]) .wrap { flex-wrap: wrap; overflow: visible; margin: 0; }

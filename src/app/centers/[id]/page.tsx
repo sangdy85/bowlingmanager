@@ -6,6 +6,7 @@ import { getEffectiveRoundDate, calculateTournamentStatus, formatKSTDate, parseK
 import TournamentListManager from "@/components/tournaments/TournamentListManager";
 import JoinCenterSection from "@/components/centers/JoinCenterSection";
 import styles from "./CenterDetail.module.css";
+import { DashboardShell } from "@/components/dashboard/DashboardUI";
 
 // ... (existing code, ensure imports are correct)
 
@@ -265,6 +266,7 @@ export default async function CenterDetailPage({ params }: { params: Promise<{ i
     });
 
     return (
+        <DashboardShell current="centers">
         <div className={styles.page}>
             <header className={styles.hero}>
                 <div className={styles.heroMain}>
@@ -353,5 +355,6 @@ export default async function CenterDetailPage({ params }: { params: Promise<{ i
                 )}
             </div>
         </div>
+        </DashboardShell>
     );
 }

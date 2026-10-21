@@ -13,6 +13,7 @@ import TeamStatsContainer from "@/components/TeamStatsContainer";
 import TeamMemberManager from "@/components/TeamMemberManager";
 import TeamGuestManager from "@/components/TeamGuestManager";
 import styles from "./TeamDetail.module.css";
+import { DashboardShell } from "@/components/dashboard/DashboardUI";
 
 interface TeamPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -128,6 +129,7 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
     const manageTab = resolvedSearchParams.tab || 'members'; // 'members' or 'guests'
 
     return (
+        <DashboardShell current="team">
         <div className={styles.page}>
             <header className={styles.hero}>
                 <div className={styles.heroMain}>
@@ -233,5 +235,6 @@ export default async function TeamDetailPage({ searchParams, params }: TeamPageP
                 </>
             )}
         </div>
+        </DashboardShell>
     );
 }

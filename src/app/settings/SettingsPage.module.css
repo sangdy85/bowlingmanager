@@ -18,7 +18,7 @@
 
 .subtitle {
   margin: 0.3rem 0 0;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.82rem;
   font-weight: 650;
 }
@@ -39,7 +39,7 @@
   gap: 0.8rem;
   margin-bottom: 0.8rem;
   padding-bottom: 0.65rem;
-  border-bottom: 1px solid #2c3a52;
+  border-bottom: 1px solid var(--border);
 }
 
 .sectionTitle {
@@ -58,7 +58,7 @@
   justify-content: space-between;
   gap: 1rem;
   min-height: 2.9rem;
-  border-bottom: 1px solid #26364e;
+  border-bottom: 1px solid var(--border);
   padding: 0.55rem 0;
 }
 
@@ -67,7 +67,7 @@
 }
 
 .profileLabel {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -78,7 +78,7 @@
   justify-content: flex-end;
   gap: 0.35rem;
   min-width: 0;
-  color: #e2e8f0;
+  color: var(--foreground);
   font-size: 0.8rem;
   font-weight: 800;
   text-align: right;
@@ -115,28 +115,28 @@
 
 .success {
   border: 1px solid rgba(34, 197, 94, 0.28);
-  background: rgba(20, 83, 45, 0.22);
-  color: #bbf7d0;
+  background: #edf8f1;
+  color: #166534;
 }
 
 .error {
   border: 1px solid rgba(239, 68, 68, 0.28);
-  background: rgba(127, 29, 29, 0.22);
-  color: #fecaca;
+  background: #fff1f2;
+  color: #b42335;
 }
 
 .dangerSection {
   border-color: rgba(239, 68, 68, 0.28);
-  background: linear-gradient(180deg, rgba(69, 10, 10, 0.28), rgba(30, 14, 21, 0.26));
+  background: #fff1f2;
 }
 
 .dangerTitle {
-  color: #fca5a5;
+  color: #b42335;
 }
 
 .dangerText {
   margin: 0;
-  color: #cbd5e1;
+  color: var(--secondary-foreground);
   font-size: 0.78rem;
   line-height: 1.65;
 }
@@ -158,7 +158,7 @@
   justify-content: center;
   border-radius: 0.2rem;
   background: #03c75a;
-  color: #fff;
+  color: var(--foreground);
   font-size: 0.68rem;
   font-weight: 900;
 }

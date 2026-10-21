@@ -7,13 +7,12 @@
 
 .shell {
   width: 100%;
-  border: 1px solid #2c3a52;
+  border: 1px solid var(--border);
   border-radius: 1rem;
   background:
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 22rem),
-    linear-gradient(180deg, #162136, #111a2b);
+    var(--card);
   padding: 1.25rem;
-  box-shadow: 0 14px 30px rgba(2, 6, 23, 0.18);
+  box-shadow: var(--shadow-sm);
 }
 
 .header {
@@ -22,7 +21,7 @@
 
 .title {
   margin: 0;
-  color: #f8fafc;
+  color: var(--foreground);
   font-size: clamp(1.45rem, 4vw, 1.9rem);
   font-weight: 900;
   letter-spacing: -0.035em;
@@ -30,7 +29,7 @@
 
 .subtitle {
   margin: 0.3rem 0 0;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.82rem;
   font-weight: 650;
 }
@@ -65,9 +64,9 @@
   gap: 0.35rem;
   margin: 1rem 0;
   padding: 0.35rem;
-  border: 1px solid #2c3a52;
+  border: 1px solid var(--border);
   border-radius: 0.85rem;
-  background: rgba(15, 23, 42, 0.42);
+  background: var(--card);
 }
 
 .tab {
@@ -75,20 +74,20 @@
   border: 1px solid transparent;
   border-radius: 0.65rem;
   background: transparent;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.78rem;
   font-weight: 850;
   cursor: pointer;
 }
 
 .tab:hover {
-  background: rgba(148, 163, 184, 0.08);
-  color: #e2e8f0;
+  background: var(--primary-soft);
+  color: var(--foreground);
 }
 
 .tabActive {
-  border-color: rgba(96, 165, 250, 0.25);
-  background: linear-gradient(180deg, #3b82f6, #2563eb);
+  border-color: var(--border-strong);
+  background: var(--primary);
   color: #fff;
   box-shadow: 0 5px 12px rgba(37, 99, 235, 0.22);
 }
@@ -96,9 +95,9 @@
 .modePanel {
   display: grid;
   gap: 0.85rem;
-  border: 1px solid #2c3a52;
+  border: 1px solid var(--border);
   border-radius: 0.9rem;
-  background: rgba(15, 23, 42, 0.34);
+  background: var(--card);
   padding: 1rem;
 }
 
@@ -119,14 +118,14 @@
 
 .success {
   border: 1px solid rgba(34, 197, 94, 0.25);
-  background: rgba(20, 83, 45, 0.24);
-  color: #bbf7d0;
+  background: #edf8f1;
+  color: #166534;
 }
 
 .error {
   border: 1px solid rgba(239, 68, 68, 0.25);
-  background: rgba(127, 29, 29, 0.22);
-  color: #fecaca;
+  background: #fff1f2;
+  color: #b42335;
 }
 
 .actions {

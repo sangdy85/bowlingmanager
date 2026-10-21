@@ -13,6 +13,6 @@
 .button:disabled { opacity: .5; cursor: wait; }
 .checks { display: grid; gap: .75rem; }
 .check { display: flex; gap: .6rem; align-items: flex-start; font-size: .9rem; }
-.message { padding: .75rem; border-radius: .6rem; font-size: .875rem; background: #eff6ff; color: #1e3a8a; }
+.message { padding: .75rem; border-radius: .6rem; font-size: .875rem; background: var(--primary-soft); color: #1e3a8a; }
 .error { background: #fef2f2; color: #991b1b; }
 @media (max-width: 640px) { .panel { padding: 1rem; } .header { flex-direction: column; } .button { width: 100%; } }

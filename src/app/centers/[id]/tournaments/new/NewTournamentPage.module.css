@@ -10,45 +10,44 @@
   align-items: center;
   gap: .55rem;
   margin-bottom: .8rem;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: .78rem;
   font-weight: 750;
   text-decoration: none;
 }
 
-.back:hover { color: #fff; text-decoration: none; }
+.back:hover { color: var(--foreground); text-decoration: none; }
 
 .backIcon {
   display: inline-grid;
   width: 1.9rem;
   height: 1.9rem;
   place-items: center;
-  border: 1px solid #3b4a62;
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: #172033;
+  background: var(--card);
 }
 
 .hero {
   margin-bottom: 1rem;
-  border: 1px solid #30425d;
+  border: 1px solid var(--border);
   border-radius: 1rem;
   background:
-    radial-gradient(circle at top right, rgba(59,130,246,.15), transparent 18rem),
-    linear-gradient(145deg,#19263d,#101827);
+    var(--card);
   padding: 1.15rem;
-  box-shadow: 0 12px 26px rgba(2,6,23,.16);
+  box-shadow: var(--shadow-sm);
 }
 
-.title { margin: 0; color: #f8fafc; font-size: clamp(1.45rem,4vw,1.95rem); font-weight: 900; letter-spacing: -.035em; }
-.subtitle { margin: .3rem 0 0; color: #9fb0c5; font-size: .78rem; font-weight: 650; }
+.title { margin: 0; color: var(--foreground); font-size: clamp(1.45rem,4vw,1.95rem); font-weight: 900; letter-spacing: -.035em; }
+.subtitle { margin: .3rem 0 0; color: var(--muted); font-size: .78rem; font-weight: 650; }
 
 .formShell {
   overflow: hidden;
-  border: 1px solid #2f405a;
+  border: 1px solid var(--border);
   border-radius: .95rem;
-  background: linear-gradient(180deg,#172238,#111a2b);
+  background: var(--card);
   padding: 1rem;
-  box-shadow: 0 9px 22px rgba(2,6,23,.13);
+  box-shadow: var(--shadow-sm);
 }
 
 .formShell :global(form) {
@@ -58,7 +57,7 @@
 
 .formShell :global(.label) {
   padding-bottom: .3rem;
-  color: #cbd5e1;
+  color: var(--secondary-foreground);
   font-size: .74rem;
   font-weight: 800;
 }
@@ -67,8 +66,8 @@
   min-height: 2.7rem;
   margin-bottom: 0;
   border-color: #3a4c68;
-  background: #111a2b;
-  color: #f8fafc;
+  background: var(--card);
+  color: var(--foreground);
 }
 
 .formShell :global(.input::placeholder) {
@@ -80,12 +79,12 @@
 }
 
 .formShell :global(.border-t) {
-  border-color: #2f405a !important;
+  border-color: var(--border) !important;
 }
 
 .formShell :global(.text-secondary-foreground),
 .formShell :global(.text-gray-500) {
-  color: #94a3b8 !important;
+  color: var(--muted) !important;
 }
 
 .formShell :global(.btn) {

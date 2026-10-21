@@ -11,7 +11,7 @@
 
 .description,
 .currentLabel {
-  color: #aebdce;
+  color: var(--muted);
   font-size: 0.8rem;
   line-height: 1.55;
 }
@@ -30,7 +30,7 @@
 
 .currentTeam {
   margin: 0;
-  color: #60a5fa;
+  color: var(--primary);
   font-weight: 850;
 }
 
@@ -41,7 +41,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -54,11 +54,11 @@
   position: relative;
   width: 100%;
   max-width: 28rem;
-  border: 1px solid #3b4a62;
+  border: 1px solid var(--border);
   border-radius: 1rem;
-  background: #111a2b;
+  background: var(--card);
   padding: 1.25rem;
-  box-shadow: 0 24px 54px rgba(2, 6, 23, 0.45);
+  box-shadow: var(--shadow-sm);
 }
 
 .close {
@@ -70,16 +70,16 @@
   height: 2.35rem;
   align-items: center;
   justify-content: center;
-  border: 1px solid #334155;
+  border: 1px solid var(--border);
   border-radius: 0.65rem;
-  background: #172033;
-  color: #cbd5e1;
+  background: var(--card);
+  color: var(--secondary-foreground);
   cursor: pointer;
 }
 
 .close:hover {
-  background: #23314a;
-  color: #fff;
+  background: var(--card);
+  color: var(--foreground);
 }
 
 .modalTitle {
@@ -92,9 +92,9 @@
   margin: 0 0 0.9rem;
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 0.7rem;
-  background: rgba(127, 29, 29, 0.22);
+  background: #fff1f2;
   padding: 0.7rem;
-  color: #fecaca;
+  color: #b42335;
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -110,7 +110,7 @@
 }
 
 .field label {
-  color: #dbe4f0;
+  color: var(--secondary-foreground);
   font-size: 0.78rem;
   font-weight: 750;
 }
@@ -121,7 +121,7 @@
 
 .help {
   margin: 0.25rem 0 0;
-  color: #8190a6;
+  color: var(--muted);
   font-size: 0.68rem;
 }
 

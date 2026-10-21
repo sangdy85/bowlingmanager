@@ -1,4 +1,4 @@
-.page {color:#182b43;background:#f3f6fa;border:1px solid #dce4ed;border-radius:24px;overflow:hidden;line-height:1.65}
+.page {color:var(--foreground);background:var(--background);border:0;border-radius:0;line-height:1.65;min-width:0}
 .page a{text-decoration:none}.page :is(a,button,input,select,textarea,summary):focus-visible{outline:3px solid #0a8c73;outline-offset:3px}
 .inner{padding:clamp(20px,4vw,44px)}.hero{padding:clamp(28px,5vw,60px);background:#11283e;color:#fff;display:grid;grid-template-columns:1.4fr 1fr;align-items:center;gap:32px;overflow:hidden}
 .hero h1{font-size:clamp(2rem,4.5vw,3.6rem);line-height:1.18;letter-spacing:-.055em;margin:15px 0 22px;color:#fff;font-weight:850}.hero p{max-width:600px;color:#cad7e6;font-size:17px}.hero .eyebrow{color:#80e2c7}.eyebrow{margin:0;color:#237c6b;letter-spacing:.12em;font-size:12px;font-weight:800}
@@ -39,6 +39,7 @@
 .recordStrip span { color:#5b6e81; font-size:13px; }
 @media(max-width:760px) { .workspaceGrid { grid-template-columns:1fr; } .workspaceCard { padding:22px; } .page .workspaceCard h3 { font-size:23px!important; } .recordStrip { padding:18px; } }
 .hero .eyebrow { font-size:12px; }
+.hero { border-radius: var(--radius-lg); }
 .hero h1,.hero p,.quickLinks a { word-break:keep-all; }
 .hero .ballArt { width:min(100%,340px); }
 .hero .actions { gap:14px; margin-top:28px; }

@@ -4,9 +4,19 @@ import Link from 'next/link';
 import styles from './Navbar.module.css';
 import { useState } from 'react';
 import { signOut } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
 
 export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boolean, userRole?: string }) {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+  const primaryLinks = [
+    { label: '동호회', href: isLoggedIn ? '/team' : '/login', section: '/team' },
+    { label: '볼링장', href: '/centers', section: '/centers' },
+    { label: '대회 정보', href: '/competitions', section: '/competitions' },
+    { label: '볼링 용품', href: '/equipment', section: '/equipment' },
+    { label: '커뮤니티', href: '/community', section: '/community' },
+    { label: '이용방법 & 가이드', href: '/guide', section: '/guide' },
+  ];
 
   const toggleMenu = () => setIsOpen(!isOpen);
   const closeMenu = () => setIsOpen(false);
@@ -24,7 +34,7 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
   };
 
   return (
-    <nav className={styles.navbar}>
+    <nav className={styles.navbar} aria-label="사이트 메뉴">
       <div className={`container ${styles.navContent}`}>
         <Link href="/" className={styles.logo} onClick={closeMenu}>
           BowlingManager
@@ -41,12 +51,15 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
         </button>
 
         <div id="main-navigation" className={`${styles.links} ${isOpen ? styles.linksOpen : ''}`}>
-          <Link href={isLoggedIn ? '/team' : '/login'} className={`${styles.link} ${styles.coreLink}`} onClick={closeMenu}>동호회</Link>
-          <Link href="/centers" className={`${styles.link} ${styles.coreLink}`} onClick={closeMenu}>볼링장</Link>
-          <Link href="/competitions" className={styles.link} onClick={closeMenu}>대회 정보</Link>
-          <Link href="/equipment" className={styles.link} onClick={closeMenu}>볼링 용품</Link>
-          <Link href="/community" className={styles.link} onClick={closeMenu}>커뮤니티</Link>
-          <Link href="/guide" className={styles.link} onClick={closeMenu}>이용방법 & 가이드</Link>
+          <div className={styles.primaryLinks}>
+            {primaryLinks.map(({ label, href, section }) => (
+              <Link key={section} href={href} className={styles.link} onClick={closeMenu}
+                aria-current={pathname === section || pathname.startsWith(section + '/') ? 'page' : undefined}>
+                {label}
+              </Link>
+            ))}
+          </div>
+          <div className={styles.accountArea}>
           {isLoggedIn ? (
             <details className={styles.accountMenu}>
               <summary className={styles.link}>내 계정 ▾</summary>
@@ -81,6 +94,7 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
               <Link href="/register" className="btn btn-primary" onClick={closeMenu}>회원가입</Link>
             </>
           )}
+          </div>
         </div>
       </div>
     </nav>
