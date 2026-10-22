@@ -1,0 +1,51 @@
+BowlingManager — 선두 접전 이름 확대 및 골인 후 카메라 전환 배포 (2026-10-22)
+실제 배포 시각: 2026-10-22T03:32:11.491Z (한국시간 2026-10-22 12:32:11)
+소스 커밋: 25d2bcfce45546936086da7e10233c2fb8310f2d
+GitHub: https://github.com/sangdy85/bowlingmanager/tree/codex/release-1.2.1
+운영 릴리스: race-finish-25d2bcf-e3ec0cfe2985-20261022
+Linux Build ID: ZORdVDrXAMk4oHyZ6uBu5
+이전 릴리스: race-focus-7fcc120-3feb40c5bd40-20261022
+이전 Build ID: BkNQMqy4XJnvlzRF7ZNep
+운영 전체 소스는 기존 정상 운영 소스와 이번 5개 패치를 결합한 hybrid다. 전체 Git 트리가 소스 커밋과 일치한다는 의미는 아니다.
+
+반영 내용
+- 선두 접전 모드 이름 글자 정확히 15% 확대: 일반/모바일 58.19px, 확대 태블릿 69.575px, 확대 PC 83.49px.
+- 1위 도착 후 실제 재생시간으로 1초 동안 도착 장면과 이름 강조 유지. 슬로모션 여부와 무관하게 999ms까지 유지하고 1000ms부터 기존 카메라 보간으로 다음 미완주 순위와 근접 추격 공들을 추적.
+- 이후 완주자 제외, 아직 달리는 선두권을 계속 추적. 최종 43위 등 뒤 순위도 렌더·이름 표시 대상으로 유지. 전원 완주 시 기존 중앙 전체 순위 유지.
+- 기본 카메라/전체 맵/수동 추적, 추첨 계산·당첨 순서·아이템·슬로모션·저장·대회 결과·PNG 다운로드 유지.
+변경 런타임 파일:
+- src/components/tournaments/LotteryRace.tsx
+- src/components/tournaments/lottery-race-canvas.ts
+- src/components/tournaments/lottery-race-scene.ts
+- src/lib/lottery-race-labels.ts
+- src/lib/lottery-race-view.ts
+
+보존 및 백업
+- user@vm-share / /home/user/bowling-score-manager / PM2 bowling-manager / 포트 3000. 해당 앱만 정지·기동했고 자동 시작은 active/enabled 유지; 설정 변경·재부팅 없음.
+- API 84개 및 그 외 소스/자산 1282개 보존. dependencies/schema/migrations/모바일/API/auth/BAND 변경 없음.
+- 기존 적용 migration 26개, 대기 migration 없음. migration 실행 없음. 운영 DB 86개 테이블 전환 전후 행 수 동일, quick_check ok.
+- 운영 환경파일 및 업로드/상품 이미지 보존. BAND 미설정 유지, 개발 키 복사·OAuth·게시·푸시 없음.
+- 기존 .next와 분리한 Linux 후보에서 테스트·빌드. public과 node_modules는 변경 없이 재사용, build cache는 후보에서만 비활성화 후 config 복원.
+- 백업: /home/user/bowling-backups/race-finish-25d2bcf-e3ec0cfe2985-20261022-before
+- DB 일관성 백업: 위 폴더의 database-before.db, database-at-cutover.db.
+- 롤백 명령: bash /home/user/bowling-deploy/race-finish-25d2bcf-e3ec0cfe2985-20261022/rollback.sh
+- 롤백은 해당 릴리스 여부를 검사하고 5개 소스·빌드·배포 기록만 복구. 운영 DB 자동 복원 없음.
+
+검증
+- 로컬 및 Linux 후보 관련 테스트 각각 83/83 통과.
+- 로컬 및 Linux lint/TypeScript/production build 통과. 기존 lint 경고 17개, 새 오류 없음. 로컬 Build zGtgDup1ARSsGv9ENmI1t.
+- 로컬 검증은 동일 앱 소스와 가상 DB를 사용하는 격리 경로에서 수행. scratch 과거 백업 때문에 루트 typecheck를 통과한 것으로 표기하지 않음.
+- Linux 후보 HTTP 279개, 전환 후 운영 직접 HTTP 40개, 외부 HTTPS/정적 파일/상품/검색 설정 50개 및 실제 레이스 JS 번들 해시 2개 정상.
+- 기본/www 홈 HTML의 새 Build ID 일치. 로그인·모바일 health·공개 결과·상품/제조사 필터·이미지·ads.txt·robots·sitemap 확인.
+- 외부 레이스 JS가 Linux 검증 번들과 SHA256 일치, 83.49px 이름 및 1초 유지 코드 포함 확인.
+- PM2 online, systemd pm2-user.service active/enabled. upstream 3000 및 Nginx 80 응답 200.
+- 새 오류 로그 0바이트, stdout 신규 오류 0개; 502 없음.
+- git diff --check 통과. main 통합/force push/다른 worktree 변경 없음.
+
+미검증 및 주의
+- 실제 운영 관리자 로그인 후 레이스 재생·추첨 결과 저장은 실행하지 않음. 1초 경계와 카메라는 로컬 실제 3D/2D 렌더러 및 브라우저 가상 데이터로 검증.
+- 실제 BAND OAuth/게시/푸시, 운영 데이터 생성·점수 수정 없음.
+- 최종 가용 디스크 약 116.1MiB. 기존 백업/릴리스를 삭제하지 않았으며 후속 배포 전에 용량 확보가 필요하다.
+- 다른 PC에서는 main이 아닌 codex/release-1.2.1 브랜치를 동기화해야 한다.
+검증 자료: scratch/race-finish-release-20261022
+운영 기록: /home/user/bowling-score-manager/.deployment-release.json
