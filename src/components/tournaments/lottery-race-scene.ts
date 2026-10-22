@@ -1,4 +1,4 @@
-import { raceBattleGroup, raceFinishView } from '@/lib/lottery-race-view';
+import { raceBattleGroup, raceFinishView, raceFirstFinishHold } from '@/lib/lottery-race-view';
 import { layoutRaceNames, raceNameStyle, paintRaceNames } from '@/lib/lottery-race-labels';
 import { participantName, type LotteryParticipant } from '@/lib/lottery-ui';
 import { createRacePickups, RACE_ITEMS, RaceEffect, raceEffectIcons, raceRecentEvents, type LotteryRacePlan, type RacePickup } from '@/lib/lottery-race';
@@ -41,8 +41,8 @@ export function lotteryRaceCamera(progress:number,aspect:number,overview:boolean
 }
 
 /** Tight broadcast shot: fit nearby podium balls with space for names and controls. */
-export function lotteryRaceBattleCamera(positions: Position[], aspect: number, phaseProgress: number, lowerDegrees = 0, elapsed = 0) {
-    const group = raceBattleGroup(positions);
+export function lotteryRaceBattleCamera(positions: Position[], aspect: number, phaseProgress: number, lowerDegrees = 0, elapsed = 0, holdWinner = false) {
+    const group = raceBattleGroup(positions, holdWinner);
     const points = (group.length ? group : [{ index: 0, progress: 0, lane: 0 }]).map(p => {const point=ballPose(p,elapsed,positions.length).point;return [point[0],point[1]+8,point[2]] as Vec3;});
     const look = [0, 1, 2].map(i => (Math.min(...points.map(p => p[i])) + Math.max(...points.map(p => p[i]))) / 2) as Vec3;
     const angle = Math.atan2(360, 160) + Math.PI * cameraTurn(phaseProgress);
@@ -221,6 +221,7 @@ export class LotteryRaceScene {
         // A lone leader should not pull the whole pack out of the default view.
         // The broadcast changes sides once, even if an item sends the leader backwards.
         const finishView=raceFinishView(plan,elapsed,playbackMs,reduce);
+        const holdWinner=raceFirstFinishHold(plan,elapsed,playbackMs);
         const finishLocked=finishView.locked&&followed===null&&!overview;
         this.cameraPhaseProgress=Math.max(this.cameraPhaseProgress,finishLocked?1:positions[0]?.progress??0);
         const group=positions[Math.min(positions.length-1,Math.floor(positions.length*(.25+.25*cameraTurn(this.cameraPhaseProgress))))];
@@ -229,7 +230,7 @@ export class LotteryRaceScene {
         const changedView=this.previousOverview!==overview||this.previousFollowed!==followed||this.previousExpanded!==expanded||this.previousBattle!==battle;
         if(this.cameraProgress===null||reduce||staticView&&changedView)this.cameraProgress=progress;
         else this.cameraProgress+=(progress-this.cameraProgress)*(1-Math.exp(-delta/500));
-        const {eye,look}=battle&&!overview?lotteryRaceBattleCamera(positions,width/height,this.cameraPhaseProgress,finishView.lowerDegrees+(expanded?10:0),elapsed):lotteryRaceCamera(this.cameraProgress,width/height,overview,this.cameraPhaseProgress,finishView.lowerDegrees+(expanded?10:0)),easing=1-Math.exp(-delta/(battle?160:320));
+        const {eye,look}=battle&&!overview?lotteryRaceBattleCamera(positions,width/height,this.cameraPhaseProgress,finishView.lowerDegrees+(expanded?10:0),elapsed,holdWinner):lotteryRaceCamera(this.cameraProgress,width/height,overview,this.cameraPhaseProgress,finishView.lowerDegrees+(expanded?10:0)),easing=1-Math.exp(-delta/(battle?160:320));
         if(!this.eye||reduce||staticView&&changedView){this.eye=eye;this.look=look;}
         else for(let i=0;i<3;i++){this.eye[i]+=(eye[i]-this.eye[i])*easing;this.look![i]+=(look[i]-this.look![i])*easing;}
         this.previousOverview=overview;this.previousFollowed=followed;this.previousExpanded=expanded;this.previousBattle=battle;
@@ -238,7 +239,8 @@ export class LotteryRaceScene {
         const dynamic = new RaceMesh(), pickups = plan?.pickups ?? this.previewPickups;
         const remaining = pickups.filter(item => item.collectedAt === null || item.collectedAt > elapsed);
         for (const item of remaining) { const p = world(item.progress, item.lane, 6 + (reduce ? 0 : Math.sin(elapsed / 250 + item.id) * 1.5)); if(item.kind==='bowlingPin')dynamic.bowlingPin(p[0],p[1]-6,p[2],.85);else dynamic.diamond(...p, 3.4, rgb(RACE_ITEMS.find(k=>k.key===item.kind)!.color)); }
-        const priority = positions.filter((p, rank) => rank < 6 || p.index === followed), priorityIds = new Set(priority.map(p => p.index));
+        const battleIds = new Set(battle&&!overview ? raceBattleGroup(positions,holdWinner).map(p=>p.index) : []);
+        const priority = positions.filter((p, rank) => rank < 6 || p.index === followed || battleIds.has(p.index)), priorityIds = new Set(priority.map(p => p.index));
         const visible = [...priority, ...positions.filter(p => !priorityIds.has(p.index) && (Math.abs(p.progress-progress)<.45 || overview)).slice(0, 210)];
         const people = visible.map(p => ({ ...p, ...this.ball(dynamic, p, elapsed, reduce, participants.length) }));
         const recent = plan ? raceRecentEvents(plan, elapsed, 3500).slice(-180) : [];
@@ -264,10 +266,10 @@ export class LotteryRaceScene {
         bind(this.ballBuffer);gl.uniform1f(this.ballLighting,1);
         for(const ball of people){gl.uniformMatrix4fv(this.model,false,raceBallMatrix([ball.point[0],ball.point[1]+8,ball.point[2]],ball.roll,ball.yaw,7.2,this.ballTransform));gl.drawArrays(gl.TRIANGLES,(ball.index%RACE_COLORS.length)*this.ballVertices,this.ballVertices);}
         ctx.clearRect(0, 0, width, height);
-        this.labels(ctx, width, height, participants, people, remaining, recent, positions, project, elapsed, followed, overview, expanded, battle&&!overview);
+        this.labels(ctx, width, height, participants, people, remaining, recent, positions, project, elapsed, followed, overview, expanded, battle&&!overview, holdWinner);
     }
 
-    private labels(ctx: CanvasRenderingContext2D, width: number, height: number, participants: LotteryParticipant[], people: (Position & { point: Vec3; head: Vec3 })[], pickups: RacePickup[], events: LotteryRacePlan['events'], positions: Position[], project: (p: Vec3) => ReturnType<typeof raceProject>, elapsed: number, followed: number | null, overview: boolean, expanded:boolean, battle:boolean) {
+    private labels(ctx: CanvasRenderingContext2D, width: number, height: number, participants: LotteryParticipant[], people: (Position & { point: Vec3; head: Vec3 })[], pickups: RacePickup[], events: LotteryRacePlan['events'], positions: Position[], project: (p: Vec3) => ReturnType<typeof raceProject>, elapsed: number, followed: number | null, overview: boolean, expanded:boolean, battle:boolean, holdWinner:boolean) {
         const label = (text: string, x: number, y: number, gold = false) => {
             ctx.font = '800 11px sans-serif'; const w = ctx.measureText(text).width + 12; x = Math.max(w / 2 + 4, Math.min(width - w / 2 - 4, x));
             ctx.fillStyle = gold ? '#ffe4a1' : '#172d3fc9'; ctx.beginPath(); ctx.roundRect(x - w / 2, y - 16, w, 21, 5); ctx.fill(); ctx.fillStyle = gold ? '#5a3f10' : '#fff'; ctx.textAlign = 'center'; ctx.fillText(text, x, y - 2);
@@ -288,7 +290,8 @@ export class LotteryRaceScene {
             if(icons){ctx.font=`${Math.min(20,Math.max(11,radius))}px sans-serif`;ctx.textAlign='center';ctx.fillText(icons,foot.x+radius,foot.y-radius);}
         }
         ctx.font = raceNameStyle(width,expanded,battle&&!overview).font;
-        const names=layoutRaceNames(labels.map(runner=>({index:runner.index,rank:ranks.get(runner.index),text:participantName(participants[runner.index]),x:runner.screen!.x,y:runner.screen!.y,priority:runner.index===followed||(ranks.get(runner.index)??0)<3,gold:runner.index===followed||ranks.get(runner.index)===0})),width,height,text=>ctx.measureText(text).width,expanded,battle&&!overview);
+        const battleGroup=battle&&!overview?raceBattleGroup(positions,holdWinner):[],battleIds=new Set(battleGroup.map(p=>p.index));
+        const names=layoutRaceNames(labels.map(runner=>({index:runner.index,rank:ranks.get(runner.index),text:participantName(participants[runner.index]),x:runner.screen!.x,y:runner.screen!.y,priority:runner.index===followed||(ranks.get(runner.index)??0)<3,focus:battleIds.has(runner.index),gold:runner.index===followed||(battleGroup.length?runner.index===battleGroup[0].index:ranks.get(runner.index)===0)})),width,height,text=>ctx.measureText(text).width,expanded,battle&&!overview);
         if(!expanded)paintRaceNames(ctx,names,width,false,battle&&!overview);
         for (const event of events) {
             const source = project(world(event.progress, event.lane, 8)); if (!source) continue; const age = elapsed - event.time;

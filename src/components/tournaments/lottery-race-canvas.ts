@@ -1,4 +1,4 @@
-import { raceBattleGroup, raceFinishView } from '@/lib/lottery-race-view';
+import { raceBattleGroup, raceFinishView, raceFirstFinishHold } from '@/lib/lottery-race-view';
 import { layoutRaceNames, raceNameStyle, paintRaceNames } from '@/lib/lottery-race-labels';
 import type { LotteryParticipant } from '@/lib/lottery-ui';
 import { participantName } from '@/lib/lottery-ui';
@@ -12,12 +12,13 @@ export function paintLotteryRace(ctx:CanvasRenderingContext2D,width:number,heigh
     const leader=positions[0],target=followed===null?leader:positions.find(p=>p.index===followed)||leader;
     const group=positions[Math.min(positions.length-1,Math.floor(positions.length*.25))];
     const finishView=raceFinishView(plan,elapsed,playbackMs,reduceMotion);
+    const holdWinner=raceFirstFinishHold(plan,elapsed,playbackMs);
     const verticalScale=overview?.78:Math.sin(Math.asin(.78)-(finishView.lowerDegrees+(expanded?10:0))*Math.PI/180);
     const focus=raceCoursePoint(finishView.locked&&followed===null&&!overview?1:followed===null?(target?.progress??0)*.55+(group?.progress??0)*.45:target?.progress??0);
     let scale=Math.min(width/1050,height/850)*(overview? .92 : (width<500?1.8:1.45)*1.15*finishView.zoom*(expanded?1.1*1.05:1));
     let camera=overview?{x:490,y:395}:{x:focus.x,y:focus.y*verticalScale-focus.height*.9};
     if(battle&&!overview){
-        const group=raceBattleGroup(positions).map(p=>{const c=raceCoursePoint(p.progress);return{x:c.x-c.dy*(p.lane??0)*30,y:(c.y+c.dx*(p.lane??0)*30)*verticalScale-c.height*.9};});
+        const group=raceBattleGroup(positions,holdWinner).map(p=>{const c=raceCoursePoint(p.progress);return{x:c.x-c.dy*(p.lane??0)*30,y:(c.y+c.dx*(p.lane??0)*30)*verticalScale-c.height*.9};});
         if(group.length){
             const xs=group.map(p=>p.x),ys=group.map(p=>p.y),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
             scale=Math.min(height/(80/1.2/1.1),width*.92/(maxX-minX+48),height*.75/(maxY-minY+48));camera={x:(minX+maxX)/2,y:(minY+maxY)/2};
@@ -87,7 +88,8 @@ export function paintLotteryRace(ctx:CanvasRenderingContext2D,width:number,heigh
         const grid=(1-Math.min(1,r.progress/.12))*(15+Math.sin(r.phase??r.index*1.31)*15);
         return {...r,lane,screen:point(p.x-p.dx*grid-p.dy*lane*30,p.y-p.dy*grid+p.dx*lane*30,p.height)};
     }).filter(p=>p.screen.x> -70&&p.screen.x<width+70&&p.screen.y> -80&&p.screen.y<height+70);
-    const priority=sprites.filter(p=>p.index===followed||(ranks.get(p.index)??Infinity)<6),ids=new Set(priority.map(p=>p.index));
+    const battleGroup=battle&&!overview?raceBattleGroup(positions,holdWinner):[],battleIds=new Set(battleGroup.map(p=>p.index));
+    const priority=sprites.filter(p=>p.index===followed||(ranks.get(p.index)??Infinity)<6||battleIds.has(p.index)),ids=new Set(priority.map(p=>p.index));
     const visible=[...sprites.filter(p=>!ids.has(p.index)).slice(-210),...priority].sort((a,b)=>a.screen.y-b.screen.y);
     for(const runner of visible){
         const {index,screen:p}=runner,mask=runner.effects??0,s=Math.min(13,Math.max(4.5,10*scale)),color=RACE_COLORS[index%RACE_COLORS.length];
@@ -106,7 +108,7 @@ export function paintLotteryRace(ctx:CanvasRenderingContext2D,width:number,heigh
         if(icons){ctx.font=`${Math.max(11,13*scale)}px sans-serif`;ctx.textAlign='center';ctx.fillText(icons,p.x,p.y-s*2.6);}
     }
     ctx.font=raceNameStyle(width,expanded,battle&&!overview).font;
-    const names=layoutRaceNames(visible.filter(r=>r.screen.x>0&&r.screen.x<width&&r.screen.y>0&&r.screen.y<height).map(r=>({index:r.index,rank:ranks.get(r.index),text:participantName(participants[r.index]),x:r.screen.x,y:r.screen.y-18,priority:r.index===followed||(ranks.get(r.index)??0)<3,gold:r.index===followed||ranks.get(r.index)===0})),width,height,text=>ctx.measureText(text).width,expanded,battle&&!overview);
+    const names=layoutRaceNames(visible.filter(r=>r.screen.x>0&&r.screen.x<width&&r.screen.y>0&&r.screen.y<height).map(r=>({index:r.index,rank:ranks.get(r.index),text:participantName(participants[r.index]),x:r.screen.x,y:r.screen.y-18,priority:r.index===followed||(ranks.get(r.index)??0)<3,focus:battleIds.has(r.index),gold:r.index===followed||(battleGroup.length?r.index===battleGroup[0].index:ranks.get(r.index)===0)})),width,height,text=>ctx.measureText(text).width,expanded,battle&&!overview);
     if(!expanded)paintRaceNames(ctx,names,width,false,battle&&!overview);
     if(plan){
         const recent=raceRecentEvents(plan,elapsed,3500).filter(e=>followed===null||e.actor===followed||e.targets.includes(followed)||e.phase==='use').slice(-180);

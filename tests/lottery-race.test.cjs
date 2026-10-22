@@ -299,3 +299,26 @@ test('2D battle fallback enlarges the lead battle and preserves overview and rac
  }
  assert.equal(JSON.stringify(positions),before);
 });
+
+
+test('actual 2D battle fallback shows the next unfinished rank even after twelve finishers',()=>{
+ const paint=loadPainter(),pool=Array.from({length:16},(_,index)=>({registrationId:String(index),registration:{guestName:'남은공 '+index}}));
+ const positions=pool.map((_,index)=>({index,progress:index<12?1:.6-(index-12)*.012,lane:0})),before=JSON.stringify(positions);
+ for(const width of [390,1280]){
+  const {ctx,draws}=context();paint(ctx,width,620,pool,positions,30000,null,true,null,false,0,true,true);
+  assert.ok(draws.some(d=>d.text==='남은공 12'));assert.ok(draws.filter(d=>d.text.startsWith('남은공 ')).every(d=>d.font==='900 '+(width<600?58.19:83.49)+'px sans-serif'));
+ }
+ assert.equal(JSON.stringify(positions),before);
+});
+
+
+test('actual 2D battle fallback highlights first finisher for one playback second before following the next rank',()=>{
+ const paint=loadPainter(),plan=createLotteryRacePlan(43,5,50000,{seed:42}),pool=Array.from({length:43},(_,index)=>({registrationId:String(index),registration:{guestName:'도착공 '+index}}));
+ for(const width of [390,1280])for(const offset of [0,999,1000]){
+  const playback=plan.slowMotionStartMs+offset,elapsed=raceSimulationTime(plan,playback),positions=raceSnapshot(plan,elapsed),{ctx}=context(),gold=[];
+  ctx.fillText=text=>{if(ctx.fillStyle==='#483009')gold.push(text);};
+  paint(ctx,width,620,pool,positions,elapsed,null,true,plan,false,playback,true,true);
+  const subject=offset<1000?plan.order[0]:positions.find(p=>p.progress<1).index;
+  assert.ok(gold.includes('도착공 '+subject));assert.equal(subject===plan.order[0],offset<1000);
+ }
+});

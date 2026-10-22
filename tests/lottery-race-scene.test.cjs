@@ -15,11 +15,11 @@ const { LotteryRaceScene, lotteryRaceCamera } = load(path.join(__dirname, '../sr
 const {raceCoursePoint}=load(path.join(__dirname,'../src/lib/lottery-race-course.ts'));
 const { createLotteryRacePlan, raceSnapshot, raceSimulationTime } = load(path.join(__dirname, '../src/lib/lottery-race.ts'));
 const { lotteryRaceBattleCamera } = load(path.join(__dirname, '../src/components/tournaments/lottery-race-scene.ts'));
-const { raceBattleGroup } = load(path.join(__dirname, '../src/lib/lottery-race-view.ts'));
+const { raceBattleGroup, raceFirstFinishHold, raceFinishView } = load(path.join(__dirname, '../src/lib/lottery-race-view.ts'));
 
 test('actual 3D battle renderer uses larger names and overview restores normal text',()=>{
  const people=Array.from({length:3},(_,index)=>({registrationId:String(index),registration:{guestName:'가상 공 '+index}})),positions=people.map((_,index)=>({index,progress:.4-index*.01,lane:0}));
- for(const [width,height,size] of [[390,520,50.6],[1280,700,72.6]])for(const overview of [false,true]){
+ for(const [width,height,size] of [[390,520,58.19],[1280,700,83.49]])for(const overview of [false,true]){
   const scene=new LotteryRaceScene({width,height,getContext:()=>fakeGL()}),{ctx,draws}=overlay();
   scene.render(ctx,width,height,people,positions,10000,null,true,null,overview,0,true,true);
   const names=draws.filter(d=>d.text.startsWith('가상 공 '));assert.ok(names.length);assert.ok(names.every(d=>d.font===`900 ${overview?(width<600?11:16):size}px sans-serif`));scene.dispose();
@@ -37,7 +37,7 @@ test('battle camera enlarges the nearby podium and keeps all three balls inside 
   const positions=[0,1,2,3].map((index)=>({index,progress:Math.max(0,progress-index*.012),lane:index*.6-.6}));
   const before=JSON.stringify(positions),camera=lotteryRaceBattleCamera(positions,width/height,progress);
   const matrix=raceMatrixMultiply(racePerspective(width/height),raceViewMatrix(camera.eye,camera.look));
-  for(const runner of positions.slice(0,3)){
+  for(const runner of raceBattleGroup(positions)){
    const p=raceCoursePoint(runner.progress),point=[p.x-p.dy*runner.lane*30,p.height+8,p.y+p.dx*runner.lane*30];
    const screen=raceProject(matrix,point,width,height);
    assert.ok(screen&&screen.x>width*.06&&screen.x<width*.94&&screen.y>height*.13&&screen.y<height*.88);
@@ -273,3 +273,72 @@ test('actual WebGL overlay uses reduced expanded names and retains the selected 
 test('expanded camera adds five percent zoom and ten degrees lower pitch; finish framing and overview remain intact',()=>{const plan=createLotteryRacePlan(47,5,50000,{seed:42}),people=Array.from({length:47},(_,index)=>({registrationId:String(index),registration:{guestName:'공 '+index}}));for(const [width,height] of [[390,520],[1280,700]])for(const overview of [false,true])for(const time of [12000,plan.firstFinishMs+1000]){const gl=fakeGL(),scene=new LotteryRaceScene({width,height,getContext:()=>gl}),{ctx}=overlay();scene.render(ctx,width,height,people,raceSnapshot(plan,time),time,null,true,plan,overview,undefined,true);const finished=time>plan.firstFinishMs,zoom=overview?1:1.15*(finished?1.32:1)*1.1*1.05;const camera=lotteryRaceCamera(scene.cameraProgress,width/height,overview,scene.cameraPhaseProgress,(finished?10:0)+10);assert.deepEqual(scene.eye,camera.eye);assert.deepEqual(scene.look,camera.look);const base=lotteryRaceCamera(scene.cameraProgress,width/height,overview,scene.cameraPhaseProgress,finished?10:0);const pitch=c=>Math.atan2(c.eye[1]-c.look[1],Math.hypot(c.eye[0]-c.look[0],c.eye[2]-c.look[2]))*180/Math.PI;assert.ok(Math.abs(pitch(base)-pitch(camera)-(overview?0:10))<1e-10);assert.deepEqual(gl.stats.matrices[0],Array.from(raceMatrixMultiply(racePerspective(width/height,zoom),raceViewMatrix(scene.eye,scene.look))));scene.dispose();}});
 
 test('expanded pitch applies immediately in ready and finished views and restores on close',()=>{const width=1280,height=700,people=[{registrationId:'1',registration:{guestName:'공'}}],plan=createLotteryRacePlan(1,1,50000,{seed:42});for(const race of [null,plan]){const scene=new LotteryRaceScene({width,height,getContext:()=>fakeGL()}),{ctx}=overlay(),time=race?race.simulationEndMs:0,positions=race?raceSnapshot(race,time):[{index:0,progress:0}];for(const expanded of [false,true,false]){scene.render(ctx,width,height,people,positions,time,null,false,race,false,race?.durationMs??0,expanded);const expected=lotteryRaceCamera(scene.cameraProgress,width/height,false,scene.cameraPhaseProgress,(race?10:0)+(expanded?10:0));assert.deepEqual(scene.eye,expected.eye);assert.deepEqual(scene.look,expected.look);}scene.dispose();}});
+
+
+test('battle framing follows each next unfinished rank, including the tail, without mutating results',()=>{
+ const all=Array.from({length:16},(_,index)=>({index,progress:.96-index*.008,lane:0}));
+ for(const finished of [1,5,12,15,16]){
+  const positions=all.map((p,i)=>({...p,progress:i<finished?1:p.progress})),before=JSON.stringify(positions);
+  const group=raceBattleGroup(positions);
+  assert.equal(group[0].index,finished<16?finished:0);
+  assert.ok(group.every(p=>finished===16||p.progress<1));
+  assert.equal(JSON.stringify(positions),before);
+ }
+ assert.deepEqual(raceBattleGroup([{progress:1}]),[{progress:1}]);
+});
+
+test('actual battle renderer and labels follow remaining ranks after the podium has finished on mobile and PC',()=>{
+ const people=Array.from({length:16},(_,index)=>({registrationId:String(index),registration:{guestName:'가상 공 '+index}}));
+ for(const [width,height]of [[390,620],[1280,700]])for(const finished of [1,12,15]){
+  const positions=people.map((_,index)=>({index,progress:index<finished?1:.6-(index-finished)*.012,lane:0}));
+  const before=JSON.stringify(positions),scene=new LotteryRaceScene({width,height,getContext:()=>fakeGL()}),{ctx,draws}=overlay();
+  scene.render(ctx,width,height,people,positions,30000,null,true,null,false,0,true,true);
+  const expected=lotteryRaceBattleCamera(positions.filter(p=>p.progress<1),width/height,1,10,30000);
+  assert.deepEqual(scene.eye,expected.eye);assert.deepEqual(scene.look,expected.look);
+  assert.ok(draws.some(d=>d.text==='가상 공 '+finished),'the next unfinished rank remains labelled beyond the first ten');
+  assert.equal(JSON.stringify(positions),before);scene.dispose();
+ }
+});
+
+test('next-rank handover eases camera position rather than cutting to another ball',()=>{
+ const plan=createLotteryRacePlan(3,1,50000,{seed:42}),scene=new LotteryRaceScene({width:1280,height:700,getContext:()=>fakeGL()}),{ctx}=overlay();
+ const people=Array.from({length:3},(_,index)=>({registrationId:String(index),registration:{guestName:'가상 공 '+index}}));
+ const positions=[{index:0,progress:1,finishMs:plan.firstFinishMs,lane:0},{index:1,progress:.95,lane:0},{index:2,progress:.94,lane:0}];
+ const beforeTime=plan.slowMotionStartMs+999,afterTime=plan.slowMotionStartMs+1000;
+ scene.render(ctx,1280,700,people,positions,raceSimulationTime(plan,beforeTime),null,false,plan,false,beforeTime,true,true);
+ const before=[...scene.eye];scene.lastPaint=performance.now()-16;
+ const elapsed=raceSimulationTime(plan,afterTime);
+ scene.render(ctx,1280,700,people,positions,elapsed,null,false,plan,false,afterTime,true,true);
+ const destination=lotteryRaceBattleCamera(positions,1280/700,1,raceFinishView(plan,elapsed,afterTime).lowerDegrees+10,elapsed,false);
+ assert.notDeepEqual(scene.eye,before);assert.notDeepEqual(scene.eye,destination.eye);
+ assert.ok(Math.hypot(...scene.eye.map((v,i)=>v-before[i]))<Math.hypot(...destination.eye.map((v,i)=>v-before[i])));scene.dispose();
+});
+
+
+test('first finish holds the winner for exactly one real playback second, including slow motion and elapsed fallback',()=>{
+ const plan=createLotteryRacePlan(43,5,50000,{seed:42});
+ const before=JSON.stringify(plan.order);
+ for(const offset of [-1,0,500,999,1000,1001,2000]){
+  const playback=plan.slowMotionStartMs+offset,elapsed=raceSimulationTime(plan,playback),expected=offset>=0&&offset<1000;
+  assert.equal(raceFirstFinishHold(plan,elapsed,playback),expected);
+  assert.equal(raceFirstFinishHold(plan,elapsed),expected);
+  const positions=raceSnapshot(plan,elapsed),group=raceBattleGroup(positions,expected);
+  if(expected)assert.equal(group[0].index,plan.order[0]);
+  else if(offset>=1000&&positions.some(p=>p.progress<1))assert.ok(group.every(p=>p.progress<1));
+ }
+ assert.equal(JSON.stringify(plan.order),before);assert.equal(raceFirstFinishHold(null,1000,1000),false);
+});
+
+test('actual 3D battle camera and name highlight hold the first arrival then hand over at one second on mobile and PC',()=>{
+ const plan=createLotteryRacePlan(43,5,50000,{seed:42}),people=Array.from({length:43},(_,index)=>({registrationId:String(index),registration:{guestName:'가상 공 '+index}}));
+ for(const [width,height]of [[390,620],[1280,700]])for(const offset of [0,999,1000]){
+  const playback=plan.slowMotionStartMs+offset,elapsed=raceSimulationTime(plan,playback),positions=raceSnapshot(plan,elapsed),hold=offset<1000;
+  const scene=new LotteryRaceScene({width,height,getContext:()=>fakeGL()}),{ctx}=overlay();const gold=[];
+  ctx.fillText=text=>{if(ctx.fillStyle==='#483009')gold.push(text);};
+  scene.render(ctx,width,height,people,positions,elapsed,null,true,plan,false,playback,true,true);
+  const lower=raceFinishView(plan,elapsed,playback,true).lowerDegrees+10,expected=lotteryRaceBattleCamera(positions,width/height,1,lower,elapsed,hold);
+  assert.deepEqual(scene.eye,expected.eye);assert.deepEqual(scene.look,expected.look);
+  const subject=raceBattleGroup(positions,hold)[0];assert.ok(gold.includes('가상 공 '+subject.index));
+  assert.equal(subject.index===plan.order[0],hold);scene.dispose();
+ }
+});

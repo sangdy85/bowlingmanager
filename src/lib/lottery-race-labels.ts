@@ -1,9 +1,9 @@
-export type RaceNameLabel = { index: number; text: string; x: number; y: number; priority: boolean; gold: boolean; rank?: number };
+export type RaceNameLabel = { index: number; text: string; x: number; y: number; priority: boolean; gold: boolean; rank?: number; focus?: boolean };
 export type RaceLabelBox = RaceNameLabel & { anchorX: number; anchorY: number; w: number };
 /** CSS pixels, independent of camera zoom and device pixel ratio. */
 export function raceNameStyle(width:number,expanded=false,battle=false){
     const base=expanded?(width<600?11:width<1000?13:16):11;
-    const battleSize=expanded?(width<600?50.6:width<1000?60.5:72.6):50.6;
+    const battleSize=expanded?(width<600?58.19:width<1000?69.575:83.49):58.19;
     const size=battle?battleSize:base;
     return {size,font:`${expanded?900:800} ${size}px sans-serif`,h:expanded?size+7:battle?size+10:21,top:expanded?size+3:battle?size+5:16,pad:expanded?10:12,gap:expanded?3:2,radius:expanded?4:5};
 }
@@ -11,8 +11,8 @@ export function raceNameStyle(width:number,expanded=false,battle=false){
 export function layoutRaceNames(candidates: RaceNameLabel[], width: number, height: number, measure: (text: string) => number, expanded=false,battle=false): RaceLabelBox[] {
     const style=raceNameStyle(width,expanded,battle),step=expanded||battle?style.h+style.gap:24;
     const leaderCount = width < 600 ? 5 : 10;
-    const selected = candidates.filter(p => (p.rank ?? p.index) < leaderCount || p.gold);
-    selected.sort((a, b) => Number(b.gold) - Number(a.gold) || (a.rank ?? a.index) - (b.rank ?? b.index));
+    const selected = candidates.filter(p => (p.rank ?? p.index) < leaderCount || p.gold || battle && p.focus);
+    selected.sort((a, b) => Number(b.gold) - Number(a.gold) || (battle ? Number(!!b.focus) - Number(!!a.focus) : 0) || (a.rank ?? a.index) - (b.rank ?? b.index));
     const labels: RaceLabelBox[] = [];
     for (const candidate of selected) {
         let text = candidate.text;

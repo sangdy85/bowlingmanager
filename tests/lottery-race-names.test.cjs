@@ -6,8 +6,8 @@ const measure=text=>text.length*6;
 test('battle names are larger with matching collision and paint sizes; normal fonts stay unchanged',()=>{
  for(const width of [390,800,1280])for(const expanded of [false,true]){
   const base=raceNameStyle(width,expanded),style=raceNameStyle(width,expanded,true);
-  const previous=Math.round(Math.round(Math.round(Math.round(Math.round(base.size*1.25)*1.3)*1.5)*1.3)*1.3);
-  assert.ok(Math.abs(style.size/previous-1.1)<1e-12,'exactly ten percent, without integer rounding');
+  const previous=expanded?(width<600?50.6:width<1000?60.5:72.6):50.6;
+  assert.ok(Math.abs(style.size/previous-1.15)<1e-12,'exactly fifteen percent, without integer rounding');
   const labels=layoutRaceNames(people.map(p=>({...p,x:width/2,y:280})),width,650,text=>text.length*style.size*.55,expanded,true);
   assert.ok(labels.length>0);assert.ok(labels.some(p=>p.rank===0));
   if(expanded&&width>650)assert.ok(labels.every(p=>p.x-p.w/2>=270),'battle names clear the expanded sidebar');
@@ -45,3 +45,13 @@ test('expanded long names truncate safely and the actual painter uses the measur
 });
 
 test('expanded label padding, height and radius are half their previous size',()=>{for(const [width,oldSize] of [[390,22],[800,26],[1280,32]]){const s=raceNameStyle(width,true);assert.equal(s.size,oldSize/2);assert.equal(s.h,(oldSize+14)/2);assert.equal(s.top,(oldSize+6)/2);assert.equal(s.pad,10);assert.equal(s.gap,3);assert.equal(s.radius,4);}});
+
+
+test('battle focus labels retain actual ranks beyond the first ten and take priority over parked finishers',()=>{
+ const candidates=people.slice(0,16).map(p=>({...p,x:600,y:320,gold:p.index===12,focus:p.index>=12&&p.index<=14}));
+ const names=layoutRaceNames(candidates,1280,700,measure,true,true);
+ assert.equal(names[0].index,12);assert.ok(names.some(p=>p.index===13));assert.ok(names.some(p=>p.index===14));
+ assert.equal(names.find(p=>p.index===12).rank,12);
+ const normal=layoutRaceNames(candidates.map(p=>({...p,gold:false})),1280,700,measure,true,false);
+ assert.ok(normal.every(p=>p.rank<10),'focus flag does not change standard mode');
+});

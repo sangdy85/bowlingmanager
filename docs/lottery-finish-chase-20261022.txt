@@ -1,0 +1,36 @@
+Lottery race: next-rank camera and larger battle names (2026-10-22)
+Local implementation only; no commit, push, production access or deployment.
+Branch: codex/release-1.2.1; starting HEAD f9ffc56. Starting worktree clean.
+
+Changes:
+- Battle-mode name size increased exactly 15%: compact/mobile 50.6 -> 58.19 px; expanded tablet 60.5 -> 69.575 px; expanded desktop 72.6 -> 83.49 px.
+- Shared 3D/2D camera group excludes completed balls while anyone remains on the course. Each finish hands focus to the next unfinished rank and nearby pursuers (at most three).
+- Existing camera easing remains. All-finished view falls back to the completed podium.
+- Active camera group is retained in the renderer and prioritized for labels even beyond global rank 10/5. Result ranks themselves are unchanged.
+- Standard/overview/manual camera behavior, simulation, items, winner selection, slow motion and save logic unchanged.
+
+Runtime files: src/components/tournaments/{LotteryRace.tsx,lottery-race-scene.ts,lottery-race-canvas.ts}; src/lib/{lottery-race-labels.ts,lottery-race-view.ts}.
+Tests: tests/{lottery-race-scene.test.cjs,lottery-race-names.test.cjs,lottery-race.test.cjs}.
+
+Validation:
+- Five related test files: 80 passed, zero failures. Includes actual 3D/2D renderers, next-rank labels after 12 finishers, camera easing, candidate eligibility, existing race result/slow motion invariants.
+- ESLint src: exit 0; 17 pre-existing warnings; no errors.
+- TypeScript: exit 0 in the isolated identical app-source snapshot (not the repository scratch backup trees).
+- Next.js production build: exit 0 in the isolated synthetic SQLite environment; 785 static pages generated; Build ID 6e9fSlB5AIgMvzT1esU2y.
+- All five modified runtime files byte-identical to isolated build/typecheck source.
+- git diff --check passed. No mobile, API, BAND, Prisma, DB, environment or dependency changes.
+- Browser: actual 3D scene, desktop 1280x800 and mobile 390x844; checkpoint counts 1, 12, 42, 43; camera targets next unfinished ranks 2, 13, 43, then completed podium. Actual component replay and final central standings also checked.
+- Screenshots: scratch/race-finish-chase-20261022/{desktop.png,mobile.png}.
+- QA-only checkpoint page is in the separate local preview project, outside deployable app source. No production records or save endpoints used.
+
+Preview: http://127.0.0.1:3142/qa/race-rankings
+Checkpoint preview: http://127.0.0.1:3142/qa/finish-chase
+Enable the close battle camera and replay the race to inspect motion.
+
+Follow-up: first-finisher hold (2026-10-22)
+- After first arrival the battle camera and highlighted name retain the winner for exactly 1000 ms of playback, then resume next-unfinished-rank tracking with existing camera easing.
+- Uses the existing playback timeline; fallback maps simulation elapsed through racePlaybackTime. Slow motion does not stretch the one-second hold. No simulation/save/results changes.
+- Shared hold decision is applied to 3D/2D camera framing, visible group and labels. Standard/overview/manual modes unchanged.
+- Updated regression suite: 83 passed; targeted ESLint exit 0. Isolated identical-source TypeScript exit 0. The production build above predates this follow-up; it was not rerun for the timing-only update.
+- Actual browser 3D checkpoint: +999ms tracks first place, +1000ms tracks next unfinished ranks. Screenshot scratch/race-finish-chase-20261022/first-hold.png.
+- No commit, push or production deployment.
