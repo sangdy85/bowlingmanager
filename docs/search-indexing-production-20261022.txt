@@ -1,0 +1,49 @@
+BowlingManager — Search Console URL 보완 운영 반영 (2026-10-22)
+실제 배포 시각: 2026-10-22T08:34:27.730Z / 2026-10-22 17:34:27 KST
+소스 커밋: e38713ff195d03d5e2856fae9cc2a9c061a3a241
+브랜치: codex/release-1.2.1 (main/다른 worktree 변경·merge·force push 없음)
+운영 릴리스: search-index-e38713f-1caa5e0b7e1a-20261022
+실제 Linux Build ID: uHN9H8e-ZiQxrA_X-kna-
+이전 릴리스/Build: race-finish-25d2bcf-e3ec0cfe2985-20261022 / ZORdVDrXAMk4oHyZ6uBu5
+최신 정상 운영 소스에 아래 3개 파일을 반영한 hybrid 릴리스. 운영 전체 소스가 이 Git 커밋과 같다는 의미는 아님.
+
+반영 파일
+- src/app/centers/page.tsx
+- src/app/find-account/layout.tsx
+- src/app/sitemap.ts
+- /centers: 고유 제목/설명 및 www self canonical, 사이트맵 포함.
+- /find-account 및 /email, /password: 계정 복구 유틸리티 noindex/nofollow 및 제목. Google이 noindex를 읽을 수 있게 robots 차단은 추가하지 않음. 로그인/계정 복구 업무 로직 변경 없음.
+
+제보 URL의 실제 배포 후 상태
+- https://bowlingmanager.co.kr/ -> 308 www 홈페이지 -> 200, www canonical, indexable.
+- /guide/average-improvement-tips -> 308 /guide/bowling-practice-checklist -> 200, replacement self canonical, indexable. 편집 통합 정책 유지.
+- https://bowlingmanager.co.kr/find-account -> 308 www /find-account -> 200, noindex. 이메일·비밀번호 찾기 페이지도 200/noindex.
+- www /tournaments -> 기존 307 /centers -> 200, www /centers canonical. 로그인한 CENTER_ADMIN의 담당 센터 이동을 보존하려고 개인화된 임시 이동을 유지.
+- 제공된 네 URL의 최종 목적지에 404 없음. Search Console의 과거 예시 분류·최근 크롤링 날짜는 실제 계정에서 확인해야 함.
+
+검증 및 보존
+- 로컬 및 Linux 후보 각각 관련 테스트 52/52, lint/TypeScript/production build 통과. 기존 경고 17개, 새 오류 없음. 로컬 Build _CIzaorMIaT9ENzl89ZzU.
+- 테스트는 실제 메타데이터/layout/robots/sitemap/기존 역할별 이동 함수와 공개 페이지 렌더러를 호출. 외부/DB 의존성 모의 처리. 실행 빌드 검증은 별도 가상 로컬 DB 및 운영의 일관성 스냅샷 복사본 사용.
+- 후보 HTTP 287개, 운영 직접 HTTP 48개, 외부 SEO 12개 + 기본/www smoke 16개 + 기존 공개 콘텐츠/상품 34개 정상.
+- API 84개, 변경 외 소스/자산 1285개 보존. 최신 레이스/1초 유지·이름 크기, BAND, 프록시 주소, PNG 다운로드, 상품/필터/사진 유지.
+- DB 86개 테이블 전환 전후 행 수 동일, quick_check ok. 기존 적용 migration 26개, 대기 없음. migration/seed/reset/회원·점수 수정 없음.
+- 운영 환경변수/업로드 보존. 개발용 키 복사·실제 OAuth/게시/푸시 없음.
+- PM2 bowling-manager online, 기존 user·실행 경로·3000 포트 유지. 해당 앱만 전환. pm2-user.service active/enabled, 자동 시작 설정 변경·재부팅 없음.
+- upstream 및 Nginx 정상, 신규 에러 로그 [{"kind":"error","newBytes":0,"errorLines":0},{"kind":"stdout","newBytes":198,"errorLines":0}].
+- 별도 Linux 준비 경로 빌드, 기존 .next에 빌드하지 않음. 변경 없는 public/node_modules 재사용. 후보 cache 비활성화 후 config 복원.
+
+복구 자료
+- 백업: /home/user/bowling-backups/search-index-e38713f-1caa5e0b7e1a-20261022-before
+- DB: database-before.db, database-at-cutover.db. 자동 데이터 롤백 없음.
+- 코드/빌드 롤백: bash /home/user/bowling-deploy/search-index-e38713f-1caa5e0b7e1a-20261022/rollback.sh
+- 롤백 시 새 find-account/layout.tsx만 제거하고 기존 페이지/폼은 보존.
+- 감사 자료: scratch/search-index-release-20261022
+
+Google 계정에서 남은 작업
+- Search Console의 www URL-prefix 속성 또는 bowlingmanager.co.kr 도메인 속성에서 확인. non-www URL-prefix만으로는 www 색인 상태를 통합해서 볼 수 없음.
+- https://www.bowlingmanager.co.kr/sitemap.xml 재제출 및 canonical 홈페이지 /centers /guide/bowling-practice-checklist 실시간 URL 검사 후 필요 시 색인 생성 요청.
+- account recovery/login의 noindex, 이전 URL의 redirect, 적절한 canonical을 가진 대체 페이지는 정상 제외로 남을 수 있음.
+- 기존 404/중복/발견됨-현재 색인되지 않음의 나머지 정확한 URL·last crawl·Google 선택 canonical은 계정에서 추가 확인. Google 색인 반영·보고서 갱신과 AdSense 승인 보장 없음.
+- 실제 운영 사용자 로그인/계정 복구 POST·관리/추첨 저장은 미실행. 업무 로직은 변경하지 않고 테스트로 기존 이동 계약 유지 확인.
+https://support.google.com/webmasters/answer/7440203
+https://support.google.com/webmasters/answer/34592
