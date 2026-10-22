@@ -1,0 +1,34 @@
+WEB-SEO — Search Console URL indexing diagnosis and minimal fixes (2026-10-22)
+Baseline: codex/release-1.2.1 HEAD 1dd5802, clean worktree. Operational release race-finish-25d2bcf-e3ec0cfe2985-20261022, Build ZORdVDrXAMk4oHyZ6uBu5.
+
+User-reported URLs: current anonymous Googlebot HTTP check
+- https://bowlingmanager.co.kr/ -> 308 https://www.bowlingmanager.co.kr/ -> 200, www canonical, no noindex. Correct preferred-host consolidation; do not index the alternate host separately.
+- https://www.bowlingmanager.co.kr/guide/average-improvement-tips -> 308 /guide/bowling-practice-checklist -> 200, self canonical, indexable replacement. Existing editorial merge preserved; old URL should stay a redirect.
+- https://bowlingmanager.co.kr/find-account -> 308 www /find-account -> 200. Account recovery had inherited the generic root title and no indexing policy. Add noindex/nofollow to the account-recovery layout, including email/password forms, matching existing login/reset policy. No form/auth/API logic change.
+- https://www.bowlingmanager.co.kr/tournaments -> 307 /centers -> 200. Source page has role-dependent navigation: CENTER_ADMIN may go to a managed center. Preserve the existing temporary redirects to avoid permanently caching a personalized destination; add an explicit self canonical and distinct title/description to the public /centers destination.
+- None of these four currently ends in 404. Their historical Search Console categories and last crawl times were not supplied; the specific historical 404 cannot be identified from a count alone.
+
+Changes
+- src/app/centers/page.tsx: public center-list metadata, unique title/description, https://www.bowlingmanager.co.kr/centers canonical.
+- src/app/find-account/layout.tsx: noindex/nofollow for the recovery utility and descendants, distinct title. Still publicly accessible and crawlable so Google can see noindex.
+- src/app/sitemap.ts: include canonical /centers; keep utility/redirect/unpublished pages excluded.
+- tests/search-indexing.test.cjs: actual metadata, layout, robots, sitemap and role-dependent redirect function tests.
+- Existing robots, www host redirect, ads.txt exception, merged guides, unpublished guide 404 policy, authentication, API, BAND, mobile, Prisma/schema/migrations, scoring and race code unchanged.
+
+Validation and audit
+- 52 related public-web, editorial-content and indexing tests passed. Redirect role/manager lookup contracts unchanged.
+- Before-change production audit: 49 requests, sitemap 786 URLs, published guide and representative product/competition pages. Full detail in scratch/search-indexing-20261022/production-audit.json.
+- Additional /centers detail/tournament pages also lack canonical metadata; these were not changed in this targeted patch because they require a separate per-resource indexing review. Equipment filters/pagination and guide tabs are also outside this patch.
+- No change to Google-selected canonical, actual index status or AdSense approval can be inferred from an HTTP check alone.
+
+After production deployment, in Search Console
+- Inspect https://www.bowlingmanager.co.kr/ and /centers and /guide/bowling-practice-checklist with Test Live URL; confirm crawl allowed, expected canonical, and no unintended noindex. Request indexing for these canonical content URLs if needed.
+- Submit https://www.bowlingmanager.co.kr/sitemap.xml in the www/domain property. Do not submit the alternate host, old merged slug, legacy redirect or account recovery for indexing.
+- Account recovery, login and unpublished content should remain excluded. An alternate with a proper canonical or an old redirected URL is not an error requiring every version to be indexed.
+- Use the exact example URL and last crawl date to review any remaining 404/noindex/duplicate reports. Re-crawl and report updates are controlled by Google; no indexing deadline or approval guarantee.
+
+Primary references
+https://support.google.com/webmasters/answer/7440203
+https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls
+https://developers.google.com/search/docs/crawling-indexing/301-redirects
+https://developers.google.com/search/docs/crawling-indexing/block-indexing
