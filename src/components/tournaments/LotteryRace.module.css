@@ -81,3 +81,5 @@
 @media(max-width:650px){.expanded .board{width:auto}.expanded .ranking li{min-height:54px}.expanded .ranking strong{font-size:15px}.expanded .rank{font-size:13px}.expanded .distance{font-size:10px}.expanded .winnerReveal{left:50%;width:calc(100% - 20px)}}
 
 @media(max-width:900px) and (min-width:651px){.board{display:block}}
+
+.mapControls{flex-wrap:wrap;max-width:calc(100% - 28px)}.mapControls button[aria-pressed=true]{background:#087e75;border-color:#71efda;color:#fff}

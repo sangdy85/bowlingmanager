@@ -1,5 +1,11 @@
 import type { LotteryRacePlan } from './lottery-race';
 
+/** Follow the live podium, not the middle of the entire field. Never changes race state. */
+export function raceBattleGroup<T extends { progress: number }>(positions: readonly T[]): T[] {
+    const leader = positions[0];
+    return leader ? positions.slice(0, 3).filter(p => leader.progress - p.progress <= .075) : [];
+}
+
 /** Shared 3D/2D finish shot, driven by playback time so solo finishes also zoom. */
 export function raceFinishView(plan:LotteryRacePlan|null|undefined,elapsed:number,playbackMs?:number,reduceMotion=false){
     if(!plan)return {locked:false,zoom:1,lowerDegrees:0};

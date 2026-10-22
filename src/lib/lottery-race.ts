@@ -9,7 +9,9 @@ export const RACE_STEP_MS=100;
 export const RACE_SLOW_MOTION_RATE=.25;
 const SLOW_RAMP_SIMULATION_MS=200;
 const MAX_SIMULATION_MS=180000;
-export const RACE_ITEM_COUNT=100;
+const RACE_BASE_ITEM_COUNT=100;
+export const RACE_FINISH_ITEM_COUNT=20;
+export const RACE_ITEM_COUNT=RACE_BASE_ITEM_COUNT+RACE_FINISH_ITEM_COUNT;
 export type RaceEvent={id:number;time:number;kind:RaceItemKey;phase:'use'|'hit'|'trap'|'block';pickupId?:number;actor:number;targets:number[];progress:number;lane:number;blockedBy?:'spare'|'perfect'};
 export type RaceRunner={index:number;lane:number;phase:number;finishMs:number;samples:Float32Array;lanes:Float32Array;effects:Uint16Array};
 export type RacePickup={id:number;kind:RaceItemKey;progress:number;lane:number;collectedAt:number|null;collectedBy:number|null};
@@ -18,11 +20,15 @@ type SimRunner=RaceItemState & {distance:number;lane:number;homeLane:number;phas
 type PendingHit={at:number;actor:number;targets:number[];kind:RaceAttack;progress:number;lane:number};
 type DryZone={until:number;actor:number;progress:number;lane:number;touched:Set<number>};
 function seededRandom(seed:number){let state=seed>>>0;return()=>{state+=0x6D2B79F5;let t=state;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
-/** 100 single-use pickups: 20 rows, five lanes, all configured kinds represented. */
+/** Keep the original 100 pickups, then add four five-lane rows in the final straight. */
 export function createRacePickups(seed:number):RacePickup[]{
- const random=seededRandom(seed^0x59a1c3e7),kinds=Array.from({length:RACE_ITEM_COUNT},(_,i)=>RACE_ITEMS[i%RACE_ITEMS.length].key);
+ const random=seededRandom(seed^0x59a1c3e7),kinds=Array.from({length:RACE_BASE_ITEM_COUNT},(_,i)=>RACE_ITEMS[i%RACE_ITEMS.length].key);
  for(let i=kinds.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[kinds[i],kinds[j]]=[kinds[j],kinds[i]];}
- return kinds.map((kind,id)=>({id,kind,progress:.045+Math.floor(id/5)*.043+(random()-.5)*.009,lane:(id%5-2)*.44+(random()-.5)*.04,collectedAt:null,collectedBy:null}));
+ const base=kinds.map((kind,id)=>({id,kind,progress:.045+Math.floor(id/5)*.043+(random()-.5)*.009,lane:(id%5-2)*.44+(random()-.5)*.04,collectedAt:null,collectedBy:null}));
+ // Separate random stream preserves every original pickup and its kind/position.
+ const finishRandom=seededRandom(seed^0x27d4eb2f),finishKinds=Array.from({length:RACE_FINISH_ITEM_COUNT},(_,i)=>RACE_ITEMS[i%RACE_ITEMS.length].key);
+ for(let i=finishKinds.length-1;i>0;i--){const j=Math.floor(finishRandom()*(i+1));[finishKinds[i],finishKinds[j]]=[finishKinds[j],finishKinds[i]];}
+ return [...base,...finishKinds.map((kind,index)=>({id:RACE_BASE_ITEM_COUNT+index,kind,progress:.9+Math.floor(index/5)*.02+(finishRandom()-.5)*.004,lane:(index%5-2)*.44+(finishRandom()-.5)*.04,collectedAt:null,collectedBy:null}))];
 }
 /** Anonymous slots plus an independent permutation prevent name/registration-order bias. */
 export function createLotteryRacePlan(count:number,winnerCount:number,targetDurationMs=RACE_DURATION_MS,options:{seed?:number;items?:boolean}={}):LotteryRacePlan{

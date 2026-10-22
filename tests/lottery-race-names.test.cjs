@@ -3,6 +3,19 @@ const moduleUnderTest={exports:{}};new Function('module','exports',ts.transpileM
 const {layoutRaceNames,raceNameStyle,paintRaceNames}=moduleUnderTest.exports;
 const people=Array.from({length:197},(_,index)=>({index,rank:index,text:'선수 '+index,x:180+index%3*80,y:220+index%5*28,priority:index<3,gold:index===0}));
 const measure=text=>text.length*6;
+test('battle names are larger with matching collision and paint sizes; normal fonts stay unchanged',()=>{
+ for(const width of [390,800,1280])for(const expanded of [false,true]){
+  const base=raceNameStyle(width,expanded),style=raceNameStyle(width,expanded,true);
+  const previous=Math.round(Math.round(Math.round(Math.round(Math.round(base.size*1.25)*1.3)*1.5)*1.3)*1.3);
+  assert.ok(Math.abs(style.size/previous-1.1)<1e-12,'exactly ten percent, without integer rounding');
+  const labels=layoutRaceNames(people.map(p=>({...p,x:width/2,y:280})),width,650,text=>text.length*style.size*.55,expanded,true);
+  assert.ok(labels.length>0);assert.ok(labels.some(p=>p.rank===0));
+  if(expanded&&width>650)assert.ok(labels.every(p=>p.x-p.w/2>=270),'battle names clear the expanded sidebar');
+  for(let a=0;a<labels.length;a++)for(let b=a+1;b<labels.length;b++)assert.ok(Math.abs(labels[a].x-labels[b].x)>=(labels[a].w+labels[b].w)/2||Math.abs(labels[a].y-labels[b].y)>=style.h+style.gap);
+  const fonts=[],ctx=new Proxy({save(){},restore(){},fillText:()=>fonts.push(ctx.font)},{get:(o,k)=>o[k]||(()=>{}),set:(o,k,v)=>{o[k]=v;return true;}});
+  paintRaceNames(ctx,labels,width,expanded,true);assert.ok(fonts.every(font=>font===style.font));
+ }
+});
 function check(labels,width,height){for(const p of labels)assert.ok(p.x-p.w/2>=0&&p.x+p.w/2<=width&&p.y>=24&&p.y<=height-54);for(let a=0;a<labels.length;a++)for(let b=a+1;b<labels.length;b++)assert.ok(Math.abs(labels[a].x-labels[b].x)>=(labels[a].w+labels[b].w)/2||Math.abs(labels[a].y-labels[b].y)>=23);}
 test('desktop only labels the first ten ranks, rather than a grid of the whole field',()=>{const labels=layoutRaceNames(people,1280,700,measure);assert.ok(labels.length>0&&labels.length<=10);assert.ok(labels.every(p=>p.rank<10));check(labels,1280,700);});
 test('mobile only labels the first five ranks',()=>{const labels=layoutRaceNames(people,390,520,measure);assert.ok(labels.length>0&&labels.length<=5);assert.ok(labels.every(p=>p.rank<5));check(labels,390,520);});

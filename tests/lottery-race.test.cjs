@@ -9,6 +9,21 @@ const {raceFinishView}=load('lottery-race-view');
 const person=id=>({registrationId:id,registration:{guestName:'가상 동명이인',guestTeamName:'가상팀'}});
 const fixture=createLotteryRacePlan(80,20,50000,{seed:42});
 
+test('final straight adds exactly twenty pickups without changing any of the original hundred',()=>{
+ const crypto=require('node:crypto');
+ for(const [seed,hash] of [[1,'86b63ca14cd600456dc7da232947c65354636321a43134c69bed747990078b0f'],[42,'845795738916de6941cfca11cef4b9dc85513bacb0db016813be311e93708539'],[701,'a0ac74be58a57c456a1da2f0609ce3265dffa238d8711d7c8af55447e05734ac']]){
+  const pickups=createRacePickups(seed),extra=pickups.slice(100);
+  assert.equal(crypto.createHash('sha256').update(JSON.stringify(pickups.slice(0,100))).digest('hex'),hash);
+  assert.equal(extra.length,20);assert.ok(extra.every(p=>p.progress>=.898&&p.progress<=.962));
+  assert.equal(new Set(extra.map(p=>p.kind)).size,RACE_ITEMS.length);
+  assert.deepEqual(extra.map(p=>p.id),Array.from({length:20},(_,i)=>100+i));
+ }
+ const extraUses=fixture.events.filter(e=>e.phase==='use'&&e.pickupId>=100);
+ assert.ok(extraUses.length>=10,'late pickups are really collected, not decoration');
+ for(const event of extraUses){const item=fixture.pickups[event.pickupId];assert.equal(item.collectedBy,event.actor);assert.equal(item.collectedAt,event.time);assert.ok(event.progress>.89);assert.ok(event.time<fixture.runners[event.actor].finishMs);}
+ assert.ok(fixture.events.some(e=>e.phase==='hit'&&e.progress>.9),'attacks still affect balls in the finish straight');
+});
+
 test('finish shot settles before first arrival and adds ten percent zoom and lowers the camera only after that arrival',()=>{
  const plan=fixture,start=plan.slowMotionStartMs;
  assert.ok(Math.abs(plan.finishCameraAtMs/plan.normalRate-(start-2000))<1e-8);
@@ -159,7 +174,7 @@ test('pin and high-spin effects can move runners backwards; positions remain bou
  assert.ok(fixture.runners.some(r=>r.samples.some((v,i)=>i>0&&v<r.samples[i-1])));
  for(const r of fixture.runners)for(const v of r.samples)assert.ok(Number.isFinite(v)&&v>=0&&v<=1);
  assert.ok(fixture.events.every(e=>Number.isFinite(e.time)&&e.time>=0));
- assert.ok(fixture.events.filter(e=>e.phase==='use').length<=100);
+ assert.ok(fixture.events.filter(e=>e.phase==='use').length<=RACE_ITEM_COUNT);
  assert.deepEqual(raceRecentEvents(fixture,1e9),[]);
 });
 
@@ -248,10 +263,10 @@ test('actual renderer supports all item states, winding map, overview and follow
  const {ctx}=context();paint(ctx,320,340,[],[],0,null,true,null,true);
 });
 
-test('exactly 100 real pickups span the course, show all eleven kinds and are consumed once by a matching runner',()=>{
- const pickups=createRacePickups(42);assert.equal(pickups.length,RACE_ITEM_COUNT);assert.equal(RACE_ITEM_COUNT,100);
- assert.equal(new Set(pickups.map(p=>p.id)).size,100);assert.equal(new Set(pickups.map(p=>p.kind)).size,11);
- assert.ok(pickups.every(p=>p.progress>0&&p.progress<.9&&Math.abs(p.lane)<=1));
+test('exactly 120 real pickups span the course, show all eleven kinds and are consumed once by a matching runner',()=>{
+ const pickups=createRacePickups(42);assert.equal(pickups.length,RACE_ITEM_COUNT);assert.equal(RACE_ITEM_COUNT,120);
+ assert.equal(new Set(pickups.map(p=>p.id)).size,120);assert.equal(new Set(pickups.map(p=>p.kind)).size,11);
+ assert.ok(pickups.every(p=>p.progress>0&&p.progress<.965&&Math.abs(p.lane)<=1));
  const uses=fixture.events.filter(e=>e.phase==='use');assert.equal(new Set(uses.map(e=>e.pickupId)).size,uses.length);
  for(const use of uses){const pickup=fixture.pickups.find(p=>p.id===use.pickupId);assert.equal(pickup.kind,use.kind);assert.equal(pickup.collectedBy,use.actor);assert.equal(pickup.collectedAt,use.time);assert.ok(Math.abs(raceSnapshot(fixture,use.time).find(p=>p.index===use.actor).lane-pickup.lane)<.27);}
  assert.equal(fixture.pickups.filter(p=>p.collectedAt!==null).length,uses.length);
@@ -270,3 +285,17 @@ test('actual 2D fallback uses the same expanded name sizes without changing norm
 test('actual 2D expanded track adds five percent zoom while whole map retains its fit',()=>{const paint=loadPainter(),pool=[person('1')];for(const overview of [false,true]){const widths=[];for(const expanded of [false,true]){const {ctx}=context();let laneWidth;ctx.stroke=()=>{if(ctx.strokeStyle==='#32465f')laneWidth=ctx.lineWidth;};paint(ctx,1280,620,pool,[{index:0,progress:.4}],12000,null,true,null,overview,undefined,expanded);widths.push(laneWidth);}assert.ok(Math.abs(widths[1]/widths[0]-(overview?1:1.1*1.05))<1e-12);}});
 
 test('2D expanded camera lowers the projected track by ten degrees without changing whole-map geometry',()=>{const paint=loadPainter(),pool=[person('1')];for(const overview of [false,true]){const shapes=[];for(const expanded of [false,true]){const {ctx}=context();let points=[];ctx.beginPath=()=>{points=[];};ctx.moveTo=(x,y)=>points.push([x,y]);ctx.lineTo=(x,y)=>points.push([x,y]);ctx.stroke=()=>{if(ctx.strokeStyle==='#32465f')shapes.push(points.slice());};paint(ctx,1280,620,pool,[{index:0,progress:.4}],12000,null,true,null,overview,undefined,expanded);}const delta=p=>p[1][1]-p[0][1];const expected=overview?1:1.1*1.05*Math.sin(Math.asin(.78)-10*Math.PI/180)/.78;assert.ok(Math.abs(delta(shapes[1])/delta(shapes[0])-expected)<1e-8);}});
+
+test('2D battle fallback enlarges the lead battle and preserves overview and race input',()=>{
+ const paint=loadPainter(),pool=[person('1'),person('2')],positions=[{index:0,progress:.5,lane:0},{index:1,progress:.49,lane:.4}],before=JSON.stringify(positions);
+ for(const width of [390,1280]){
+  const widths=[];
+  for(const [battle,overview] of [[false,false],[true,false],[false,true],[true,true]]){
+   const {ctx}=context();let laneWidth;
+   ctx.stroke=()=>{if(ctx.strokeStyle==='#32465f')laneWidth=ctx.lineWidth;};
+   paint(ctx,width,620,pool,positions,12000,null,true,null,overview,0,false,battle);widths.push(laneWidth);
+  }
+  assert.ok(widths[1]>widths[0]*1.4);assert.equal(widths[2],widths[3]);
+ }
+ assert.equal(JSON.stringify(positions),before);
+});

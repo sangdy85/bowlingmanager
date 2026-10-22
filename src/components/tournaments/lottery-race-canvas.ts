@@ -1,4 +1,4 @@
-import { raceFinishView } from '@/lib/lottery-race-view';
+import { raceBattleGroup, raceFinishView } from '@/lib/lottery-race-view';
 import { layoutRaceNames, raceNameStyle, paintRaceNames } from '@/lib/lottery-race-labels';
 import type { LotteryParticipant } from '@/lib/lottery-ui';
 import { participantName } from '@/lib/lottery-ui';
@@ -6,15 +6,26 @@ import { createRacePickups, raceEffectIcons, RaceEffect, RACE_ITEMS, raceRecentE
 import { RACE_VISUAL_COURSE_LENGTH, raceCoursePoint } from '@/lib/lottery-race-course';
 export const RACE_COLORS=['#10b6a3','#f26679','#8c75f3','#ffb83d','#409fe7','#e574bb','#7bab42','#ff8549'];
 type Position={index:number;progress:number;lane?:number;effects?:number;phase?:number;finishMs?:number};
+const battleViews=new WeakMap<CanvasRenderingContext2D,{x:number;y:number;scale:number;time:number}>();
 /** An original open-roof bowling arena with wood lanes and scoring monitors. */
-export function paintLotteryRace(ctx:CanvasRenderingContext2D,width:number,height:number,participants:LotteryParticipant[],positions:Position[],elapsed:number,followed:number|null,reduceMotion:boolean,plan?:LotteryRacePlan|null,overview=false,playbackMs?:number,expanded=false){
+export function paintLotteryRace(ctx:CanvasRenderingContext2D,width:number,height:number,participants:LotteryParticipant[],positions:Position[],elapsed:number,followed:number|null,reduceMotion:boolean,plan?:LotteryRacePlan|null,overview=false,playbackMs?:number,expanded=false,battle=false){
     const leader=positions[0],target=followed===null?leader:positions.find(p=>p.index===followed)||leader;
     const group=positions[Math.min(positions.length-1,Math.floor(positions.length*.25))];
     const finishView=raceFinishView(plan,elapsed,playbackMs,reduceMotion);
     const verticalScale=overview?.78:Math.sin(Math.asin(.78)-(finishView.lowerDegrees+(expanded?10:0))*Math.PI/180);
     const focus=raceCoursePoint(finishView.locked&&followed===null&&!overview?1:followed===null?(target?.progress??0)*.55+(group?.progress??0)*.45:target?.progress??0);
-    const scale=Math.min(width/1050,height/850)*(overview? .92 : (width<500?1.8:1.45)*1.15*finishView.zoom*(expanded?1.1*1.05:1));
-    const camera=overview?{x:490,y:395}:{x:focus.x,y:focus.y*verticalScale-focus.height*.9};
+    let scale=Math.min(width/1050,height/850)*(overview? .92 : (width<500?1.8:1.45)*1.15*finishView.zoom*(expanded?1.1*1.05:1));
+    let camera=overview?{x:490,y:395}:{x:focus.x,y:focus.y*verticalScale-focus.height*.9};
+    if(battle&&!overview){
+        const group=raceBattleGroup(positions).map(p=>{const c=raceCoursePoint(p.progress);return{x:c.x-c.dy*(p.lane??0)*30,y:(c.y+c.dx*(p.lane??0)*30)*verticalScale-c.height*.9};});
+        if(group.length){
+            const xs=group.map(p=>p.x),ys=group.map(p=>p.y),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+            scale=Math.min(height/(80/1.2/1.1),width*.92/(maxX-minX+48),height*.75/(maxY-minY+48));camera={x:(minX+maxX)/2,y:(minY+maxY)/2};
+        }
+        const now=performance.now(),previous=battleViews.get(ctx),blend=reduceMotion||!previous?1:1-Math.exp(-Math.min(100,now-previous.time)/300);
+        if(previous){camera={x:previous.x+(camera.x-previous.x)*blend,y:previous.y+(camera.y-previous.y)*blend};scale=previous.scale+(scale-previous.scale)*blend;}
+        battleViews.set(ctx,{...camera,scale,time:now});
+    }else battleViews.delete(ctx);
     const point=(x:number,y:number,elevation=0)=>({x:width/2+(x-camera.x)*scale,y:height*(overview ? .50 : .57)+(y*verticalScale-elevation*.9-camera.y)*scale});
     const trackPoint=(progress:number,lane=0)=>{const p=raceCoursePoint(progress);return point(p.x-p.dy*lane*30,p.y+p.dx*lane*30,p.height);};
     const polygon=(points:{x:number;y:number}[],fill:string)=>{ctx.fillStyle=fill;ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fill();};
@@ -94,9 +105,9 @@ export function paintLotteryRace(ctx:CanvasRenderingContext2D,width:number,heigh
         const icons=raceEffectIcons(mask).slice(0,2).join('');
         if(icons){ctx.font=`${Math.max(11,13*scale)}px sans-serif`;ctx.textAlign='center';ctx.fillText(icons,p.x,p.y-s*2.6);}
     }
-    ctx.font=raceNameStyle(width,expanded).font;
-    const names=layoutRaceNames(visible.filter(r=>r.screen.x>0&&r.screen.x<width&&r.screen.y>0&&r.screen.y<height).map(r=>({index:r.index,rank:ranks.get(r.index),text:participantName(participants[r.index]),x:r.screen.x,y:r.screen.y-18,priority:r.index===followed||(ranks.get(r.index)??0)<3,gold:r.index===followed||ranks.get(r.index)===0})),width,height,text=>ctx.measureText(text).width,expanded);
-    if(!expanded)paintRaceNames(ctx,names,width);
+    ctx.font=raceNameStyle(width,expanded,battle&&!overview).font;
+    const names=layoutRaceNames(visible.filter(r=>r.screen.x>0&&r.screen.x<width&&r.screen.y>0&&r.screen.y<height).map(r=>({index:r.index,rank:ranks.get(r.index),text:participantName(participants[r.index]),x:r.screen.x,y:r.screen.y-18,priority:r.index===followed||(ranks.get(r.index)??0)<3,gold:r.index===followed||ranks.get(r.index)===0})),width,height,text=>ctx.measureText(text).width,expanded,battle&&!overview);
+    if(!expanded)paintRaceNames(ctx,names,width,false,battle&&!overview);
     if(plan){
         const recent=raceRecentEvents(plan,elapsed,3500).filter(e=>followed===null||e.actor===followed||e.targets.includes(followed)||e.phase==='use').slice(-180);
         for(const event of recent){const source=trackPoint(event.progress,event.lane),age=elapsed-event.time,item=RACE_ITEMS.find(i=>i.key===event.kind)!;
@@ -111,5 +122,5 @@ export function paintLotteryRace(ctx:CanvasRenderingContext2D,width:number,heigh
     // Overview inset preserves orientation even when following a runner on a bend.
     const miniW=width<500?62:88,miniH=miniW*.85,mx=width-miniW-12,my=height-miniH-46;
     rounded(mx-6,my-6,miniW+12,miniH+12,8,'#173b4bd9');ctx.beginPath();for(let i=0;i<=80;i++){const p=raceCoursePoint(i/80),x=mx+p.x/1000*miniW,y=my+p.y/1000*miniH;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.strokeStyle='#f5d395';ctx.lineWidth=3;ctx.stroke();if(target){const p=raceCoursePoint(target.progress);ctx.fillStyle='#8affd7';ctx.beginPath();ctx.arc(mx+p.x/1000*miniW,my+p.y/1000*miniH,3,0,Math.PI*2);ctx.fill();}
-    if(expanded)paintRaceNames(ctx,names,width,true);
+    if(expanded)paintRaceNames(ctx,names,width,true,battle&&!overview);
 }

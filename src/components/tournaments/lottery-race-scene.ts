@@ -1,4 +1,4 @@
-import { raceFinishView } from '@/lib/lottery-race-view';
+import { raceBattleGroup, raceFinishView } from '@/lib/lottery-race-view';
 import { layoutRaceNames, raceNameStyle, paintRaceNames } from '@/lib/lottery-race-labels';
 import { participantName, type LotteryParticipant } from '@/lib/lottery-ui';
 import { createRacePickups, RACE_ITEMS, RaceEffect, raceEffectIcons, raceRecentEvents, type LotteryRacePlan, type RacePickup } from '@/lib/lottery-race';
@@ -10,6 +10,15 @@ type Position = { index: number; progress: number; lane?: number; effects?: numb
 const world = (progress: number, lane = 0, lift = 0): Vec3 => {
     const p = raceCoursePoint(progress);
     return [p.x - p.dy * lane * 30, p.height + lift, p.y + p.dx * lane * 30];
+};
+const ballPose = (position: Position, elapsed: number, count: number) => {
+    const progress=position.progress,point=world(progress,position.lane??(position.index%5-2)*.44),tangent=raceCoursePoint(progress);
+    const phase=position.phase??position.index*1.3,afterFinish=progress>=1?Math.max(0,elapsed-(position.finishMs??elapsed)):0;
+    const settling=1-Math.exp(-afterFinish/2200),runout=(55+Math.min(5,Math.floor(position.index/9))*12+Math.sin(phase)*8)*settling,spread=((position.index%9)-4)*10*settling;
+    point[0]+=tangent.dx*runout-tangent.dy*spread;point[2]+=tangent.dy*runout+tangent.dx*spread;
+    const grid=(1-Math.min(1,progress/.09))*(12+(Math.sin(phase)+1)*Math.max(12,Math.min(65,Math.sqrt(count)*4)));
+    point[0]-=tangent.dx*grid;point[2]-=tangent.dy*grid;
+    return {point,phase,runout};
 };
 const vertexShader = 'attribute vec3 a_position;attribute vec3 a_color;uniform mat4 u_matrix;uniform mat4 u_model;uniform float u_ball;varying vec3 v_color;void main(){vec4 world=u_model*vec4(a_position,1.0);gl_Position=u_matrix*world;v_color=a_color;if(u_ball>0.5&&max(a_color.r,max(a_color.g,a_color.b))>0.2){vec3 n=normalize(mat3(u_model)*a_position);float light=0.7+0.3*max(0.0,dot(n,vec3(-0.35,0.8,0.45)));float shine=pow(max(0.0,dot(n,vec3(-0.35,0.7,0.62))),18.0)*0.4;v_color=min(vec3(1.0),a_color*light+shine);}}';
 const fragmentShader = 'precision mediump float;varying vec3 v_color;void main(){gl_FragColor=vec4(v_color,1.0);}';
@@ -30,6 +39,27 @@ export function lotteryRaceCamera(progress:number,aspect:number,overview:boolean
     const orbitRadius=lowerDegrees?distance*Math.cos(pitch):radius,orbitHeight=lowerDegrees?distance*Math.sin(pitch):vertical;
     return{eye:[look[0]+Math.cos(angle)*orbitRadius,look[1]+orbitHeight,look[2]+Math.sin(angle)*orbitRadius] as Vec3,look};
 }
+
+/** Tight broadcast shot: fit nearby podium balls with space for names and controls. */
+export function lotteryRaceBattleCamera(positions: Position[], aspect: number, phaseProgress: number, lowerDegrees = 0, elapsed = 0) {
+    const group = raceBattleGroup(positions);
+    const points = (group.length ? group : [{ index: 0, progress: 0, lane: 0 }]).map(p => {const point=ballPose(p,elapsed,positions.length).point;return [point[0],point[1]+8,point[2]] as Vec3;});
+    const look = [0, 1, 2].map(i => (Math.min(...points.map(p => p[i])) + Math.max(...points.map(p => p[i]))) / 2) as Vec3;
+    const angle = Math.atan2(360, 160) + Math.PI * cameraTurn(phaseProgress);
+    const pitch = (48 - Math.min(18, lowerDegrees)) * Math.PI / 180;
+    const direction = [Math.cos(angle) * Math.cos(pitch), Math.sin(pitch), Math.sin(angle) * Math.cos(pitch)];
+    const cameraAt = (distance: number) => ({ eye: look.map((v, i) => v + direction[i] * distance) as Vec3, look });
+    // Include each ball's radius and name clearance. Portrait views pull back only as needed.
+    for (let distance = 208 / 1.2 / 1.5 / 1.2 / 1.1; distance < 2400; distance *= 1.08) {
+        const camera = cameraAt(distance);
+        const matrix = raceMatrixMultiply(racePerspective(aspect), raceViewMatrix(camera.eye, look));
+        if (points.every(p => [-14, 14].every(x => [-14, 24].every(y => {
+            const screen = raceProject(matrix, [p[0] + x, p[1] + y, p[2]], 1000 * aspect, 1000);
+            return screen && screen.x > 1000 * aspect * .06 && screen.x < 1000 * aspect * .94 && screen.y > 130 && screen.y < 880;
+        })))) return camera;
+    }
+    return cameraAt(2400);
+}
 /** Original open-roof bowling arena, built locally with WebGL; no copied models, textures or remote assets. */
 export class LotteryRaceScene {
     private gl: WebGLRenderingContext;
@@ -47,6 +77,7 @@ export class LotteryRaceScene {
     private previousOverview:boolean|null=null;
     private previousExpanded:boolean|null=null;
     private previousFollowed:number|null=null;
+    private previousBattle=false;
     private count: number;
     private position: number;
     private color: number;
@@ -171,12 +202,8 @@ export class LotteryRaceScene {
     }
 
     private ball(mesh:RaceMesh,position:Position,elapsed:number,reduce:boolean,count:number){
-        const progress=position.progress,p=world(progress,position.lane??(position.index%5-2)*.44),tangent=raceCoursePoint(progress),mask=position.effects??0;
-        const phase=position.phase??position.index*1.3,afterFinish=progress>=1?Math.max(0,elapsed-(position.finishMs??elapsed)):0;
-        const settling=1-Math.exp(-afterFinish/2200),runout=(55+Math.min(5,Math.floor(position.index/9))*12+Math.sin(phase)*8)*settling,spread=((position.index%9)-4)*10*settling;
-        p[0]+=tangent.dx*runout-tangent.dy*spread;p[2]+=tangent.dy*runout+tangent.dx*spread;
-        const grid=(1-Math.min(1,progress/.09))*(12+(Math.sin(phase)+1)*Math.max(12,Math.min(65,Math.sqrt(count)*4)));
-        p[0]-=tangent.dx*grid;p[2]-=tangent.dy*grid;
+        const progress=position.progress,tangent=raceCoursePoint(progress),mask=position.effects??0;
+        const {point:p,phase,runout}=ballPose(position,elapsed,count);
         for(let i=0;i<12;i++){const a=i*Math.PI/6,b=(i+1)*Math.PI/6;mesh.triangle([p[0],p[1]+.8,p[2]],[p[0]+Math.cos(a)*7.8,p[1]+.8,p[2]+Math.sin(a)*5],[p[0]+Math.cos(b)*7.8,p[1]+.8,p[2]+Math.sin(b)*5],rgb('#755c3d'));}
         const roll=reduce?phase:(progress*RACE_VISUAL_COURSE_LENGTH+runout)/7.2+phase;
         const yaw=Math.atan2(tangent.dx,tangent.dy);
@@ -187,7 +214,7 @@ export class LotteryRaceScene {
         return{point:p,head:[p[0],p[1]+25,p[2]] as Vec3,roll,yaw};
     }
 
-    render(ctx: CanvasRenderingContext2D, width: number, height: number, participants: LotteryParticipant[], positions: Position[], elapsed: number, followed: number | null, reduce: boolean, plan: LotteryRacePlan | null, overview: boolean, playbackMs?: number, expanded=false) {
+    render(ctx: CanvasRenderingContext2D, width: number, height: number, participants: LotteryParticipant[], positions: Position[], elapsed: number, followed: number | null, reduce: boolean, plan: LotteryRacePlan | null, overview: boolean, playbackMs?: number, expanded=false, battle=false) {
         const gl = this.gl;
         if (gl.isContextLost()) throw new Error('Scene context lost');
         const tracked=positions.find(p=>p.index===followed),target=tracked??positions[0],now=performance.now(),delta=Math.max(0,Math.min(100,now-this.lastPaint));this.lastPaint=now;
@@ -199,14 +226,14 @@ export class LotteryRaceScene {
         const group=positions[Math.min(positions.length-1,Math.floor(positions.length*(.25+.25*cameraTurn(this.cameraPhaseProgress))))];
         const progress=finishLocked?1:tracked?.progress??((target?.progress??0)*.55+(group?.progress??0)*.45);
         const staticView=!plan||elapsed<=0||elapsed>=plan.simulationEndMs;
-        const changedView=this.previousOverview!==overview||this.previousFollowed!==followed||this.previousExpanded!==expanded;
+        const changedView=this.previousOverview!==overview||this.previousFollowed!==followed||this.previousExpanded!==expanded||this.previousBattle!==battle;
         if(this.cameraProgress===null||reduce||staticView&&changedView)this.cameraProgress=progress;
         else this.cameraProgress+=(progress-this.cameraProgress)*(1-Math.exp(-delta/500));
-        const {eye,look}=lotteryRaceCamera(this.cameraProgress,width/height,overview,this.cameraPhaseProgress,finishView.lowerDegrees+(expanded?10:0)),easing=1-Math.exp(-delta/320);
+        const {eye,look}=battle&&!overview?lotteryRaceBattleCamera(positions,width/height,this.cameraPhaseProgress,finishView.lowerDegrees+(expanded?10:0),elapsed):lotteryRaceCamera(this.cameraProgress,width/height,overview,this.cameraPhaseProgress,finishView.lowerDegrees+(expanded?10:0)),easing=1-Math.exp(-delta/(battle?160:320));
         if(!this.eye||reduce||staticView&&changedView){this.eye=eye;this.look=look;}
         else for(let i=0;i<3;i++){this.eye[i]+=(eye[i]-this.eye[i])*easing;this.look![i]+=(look[i]-this.look![i])*easing;}
-        this.previousOverview=overview;this.previousFollowed=followed;this.previousExpanded=expanded;
-        const matrix = raceMatrixMultiply(racePerspective(width / height, overview ? 1 : 1.15*finishView.zoom*(expanded?1.1*1.05:1)), raceViewMatrix(this.eye, this.look!));
+        this.previousOverview=overview;this.previousFollowed=followed;this.previousExpanded=expanded;this.previousBattle=battle;
+        const matrix = raceMatrixMultiply(racePerspective(width / height, overview || battle ? 1 : 1.15*finishView.zoom*(expanded?1.1*1.05:1)), raceViewMatrix(this.eye, this.look!));
         const project = (p: Vec3) => raceProject(matrix, p, width, height);
         const dynamic = new RaceMesh(), pickups = plan?.pickups ?? this.previewPickups;
         const remaining = pickups.filter(item => item.collectedAt === null || item.collectedAt > elapsed);
@@ -237,10 +264,10 @@ export class LotteryRaceScene {
         bind(this.ballBuffer);gl.uniform1f(this.ballLighting,1);
         for(const ball of people){gl.uniformMatrix4fv(this.model,false,raceBallMatrix([ball.point[0],ball.point[1]+8,ball.point[2]],ball.roll,ball.yaw,7.2,this.ballTransform));gl.drawArrays(gl.TRIANGLES,(ball.index%RACE_COLORS.length)*this.ballVertices,this.ballVertices);}
         ctx.clearRect(0, 0, width, height);
-        this.labels(ctx, width, height, participants, people, remaining, recent, positions, project, elapsed, followed, overview, expanded);
+        this.labels(ctx, width, height, participants, people, remaining, recent, positions, project, elapsed, followed, overview, expanded, battle&&!overview);
     }
 
-    private labels(ctx: CanvasRenderingContext2D, width: number, height: number, participants: LotteryParticipant[], people: (Position & { point: Vec3; head: Vec3 })[], pickups: RacePickup[], events: LotteryRacePlan['events'], positions: Position[], project: (p: Vec3) => ReturnType<typeof raceProject>, elapsed: number, followed: number | null, overview: boolean, expanded:boolean) {
+    private labels(ctx: CanvasRenderingContext2D, width: number, height: number, participants: LotteryParticipant[], people: (Position & { point: Vec3; head: Vec3 })[], pickups: RacePickup[], events: LotteryRacePlan['events'], positions: Position[], project: (p: Vec3) => ReturnType<typeof raceProject>, elapsed: number, followed: number | null, overview: boolean, expanded:boolean, battle:boolean) {
         const label = (text: string, x: number, y: number, gold = false) => {
             ctx.font = '800 11px sans-serif'; const w = ctx.measureText(text).width + 12; x = Math.max(w / 2 + 4, Math.min(width - w / 2 - 4, x));
             ctx.fillStyle = gold ? '#ffe4a1' : '#172d3fc9'; ctx.beginPath(); ctx.roundRect(x - w / 2, y - 16, w, 21, 5); ctx.fill(); ctx.fillStyle = gold ? '#5a3f10' : '#fff'; ctx.textAlign = 'center'; ctx.fillText(text, x, y - 2);
@@ -260,9 +287,9 @@ export class LotteryRaceScene {
             const icons=raceEffectIcons(mask).slice(0,2).join('');
             if(icons){ctx.font=`${Math.min(20,Math.max(11,radius))}px sans-serif`;ctx.textAlign='center';ctx.fillText(icons,foot.x+radius,foot.y-radius);}
         }
-        ctx.font = raceNameStyle(width,expanded).font;
-        const names=layoutRaceNames(labels.map(runner=>({index:runner.index,rank:ranks.get(runner.index),text:participantName(participants[runner.index]),x:runner.screen!.x,y:runner.screen!.y,priority:runner.index===followed||(ranks.get(runner.index)??0)<3,gold:runner.index===followed||ranks.get(runner.index)===0})),width,height,text=>ctx.measureText(text).width,expanded);
-        if(!expanded)paintRaceNames(ctx,names,width);
+        ctx.font = raceNameStyle(width,expanded,battle&&!overview).font;
+        const names=layoutRaceNames(labels.map(runner=>({index:runner.index,rank:ranks.get(runner.index),text:participantName(participants[runner.index]),x:runner.screen!.x,y:runner.screen!.y,priority:runner.index===followed||(ranks.get(runner.index)??0)<3,gold:runner.index===followed||ranks.get(runner.index)===0})),width,height,text=>ctx.measureText(text).width,expanded,battle&&!overview);
+        if(!expanded)paintRaceNames(ctx,names,width,false,battle&&!overview);
         for (const event of events) {
             const source = project(world(event.progress, event.lane, 8)); if (!source) continue; const age = elapsed - event.time;
             if(event.phase==='use'&&event.kind==='turkey'&&age<600){ctx.font='bold 17px sans-serif';ctx.textAlign='center';if(age<150)ctx.fillText('❌❌❌',source.x,source.y-25);else for(const index of event.targets){const target=positions.find(p=>p.index===index);if(!target)continue;const end=project(world(target.progress,target.lane??0,16));if(end){const t=(age-150)/450;ctx.fillText('❌',source.x+(end.x-source.x)*t,source.y+(end.y-source.y)*t-16);}}}
@@ -270,7 +297,7 @@ export class LotteryRaceScene {
 
         }
         // Keep enlarged names readable above item explosions and projectiles.
-        if(expanded)paintRaceNames(ctx,names,width,true);
+        if(expanded)paintRaceNames(ctx,names,width,true,battle&&!overview);
     }
 
     dispose() { this.gl.deleteBuffer(this.staticBuffer); this.gl.deleteBuffer(this.dynamicBuffer); this.gl.deleteBuffer(this.ballBuffer); this.gl.deleteProgram(this.program); }

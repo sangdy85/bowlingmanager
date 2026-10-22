@@ -14,6 +14,59 @@ const { RaceMesh, raceBallMatrix, raceViewMatrix, racePerspective, raceMatrixMul
 const { LotteryRaceScene, lotteryRaceCamera } = load(path.join(__dirname, '../src/components/tournaments/lottery-race-scene.ts'));
 const {raceCoursePoint}=load(path.join(__dirname,'../src/lib/lottery-race-course.ts'));
 const { createLotteryRacePlan, raceSnapshot, raceSimulationTime } = load(path.join(__dirname, '../src/lib/lottery-race.ts'));
+const { lotteryRaceBattleCamera } = load(path.join(__dirname, '../src/components/tournaments/lottery-race-scene.ts'));
+const { raceBattleGroup } = load(path.join(__dirname, '../src/lib/lottery-race-view.ts'));
+
+test('actual 3D battle renderer uses larger names and overview restores normal text',()=>{
+ const people=Array.from({length:3},(_,index)=>({registrationId:String(index),registration:{guestName:'가상 공 '+index}})),positions=people.map((_,index)=>({index,progress:.4-index*.01,lane:0}));
+ for(const [width,height,size] of [[390,520,50.6],[1280,700,72.6]])for(const overview of [false,true]){
+  const scene=new LotteryRaceScene({width,height,getContext:()=>fakeGL()}),{ctx,draws}=overlay();
+  scene.render(ctx,width,height,people,positions,10000,null,true,null,overview,0,true,true);
+  const names=draws.filter(d=>d.text.startsWith('가상 공 '));assert.ok(names.length);assert.ok(names.every(d=>d.font===`900 ${overview?(width<600?11:16):size}px sans-serif`));scene.dispose();
+ }
+});
+
+test('single-leader battle shot adds another 10 percent zoom while retaining automatic framing',()=>{
+ const camera=lotteryRaceBattleCamera([{index:0,progress:.4,lane:0}],1280/700,.4);
+ const distance=Math.hypot(...camera.eye.map((v,i)=>v-camera.look[i]));
+ assert.ok(Math.abs(distance-208/1.2/1.5/1.2/1.1)<1e-9);assert.ok(Math.abs((208/1.2/1.5/1.2)/distance-1.1)<1e-9);
+});
+
+test('battle camera enlarges the nearby podium and keeps all three balls inside the usable frame', () => {
+ for (const [width,height] of [[390,520],[1280,700],[1920,1080]]) for (const progress of [.02,.25,.55,.75,.96,1]) {
+  const positions=[0,1,2,3].map((index)=>({index,progress:Math.max(0,progress-index*.012),lane:index*.6-.6}));
+  const before=JSON.stringify(positions),camera=lotteryRaceBattleCamera(positions,width/height,progress);
+  const matrix=raceMatrixMultiply(racePerspective(width/height),raceViewMatrix(camera.eye,camera.look));
+  for(const runner of positions.slice(0,3)){
+   const p=raceCoursePoint(runner.progress),point=[p.x-p.dy*runner.lane*30,p.height+8,p.y+p.dx*runner.lane*30];
+   const screen=raceProject(matrix,point,width,height);
+   assert.ok(screen&&screen.x>width*.06&&screen.x<width*.94&&screen.y>height*.13&&screen.y<height*.88);
+  }
+  const normal=lotteryRaceCamera(progress,width/height,false),point=raceCoursePoint(progress);
+  const center=[point.x,point.height+8,point.y],close=raceProject(matrix,center,width,height);
+  const wide=raceProject(raceMatrixMultiply(racePerspective(width/height,1.15),raceViewMatrix(normal.eye,normal.look)),center,width,height);
+  assert.ok(close.scale>wide.scale*1.4,'balls are visibly larger than the standard camera');
+  assert.equal(JSON.stringify(positions),before);
+ }
+ assert.deepEqual(raceBattleGroup([{progress:.8},{progress:.79},{progress:.5}]),[{progress:.8},{progress:.79}]);
+ assert.deepEqual(raceBattleGroup([]),[]);
+});
+
+test('actual scene switches battle view smoothly and restores overview and participant following',()=>{
+ const width=1280,height=700,gl=fakeGL(),scene=new LotteryRaceScene({width,height,getContext:()=>gl}),{ctx}=overlay();
+ const people=Array.from({length:4},(_,index)=>({registrationId:String(index),registration:{guestName:'가상 공 '+index}}));
+ const positions=people.map((_,index)=>({index,progress:.7-index*.01,lane:0})),before=JSON.stringify(positions);
+ const plan=createLotteryRacePlan(4,2,50000,{seed:42});
+ scene.render(ctx,width,height,people,positions,1000,null,false,plan,false,0,false,false);
+ const original=[...scene.eye];scene.lastPaint=performance.now()-16;
+ scene.render(ctx,width,height,people,positions,1100,null,false,plan,false,0,false,true);
+ const target=lotteryRaceBattleCamera(positions,width/height,.7);
+ assert.notDeepEqual(scene.eye,original);assert.notDeepEqual(scene.eye,target.eye,'no instantaneous cut during playback');
+ scene.render(ctx,width,height,people,positions,1200,null,true,null,true,0,false,false);
+ assert.deepEqual(scene.eye,lotteryRaceCamera(.7,width/height,true).eye);
+ scene.render(ctx,width,height,people,positions,1300,3,true,null,false,0,false,false);
+ assert.equal(scene.cameraProgress,positions[3].progress);assert.equal(JSON.stringify(positions),before);scene.dispose();
+});
 
 test('actual finish shot adds another ten percent zoom and lowers pitch by ten degrees on mobile and PC',()=>{
  const plan=createLotteryRacePlan(47,5,50000,{seed:42});
@@ -79,7 +132,7 @@ function fakeGL() {
 }
 function overlay() { const labels = [],draws=[],ops=[]; const ctx = new Proxy({ stroke:()=>ops.push('stroke'),fill:()=>ops.push('fill'),measureText: value => ({ width: value.length * 6 }), fillText: value => {labels.push(value);draws.push({text:value,font:ctx.font});ops.push('text:'+value);} }, { get: (obj, key) => obj[key] || (() => {}), set: (obj, key, value) => { obj[key] = value; return true; } }); return { ctx, labels,draws,ops }; }
 
-test('actual WebGL scene renders mobile/desktop, 100 pickups, item effects, following and overview, then disposes resources', () => {
+test('actual WebGL scene renders mobile/desktop, 120 pickups, item effects, following and overview, then disposes resources', () => {
     const plan = createLotteryRacePlan(80, 20, 50000, { seed: 42 });
     const people = Array.from({ length: 80 }, (_, i) => ({ registrationId: String(i), registration: { guestName: '가상 선수 ' + i } }));
     const gl = fakeGL(), canvas = { width: 1280, height: 700, getContext: () => gl }, scene = new LotteryRaceScene(canvas), { ctx } = overlay();
