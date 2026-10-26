@@ -1,0 +1,101 @@
+BAND 공식 공유하기 — GitHub 반영 및 운영 배포 기록
+작성일: 2026-10-26
+
+1. Git 기준과 반영
+저장소: https://github.com/sangdy85/bowlingmanager
+개발 기준: codex/release-1.2.1 / 6af11f79f6db4c11835ef5d31719e83458a77aca
+작업 및 원격 브랜치: codex/band-official-share-20261026
+기능 커밋: 6f2c70dcd2b7dcf43cd48177dc82cc07c9450698
+메시지: feat(band): add official sharing with result images and captions
+명시적으로 선택한 27개 파일의 staged diff를 검토하고 커밋·push했다.
+원본 작업 트리를 보존했으며 main/기존 BAND 브랜치를 merge/rebase/force push하지 않았다.
+추적 파일의 환경설정·비밀키·DB·백업·업로드·임시 검증 산출물은 추가하지 않았다.
+현재 코드와 origin/main의 .github 배포 워크플로는 없었다. 기존 수동 배포 방식을 확인했다.
+이 문서의 후속 커밋은 배포 코드를 바꾸지 않는 기록 전용 커밋이다.
+
+2. 기능 범위
+Client ID/Secret 없이 공식 BAND 공유 URL을 열고, 관리자가 BAND에서 최종 게시한다.
+상주리그는 선택 주차의 기존 4종 결과표 PNG 생성/다운로드를 재사용한다.
+챔프전·이벤트전은 참가자/레인배정/최종 결과 공지와 전체 결과 이미지 생성을 지원한다.
+기본 문구는 대회명·주차/회차·항목으로 구성한다.
+대회 설정에서 사진 위/아래 기본 문구를 저장하고, 공유 미리보기에서 이번 문구를 수정할 수 있다.
+공식 웹 공유에는 PNG를 직접 첨부할 수 없어 저장 후 수동 첨부 안내를 제공한다.
+지원 기기는 파일+문구 네이티브 공유를 제공하며, 미지원/실패 시 다운로드·복사·웹 공유를 제공한다.
+사진과 문구의 실제 배치는 BAND에서 관리자가 확인한다.
+팝업 차단 시 새 탭 링크를 제공한다. 긴 URL은 본문 전체 복사 후 빈 공유 화면으로 안내한다.
+기존 OAuth/암호화/자동 게시/게시 이력 코드를 보존했다.
+공유 화면 열기나 OS 공유 완료를 BAND 게시 성공으로 기록하지 않는다.
+테스트 전용 QA layout의 inline body style을 CSS로 옮겨 hydration 불일치도 수정했다.
+상세 구현·파일별 변경 이유는 band-official-share-20261026.txt를 참고한다.
+
+3. 실제 운영 식별 정보
+서버: vm-share / user@119.214.25.118:51222
+운영 경로: /home/user/bowling-score-manager
+이전 릴리스: search-index-e38713f-1caa5e0b7e1a-20261022
+이전 Build: uHN9H8e-ZiQxrA_X-kna-
+신규 릴리스: band-share-6f2c70d-5390945c7e8d-20261026
+실제 Linux production Build: cRPpar2hIkDewkdD-tYNk
+실제 전환 기록 시각: 2026-10-26T04:39:59.090Z (한국 시각 2026-10-26 13:39:59)
+운영 Git 기반: 1299cca08dd2ec6cc04457e0234d369f90a643be
+적용 소스 패치 커밋: 6f2c70dcd2b7dcf43cd48177dc82cc07c9450698
+패치 SHA-256: 5390945c7e8d0ad4f23711d918f022e620b0cb4e185c1da6271202592448cd00
+전체 운영 트리가 위 기능 커밋과 같다는 의미가 아니다(fullGitTreeMatch=false).
+최신 운영의 혼합 소스에 검증한 BAND 파일 18개만 통합한 릴리스다.
+10개 기존 파일 수정·8개 신규 파일 추가, 다른 기존 파일 1,278개 해시 보존을 확인했다.
+운영에만 있던 회원/기록 귀속·모바일·레이스 등 변경은 덮어쓰지 않았다.
+운영 .deployment-release.json과 배포 디렉터리에 실제 Build/파일 해시/기반/패치 식별자를 기록했다.
+
+4. 빌드·전환·데이터 보존
+별도 디렉터리에서 최신 운영 소스에 패치를 통합해 Linux Node v20.20.0 x64로 빌드했다.
+빌드용 node_modules는 별도 복사했다. 운영 의존성/환경파일을 빌드 과정에서 수정하지 않았다.
+후보 DB는 일관된 운영 백업의 별도 복사본이며 실제 운영 DB로 테스트하지 않았다.
+가짜 BAND Client ID/Secret이나 개발용 BAND 암호화 키를 운영에 복사하지 않았다.
+빌드용 임시 설정은 원복했고 운영 기존 환경파일의 해시가 그대로임을 확인했다.
+Prisma schema/migration 변경 없음. 운영 migration 실행 없음(기존 적용 26개, 대기 0개).
+전환 직전 일관된 SQLite 백업 및 quick_check=ok를 확인했다.
+코드/Build 교체 전후 운영 DB 86개 테이블 행 수가 동일했고 quick_check=ok였다.
+업로드·이미지·점수·회원 데이터는 수정하지 않았다. 운영에서 로그인/관리 저장 테스트는 하지 않았다.
+기존 .next를 보관하고 새 Build로 전환한 후 bowling-manager만 재시작했다.
+후보 검증용 3108 포트 서버는 전환 전에 종료했다.
+
+5. 검증 결과
+로컬 및 Linux 후보에서 확장 회귀 테스트 각각 200개 PASS, 실패 0개.
+BAND 환경변수 없는 미리보기, 권한 거부, 주차별 결과, CHAMP/EVENT, 인코딩,
+문구 설정/동시 수정, 이미지 생성, 기존 OAuth/API 이력 회귀를 포함한다.
+추가로 모바일 운영·센터 권한·기록 귀속·보안·사이드게임·KING PERFECT 회귀를 실행했다.
+npm run lint: PASS, 오류 0개, 기존 경고 17개.
+npm run typecheck: PASS.
+npm run build: 로컬 및 Linux 후보 PASS(Prisma generate 포함).
+브라우저 QA: 기본 문구 저장/재조회, 일회성 편집, 복사, 4종 PNG, 파일 공유 지원/취소 대안 확인.
+QA 재로드 후 hydration 관련 console error/warn 없음.
+실제 공식 BAND 로그인 화면까지 열림을 확인했으며 로그인/게시를 실행하지 않았다.
+Linux 후보 HTTP 검사 288개 PASS: 제품 759개 및 이미지/공개 결과/SEO/정적 파일 포함.
+전환 직후 운영 HTTP 검사 49개 PASS, 외부 HTTPS 검사 27개 PASS.
+API 엔드포인트 84개 보존. 제품 정보 및 기존 이미지 다운로드 자원 보존.
+기본 도메인 HTTPS 308 → www HTTPS 200, 로그인 페이지 200.
+/api/mobile/v1/health 200, 공개 대회 결과 200, 정적 파일 200.
+robots.txt/sitemap.xml/ads.txt 및 공개 메뉴 정상 응답.
+외부에서 내려받은 신규 BAND 정적 번들의 SHA-256이 실제 Build 산출물과 일치했다.
+PM2 bowling-manager online, pm2-user.service active/enabled, upstream/Nginx 정상 응답.
+2026-10-26T04:41:58.014Z 최종 감사: 배포 이후 새 PM2 오류 0줄, Nginx 오류/502 0줄.
+오류 로그의 기존 내용 전체가 깨끗하다는 의미가 아닌, 전환 시점 이후 추가분 검사다.
+
+6. 백업 및 롤백
+백업: /home/user/bowling-backups/band-share-6f2c70d-5390945c7e8d-20261026-before
+소스/이전 Build/서버 환경파일/PM2 및 시작 설정/이전 릴리스 기록/일관된 DB 백업을 보관했다.
+전환 직전 DB 추가 백업: 위 백업 디렉터리의 database-at-cutover.db
+배포 기록: /home/user/bowling-deploy/band-share-6f2c70d-5390945c7e8d-20261026
+이전 실행 Build: 위 배포 디렉터리의 previous-next
+롤백 명령:
+bash /home/user/bowling-deploy/band-share-6f2c70d-5390945c7e8d-20261026/rollback.sh
+해당 릴리스인지 검사 후 이번 파일·이전 Build·이전 릴리스 기록을 복구하고 대상 PM2만 재시작한다.
+DB를 과거 백업으로 되돌리지 않는다. 스키마 변경이 없고 추가 JSON 설정은 이전 코드와 호환된다.
+배포 실패 시 자동 롤백 경로를 준비했으며 이번 전환은 성공해 롤백을 실행하지 않았다.
+새 릴리스가 추가 배포된 경우 이 롤백 스크립트는 현재 릴리스를 먼저 확인해야 한다.
+
+7. 남은 실제 사용자 확인
+운영 관리자 계정으로 실제 주차/회차 선택 후 문구·사진과 설정 저장을 확인할 수 있다.
+권한 및 데이터 조회 동작은 테스트/격리 QA에서 검증했으나 운영 관리자 로그인 저장은 미실행이다.
+실기기 BAND 앱 호출, OS 파일 공유 대상 선택 및 BAND 사진 첨부/게시 완료는 미검증이다.
+공식 공유 기능으로 게시 완료를 확인할 수 없으므로 최종 게시 여부는 관리자가 BAND에서 확인한다.
+실제 BAND OAuth/게시/푸시, Google Play 배포, main 병합은 실행하지 않았다.
