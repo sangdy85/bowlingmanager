@@ -1,0 +1,29 @@
+BAND PC 사진 전달 연결 보완 — 운영 반영 결과 (2026-10-26)
+
+원인: 0.1.0 확장프로그램과 사이트 공유 화면이 연결되지 않아 설치 후에도 수동 저장 안내가 주 동선이었다.
+변경: PC BAND에 사진 전달 버튼, 확장프로그램 연결 상태, 저장 확인 없이 사진 전달 시작. 수동 저장/직접 첨부는 접힌 대안으로 보존.
+모바일 파일 공유는 PNG 4개와 문구 보존을 로컬 Chromium에서 확인했다.
+
+GitHub 브랜치: codex/band-official-share-20261026
+운영 패치 기준 커밋: c313118dddd107daadd0546d2135d5bc8068e2d9
+릴리스: band-pc-bridge-c313118-09fbf5f9e694-20261026
+Build: DR8dh-WQ2TYkI_RBU5QDP
+직전 릴리스: band-photo-flow-889cadb-0f0f6f7e827b-20261026
+직전 Build: 7k-DQgryRe9bD0ZYitpA-
+실제 운영 반영: src/components/tournaments/BandOfficialShareControl.tsx, BandPublishStatus.module.css, LeagueWeeklyBandButton.tsx (3개)
+운영 기존 소스 1293개 보존. 전체 Git 트리 교체 없이 검증한 파일만 반영.
+운영 후보 테스트: 200/200 통과. 로컬 BAND 테스트: 128/128 통과 (확장프로그램 9개 포함).
+lint 오류 0 (기존 경고 17), typecheck 및 로컬/서버 build 통과.
+후보 HTTP 288개, 운영 내부 HTTP 49개, 외부 HTTPS 27개 통과. 외부 새 BAND 번들 해시 일치.
+PM2 online, startup active/enabled. 새 애플리케이션 오류 로그 0바이트. Nginx 내부 HTTP 200.
+API 84개 유지. DB 86개 테이블 행 수 유지, 무결성 ok, 마이그레이션 없음. 환경 파일 유지.
+백업: /home/user/bowling-backups/band-pc-bridge-c313118-09fbf5f9e694-20261026-before
+롤백: bash /home/user/bowling-deploy/band-pc-bridge-c313118-09fbf5f9e694-20261026/rollback.sh
+
+확장프로그램 0.2.0: 기존 안내 설치 폴더의 0.1.0 원본 해시를 비교하고 백업한 후 11개 파일 갱신/해시 검증.
+설치 폴더: C:/Users/user/Desktop/새 폴더/BAND-Photo-Helper-0.1.0 (폴더명은 유지, manifest 버전은 0.2.0).
+기존 설치 백업: C:/Users/user/Desktop/새 폴더/BAND-Photo-Helper-0.1.0-before-0.2.0
+ZIP SHA-256: 9c4608ef87640f66c31eb5cc03492ec0d616cc970e2db9872c26425417d88516
+Chrome 확장프로그램 목록에서 사용자가 새로고침하고 공식 사이트 접근 확인이 나오면 직접 확인해야 함. 이후 사이트 Ctrl+F5.
+현재 남은 확인: 사용자의 실제 Chrome 확장프로그램 연결 상태 및 BAND 서버 사진 업로드/미리보기. 로컬 모형 결과를 실제 BAND 업로드 성공으로 기록하지 않음.
+BAND 게시 버튼 자동 실행/게시 성공 이력 기록 없음.
