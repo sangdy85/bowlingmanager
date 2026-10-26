@@ -243,7 +243,7 @@ test('회차 BAND 게시 UI는 모집 참가자 명단 레인 배정 최종 결�
 });
 
 test('레인 배정 게시 로직은 실제 참가자 전원 배정을 요구한다', () => {
-  const source = fs.readFileSync('src/lib/band/publisher.ts', 'utf8');
+  const source = fs.readFileSync('src/lib/band/announcement.ts', 'utf8');
   assert.match(source, /실제 참가자 전원의 레인 배정이 완료된 뒤 게시할 수 있습니다/);
   assert.match(source, /formatLane\(participant\.lane\)/);
 });
@@ -300,7 +300,7 @@ test('상주리그 주차별 BAND 게시 이력은 다른 주차와 구분된다
 test('상주리그 BAND 버튼은 공식 결과표의 선택 주차 영역에만 제공된다', () => {
   const cards = fs.readFileSync('src/components/tournaments/LeagueResultManager.tsx', 'utf8');
   const downloads = fs.readFileSync('src/components/tournaments/WeeklyResultDownloader.tsx', 'utf8');
-  const publisher = fs.readFileSync('src/lib/band/publisher.ts', 'utf8');
+  const publisher = fs.readFileSync('src/lib/band/announcement.ts', 'utf8');
   assert.ok(!cards.includes('LeagueWeeklyBandButton'));
   assert.ok(downloads.includes('isManager && selectedRoundInfo'));
   assert.ok(downloads.includes('week={selectedRound}'));

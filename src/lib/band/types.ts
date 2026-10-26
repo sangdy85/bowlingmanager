@@ -85,4 +85,5 @@ export type FinalResultPostData = {
     results: FinalResultEntry[];
     participantCount: number;
     detailUrl: string;
+    showAllResults?: boolean;
 };

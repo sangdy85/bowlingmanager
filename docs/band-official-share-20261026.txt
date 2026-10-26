@@ -1,0 +1,234 @@
+BAND 공식 공유하기 전환 — 개발 및 로컬 검증 보고서
+작성일: 2026-10-26
+이 문서는 개발·로컬 검증 단계의 기록이다. 아래 미커밋 상태는 당시 상태이며, 이후 승인된 GitHub 반영·운영 배포 결과는 별도 production 보고서에 기록한다.
+
+1. 기준과 작업 보존
+원본: C:\Users\user\Documents\ChatGPT\볼링 사이트 & 앱\growth-001
+기준 브랜치: codex/release-1.2.1
+기준 HEAD: 6af11f79f6db4c11835ef5d31719e83458a77aca
+시작 및 종료 시 원본 작업 트리: clean, origin/codex/release-1.2.1과 동일.
+git status/branch/remote/fetch --prune/log/worktree를 확인했다.
+origin: https://github.com/sangdy85/bowlingmanager
+origin/main: 4045d27917444446449b928713f612ae5643134d
+origin/codex/develop-band-next: 3eaca552979224b7dceb93fc0d072962be543cb9
+main...기준 HEAD: main에만 1개, 기준에만 131개 커밋.
+remote BAND...기준 HEAD: remote에만 25개, 기준에만 30개 커밋.
+main에는 BAND 라이브러리가 없고 실제 release 작업 코드에 완성된 BAND/주차 기능이 있어 release를 기준으로 삼았다.
+다른 브랜치를 merge/rebase/cherry-pick하지 않았다.
+
+개발 worktree: C:\Users\user\Desktop\새 폴더\band-official-share-20261026
+개발 브랜치: codex/band-official-share-20261026
+HEAD는 위 기준과 같으며 모든 변경은 미커밋/미스테이징 상태다.
+
+2. 신규 파일
+src/app/actions/band-share-actions.ts
+  인증/센터 권한/대회와 회차 소속/주차 매핑/경기 완료를 검사하는 공식 공유 전용 서버 Action.
+src/app/actions/band-post-settings-actions.ts
+  관리자만 사진 위/아래 기본 문구 저장. 기존 설정 보존 및 동시 수정 검사.
+src/lib/band/announcement.ts
+  publisher에서 기존 공지 생성 코드를 분리. 기존 조회·집계·정렬·시상 계산을 재사용.
+src/lib/band/official-share.ts
+  고정 route, UTF-8 URL 인코딩, PC 팝업, 모바일 링크, 긴 문구 처리.
+src/lib/band/share-images.ts
+  공지 PNG 페이지 생성, PNG 파일 변환/저장, 문구+사진 네이티브 공유 지원 검사.
+src/lib/band/share-caption.ts
+  간단한 대회명/회차/항목 안내와 사진 위/아래 문구 구성. 기존 전체 결과 본문과 분리.
+src/components/tournaments/BandOfficialShareControl.tsx
+  편집 가능한 미리보기, 공유 범위 확인, 복사, PC/모바일/팝업 차단 대안.
+src/components/tournaments/BandPostSettings.tsx
+  대회별 사진 위/아래 기본 문구 설정 UI.
+tests/band-official-share.test.cjs
+  신규 공식 공유 시나리오 12개.
+tests/band-share-images.test.cjs
+  긴 문구/한글/이모지 보존, 여러 페이지 PNG, 파일 변환, 지원 불가 대안 검증 4개.
+tests/band-share-caption.test.cjs
+  간단한 기본 안내, 회차/항목, 기본 문구 저장/권한/동시 수정/타 설정 보존 검증 6개.
+tests/helpers/band-share-fixture.cjs
+  실제 서버 Action/공지 생성/집계 함수를 메모리 Prisma 및 인증 경계와 연결하는 테스트 도구.
+scripts/qa-band-official-share.cjs
+  실제 UI 컴포넌트를 사용하는 격리된 브라우저 QA 프로젝트 생성 도구.
+docs/band-official-share-20261026.txt
+  이 보고서.
+
+3. 수정 파일
+src/lib/band/publisher.ts
+  생성 부분만 announcement로 위임. 기존 API 전송·승인·중복 방지·revision·게시 이력 로직 보존.
+src/lib/band/content.ts
+src/lib/band/types.ts
+  공식 공유는 최종 결과 전 순위 지원. 기존 API 호출의 기본 TOP 3 동작 유지.
+src/components/centers/BandIntegrationSettings.tsx
+  공식 공유 사용 가능과 API 자동 게시 승인 필요 상태를 구분.
+src/components/tournaments/BandPublishStatus.tsx
+  회차별 공식 공유를 주 기능으로 제공. 기존 API UI/이력은 접는 영역에서 유지.
+src/components/tournaments/LeagueWeeklyBandButton.tsx
+  선택 주차 공식 공유 버튼 1개 제공. 기존 API 게시/이력/완료 상태 유지.
+src/components/tournaments/WeeklyResultDownloader.tsx
+  BAND 영역을 기존 주차 선택기 위로 이동. 기존 PNG 템플릿/집계를 유지하고 이미지 캡처를 저장과 BAND 사진 준비에서 함께 재사용.
+src/components/tournaments/BandPublishStatus.module.css
+  공지 편집기/공식 공유 UI 및 모바일에서 하단 버튼을 유지하는 스크롤 구조.
+src/components/tournaments/TournamentManager.tsx
+  상주리그 대회 관리에 BAND 게시글 설정 탭 추가.
+src/components/tournaments/RoundDetailPageContent.tsx
+  챔프전/이벤트전 회차 설정에 대회 공통 BAND 게시글 설정 추가.
+tests/band-integration.test.cjs
+tests/band-post-preview.test.cjs
+tests/league-weekly-band.test.cjs
+  공지 생성 코드 분리에 맞춰 기존 테스트의 모듈 경계를 조정.
+
+4. 적용 범위와 실제 흐름
+상주리그: 기존 주차 선택기 하나를 재사용한다. 서버에서 roundId와 roundNumber(week)를 비교한다.
+선택 주차까지의 누적 팀 순위/시상, 팀별 개인 순위, 해당 주차 매치 기록, 설정된 개인 평균 TOP 인원과 기존 결과 링크를 만든다.
+미완료 경기 또는 경기 없는 주차는 서버에서 거부한다. 선택 변경은 열린 미리보기를 닫고 이전 응답을 무효화한다.
+CHAMP/EVENT: 참가자·레인배정·최종 결과 유형을 지원한다.
+최종 결과는 실제 참가자(대기자 제외) 전원의 설정된 게임 점수가 존재해야 한다.
+현재 LeagueRound 모델에는 별도의 결과 확정 플래그가 없어 저장된 점수의 완전성을 확인한다. 신규 확정 상태나 migration은 만들지 않았다.
+
+관리자 클릭 → 서버 권한/대상 검증 및 최신 데이터 조회 → 공지 생성 → 관리자 확인/수정 → 공유 범위 확인 → 공식 공유 화면 → 관리자가 BAND에서 대상 밴드와 최종 게시를 선택한다.
+문구를 수정하면 확인 체크를 해제한다. 기록 변경 시 '최신 공지 다시 불러오기'로 다시 조회한다.
+클라이언트의 점수/본문/revision은 서버 공지 생성의 입력으로 사용하지 않는다.
+생성된 공지에는 연락처·토큰·비공개 첨부파일을 포함하지 않는다. 기존 결과 URL의 접근 권한을 변경하지 않는다.
+외부 게시 전 관리자가 선수 이름/팀/기록의 공유 범위를 확인해야 한다.
+
+5. Client ID/Secret 및 OAuth 보존
+공식 공유 서버 Action과 생성 경로는 OAuth 연결/토큰/BandPost 모델이나 외부 BAND API를 사용하지 않는다.
+환경변수 없는 단위 테스트와 BAND 환경변수 없는 로컬 빌드/브라우저 QA를 통과했다. 가짜 BAND 자격증명을 만들지 않았다.
+OAuth 코드, 토큰 암호화, 연결 모델, API 자동 게시, 게시 이력과 기존 엔드포인트를 삭제하지 않았다.
+공식 공유 화면을 열어도 게시 성공·알림 발송을 기록하지 않는다. BAND 게시 완료 여부는 공식 공유 API로 확인할 수 없다고 안내한다.
+
+6. PC/모바일/제약
+공식 문서: https://developers.band.us/develop/guide/share
+PC: https://band.us/plugin/share?body=...&route=bowlingmanager.co.kr
+모바일: bandapp://create/post?text=...&route=bowlingmanager.co.kr
+직접 클릭에서만 PC 팝업/모바일 앱 링크를 실행한다. route는 고정 허용 도메인이다.
+팝업 차단 시 새 탭 링크와 복사를 제공한다. 모바일은 앱 호출과 별도 웹 공유 대안을 함께 제공한다.
+URL 안전 기준은 자체 보수적 기준 8,000자이며 BAND 공식 제한값으로 주장하지 않는다.
+이를 넘으면 본문을 자르지 않고 전체 복사 후 빈 공식 공유 화면에 붙여넣도록 안내한다.
+PNG 자동 첨부는 지원하지 않는다. 기존 4종 개별/전체 다운로드 후 BAND에서 수동 첨부한다.
+실제 BAND 로그인/최종 게시/푸시, 실기기 BAND 앱 실행 및 긴 글 빈 공유 화면의 BAND 측 동작은 미검증이다.
+추가 확인: QA에서 실제 창 열기를 명시적으로 허용한 후 새 탭 공유 링크로 공식 BAND 로그인 화면(auth.band.us/login_page) 도달을 확인했다. 로그인은 진행하지 않았다.
+
+7. 검증 결과
+Prisma generate: PASS (Prisma 5.22.0). schema/migration 변경 없음.
+npm.cmd run lint: PASS, 오류 0개, 기존 경고 17개.
+npm.cmd run typecheck: PASS.
+npm.cmd run build: PASS. 사진 위/아래 설정 및 간단한 기본 안내를 포함한 전체 빌드 통과, 마지막 안내 문구 수정 후 next build도 재실행하여 PASS.
+최종 로컬 production Build ID: m3J9MbrzmGGCsajtOoFlJ
+이는 로컬 검증 Build이며 운영 Build가 아니다.
+node --test: BAND 관련 테스트와 league-weekly-band 테스트 총 119개 PASS, 실패 0개.
+PowerShell에서 Node 20의 glob 제한 때문에 Get-ChildItem으로 테스트 파일 목록을 전달했다.
+  $bandTestFiles = @(Get-ChildItem -LiteralPath tests -Filter 'band-*.test.cjs' | ForEach-Object FullName)
+  node --test @bandTestFiles tests/league-weekly-band.test.cjs
+git diff --check: PASS.
+
+자동 테스트 검증:
+- BAND 환경변수 없이 실제 공유 서버 Action/생성기 호출
+- 비로그인/일반 회원/다른 센터 관리자 접근 거부, 소유자/등록 관리자 허용
+- 대회/회차/주차 불일치 거부, 미완료 및 경기 없는 주차 차단
+- 1주차/3주차 결과 및 DB 변경 후 재조회, 클라이언트 위조 본문 무시
+- CHAMP와 EVENT의 참가자/레인/전체 최종 순위 및 불완전 점수 차단
+- 편집 문구의 한글/이모지/&/+/개행 인코딩과 고정 도메인
+- 팝업 차단, 긴 문구 대안, 토큰/API 호출과 게시 이력 쓰기 부재
+- 기존 API 승인/중복 방지/revision/암호화/미설정 상태 회귀
+
+브라우저 QA:
+운영 계정/DB 대신 가상 인증·메모리 데이터를 사용하고 실제 앱 UI와 서버 생성 코드를 연결했다.
+자동 QA에서는 팝업과 bandapp 이동을 URL 캡처로 대체하여 실제 BAND 이동/게시를 막았다.
+사용자가 직접 확인할 수 있도록 '실제 BAND 공유 창 열기' 선택 항목을 추가했다. 기본값은 비활성이고, 미리보기 내부에도 현재 테스트/수동 확인 모드를 표시한다.
+실제 창 열기 선택 시에만 기본 브라우저 열기 동작을 허용하며, 가상 기록을 게시하지 말라는 안내를 표시한다. 자동 게시 기능은 없다.
+- 주차 변경 시 미리보기 닫힘 및 늦은 이전 회차 응답 무시 확인
+- 편집 후 확인 체크 재설정, 복사된 긴 전체 문구 일치 확인
+- PC 팝업 URL/차단 대안, 모바일 390x844의 앱 링크/웹 대안/하단 버튼 확인
+- 실제 PNG 4종 생성 확인. 자동 파일 저장만 QA가 캡처했으며 native 파일 저장 완료를 주장하지 않는다.
+  팀순위표: 2000x2310, 310969 bytes
+  팀별 개인순위: 2000x1154, 145229 bytes
+  팀기록표: 2200x934, 107739 bytes
+  개인평균TOP2: 2000x986, 159645 bytes
+  모두 PNG signature 89504e470d0a1a0a 확인.
+QA 페이지: http://127.0.0.1:3165/ (현재 로컬 QA 프로세스 실행 중일 때만 접근 가능)
+재현: node scripts/qa-band-official-share.cjs 실행 후 출력된 임시 경로에서 Next dev를 실행한다. 실행 중인 QA 소스만 갱신할 때는 같은 사용자 임시 폴더 환경에서 --update를 사용한다.
+
+8. 기존 기능 영향과 제외
+기존 src/app/api 라우트 84개: 기준과 동일하며 파일 변경 없음.
+Prisma schema/migration, 모바일, 인증/암호화 모듈, band-actions, BAND HTTP client 변경 없음.
+기존 결과표 집계/시상/TOP 설정과 PNG 템플릿을 복제하거나 교체하지 않았다.
+테스트는 별도 합성 로컬 SQLite/메모리 자료만 사용했다. 운영 데이터·서비스·환경변수·업로드에 접근하거나 변경하지 않았다.
+npm install 불필요: 기준과 동일한 기존 의존성을 junction으로 재사용했다.
+로컬 .env.production.local, 합성 DB, node_modules, 빌드/로그/스크린샷은 ignored 경로에 있고 Git 대상에서 제외했다.
+
+9. Git 상태
+작업 브랜치: codex/band-official-share-20261026
+기준 HEAD 이후 커밋 없음. stage/push/merge/배포 없음.
+수정 13개 + 신규 14개(이 보고서 포함), 모두 미스테이징.
+원본 release 작업 트리는 clean이며 변경하지 않았다.
+tracked diff 통계는 신규 미추적 파일을 포함하지 않으므로 위 파일 목록과 함께 확인해야 한다.
+
+10. 운영 반영 전에 필요한 작업
+이 worktree의 diff와 보고서를 검토하고 별도 GitHub 반영/배포 승인을 받는다.
+실제 관리자로 PC BAND 공유 창과 iOS/Android 앱 호출, 앱 미설치 시 웹 대안, 긴 공지 붙여넣기를 수동 점검한다. 실제 게시 여부는 관리자가 선택한다.
+배포 시 당시 최신 운영 소스와 비교하고 기존 배포/백업/롤백 절차를 따른다. 이번 작업은 운영 소스와 비교하거나 재배포하지 않았다.
+DB migration이나 BAND Client ID/Secret 추가는 필요하지 않다.
+공유하기는 게시 완료/푸시 상태를 확인할 수 없으므로 자동 게시 성공으로 취급하지 않는다.
+
+11. 추가 요청: 사진을 함께 올리는 준비 기능
+미리보기 안의 '사진으로 함께 올리기'에서 준비/미리보기/개별 PNG 저장을 제공한다.
+상주리그는 기존 공식 결과표 4종(팀 순위·시상, 팀별 개인 순위, 매치 기록, 개인 평균 TOP)을 그대로 캡처한다.
+CHAMP/EVENT의 해당 공지는 서버에서 검증한 전체 내용을 이미지로 만든다. 짧은 공유 안내와 분리하며, 긴 기록은 여러 장으로 나누고 내용을 자르지 않는다.
+사진 준비 시 관리 권한/회차/완료 상태와 최신 공지를 다시 확인한다. DB 공지가 변경되었으면 최신 내용으로 바꾸고 확인을 다시 받는다.
+주차/회차/공지 문구/새 미리보기 변경 또는 창 닫기 시 준비 사진과 File 객체를 비운다. 늦은 응답은 기존 요청 번호 검사로 무시한다.
+파일 공유 지원 기기에서는 준비한 File과 수정 문구를 클릭 즉시 navigator.share에 전달한다.
+지원 여부는 navigator.canShare({files, text})로 검사하며, 파일 생성 후 별도 버튼 클릭으로 공유해 사용자 활성화를 유지한다.
+기기 공유창의 BAND 표시 여부와 실제 사진/문구 수신은 기기·앱에 따라 달라지므로 보장하지 않는다.
+미지원/공유 취소/오류 시 사진 저장과 문구 복사 후 BAND에 직접 첨부할 수 있다.
+공식 BAND URL에는 문구만 전달하며 지원되지 않는 사진 업로드 파라미터/API를 추가하지 않는다.
+사진 공유 완료 Promise도 게시 성공으로 기록하지 않는다.
+
+추가 브라우저 QA 결과 (가상 데이터, 네이티브 공유는 전달 데이터 캡처로 대체):
+- 1주차 공식 PNG 4종 생성, 미리보기와 개별 저장 캡처 확인.
+- 문구+사진 전달 데이터에 같은 1주차 본문과 PNG 4개의 이름/타입/실제 바이너리 크기가 함께 포함됨.
+- 파일 공유 미지원 시 비활성화와 수동 첨부 안내 확인.
+- 공지 문구 수정 시 사진/확인 체크가 무효화됨.
+- CHAMP 참가자 공지 PNG 생성 및 공유 취소 안내 확인.
+- EVENT 최종 순위 공지 PNG 생성 확인: 1200x1094, 123275 bytes, PNG signature 일치.
+- 실제 BAND 앱으로 파일을 전달하거나 게시하지 않았으며, 실기기 BAND 수신 확인은 배포 전 수동 점검 항목이다.
+QA 기본값은 공유를 캡처하며 실제 기기 공유창은 열지 않는다. '실제 BAND 공유 창 열기'를 직접 켠 경우에만 원래 브라우저의 BAND 창/파일 공유 지원 여부와 기기 공유창을 사용한다.
+운영용 컴포넌트에는 이 가상 공유 캡처를 넣지 않았다.
+
+참고 문서:
+https://developers.band.us/develop/guide/share
+https://developer.mozilla.org/en-US/docs/Web/API/Navigator/share
+https://developer.mozilla.org/en-US/docs/Web/API/Navigator/canShare
+
+12. 추가 요청: 간단한 안내 및 사진 위/아래 기본 문구
+공식 공유의 기본 안내는 대회명, 선택 주차(회차), 항목명만 표시한다.
+예: '대회명\n1주차 · 공식 결과표 4종'. 자동으로 긴 점수/순위/결과 링크나 서비스 꼬리 문구를 추가하지 않는다.
+원래 전체 공지 생성 결과는 별도로 유지하여 참가자/레인/최종 결과 PNG에는 전체 기록이 들어간다. 기존 API 자동 게시 본문은 그대로 유지한다.
+
+설정 경로:
+- 상주리그: 대회 관리 → BAND 게시글 설정
+- 챔프전/이벤트전: 해당 회차 → 설정 → BAND 게시글 설정 (대회 공통)
+사진 위/아래 기본 문구는 각각 2000자까지 지정할 수 있고 비워두면 추가하지 않는다.
+기존 Tournament.settings JSON의 bandOfficialShare에만 저장하며 schema/migration은 추가하지 않는다.
+기존 gameCount/회차별 정원/BAND 자동 게시 설정 등은 보존한다. 저장 시 기존 설정 문자열을 조건으로 검사해 동시 수정 덮어쓰기를 방지한다.
+비로그인/일반 회원/다른 센터 관리자는 저장할 수 없다. 테스트 저장은 메모리 DB 모형만 사용했다.
+
+미리보기에서는 '공유할 공지 문구'에 제목+사진 위 문구, 이미지 준비 영역 아래의 '사진 아래에 쓰기'에 하단 문구를 불러온다.
+각 문구는 이번 공지에만 수정할 수 있으며 기본 설정을 자동으로 바꾸지 않는다. 새 미리보기에서는 저장된 기본 문구를 다시 불러온다.
+복사/웹 URL/앱 URL/기기 파일 공유에는 위/아래 문구를 한 번씩 결합해 전달한다.
+공식 BAND 공유 인터페이스는 이미지 사이에 본문을 배치하는 기능을 제공하지 않으므로, BAND 최종 편집 화면에서 사진과 문구 위치를 확인·조정해야 한다고 안내한다.
+
+추가 브라우저 QA (실제 컴포넌트, 메모리 설정 저장):
+- 설정이 없을 때 기본 안내가 대회명/주차/항목만 포함됨.
+- 위/아래 기본 문구 저장 후 다음 미리보기에서 불러옴.
+- 이번 공지만 수정한 문구의 URL 인코딩과 공유 목적지 캡처 확인.
+- 다시 열면 기본 설정이 복원됨.
+- 기본 위/아래 문구를 결합해 복사한 실제 클립보드 내용이 기대 문구와 일치함.
+- 간단한 안내와 별도로 기존 공식 결과표 PNG 4종을 유지함.
+- 팀 순위표 PNG가 변경 전과 동일한 310969 bytes / 2000x2310으로 생성됨.
+- CHAMP는 공유 안내가 '대회명 / 1회차 · 참가자 명단'으로 간단해져도 PNG에는 전체 참가자 4명 기록이 유지됨을 확인.
+
+13. QA 화면 hydration 경고 수정
+로컬 QA 생성기의 app/layout.jsx에서 body 인라인 스타일을 제거하고 app/qa.css의 고정 클래스로 옮겼다.
+브라우저에서 body style이 색상/배경 CSS 표현으로 정규화되어 React의 최초 속성 비교와 달라지는 경로를 제거했다.
+suppressHydrationWarning으로 숨기지 않았다. 운영 앱의 layout이나 기능 소스는 이번 경고 수정에서 변경하지 않았다.
+새 로컬 탭에서 최초 접속, 새로고침, 1주차 미리보기 열기를 확인했다. 해당 탭의 콘솔 error/warn 조회 결과는 모두 0건이었다.
+QA 생성기 node --check와 git diff --check 통과. 기존 앱 소스가 같으므로 위 production build 결과를 재사용한다.

@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import { generateLeagueSchedule, updateLeagueScheduleDates } from '@/app/actions/league-actions';
 import { updateTournamentRules, updateTeamHandicaps } from '@/app/actions/tournament-mgmt';
 import Link from 'next/link';
+import BandPostSettings from './BandPostSettings';
 
 interface Team {
     id: string;
@@ -25,7 +26,7 @@ export default function TournamentManager({
     hasStarted?: boolean;
 }) {
     const [isExpanded, setIsExpanded] = useState(false);
-    const [activeTab, setActiveTab] = useState<'SCHEDULE' | 'RULES' | 'PENALTIES'>('SCHEDULE');
+    const [activeTab, setActiveTab] = useState<'SCHEDULE' | 'RULES' | 'PENALTIES' | 'BAND'>('SCHEDULE');
     const [loading, setLoading] = useState(false);
 
     // --- Schedule State ---
@@ -171,6 +172,10 @@ export default function TournamentManager({
 
             {/* Tabs */}
             <div className="flex gap-2 mb-6 border-b border-secondary/20 pb-2 overflow-x-auto">
+                <button type="button" onClick={() => setActiveTab('BAND')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${activeTab === 'BAND' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-secondary/10'}`}>
+                    📢 BAND 게시글 설정
+                </button>
                 <button
                     onClick={() => setActiveTab('SCHEDULE')}
                     className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${activeTab === 'SCHEDULE' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-secondary/10'}`}
@@ -192,6 +197,7 @@ export default function TournamentManager({
             </div>
 
             {/* SCHEDULE TAB */}
+            {activeTab === 'BAND' && <BandPostSettings centerId={centerId} tournamentId={tournament.id} initialSettings={tournament.settings} />}
             {activeTab === 'SCHEDULE' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <h4 className="font-bold border-l-4 border-primary pl-2">📅 리그 일정 및 대진표 생성</h4>

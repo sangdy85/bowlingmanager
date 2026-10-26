@@ -73,8 +73,8 @@ export function buildFinalResultPost(data: FinalResultPostData): string {
     ];
     if (data.roundNumber) lines.push(`${data.roundNumber}회차`);
     const medals = ['🥇', '🥈', '🥉'];
-    data.results.slice(0, 3).forEach((result, index) => {
-        lines.push('', `${medals[index]} ${index + 1}위 ${result.name}`);
+    data.results.slice(0, data.showAllResults ? data.results.length : 3).forEach((result, index) => {
+        lines.push('', `${medals[index] || '🎳'} ${index + 1}위 ${result.name}`);
         const average = result.average == null ? '' : ` / AVG ${result.average.toFixed(1)}`;
         lines.push(`${Math.round(result.total).toLocaleString('ko-KR')}점${average}`);
     });

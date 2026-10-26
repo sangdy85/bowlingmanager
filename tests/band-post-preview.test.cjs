@@ -10,7 +10,7 @@ function loadTs(relativePath, mocks = {}) {
         compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
     }).outputText;
     const module = { exports: {} };
-    const localRequire = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+    const localRequire = id => Object.hasOwn(mocks, id) ? mocks[id] : id === './announcement' ? loadTs('src/lib/band/announcement.ts', mocks) : require(id);
     new Function('require', 'module', 'exports', '__filename', '__dirname', transpiled)(
         localRequire, module, module.exports, filename, path.dirname(filename),
     );

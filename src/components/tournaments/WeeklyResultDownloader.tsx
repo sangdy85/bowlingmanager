@@ -2,6 +2,8 @@
 
 import React, { useState, useRef } from 'react';
 import { toPng } from 'html-to-image';
+import { saveBandShareImage } from '@/lib/band/share-images';
+import type { BandShareImage } from '@/lib/band/share-images';
 import { getWeeklyLeagueReport } from '@/app/actions/league-leaderboard';
 import { getLeagueMatchTeamReport, getLeaguePlayerGames, getLeaguePlayerReportValues, leagueReportNotice } from '@/lib/league-report';
 import LeagueWeeklyBandButton from './LeagueWeeklyBandButton';
@@ -54,84 +56,46 @@ export default function WeeklyResultDownloader({
 
     const [templateData, setTemplateData] = useState<any>(null);
 
-    const handleDownload = async (type: 'TEAM_STANDINGS' | 'INDIVIDUAL_BY_TEAM' | 'MATCH_RECORD' | 'TOP_30') => {
-        setIsGenerating(type);
-        try {
-            const currentData = await getWeeklyLeagueReport(tournamentId, selectedRound);
-            setTemplateData(currentData);
-
-            // Wait longer for complex grid rendering (1000ms)
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // 2. Capture and download
-            let targetRef: React.RefObject<HTMLDivElement | null> | null = null;
-            let fileName = "";
-
-            switch (type) {
-                case 'TEAM_STANDINGS': targetRef = teamStandingsRef; fileName = "팀순위표"; break;
-                case 'INDIVIDUAL_BY_TEAM': targetRef = individualByTeamRef; fileName = "개인순위표_팀별"; break;
-                case 'MATCH_RECORD': targetRef = matchRecordRef; fileName = "팀기록표"; break;
-                case 'TOP_30': targetRef = top30Ref; fileName = `개인평균TOP${currentData.individual.metadata.avgTopRankCount || 30}`; break;
-            }
-
-            if (targetRef?.current) {
-                const dataUrl = await toPng(targetRef.current, {
-                    quality: 1,
-                    backgroundColor: '#ffffff',
-                    pixelRatio: 2,
-                });
-
-                const link = document.createElement('a');
-                link.download = `${tournamentName}_${selectedRound}주차_${fileName}.png`;
-                link.href = dataUrl;
-                link.click();
-            }
-            setIsGenerating(null);
-        } catch (error) {
-            console.error('Download error:', error);
-            alert('이미지 생성 중 오류가 발생했습니다.');
-            setIsGenerating(null);
-        }
-    };
-
-    const handleDownloadAll = async () => {
-        setIsGenerating('ALL');
+    const captureBusy = useRef(false);
+    type ReportType = 'TEAM_STANDINGS' | 'INDIVIDUAL_BY_TEAM' | 'MATCH_RECORD' | 'TOP_30';
+    const allReportTypes: ReportType[] = ['TEAM_STANDINGS', 'INDIVIDUAL_BY_TEAM', 'MATCH_RECORD', 'TOP_30'];
+    const prepareReportImages = async (types: ReportType[]): Promise<BandShareImage[]> => {
+        if (captureBusy.current) throw new Error('이미지를 생성 중입니다. 잠시 후 다시 시도해주세요.');
+        captureBusy.current = true;
+        setIsGenerating(types.length === 1 ? types[0] : 'ALL');
         try {
             const data = await getWeeklyLeagueReport(tournamentId, selectedRound);
             setTemplateData(data);
-
-            // Wait for re-render (1000ms for large batch)
+            // Use the existing official templates after React renders the latest report.
             await new Promise(resolve => setTimeout(resolve, 1000));
-
-            const tasks = [
-                { ref: teamStandingsRef, name: "팀순위표" },
-                { ref: individualByTeamRef, name: "개인순위표_팀별" },
-                { ref: matchRecordRef, name: "팀기록표" },
-                { ref: top30Ref, name: `개인평균TOP${data.individual.metadata.avgTopRankCount || 30}` }
-            ];
-
-            for (const task of tasks) {
-                if (task.ref.current) {
-                    const dataUrl = await toPng(task.ref.current, {
-                        quality: 1,
-                        backgroundColor: '#ffffff',
-                        pixelRatio: 2,
-                    });
-                    const link = document.createElement('a');
-                    link.download = `${tournamentName}_${selectedRound}주차_${task.name}.png`;
-                    link.href = dataUrl;
-                    link.click();
-                    // Slight delay between downloads to avoid browser issues
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                }
+            if (document.fonts) await document.fonts.ready;
+            const tasks = {
+                TEAM_STANDINGS: { ref: teamStandingsRef, name: '팀순위표' },
+                INDIVIDUAL_BY_TEAM: { ref: individualByTeamRef, name: '개인순위표_팀별' },
+                MATCH_RECORD: { ref: matchRecordRef, name: '팀기록표' },
+                TOP_30: { ref: top30Ref, name: '개인평균TOP' + (data.individual.metadata.avgTopRankCount || 30) },
+            };
+            const images: BandShareImage[] = [];
+            for (const type of types) {
+                const task = tasks[type];
+                if (!task.ref.current) throw new Error('결과표를 준비하지 못했습니다. 다시 시도해주세요.');
+                const dataUrl = await toPng(task.ref.current, { quality: 1, backgroundColor: '#ffffff', pixelRatio: 2 });
+                images.push({ name: tournamentName + '_' + selectedRound + '주차_' + task.name + '.png', dataUrl });
             }
-        } catch (error) {
-            console.error('Download All error:', error);
-            alert('전체 다운로드 중 오류가 발생했습니다.');
-        } finally {
-            setIsGenerating(null);
-        }
+            return images;
+        } finally { captureBusy.current = false; setIsGenerating(null); }
     };
+    const downloadReports = async (types: ReportType[]) => {
+        try {
+            const images = await prepareReportImages(types);
+            for (const image of images) {
+                saveBandShareImage(image);
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+        } catch { alert('이미지 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'); }
+    };
+    const handleDownload = (type: ReportType) => downloadReports([type]);
+    const handleDownloadAll = () => downloadReports(allReportTypes);
 
     const getBtnLabel = (type: string, base: string) => {
         return isGenerating === type ? "생성 중..." : base;
@@ -204,6 +168,20 @@ export default function WeeklyResultDownloader({
 
     return (
         <section className="card p-8 border-2 border-black bg-white shadow-xl">
+            {isManager && selectedRoundInfo && (
+                <LeagueWeeklyBandButton
+                    key={selectedRoundInfo.id}
+                    centerId={centerId}
+                    tournamentId={tournamentId}
+                    roundId={selectedRoundInfo.id}
+                    week={selectedRound}
+                    connected={bandConnected}
+                    configured={bandConfigured}
+                    onBusyChange={setBandBusy}
+                    onPrepareImages={() => prepareReportImages(allReportTypes)}
+                />
+            )}
+
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
                     <h2 className="text-2xl font-black flex items-center gap-2 mb-2">
@@ -269,18 +247,6 @@ export default function WeeklyResultDownloader({
                 </button>
             </div>
 
-            {isManager && selectedRoundInfo && (
-                <LeagueWeeklyBandButton
-                    key={selectedRoundInfo.id}
-                    centerId={centerId}
-                    tournamentId={tournamentId}
-                    roundId={selectedRoundInfo.id}
-                    week={selectedRound}
-                    connected={bandConnected}
-                    configured={bandConfigured}
-                    onBusyChange={setBandBusy}
-                />
-            )}
 
             {/* Hidden Templates for Image Generation */}
             <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', pointerEvents: 'none' }}>

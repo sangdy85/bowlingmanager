@@ -1,6 +1,7 @@
 'use client';
 
 import BandPublishControl from './BandPublishControl';
+import BandOfficialShareControl from './BandOfficialShareControl';
 import BandUncertainResolution from './BandUncertainResolution';
 import type { BandPostType } from '@/lib/band/types';
 import styles from './BandPublishStatus.module.css';
@@ -36,11 +37,9 @@ export default function BandPublishStatus({ centerId, tournamentId, roundId, con
         ];
 
     return <section className={styles.panel} aria-label="BAND 게시 상태">
-        <h3 className={styles.title}>NAVER BAND 게시</h3>
+        <h3 className={styles.title}>NAVER BAND 공유 및 게시</h3>
         <p className={styles.hint}>
-            {!configured ? 'NAVER BAND 연동 준비 중입니다. 앱 승인과 운영 설정 완료 후 게시할 수 있습니다.' : connected
-                ? '게시할 대상 밴드와 공지 내용을 미리 확인한 후 게시할 수 있습니다.'
-                : '볼링장 설정에서 BAND를 연결하고 게시 대상을 선택해주세요.'}
+            BAND 공유하기: 사용 가능 · 자동 게시: {configured ? (connected ? '연결됨' : 'BAND 연결 필요') : 'API 승인 필요'}. 공지를 확인·수정한 뒤 BAND에서 직접 게시합니다.
         </p>
         <div className={styles.list}>{items.map(item => {
             const latest = posts.find(post => post.type === item.type);
@@ -51,8 +50,11 @@ export default function BandPublishStatus({ centerId, tournamentId, roundId, con
                         ? <><span className={`${styles.badge} ${styles[latest.status] || ''}`}>{latest.status}</span>
                             v{latest.revision} · {new Date(latest.postedAt || latest.createdAt).toLocaleString('ko-KR')}
                             {latest.errorMessage ? ` · ${latest.errorMessage}` : ''}</>
-                        : '게시 이력 없음'}
+                        : 'API 게시 이력 없음'}
                 </div>
+                <BandOfficialShareControl centerId={centerId} tournamentId={tournamentId} roundId={roundId} type={item.type} buttonLabel={item.label + ' · BAND 공유하기'} />
+                <details className={styles.apiDetails}>
+                    <summary>공식 API 게시 · {configured ? '기존 연결 기능' : 'API 승인 필요'}</summary>
                 <BandPublishControl
                     centerId={centerId}
                     tournamentId={tournamentId}
@@ -61,6 +63,7 @@ export default function BandPublishStatus({ centerId, tournamentId, roundId, con
                     connected={configured && connected}
                     buttonLabel={latest ? '미리보기 · 다시 게시' : '미리보기 · BAND 게시'}
                 />
+                </details>
                 {latest && <BandUncertainResolution centerId={centerId} post={latest} />}
             </div>;
         })}</div>

@@ -26,6 +26,7 @@ import { getRoundFinalResults } from '@/lib/round-final-results';
 import LuckyDrawWinners from './LuckyDrawWinners';
 import resultStyles from './ResultVisibility.module.css';
 import BandPublishStatus from './BandPublishStatus';
+import BandPostSettings from './BandPostSettings';
 
 // --- Tab Components ---
 
@@ -2426,7 +2427,10 @@ export default function RoundDetailPageContent({
                 ) : (
                     <>
                         {activeTab === 'overview' && <RoundOverviewTab round={round} isManager={isManager} onNavigate={handleTabChange} />}
-                        {activeTab === 'settings' && isManager && <RoundSettingsTab round={round} onUpdate={refresh} />}
+                        {activeTab === 'settings' && isManager && <>
+                            <RoundSettingsTab round={round} onUpdate={refresh} />
+                            <BandPostSettings centerId={centerId!} tournamentId={round.tournament.id} initialSettings={round.tournament.settings} />
+                        </>}
                         {activeTab === 'participants' && (
                             <RoundParticipantManager
                                 rounds={round.tournament.rounds}

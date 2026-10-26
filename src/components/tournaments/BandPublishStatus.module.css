@@ -9,6 +9,26 @@
 .SUCCESS { background: #dcfce7; color: #166534; } .FAILED { background: #fee2e2; color: #991b1b; } .PENDING, .UNKNOWN { background: #fef3c7; color: #92400e; }
 .button { flex: 0 0 auto; border: 0; border-radius: .55rem; background: var(--primary); color: white; font-size: .75rem; font-weight: 800; padding: .55rem .7rem; cursor: pointer; }
 .button:disabled { opacity: .5; cursor: wait; }
+.shareLabel { display: block; margin: 16px 0 8px; font-weight: 800; }
+.shareEditor { box-sizing: border-box; display: block; width: 100%; min-height: 260px; resize: vertical; }
+.captionEditor { min-height: 110px; }
+.settingsEditor { box-sizing: border-box; width: 100%; border: 1px solid #94a3b8; border-radius: 9px; padding: 12px; color: #10283e; background: white; font: inherit; font-size: 14px; resize: vertical; }
+.shareDisabled { opacity: .5; cursor: not-allowed; }
+.imageArea { margin-top: 18px; padding: 16px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 12px; }
+.imageArea > button { margin-top: 12px; max-width: 100%; }
+.imageList { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 12px; margin-top: 14px; }
+.imageList figure { min-width: 0; margin: 0; }
+.imageList img { width: 100%; height: 200px; object-fit: contain; background: white; border: 1px solid #cbd5e1; border-radius: 6px; }
+.imageList button { width: 100%; font-size: 12px; padding: 8px; overflow-wrap: anywhere; }
+.previewActions a { display: inline-flex; align-items: center; text-decoration: none; box-sizing: border-box; }
+.apiDetails { width: 100%; font-size: 13px; color: #475569; }
+.apiDetails summary { cursor: pointer; margin-bottom: 10px; }
+.shareDialog[open] { display: flex; flex-direction: column; }
+.shareDialog .previewHeader, .shareDialog .previewActions { flex: 0 0 auto; }
+.shareDialog .previewBody { flex: 1 1 auto; min-height: 0; max-height: none; }
+@media (max-width: 640px) {
+ .shareDialog .previewActions > * { flex: 1 1 130px; justify-content: center; text-align: center; }
+}
 
 .control { display: grid; gap: .4rem; justify-items: end; }
 .feedback { font-size: .75rem; line-height: 1.5; color: var(--primary); margin: 0; max-width: 280px; overflow-wrap: anywhere; text-align: right; }

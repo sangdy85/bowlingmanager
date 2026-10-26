@@ -7,7 +7,7 @@ after(() => { if (originalSecret === undefined) delete process.env.AUTH_SECRET; 
 function load(file, mocks = {}) {
     const source = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
     const module = { exports: {} };
-    new Function('require', 'module', 'exports', source)(id => Object.hasOwn(mocks, id) ? mocks[id] : require(id), module, module.exports);
+    new Function('require', 'module', 'exports', source)(id => Object.hasOwn(mocks, id) ? mocks[id] : id === './announcement' ? load('src/lib/band/announcement.ts', mocks) : require(id), module, module.exports);
     return module.exports;
 }
 function fixture() {

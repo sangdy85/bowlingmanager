@@ -53,12 +53,12 @@ export default function BandIntegrationSettings({ centerId, connection, oauthRes
 
     return <section className={styles.panel} aria-labelledby="band-settings-title">
         <div className={styles.header}>
-            <div><h2 id="band-settings-title" className={styles.title}>NAVER BAND 자동 게시</h2><p className={styles.description}>기본값은 자동 게시 꺼짐입니다. 필요한 시점에 관리자가 별도로 자동 게시를 활성화할 수 있습니다.</p></div>
+            <div><h2 id="band-settings-title" className={styles.title}>NAVER BAND 공유 및 자동 게시</h2><p className={styles.description}>BAND 공유하기는 Client ID·Secret 없이 사용 가능합니다. 대회 회차 또는 주차별 공식 결과표 영역에서 공지를 확인·수정하고 직접 공유해주세요.</p></div>
             {connection && <span className={styles.badge}>연결됨</span>}
         </div>
-        {!configured && <p className={styles.message} role="status">NAVER BAND 연동 준비 중입니다. 앱 승인과 운영 설정이 완료되면 연결·게시 기능을 사용할 수 있습니다.</p>}
+        {!configured && <p className={styles.message} role="status">BAND 자동 게시: API 승인 필요 · BAND 공유하기: 사용 가능. 공식 공유 화면에서 관리자가 밴드 선택 및 최종 게시를 진행합니다.</p>}
         {message && <p className={`${styles.message} ${isError ? styles.error : ''}`}>{message}</p>}
-        {!configured ? <button type="button" className={styles.button} disabled>BAND 연결·게시 준비 중</button> : !connection ? <a className={styles.button} href={`/api/integrations/band/connect?centerId=${encodeURIComponent(centerId)}`}>NAVER BAND 연결</a> : <div className={styles.stack}>
+        {!configured ? <button type="button" className={styles.button} disabled>BAND API 자동 게시 · 승인 필요</button> : !connection ? <a className={styles.button} href={`/api/integrations/band/connect?centerId=${encodeURIComponent(centerId)}`}>NAVER BAND 연결</a> : <div className={styles.stack}>
             <div className={styles.box}>
                 <p><strong>게시 BAND:</strong> {connection.bandName || '선택 전'}</p>
                 <div className={styles.row}>
