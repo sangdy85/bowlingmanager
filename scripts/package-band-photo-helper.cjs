@@ -25,7 +25,7 @@ const quote = value => "'" + value.replaceAll("'", "''") + "'";
 // Use the framework ZIP API instead of the PS5/PS7 Archive module, whose module
 // version may be incompatible with the child PowerShell process on this PC.
 const entries = files.map(file => '[IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive,' + quote(path.join(folder, file)) + ',' + quote(file) + ',[IO.Compression.CompressionLevel]::Optimal) | Out-Null').join('; ');
-const command = "$ErrorActionPreference='Stop'; Add-Type -AssemblyName System.IO.Compression.FileSystem; $archive=[IO.Compression.ZipFile]::Open(" + quote(zip) + ',[IO.Compression.ZipArchiveMode]::Create); try { ' + entries + ' } finally { $archive.Dispose() }';
+const command = "$ErrorActionPreference='Stop'; Add-Type -AssemblyName System.IO.Compression; Add-Type -AssemblyName System.IO.Compression.FileSystem; $archive=[IO.Compression.ZipFile]::Open(" + quote(zip) + ',[IO.Compression.ZipArchiveMode]::Create); try { ' + entries + ' } finally { $archive.Dispose() }';
 cp.execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', command], { stdio: 'inherit' });
 const hash = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const info = {
