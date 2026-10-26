@@ -1,0 +1,35 @@
+CHAMP historical lane loss — 2026-10-26
+Base branch: codex/band-official-share-20261026 at 19d0b43
+
+Diagnosis confirmed read-only against production and pre-deployment databases:
+- Four participating entries in CHAMP round 4 retained all three game scores
+  but lanes became NULL and paymentStatus changed PENDING -> CANCELED.
+- Opening the participant manager invokes checkAndCancelUnpaidRegistrations.
+- The old action selected overdue registrations for the entire tournament and
+  cleared RoundParticipant lanes by registrationId without a roundId condition.
+- No guard prevented cancellation of past/scored rounds. The BAND preview
+  builder itself performs no DB writes; it exposed the already-missing lanes.
+
+Fix (no schema/API shape changes):
+- Verify the caller manages the round's center on the server.
+- Skip historical/current-day rounds, finished/canceled tournaments, and rounds
+  containing saved scores or raw lane scores, including zero-valued records.
+- Select only this round's pending entries and measure the deadline from their
+  round entry timestamp, with an explicit KST day boundary.
+- Scope lane clearing to the exact entry and round. Payment and lane updates
+  occur in one transaction, including rollback on a lane-write failure.
+
+Local verification:
+- lint: zero errors, 17 existing warnings.
+- typecheck: passed.
+- npm run build: passed using a local fixture DB.
+- Real temporary SQLite/Prisma tests: 11 passed; past/scored/raw-score rounds,
+  paid/recent entries, old rounds, unrelated entries, permissions and rollback.
+- BAND/lane regression subset: 150 passed.
+
+Recovery is separately authorized by the user after a read-only dry run.
+Only four backed-up lanes/manual flags and four original PENDING statuses may
+be restored, with a full database backup and guarded transaction. Scores,
+rankings and other entries must remain unchanged. User confirmed all four
+affected people attended. Deployment and recovery receipts are recorded after
+execution; this document alone does not assert production completion.
