@@ -9,15 +9,34 @@ const core = () => import(moduleUrl('transfer.js'));
 const png = 'data:image/png;base64,iVBORw0KGgo=';
 const source = () => ({ version: 1, sourceUrl: 'https://www.bowlingmanager.co.kr/centers/test?private-query=excluded', text: '테스트 🎳\n문구', images: Array.from({ length: 4 }, (_, i) => ({ name: `결과표_${i}.png`, dataUrl: png })) });
 
-test('extension uses temporary activeTab access and no permanent hosts, cookies, background content scripts or external callers', () => {
+test('extension only bridges official source sites; BAND access remains temporary activeTab with no external callers', () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(root, 'extensions/band-photo-helper/manifest.json')));
     assert.deepEqual(manifest.permissions.sort(), ['activeTab', 'alarms', 'scripting']);
-    for (const key of ['host_permissions', 'optional_host_permissions', 'content_scripts', 'externally_connectable', 'web_accessible_resources', 'update_url']) assert.equal(manifest[key], undefined);
+    for (const key of ['host_permissions', 'optional_host_permissions', 'externally_connectable', 'update_url']) assert.equal(manifest[key], undefined);
+    const official = ['https://bowlingmanager.co.kr/*', 'https://www.bowlingmanager.co.kr/*'];
+    assert.equal(manifest.version, '0.2.0');
+    assert.deepEqual(manifest.content_scripts, [{ matches: official, js: ['bridge.js'], run_at: 'document_idle' }]);
+    assert.deepEqual(manifest.web_accessible_resources, [{ resources: ['transfer.js'], matches: official }]);
     assert.equal(manifest.manifest_version, 3);
     const worker = fs.readFileSync(path.join(root, 'extensions/band-photo-helper/worker.js'), 'utf8');
-    assert.match(worker, /sender\.id !== chrome\.runtime\.id/);
-    assert.match(worker, /sender\.url !== chrome\.runtime\.getURL\('popup.html'\)/);
+    assert.match(worker, /sender\.id === chrome\.runtime\.id/);
+    assert.match(worker, /sender\.url === chrome\.runtime\.getURL\('popup.html'\)/);
+    assert.match(worker, /sourceCaptureCommand\(message, sender, chrome\.runtime\.id\)/);
     assert.match(worker, /onStartup\.addListener/);
+});
+
+test('source bridge accepts only its own top-level official page and cannot request attach, inspect or a foreign packet', async () => {
+    const { sourceCaptureCommand } = await import(moduleUrl('controller.js'));
+    const packet = source(), sender = { id: 'our-extension', frameId: 0, tab: { id: 10 }, url: packet.sourceUrl };
+    assert.deepEqual(sourceCaptureCommand({ action: 'capture-prepared', packet }, sender, 'our-extension'), { action: 'capture-prepared', packet });
+    for (const patch of [{ id: 'foreign-extension' }, { frameId: 1 }, { tab: {} }, { url: 'http://www.bowlingmanager.co.kr/' }, { url: 'https://www.band.us/' }, { url: 'https://www.bowlingmanager.co.kr.evil.test/' }, { url: 'https://www.bowlingmanager.co.kr:8443/' }]) {
+        assert.equal(sourceCaptureCommand({ action: 'capture-prepared', packet }, { ...sender, ...patch }, 'our-extension'), null);
+    }
+    for (const action of ['attach', 'inspect', 'status', 'clear']) assert.equal(sourceCaptureCommand({ action, packet }, sender, 'our-extension'), null);
+    assert.equal(sourceCaptureCommand({ action: 'capture-prepared', packet: { ...packet, sourceUrl: 'https://www.bowlingmanager.co.kr/other' } }, sender, 'our-extension'), null);
+    const bridge = fs.readFileSync(path.join(root, 'extensions/band-photo-helper/bridge.js'), 'utf8');
+    assert.match(bridge, /!event\.isTrusted/); assert.match(bridge, /readPreparedSource\(\)/);
+    assert.doesNotMatch(bridge, /postMessage|document\.cookie|fetch\(|\.click\(/);
 });
 
 test('packet retains all edited text and four images, excludes query strings and arbitrary caller fields, expires in 20 minutes', async () => {
@@ -73,6 +92,16 @@ test('capture -> inspect -> one photo dispatch: correct packet, target tab and c
     assert.equal(result.count, 4); assert.equal(result.published, false); assert.equal(f.calls.dispatched, 1);
     assert.equal((await f.handle({ action: 'status' })).packet, null);
     await assert.rejects(() => f.handle({ action: 'attach', packetId: captured.packet.id, tabId: 10, bandId: '123', composerId: 'editor:photo' }), /없거나 만료/);
+});
+
+test('website-button capture uses the validated prepared packet and opens normal BAND without activeTab injection', async () => {
+    const f = await controllerFixture();
+    const response = await f.handle({ action: 'capture-prepared', packet: source() });
+    assert.deepEqual(response.packet.names, source().images.map(i => i.name));
+    assert.equal(f.calls.captured, 0); assert.equal(f.calls.dispatched, 0); assert.equal(f.calls.opened, 1);
+    assert.equal(response.packet.images, undefined);
+    await assert.rejects(() => f.handle({ action: 'capture-prepared', packet: { ...source(), sourceUrl: 'https://evil.test/' } }));
+    assert.equal(f.calls.opened, 1);
 });
 
 test('changed tab or stale packet is rejected before any attachment; rejected composer is not retried or silently replaced', async () => {

@@ -45,7 +45,7 @@ export default function LeagueWeeklyBandButton({ centerId, tournamentId, roundId
             onBusyChange={onBusyChange}
             onPrepareImages={onPrepareImages}
         />
-        <p className={styles.hint}>공식 공유하기는 BAND 연결 없이 사용할 수 있습니다. PNG 4종은 다운로드한 뒤 BAND에서 직접 첨부해주세요.</p>
+        <p className={styles.hint}>BAND 연결 없이 공지와 결과표 사진 4종을 준비합니다. PC에서는 사진 전달 확장프로그램을 이용할 수 있으며, 기존 다운로드도 그대로 사용할 수 있습니다.</p>
         <details className={styles.apiDetails}>
             <summary>BAND 자동 게시: {configured ? '기존 API 연결 기능' : 'API 승인 필요'}</summary>
             <BandPublishControl

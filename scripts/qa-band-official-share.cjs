@@ -69,6 +69,13 @@ export default function Controls(){
  const blockRef=useRef(false);blockRef.current=blocked;
  const liveRef=useRef(false);liveRef.current=live;
  const [native,setNative]=useState(false),[nativeCancel,setNativeCancel]=useState(false),[fileEvents,setFileEvents]=useState([]);
+ const [helper,setHelper]=useState(false);
+ useEffect(()=>{
+   if(helper)document.documentElement.dataset.bmBandPhotoHelper='0.2.0';else delete document.documentElement.dataset.bmBandPhotoHelper;
+   window.dispatchEvent(new Event('bm-band-photo-helper-ready'));
+   const mockBridge=e=>{const b=e.target.closest('button[data-band-photo-helper="capture"]');if(!helper||!e.isTrusted||!b||b.disabled)return;const requestId=b.getAttribute('data-band-photo-request');const count=document.querySelectorAll('dialog[open] section[aria-label="BAND 첨부 사진"] figure').length;setTimeout(()=>window.dispatchEvent(new CustomEvent('bm-band-photo-helper-result',{detail:{requestId,ok:true,count}})),40);};
+   document.addEventListener('click',mockBridge,true);return()=>document.removeEventListener('click',mockBridge,true);
+ },[helper]);
  const nativeRef=useRef(false),cancelRef=useRef(false);nativeRef.current=native;cancelRef.current=nativeCancel;
  const originalUA=useRef('');
  useEffect(()=>{
@@ -98,6 +105,7 @@ export default function Controls(){
  <label><input type="checkbox" checked={blocked} disabled={live} onChange={e=>setBlocked(e.target.checked)}/>팝업 차단 테스트</label>
  <label><input type="checkbox" checked={native} disabled={live} onChange={e=>setNative(e.target.checked)}/>사진 파일 공유 지원 테스트 (실제 전송 없음)</label>
  <label><input type="checkbox" checked={nativeCancel} disabled={live} onChange={e=>setNativeCancel(e.target.checked)}/>사진 공유 취소 테스트</label>
+ <label><input type="checkbox" checked={helper} disabled={live} onChange={e=>setHelper(e.target.checked)}/>PC 확장프로그램 연결 테스트 (실제 전송 없음)</label>
  </div>
  <details style={{marginBottom:20}}><summary>대회 설정 · BAND 게시글 설정 (메모리 저장만 사용)</summary><PostSettings key={kind} centerId="center" tournamentId={kind}/></details>
  {kind==='league'?<Weekly key={'weekly:'+mobile} centerId="center" tournamentId="league" tournamentName="가상 상주리그" rounds={rounds} isManager bandConnected={false} bandConfigured={false}/>

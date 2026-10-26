@@ -15,6 +15,11 @@
 .shareMode label { display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer; }
 .shareMode input { accent-color: var(--primary); }
 .imageArea .imageStep { margin-top: 20px; }
+.helperPanel { margin-top: 16px; padding: 14px; border: 1px solid #9bd3c9; border-radius: 10px; background: #edf9f6; color: #11463e; font-size: 13px; line-height: 1.65; }
+.helperPanel p { margin: 6px 0 0; }
+.manualAttachment { margin-top: 16px; font-size: 13px; }
+.manualAttachment summary { cursor: pointer; padding: 10px 0; font-weight: 750; }
+.manualAttachment > button { margin-top: 10px; }
 .attachmentSteps { margin: 14px 0; padding-left: 22px; color: #334155; font-size: 13px; line-height: 1.7; }
 .shareEditor { box-sizing: border-box; display: block; width: 100%; min-height: 260px; resize: vertical; }
 .captionEditor { min-height: 110px; }

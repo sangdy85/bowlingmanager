@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, '..');
 const source = path.join(root, 'extensions/band-photo-helper');
 const manifest = JSON.parse(fs.readFileSync(path.join(source, 'manifest.json'), 'utf8'));
 assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
-const files = ['manifest.json', 'package.json', 'controller.js', 'transfer.js', 'store.js', 'worker.js', 'popup.html', 'popup.js', 'popup.css', 'README.md'];
+const files = ['manifest.json', 'package.json', 'bridge.js', 'controller.js', 'transfer.js', 'store.js', 'worker.js', 'popup.html', 'popup.js', 'popup.css', 'README.md'];
 const folder = path.join(root, 'scratch', 'band-photo-helper-' + manifest.version);
 const zip = folder + '.zip';
 assert(!fs.existsSync(folder) && !fs.existsSync(zip), 'Versioned artifact already exists; preserve it and use a new version.');

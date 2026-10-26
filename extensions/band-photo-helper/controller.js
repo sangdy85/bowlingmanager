@@ -1,15 +1,34 @@
 import { validatePacket, readPreparedSource, bandComposerAction } from './transfer.js';
 
+// Content scripts may only import prepared photos from the exact top-level
+// official source page. They cannot inspect/attach/clear another tab's packet.
+export function sourceCaptureCommand(message, sender, runtimeId) {
+    if (sender.id !== runtimeId || sender.frameId !== 0 || !Number.isInteger(sender.tab?.id) || message?.action !== 'capture-prepared') return null;
+    try {
+        const source = new URL(sender.url);
+        if (source.protocol !== 'https:' || source.port || source.username || source.password ||
+            !['bowlingmanager.co.kr', 'www.bowlingmanager.co.kr'].includes(source.hostname) ||
+            new URL(message.packet?.sourceUrl).href !== source.href) return null;
+        return { action: 'capture-prepared', packet: message.packet };
+    } catch { return null; }
+}
+
 export function createController({ activeTab, execute, getPacket, putPacket, clearPacket, createAlarm, clearAlarm, openBand }) {
     let busy = false;
     const metadata = packet => packet ? { id: packet.id, names: packet.images.map(image => image.name), expiresAt: packet.expiresAt, text: packet.text } : null;
     return async function handleCommand(message) {
-        if (!message || !['status', 'capture', 'inspect', 'attach', 'clear'].includes(message.action)) throw Error('지원하지 않는 요청입니다.');
+        if (!message || !['status', 'capture', 'capture-prepared', 'inspect', 'attach', 'clear'].includes(message.action)) throw Error('지원하지 않는 요청입니다.');
         if (busy) throw Error('사진 전달 작업 중입니다. 잠시 후 다시 눌러주세요.');
         busy = true;
         try {
             if (message.action === 'clear') { await clearPacket(); await clearAlarm(); return { cleared: true }; }
             if (message.action === 'status') return { packet: metadata(await getPacket()) };
+            if (message.action === 'capture-prepared') {
+                const packet = validatePacket(message.packet);
+                await putPacket(packet); await createAlarm(packet.expiresAt);
+                await openBand();
+                return { packet: metadata(packet), openedBand: true };
+            }
             const tab = await activeTab();
             if (message.action === 'capture') {
                 const packet = validatePacket(await execute(tab.id, readPreparedSource));

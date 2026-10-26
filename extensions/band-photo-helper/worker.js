@@ -1,4 +1,4 @@
-import { createController } from './controller.js';
+import { createController, sourceCaptureCommand } from './controller.js';
 import { getPacket, putPacket, clearPacket } from './store.js';
 
 const ALARM = 'expire-band-photos';
@@ -18,8 +18,10 @@ const handleCommand = createController({ activeTab, execute, getPacket, putPacke
 });
 
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-    if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL('popup.html')) return false;
-    handleCommand(message).then(result => respond({ ok: true, result }), error => respond({ ok: false, message: error.message || '작업에 실패했습니다.' }));
+    const fromPopup = sender.id === chrome.runtime.id && sender.url === chrome.runtime.getURL('popup.html');
+    const command = fromPopup ? message : sourceCaptureCommand(message, sender, chrome.runtime.id);
+    if (!command) return false;
+    handleCommand(command).then(result => respond({ ok: true, result }), error => respond({ ok: false, message: error.message || '작업에 실패했습니다.' }));
     return true;
 });
 chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === ALARM) void clearPacket(); });

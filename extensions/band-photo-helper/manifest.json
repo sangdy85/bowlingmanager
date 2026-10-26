@@ -1,10 +1,18 @@
 {
   "manifest_version": 3,
   "name": "BowlingManager BAND 사진 전달",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "관리자가 준비한 결과표 PNG를 직접 연 BAND 글쓰기 창에 첨부합니다. 게시 버튼은 누르지 않습니다.",
   "minimum_chrome_version": "102",
   "permissions": ["activeTab", "scripting", "alarms"],
   "background": { "service_worker": "worker.js", "type": "module" },
-  "action": { "default_popup": "popup.html", "default_title": "볼링매니저 사진 전달" }
+  "action": { "default_popup": "popup.html", "default_title": "볼링매니저 사진 전달" },
+  "content_scripts": [{
+    "matches": ["https://bowlingmanager.co.kr/*", "https://www.bowlingmanager.co.kr/*"],
+    "js": ["bridge.js"], "run_at": "document_idle"
+  }],
+  "web_accessible_resources": [{
+    "resources": ["transfer.js"],
+    "matches": ["https://bowlingmanager.co.kr/*", "https://www.bowlingmanager.co.kr/*"]
+  }]
 }
