@@ -1,0 +1,17 @@
+:root { color-scheme: light; font-family: Arial, sans-serif; color: #10283e; background: #f2f5fa; }
+body { width: 360px; margin: 0; font-size: 13px; }
+header { padding: 20px; background: #102b3f; color: white; }
+small { color: #64e5d0; font-weight: 800; letter-spacing: .12em; }
+h1 { font-size: 22px; margin: 8px 0; }
+h2 { margin: 0 0 8px; font-size: 15px; }
+p { line-height: 1.6; margin: 8px 0 12px; }
+main { padding: 16px; }
+section { padding: 16px; margin: 0 0 14px; background: white; border: 1px solid #d5dfeb; border-radius: 12px; }
+button { width: 100%; border: 1px solid #087e70; border-radius: 8px; padding: 12px; background: #087e70; color: white; font: inherit; font-weight: 800; cursor: pointer; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.secondary { background: white; color: #10283e; border-color: #a7b8c9; margin-top: 12px; }
+#destination { padding-top: 16px; }
+#status { padding: 12px; border-radius: 8px; background: #fff1cd; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note, #expiry { color: #536779; font-size: 12px; }
+ul { padding-left: 18px; line-height: 1.6; overflow-wrap: anywhere; }
+pre { white-space: pre-wrap; font: inherit; overflow-wrap: anywhere; }

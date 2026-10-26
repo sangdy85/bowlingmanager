@@ -1,0 +1,53 @@
+PC BAND 사진 전달 확장프로그램 — 개발 및 로컬 검증
+날짜: 2026-10-26
+기준: codex/band-official-share-20261026 / 1f808c4
+
+요구와 방식
+사용자는 PC BAND 웹사이트에 사진을 자동 전달하려고 하며 별도 확장프로그램 사용을 허용했다.
+BAND 공식 공유 링크에는 사진 입력 인자가 없어 공식 웹 공유를 사진 첨부처럼 표시하지 않았다.
+설치형 Chrome/Edge Manifest V3 확장프로그램으로, 관리자가 준비한 PNG를 BAND 일반 새 글쓰기 창의 사진 입력에 전달한다.
+사진 저장·파일 선택은 생략하지만 밴드 선택/글쓰기 열기/첨부 대상 확인/최종 게시 확인은 사용자가 한다.
+인증 세션을 읽거나 자동 로그인하지 않고, 비공식 API나 최종 게시 자동 실행을 사용하지 않는다.
+
+파일
+extensions/band-photo-helper/manifest.json: activeTab, scripting, alarms 권한만 사용.
+transfer.js: 공식 출처/PNG/크기 검증, 공유 미리보기 읽기, 정확한 BAND 글쓰기 사진 입력에 파일 전달.
+controller.js: 가져오기→대상 확인→1회 전달. 대상 탭/밴드/작성창 및 준비 패킷 ID를 확인한다.
+store.js: 이 PC IndexedDB 임시 보관, 전달 후/20분 만료/다음 브라우저 시작 시 삭제.
+worker.js: 확장프로그램 자체 팝업 요청만 허용하고 브라우저 API를 연결한다.
+popup.html/css/js: 대상 밴드와 사진 명단 확인, 준비 자료 삭제, 전달 요청과 게시 완료 상태 구분.
+package.json: Node 테스트에서 확장 모듈을 로드하기 위한 ESM 표시.
+README.md: Chrome/Edge 설치·사진 전달 순서·권한·제약.
+scripts/qa-band-photo-helper.cjs: 실제 확장 함수를 실행하는 로컬 모형. 주소만 모형 내부에서 대체하며 실제 BAND 전송 없음.
+scripts/package-band-photo-helper.cjs: 명시한 파일만 복사·ZIP 생성·파일별 SHA-256 기록. 기존 버전 산출물 덮어쓰기 없음.
+tests/band-photo-helper.test.cjs: 권한 최소화, 출처·이미지·용량, 정확한 파일/문구 전달, 대상 확인, 1회 소비, API/게시 자동화 금지 검증.
+
+보존과 권한
+기존 볼링매니저 웹 소스/API/인증/DB/Prisma/OAuth/PNG 템플릿/모바일 앱은 수정하지 않았다.
+사이트 상시 접근, 쿠키, tabs, webRequest, externally_connectable, 콘텐츠 자동 주입 권한을 요청하지 않는다.
+사용자가 확장 아이콘을 누른 현재 탭에서만 실행한다. 코드에서도 볼링매니저 공식 HTTPS와 BAND 일반 글쓰기만 허용한다.
+파일은 PNG 1~20개·인코딩 기준 36MB 이하로 제한하고 초과 자료를 자르지 않는다.
+실제 source URL의 query와 임의 필드는 저장하지 않는다. 대회 사진·문구만 임시 보관한다.
+BAND 일반 글쓰기 DOM에서 실제 확인한 postPhotoInput_ 사진 입력과 contentEditor _richEditor 편집기만 사용한다.
+채팅/프로필/글 수정/공식 공유 팝업, 여러 작성창, 기존 사진 또는 대상 변경 시 중단한다.
+기존 문구를 덮어쓰지 않는다. 비어 있을 때만 안전한 일반 텍스트 삽입을 시도한다.
+사진 파일 변경 이벤트만 발생시키며 버튼 클릭/submit/직접 네트워크 요청/토큰 접근/게시 성공 이력 쓰기를 하지 않는다.
+
+검증 완료
+node --test tests/band-photo-helper.test.cjs: 7/7 PASS.
+전체 BAND 및 league-weekly-band 테스트: 126/126 PASS (기존 119 + 신규 7).
+확장프로그램 JS 5개 및 QA/패키지 스크립트 node --check PASS. manifest JSON/권한 검증 PASS.
+실제 BAND 로그인된 일반 글쓰기 DOM의 사진 입력/편집기 구조를 읽기 전용으로 확인 후 빈 작성창 취소. 실제 게시 없음.
+Chromium 로컬 QA: 미동의 가져오기 차단, PNG 4개를 File/DataTransfer로 전달, 파일 변경 1회/게시 0회.
+Chromium 로컬 QA: 대상 밴드 변경 차단, 작성창 변경 차단, 기존 사진 중복 방지, 기존 문구 보존, 만료 자료 삭제.
+‘새로운 소식을 남겨보세요.’라는 실제 입력 문구도 placeholder로 오인해 덮어쓰지 않는지 확인했다.
+최종 브라우저 console error/warn 0개.
+웹 앱 코드는 변경하지 않아 기존 Next.js lint/typecheck/build의 유효한 결과를 재사용한다. 확장프로그램에는 별도 Node/npm 의존성이 없다.
+운영 Build 7k-DQgryRe9bD0ZYitpA-를 재빌드/재배포/재시작하지 않았고 migration도 없다.
+
+설치 후 남은 검증
+각 PC의 Chrome/Edge에서 압축 해제 확장프로그램을 한 번 설치해야 한다.
+실제 설치된 확장프로그램의 chrome.scripting 동작과 BAND 서버의 사진 업로드·미리보기는 아직 미검증이다.
+확장프로그램이 표시하는 것은 파일 입력 전달 요청이며 실제 업로드/게시 성공이 아니다.
+실제 BAND 게시/푸시 자동 실행 금지. 사진 미리보기까지 검증한 뒤 최종 게시 버튼은 사용자가 직접 누른다.
+Chrome 웹 스토어나 Edge 스토어에 게시하지 않았고, 확장프로그램을 사용자 브라우저에 자동 설치하지 않았다.
