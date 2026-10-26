@@ -50,7 +50,7 @@ export function readPreparedSource() {
     return { version: 1, sourceUrl: location.href, text: [field('공유할 공지 문구'), field('사진 아래에 쓰기')].filter(Boolean).join('\n\n'), images };
 }
 
-export function bandComposerAction(packet = null) {
+export async function bandComposerAction(packet = null) {
     if (location.protocol !== 'https:' || !['band.us', 'www.band.us'].includes(location.hostname) || location.port) throw Error('BAND 일반 웹사이트에서 실행해주세요.');
     const match = location.pathname.match(/^\/band\/(\d+)\/(?:post|notices)(?:\/\d+)?\/?$/);
     if (!match) throw Error('대상 밴드의 게시글 화면을 열어주세요. 공유 팝업·채팅·프로필에서는 첨부하지 않습니다.');
@@ -83,10 +83,44 @@ export function bandComposerAction(packet = null) {
     }
     // No page API, cookie, token or network calls. Only the normal file input
     // change event that BAND's own photo selector handles. Never click publish.
+    const selection = window.getSelection();
+    if (!selection) throw Error('사진을 붙일 문구 아래 위치를 확인하지 못했습니다. 다시 시도해주세요.');
+    const selectEditor = collapseToEnd => {
+        editor.focus();
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        if (collapseToEnd) range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    };
     let textInserted = false;
     if (!hasText) {
-        editor.focus();
-        try { textInserted = document.execCommand('insertText', false, packet.text); } catch { /* Photos can still be attached. */ }
+        // Replace only the known-empty editor, including BAND's placeholder.
+        // Never select or replace a draft that already contains user text.
+        selectEditor(false);
+        try { textInserted = document.execCommand('insertText', false, packet.text); } catch { /* Report below before attaching photos. */ }
+        if (!textInserted) throw Error('공지 문구를 넣지 못해 사진 전달을 멈췄습니다. BAND에 문구를 먼저 붙여넣은 뒤 다시 첨부해주세요.');
+    }
+    // BAND's rich editor remembers the caret separately from the file input.
+    // Put it after the caption and notify normal editor selection handlers
+    // before delivering files; otherwise its old bookmark may precede the text.
+    selectEditor(true);
+    document.execCommand('insertParagraph', false);
+    editor.dispatchEvent(new KeyboardEvent('keyup', { key: 'End', code: 'End', bubbles: true }));
+    editor.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    await new Promise(resolve => setTimeout(resolve, 150));
+    if (!dialog.isConnected || !visible(editor) || !dialog.contains(editor) || !inputs[0].isConnected || !dialog.contains(inputs[0]) ||
+        dialog.getAttribute('aria-labelledby') + ':' + inputs[0].id !== composerId ||
+        location.pathname.match(/^\/band\/(\d+)\//)?.[1] !== packet.expectedBandId ||
+        Date.now() >= packet.expiresAt || inputs[0].files?.length || dialog.querySelector('img') ||
+        !selection.isCollapsed || !selection.anchorNode || !editor.contains(selection.anchorNode)) {
+        throw Error('사진을 준비하는 동안 글쓰기 화면이나 입력 위치가 바뀌었습니다. 현재 작성창을 다시 확인해주세요.');
+    }
+    const remaining = document.createRange();
+    remaining.selectNodeContents(editor);
+    remaining.setStart(selection.anchorNode, selection.anchorOffset);
+    if (remaining.toString().replace(/[\u200b-\u200d\ufeff]/g, '').trim()) {
+        throw Error('사진을 준비하는 동안 커서가 문구 앞으로 이동했습니다. 현재 작성창을 다시 확인해주세요.');
     }
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'files')?.set;
     if (!setter) throw Error('이 브라우저에서 파일 전달을 지원하지 않습니다.');
@@ -95,5 +129,5 @@ export function bandComposerAction(packet = null) {
     const count = inputs[0].files.length;
     if (count !== packet.images.length) throw Error('사진 파일을 모두 전달하지 못했습니다. BAND 화면을 확인해주세요.');
     inputs[0].dispatchEvent(new Event('change', { bubbles: true }));
-    return { bandId: match[1], bandName, count, textInserted, keptExistingText: hasText, uploadRequested: true, published: false };
+    return { bandId: match[1], bandName, count, textInserted, keptExistingText: hasText, photoPlacement: 'after-caption', uploadRequested: true, published: false };
 }
