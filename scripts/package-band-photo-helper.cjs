@@ -10,12 +10,22 @@ assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
 const files = ['manifest.json', 'package.json', 'bridge.js', 'controller.js', 'transfer.js', 'store.js', 'worker.js', 'popup.html', 'popup.js', 'popup.css', 'README.md'];
 const folder = path.join(root, 'scratch', 'band-photo-helper-' + manifest.version);
 const zip = folder + '.zip';
-assert(!fs.existsSync(folder) && !fs.existsSync(zip), 'Versioned artifact already exists; preserve it and use a new version.');
-fs.mkdirSync(folder, { recursive: true });
-for (const file of files) fs.copyFileSync(path.join(source, file), path.join(folder, file));
-if (process.platform !== 'win32') throw Error('This local packaging command requires Windows PowerShell Compress-Archive.');
+assert(!fs.existsSync(zip), 'Versioned ZIP already exists; preserve it and use a new version.');
+if (process.platform !== 'win32') throw Error('This local packaging command requires Windows .NET ZIP support.');
+// A previous compression attempt may have left the complete copied folder.
+// Reuse it only when every byte matches; never overwrite local changes.
+if (fs.existsSync(folder)) {
+    assert.deepEqual(fs.readdirSync(folder).sort(), [...files].sort(), 'Preserve a changed artifact folder.');
+    for (const file of files) assert(fs.readFileSync(path.join(source, file)).equals(fs.readFileSync(path.join(folder, file))), 'Preserve a changed artifact file: ' + file);
+} else {
+    fs.mkdirSync(folder, { recursive: true });
+    for (const file of files) fs.copyFileSync(path.join(source, file), path.join(folder, file));
+}
 const quote = value => "'" + value.replaceAll("'", "''") + "'";
-const command = "$ErrorActionPreference='Stop'; Compress-Archive -LiteralPath @(" + files.map(file => quote(path.join(folder, file))).join(',') + ') -DestinationPath ' + quote(zip) + ' -CompressionLevel Optimal';
+// Use the framework ZIP API instead of the PS5/PS7 Archive module, whose module
+// version may be incompatible with the child PowerShell process on this PC.
+const entries = files.map(file => '[IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive,' + quote(path.join(folder, file)) + ',' + quote(file) + ',[IO.Compression.CompressionLevel]::Optimal) | Out-Null').join('; ');
+const command = "$ErrorActionPreference='Stop'; Add-Type -AssemblyName System.IO.Compression.FileSystem; $archive=[IO.Compression.ZipFile]::Open(" + quote(zip) + ',[IO.Compression.ZipArchiveMode]::Create); try { ' + entries + ' } finally { $archive.Dispose() }';
 cp.execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', command], { stdio: 'inherit' });
 const hash = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const info = {
