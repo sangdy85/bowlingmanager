@@ -1,0 +1,67 @@
+BAND 사진 첨부 흐름 수정 및 운영 검증 — 2026-10-26
+
+문제와 지원 범위
+공식 BAND 웹/앱 공유 링크는 문구만 전달한다. 사진 준비/파일 공유와 별개로 기존 버튼이 활성화돼 사진까지 전송된 것으로 오해할 수 있었다.
+공식 문서: https://developers.band.us/develop/guide/share
+PC 웹의 사진 자동 첨부 기능을 구현한 것이 아니다. BAND 글쓰기 또는 기존 글 수정에서 PNG를 직접 첨부해야 한다.
+이미 게시된 문구 전용 글에 사진을 자동으로 추가하거나 실제 BAND 게시를 실행하지 않았다.
+
+변경
+기본 공유 모드는 문구+사진. 문구 전용은 별도 라디오 선택으로 명시한다.
+사진 모드의 웹/앱/새 탭 공유는 사진 준비 및 수동 저장·첨부 확인 이후에만 활성화한다.
+사진 전체 저장 버튼과 PNG 저장 확인 → BAND에서 직접 첨부 → 게시 미리보기 확인 절차를 추가했다.
+기기 파일 공유가 지원되면 문구+사진 전달 버튼을 별도로 표시한다. OS 공유 완료도 BAND 게시 성공으로 기록하지 않는다.
+문구/대상/이미지 변경 시 이전 사진 및 수동 첨부 확인을 무효화한다. 긴 문구와 차단·취소 대안도 유지했다.
+변경 파일: src/components/tournaments/BandOfficialShareControl.tsx, src/components/tournaments/BandPublishStatus.module.css
+
+GitHub
+저장소: https://github.com/sangdy85/bowlingmanager
+브랜치: codex/band-official-share-20261026
+기준: b42a754b54936e1d37b58d7be6dac5e4d133c6db
+기능 커밋: 889cadbb4ac38fa96d7fdf1678753bfbc5fc2fe3
+파일 두 개를 명시적으로 stage하고 staged diff 검토 후 커밋·push했다. main 병합/force push 없음.
+
+검증
+로컬 BAND·주차 회귀 테스트 119개 PASS; 로컬 lint/typecheck/build PASS, 기존 경고 17개·오류 0개.
+격리 브라우저 QA: 기본 차단/사진 4종 생성·저장/수동 첨부 확인/문구 전용 선택/편집 시 초기화/모바일 앱 링크 확인.
+지원 기기 모의 테스트는 정확한 문구와 PNG File 4개를 전달했으며 실제 BAND 앱에 전달한 테스트가 아니다.
+CHAMP/EVENT 이미지 생성, 팝업 차단·네이티브 공유 취소 대안, 긴 문구 전체 복사를 확인했다. QA console error/warn 없음.
+Linux 후보 회귀 테스트 200개 PASS; lint/typecheck/build PASS. 후보 HTTP 288개 PASS.
+첫 후보 검사에서 minifier가 중간점 문자를 이스케이프해 전체 버튼 문구 탐색이 실패했다. 불변 문구 조각 검사로 수정하고 동일 Build 전체 검사를 다시 통과했다.
+운영 내부 HTTP 49개 PASS. 외부 HTTPS 최종 검증은 403 - Nginx Proxy Guard 응답으로 실패했다. 외부 완료로 처리하지 않는다.
+API 84개 및 기존 제품·이미지·공개 결과·SEO 보존 확인.
+
+실제 운영
+서버/경로: vm-share / /home/user/bowling-score-manager
+전환 시각: 2026-10-26T05:01:26.603Z / 한국 시각 2026. 10. 26. PM 2:01:26
+릴리스: band-photo-flow-889cadb-0f0f6f7e827b-20261026
+Build: 7k-DQgryRe9bD0ZYitpA-
+이전 릴리스/Build: band-share-6f2c70d-5390945c7e8d-20261026 / cRPpar2hIkDewkdD-tYNk
+운영 Git 기반: 1299cca08dd2ec6cc04457e0234d369f90a643be
+파일 패치 SHA-256: 0f0f6f7e827b9ca3e30e4da4e230559905d363ff5c1081f0b15ea850692991fb
+fullGitTreeMatch=false: 최신 운영 혼합 소스에 이번 파일 두 개만 적용했다. 운영 전체가 기능 커밋과 같다는 뜻은 아니다.
+기타 기존 파일 1294개 및 기존 환경파일 해시 보존. 업로드/회원/점수 데이터 수정 없음.
+migration 실행 없음. 전환 전후 DB 86개 테이블 행 수 동일, quick_check=ok.
+PM2 bowling-manager online / pm2-user.service active/enabled.
+내부 upstream/Nginx/로그인/모바일 health/공개 결과/정적 파일 정상. 외부 HTTPS는 앞단 보안 프록시에서 차단된다.
+감사 시각: 2026-10-26T05:01:35.702Z; 새 PM2 오류 0줄; Nginx 오류/502 0줄.
+
+외부 접속 미완료
+전환 전 2026-10-26T04:56:23.404Z 외부 HTTPS 25개 PASS. 전환 후 403 차단을 확인했다. 사용자도 일반 브라우저에서 동일 현상을 확인했다.
+vm-share는 80/3000에서 정상 서비스하며 443은 앞단 프록시가 처리한다. 확인한 최근 내부 접근 로그 10개는 200이고, 외부 403과 별개로 내부 응답은 정상이다.
+보안 프록시 관리자 주소/관리 위치를 사용자에게 요청했다. 현재 경로에서는 해당 프록시 설정과 차단 기록에 접근할 수 없어 외부 복구가 남아 있다.
+보안 규칙 해제·전역 허용·방화벽 우회·비밀키 출력은 실행하지 않았다. 앞단 프록시 원인과 이번 배포 사이의 인과관계는 확정하지 않았다.
+
+복구
+백업: /home/user/bowling-backups/band-photo-flow-889cadb-0f0f6f7e827b-20261026-before
+이전 실행 Build: /home/user/bowling-deploy/band-photo-flow-889cadb-0f0f6f7e827b-20261026/previous-next
+배포 기록: /home/user/bowling-deploy/band-photo-flow-889cadb-0f0f6f7e827b-20261026
+롤백: bash /home/user/bowling-deploy/band-photo-flow-889cadb-0f0f6f7e827b-20261026/rollback.sh
+복구는 소스/Build/이전 릴리스 기록 및 대상 PM2만 사용한다. DB 과거 복원 없음.
+백업과 롤백 준비 후 앱 전환은 성공했다. 실제 롤백은 미실행이며 외부 접속 복구 완료는 아직 확인되지 않았다.
+
+미검증 및 관리자 사용
+운영 관리자 로그인·설정 저장·BAND 로그인/게시/푸시를 자동 실행하지 않았다.
+실기기 OS 공유창에서 BAND 선택 및 실제 앱의 사진/문구 수신은 미검증이다.
+PC: 사진 준비 → 모두 저장 → 다운로드된 PNG 확인 → BAND 글쓰기/기존 글 수정에서 첨부 → 미리보기에 사진 확인 후 게시.
+지원 기기: 사진 준비 후 기기 공유 · 문구+사진 전달 선택. BAND에서 사진과 문구 수신 여부를 직접 확인한다.
