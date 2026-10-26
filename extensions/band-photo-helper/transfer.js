@@ -90,17 +90,45 @@ export async function bandComposerAction(packet = null) {
     const aboveText = packet.aboveText === undefined ? packet.text : packet.aboveText;
     const belowText = packet.belowText || '';
     if (typeof aboveText !== 'string' || typeof belowText !== 'string' || [aboveText, belowText].filter(Boolean).join('\n\n') !== packet.text) throw Error('사진 위·아래 공지 문구를 다시 가져와주세요.');
-    const sameComposer = () => dialog.isConnected && editor.isConnected && dialog.contains(editor) &&
+    const sameTarget = () => dialog.isConnected && editor.isConnected && dialog.contains(editor) &&
         dialog.getAttribute('aria-labelledby') + ':' + dialog.querySelector('input[id^="postPhotoInput_"]')?.id === composerId &&
         location.protocol === 'https:' && ['band.us', 'www.band.us'].includes(location.hostname) &&
-        location.pathname.match(/^\/band\/(\d+)\//)?.[1] === packet.expectedBandId &&
-        dialog.dataset.bmBandPhotoTransfer === packet.id;
+        location.pathname.match(/^\/band\/(\d+)\//)?.[1] === packet.expectedBandId;
+    const sameComposer = () => sameTarget() && dialog.dataset.bmBandPhotoTransfer === packet.id;
     const photos = () => [...editor.querySelectorAll(':scope > .cke_widget_wrapper[type="photo"]')];
     const userText = () => {
         const clone = editor.cloneNode(true);
         clone.querySelectorAll('.cke_widget_wrapper[type="photo"], .placeholder[aria-hidden="true"]').forEach(node => node.remove());
         return fold(clone.textContent);
     };
+    const caretAtEnd = () => {
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount !== 1 || !selection.isCollapsed || !editor.contains(selection.anchorNode)) return false;
+        const end = document.createRange();
+        end.selectNodeContents(editor); end.collapse(false);
+        if (selection.getRangeAt(0).compareBoundaryPoints(2, end) === 0) return true;
+        // Editors may normalize the same visual endpoint into a trailing
+        // empty paragraph. Accept that only when no text or photo follows.
+        const tail = document.createRange();
+        tail.selectNodeContents(editor); tail.setStart(selection.anchorNode, selection.anchorOffset);
+        return !fold(tail.toString()) && !tail.cloneContents().querySelector('.cke_widget_wrapper[type="photo"], img._thumbnail');
+    };
+    const placeCaretAtEnd = () => {
+        editor.focus();
+        const selection = window.getSelection();
+        if (!selection) throw Error('글 끝의 커서 위치를 확인할 수 없습니다.');
+        const end = document.createRange();
+        end.selectNodeContents(editor); end.collapse(false);
+        selection.removeAllRanges(); selection.addRange(end);
+        // Notify the visible editor before BAND opens its upload dialog, so
+        // its saved insertion position follows the new collapsed selection.
+        editor.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+        editor.dispatchEvent(new KeyboardEvent('keyup', { key: 'End', code: 'End', ctrlKey: true, bubbles: true }));
+        if (!caretAtEnd()) throw Error('커서가 글 끝으로 이동하지 않아 사진 첨부를 중단했습니다.');
+    };
+    placeCaretAtEnd();
+    await new Promise(resolve => setTimeout(resolve, 150));
+    if (!sameTarget() || !inputs[0].isConnected || inputs[0].files?.length || dialog.querySelector('img') || userText() !== originalText || !caretAtEnd() || Date.now() >= packet.expiresAt) throw Error('사진 첨부 전에 작성창이나 글 끝의 커서가 바뀌었습니다. 다시 확인해주세요.');
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'files')?.set;
     if (!setter) throw Error('이 브라우저에서 파일 전달을 지원하지 않습니다.');
     setter.call(inputs[0], transfer.files);
@@ -169,7 +197,7 @@ export async function bandComposerAction(packet = null) {
             base.textInserted = true;
         }
         editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: null }));
-        editor.dispatchEvent(new KeyboardEvent('keyup', { key: 'Home', code: 'Home', bubbles: true }));
+        placeCaretAtEnd();
         await new Promise(resolve => setTimeout(resolve, 500));
         if (!sameComposer()) throw Error('문구 확인 중 작성창이 바뀌었습니다.');
         const finalPhotos = photos(), children = [...editor.childNodes];
@@ -182,8 +210,9 @@ export async function bandComposerAction(packet = null) {
         const before = fold(children.slice(0, first).map(captionText).join(''));
         const after = fold(children.slice(last + 1).map(captionText).join(''));
         if (finalPhotos.length !== count || first < 0 || before !== (hasText ? originalText : fold(aboveText)) || after !== (hasText ? '' : fold(belowText))) throw Error('문구와 사진의 최종 순서를 확인하지 못했습니다. 게시 전에 확인해주세요.');
+        if (!caretAtEnd()) throw Error('글·사진 순서는 유지됐지만 커서가 이동했습니다. 추가 사진은 글 끝을 누른 뒤 첨부해주세요.');
         editor.firstElementChild?.scrollIntoView({ block: 'nearest' });
-        return { ...base, layoutVerified: true, photoPlacement: 'between-captions' };
+        return { ...base, layoutVerified: true, photoPlacement: 'between-captions', caretAtEnd: true };
     } catch (error) {
         // Files were already sent: consume the packet and never retry an upload
         // or report publishing success. The user can inspect the intact draft.

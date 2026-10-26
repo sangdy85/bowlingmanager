@@ -1,0 +1,28 @@
+BAND photo helper 0.2.3 — keep insertion caret at the end
+Base: 88f488ba46c27e4c72a4254eee205842c65eeb4a
+Branch: codex/band-official-share-20261026
+
+User observed the editor caret remained at the start and newly attached photos
+were inserted before the caption. Version 0.2.2 also emitted a Home keyup after
+placing captions, which could notify the editor of an incorrect saved position.
+
+Changes:
+- Move the DOM selection to a collapsed range at the end of the visible editor.
+- Notify that editor with mouseup and Ctrl+End keyup before opening upload UI.
+- Allow the selection to settle and validate target, draft text, expiry and caret
+  before sending any files. Reject a changed target, file input or cursor.
+- Preserve 0.2.2's photo-upload/Attach wait and verified caption ordering.
+- Remove Home notification. Restore the end caret after arranging captions and
+  verify it again after settlement, so later manual photos can follow the draft.
+- No new permissions, login handling, API calls or Publish automation.
+
+Verification:
+- BAND and league-weekly tests: 132 passed, zero failed.
+- Chromium fixture: explicitly start an existing formatted draft with Ctrl+Home.
+  At file-change time the caret is at the end; four photos are attached once;
+  formatted captions remain above photos; final caret is at the end; posts zero.
+- Empty draft: separate above/below captions retained and final end caret checked.
+- Syntax and whitespace checks pass.
+- Local fixture verification is not installed-extension end-to-end verification
+  on actual BAND. Actual browser verification remains after reloading extension.
+- Only extension, tests and QA/docs changed. No server deployment is required.

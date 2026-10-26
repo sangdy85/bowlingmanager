@@ -15,7 +15,7 @@ test('extension only bridges official source sites; BAND access remains temporar
     assert.deepEqual(manifest.permissions.sort(), ['activeTab', 'alarms', 'scripting']);
     for (const key of ['host_permissions', 'optional_host_permissions', 'externally_connectable', 'update_url']) assert.equal(manifest[key], undefined);
     const official = ['https://bowlingmanager.co.kr/*', 'https://www.bowlingmanager.co.kr/*'];
-    assert.equal(manifest.version, '0.2.2');
+    assert.equal(manifest.version, '0.2.3');
     assert.deepEqual(manifest.content_scripts, [{ matches: official, js: ['bridge.js'], run_at: 'document_idle' }]);
     assert.deepEqual(manifest.web_accessible_resources, [{ resources: ['transfer.js'], matches: official }]);
     assert.equal(manifest.manifest_version, 3);
@@ -161,4 +161,16 @@ test('adapter limits automation to observed photo Attach step and verifies widge
     assert.ok(text.indexOf('const finalPhotos = photos()') > text.indexOf('insertCaption(belowText'));
     assert.match(text, /published: false/); assert.match(readPreparedSource.toString(), /approval\?\.checked/);
     assert.doesNotMatch(text, /innerHTML\s*=/);
+});
+
+test('photo adapter moves and settles the caret before upload and leaves it at the end, never Home', async () => {
+    const { bandComposerAction } = await core(); const text = bandComposerAction.toString();
+    assert.match(text, /end\.selectNodeContents\(editor\); end\.collapse\(false\)/);
+    assert.match(text, /compareBoundaryPoints\(2, end\) === 0/);
+    assert.match(text, /new MouseEvent\('mouseup'/);
+    assert.match(text, /key: 'End', code: 'End', ctrlKey: true/);
+    assert.doesNotMatch(text, /key: 'Home'/);
+    assert.ok(text.indexOf('placeCaretAtEnd();') < text.indexOf("new Event('change'"));
+    assert.ok(text.lastIndexOf('placeCaretAtEnd();') > text.indexOf('insertCaption(belowText'));
+    assert.match(text, /caretAtEnd: true/);
 });
