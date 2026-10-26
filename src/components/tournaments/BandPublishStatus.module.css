@@ -10,6 +10,12 @@
 .button { flex: 0 0 auto; border: 0; border-radius: .55rem; background: var(--primary); color: white; font-size: .75rem; font-weight: 800; padding: .55rem .7rem; cursor: pointer; }
 .button:disabled { opacity: .5; cursor: wait; }
 .shareLabel { display: block; margin: 16px 0 8px; font-weight: 800; }
+.shareMode { display: flex; gap: 12px 24px; flex-wrap: wrap; margin: 16px 0 0; padding: 12px; border: 1px solid #cbd5e1; border-radius: 9px; }
+.shareMode legend { padding: 0 5px; font-size: 13px; font-weight: 800; }
+.shareMode label { display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer; }
+.shareMode input { accent-color: var(--primary); }
+.imageArea .imageStep { margin-top: 20px; }
+.attachmentSteps { margin: 14px 0; padding-left: 22px; color: #334155; font-size: 13px; line-height: 1.7; }
 .shareEditor { box-sizing: border-box; display: block; width: 100%; min-height: 260px; resize: vertical; }
 .captionEditor { min-height: 110px; }
 .settingsEditor { box-sizing: border-box; width: 100%; border: 1px solid #94a3b8; border-radius: 9px; padding: 12px; color: #10283e; background: white; font: inherit; font-size: 14px; resize: vertical; }
