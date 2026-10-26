@@ -32,7 +32,7 @@ element('inspect').addEventListener('click', () => run(async () => {
     destination = null; element('destination').hidden = true;
     const result = await command('inspect'); destination = result; showPacket(result.packet);
     element('band-name').textContent = `첨부 대상: ${result.bandName}`;
-    element('draft-note').textContent = result.hasText ? '이미 작성한 문구는 그대로 두고 사진만 첨부합니다.' : '빈 글쓰기 창에 준비된 문구와 사진을 넣습니다.';
+    element('draft-note').textContent = result.hasText ? '기존 문구와 서식을 보존해 사진 위에 배치합니다.' : '사진 첨부가 끝난 뒤 준비된 위·아래 문구를 각각 넣습니다.';
     element('destination').hidden = false;
     element('status').textContent = `대상 밴드와 사진 ${result.packet.names.length}개를 확인하고 첨부 버튼을 눌러주세요. 게시 버튼은 누르지 않습니다.`;
 }));
@@ -42,7 +42,9 @@ element('attach').addEventListener('click', () => run(async () => {
     destination = null; element('destination').hidden = true;
     const result = await command('attach', { packetId: target.packet.id, tabId: target.tabId, bandId: target.bandId, composerId: target.composerId });
     showPacket(null);
-    element('status').textContent = `‘${result.bandName}’ 글쓰기 창에 사진 ${result.count}개를 전달 요청했습니다.\nBAND의 사진 업로드 완료와 미리보기를 확인한 뒤 직접 게시해주세요. 게시되지는 않았습니다.${!result.textInserted && !result.keptExistingText ? '\n문구는 추가되지 않았습니다. 볼링매니저에서 복사해 붙여넣어주세요.' : ''}`;
+    element('status').textContent = result.layoutVerified
+        ? `‘${result.bandName}’에 사진 ${result.count}개 첨부와 문구 위치를 확인했습니다.\n사진 위·아래 문구와 미리보기를 검토한 뒤 직접 게시해주세요. 게시되지는 않았습니다.`
+        : `사진 ${result.count}개의 전달은 시작했지만 문구 위치 확인을 완료하지 못했습니다.\n${result.message || 'BAND의 사진 업로드 상태와 문구 위치를 확인해주세요.'}\n중복 전송하지 않았으며 게시되지 않았습니다.`;
 }));
 element('clear').addEventListener('click', () => run(async () => {
     await command('clear'); destination = null; element('destination').hidden = true; showPacket(null); element('status').textContent = '준비된 사진과 문구를 지웠습니다.';

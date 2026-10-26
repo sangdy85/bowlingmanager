@@ -15,7 +15,7 @@ test('extension only bridges official source sites; BAND access remains temporar
     assert.deepEqual(manifest.permissions.sort(), ['activeTab', 'alarms', 'scripting']);
     for (const key of ['host_permissions', 'optional_host_permissions', 'externally_connectable', 'update_url']) assert.equal(manifest[key], undefined);
     const official = ['https://bowlingmanager.co.kr/*', 'https://www.bowlingmanager.co.kr/*'];
-    assert.equal(manifest.version, '0.2.1');
+    assert.equal(manifest.version, '0.2.2');
     assert.deepEqual(manifest.content_scripts, [{ matches: official, js: ['bridge.js'], run_at: 'document_idle' }]);
     assert.deepEqual(manifest.web_accessible_resources, [{ resources: ['transfer.js'], matches: official }]);
     assert.equal(manifest.manifest_version, 3);
@@ -64,7 +64,7 @@ test('bad images, duplicate names, excess pages and over-budget packets fail wit
 
 async function controllerFixture() {
     const { createController } = await import(moduleUrl('controller.js'));
-    const transfer = await core(); let packet = null, tab = 10, blocked = false;
+    const transfer = await core(); let packet = null, tab = 10, blocked = false, response = {};
     const calls = { clear: 0, opened: 0, dispatched: 0, captured: 0, inspected: 0 };
     const handle = createController({
         activeTab: async () => ({ id: tab }),
@@ -76,12 +76,12 @@ async function controllerFixture() {
             if (blocked) throw Error('대상 글쓰기 화면이 바뀜');
             assert.equal(args[0].expectedBandId, '123'); assert.equal(args[0].expectedComposerId, 'editor:photo');
             assert.deepEqual(args[0].images, source().images); calls.dispatched++;
-            return { count: 4, published: false, uploadRequested: true };
+            return { count: 4, published: false, uploadRequested: true, ...response };
         },
         getPacket: async () => packet, putPacket: async value => { packet = value; }, clearPacket: async () => { packet = null; calls.clear++; },
         createAlarm: async expires => { assert(expires > Date.now()); }, clearAlarm: async () => {}, openBand: async () => { calls.opened++; },
     });
-    return { handle, calls, setTab: value => { tab = value; }, setBlocked: value => { blocked = value; } };
+    return { handle, calls, setTab: value => { tab = value; }, setBlocked: value => { blocked = value; }, setResponse: value => { response = value; } };
 }
 
 test('capture -> inspect -> one photo dispatch: correct packet, target tab and composer; packet consumed without posting', async () => {
@@ -115,95 +115,50 @@ test('changed tab or stale packet is rejected before any attachment; rejected co
     await f.handle({ action: 'clear' }); assert.equal((await f.handle({ action: 'status' })).packet, null);
 });
 
-test('BAND adapter has no login/session, direct API/network or publish-button automation', async () => {
+test('captions retain separate positions, reject inconsistent text and keep legacy packet compatibility', async () => {
+    const { validatePacket } = await core();
+    const aboveText = '제20회차 상주리그\n12주차 🎳', belowText = '사진 아래 안내';
+    const packet = validatePacket({ ...source(), aboveText, belowText, text: aboveText+'\n\n'+belowText });
+    assert.equal(packet.aboveText, aboveText); assert.equal(packet.belowText, belowText);
+    assert.equal(validatePacket(source()).aboveText, source().text);
+    assert.equal(validatePacket(source()).belowText, '');
+    assert.throws(() => validatePacket({ ...source(), aboveText, belowText }), /일치/);
+    assert.throws(() => validatePacket({ ...source(), aboveText: null }), /일치/);
+    const onlyBelow = validatePacket({ ...source(), aboveText: '', belowText: '아래만', text: '아래만' });
+    assert.equal(onlyBelow.aboveText, ''); assert.equal(onlyBelow.belowText, '아래만');
+});
+
+test('upload started but layout unverified consumes packet once and cannot silently reupload or claim publication', async () => {
+    const f = await controllerFixture();
+    f.setResponse({ layoutVerified: false, message: '사진 첨부 완료를 확인하지 못했습니다.' });
+    await f.handle({ action: 'capture' }); const target = await f.handle({ action: 'inspect' });
+    const request = { action: 'attach', packetId: target.packet.id, tabId: target.tabId, bandId: target.bandId, composerId: target.composerId };
+    const response = await f.handle(request);
+    assert.equal(response.layoutVerified, false); assert.equal(response.published, false);
+    assert.match(response.message, /확인하지 못했습니다/);
+    assert.equal((await f.handle({ action: 'status' })).packet, null);
+    await assert.rejects(() => f.handle(request), /없거나 만료/);
+    assert.equal(f.calls.dispatched, 1);
+});
+
+test('layout verification is reported independently from publishing and does not add a success history', async () => {
+    const f = await controllerFixture(); f.setResponse({ layoutVerified: true, photoPlacement: 'between-captions' });
+    await f.handle({ action: 'capture' }); const target = await f.handle({ action: 'inspect' });
+    const response = await f.handle({ action: 'attach', packetId: target.packet.id, tabId: target.tabId, bandId: target.bandId, composerId: target.composerId });
+    assert.equal(response.layoutVerified, true); assert.equal(response.published, false);
+    assert.equal(response.photoPlacement, 'between-captions'); assert.equal(response.count, 4);
+    assert.equal((await f.handle({ action: 'status' })).packet, null);
+});
+
+test('adapter limits automation to observed photo Attach step and verifies widgets before caption insertion', async () => {
     const { bandComposerAction, readPreparedSource } = await core(); const text = bandComposerAction.toString();
-    assert.doesNotMatch(text, /fetch\(|XMLHttpRequest|\.click\(|\.submit\(|document\.cookie|localStorage|sessionStorage|CKEDITOR|openapi/);
-    assert.match(text, /new Event\('change'/); assert.match(text, /published: false/);
-    assert.match(text, /expectedComposerId/); assert.match(text, /postPhotoInput_/);
-    assert.match(readPreparedSource.toString(), /approval\?\.checked/);
-});
-
-async function orderingFixture(options = {}) {
-    const { bandComposerAction } = await core();
-    const state = { text: options.existingText || '', cachedAtEnd: false, order: null, changes: 0, events: [] };
-    const location = { protocol: 'https:', hostname: 'www.band.us', port: '', pathname: '/band/123/post' };
-    class FileInput {
-        constructor() { this.id = 'postPhotoInput_test'; this.multiple = true; this.isConnected = true; this._files = []; }
-        get files() { return this._files; }
-        set files(value) { this._files = value; }
-        dispatchEvent(event) {
-            assert.equal(event.type, 'change'); state.changes++;
-            state.order = state.cachedAtEnd ? 'caption -> photos' : 'photos -> caption';
-            state.events.push('file-change');
-        }
-    }
-    const input = new FileInput();
-    const selection = { isCollapsed: true, anchorNode: null, anchorOffset: 0, range: null,
-        removeAllRanges() { this.range = null; },
-        addRange(range) { this.range = range; this.isCollapsed = Boolean(range.collapsed); this.anchorNode = editor; },
-    };
-    const editor = { getClientRects: () => [1], focus() {},
-        cloneNode() {
-            const clone = { textContent: state.text || '\u200b새로운 소식을 남겨보세요.', querySelectorAll: () => state.text ? [] : [{ remove() { clone.textContent = '\u200b'; } }] };
-            return clone;
-        },
-        dispatchEvent(event) { state.events.push(event.type); state.cachedAtEnd = Boolean(selection.range?.atEnd); },
-        contains: node => node === editor,
-    };
-    selection.anchorNode = editor;
-    const dialog = { isConnected: true, dataset: {}, getClientRects: () => [1],
-        getAttribute: () => 'editor-test', contains: node => node === editor || node === input,
-        querySelectorAll: selector => selector.includes('input[') ? [input] : [editor], querySelector: () => null,
-    };
-    const document = {
-        querySelectorAll: selector => selector.includes('[role=') ? [dialog] : [{ href: 'https://www.band.us/band/123/post', textContent: '가상 밴드' }],
-        getElementById: () => ({ textContent: '글쓰기' }),
-        createRange: () => ({ collapsed: false, atEnd: false, selectNodeContents() {}, setStart() {}, toString: () => state.caretMoved ? state.text : '', collapse(toStart) { this.collapsed = true; this.atEnd = !toStart; } }),
-        execCommand(command, _show, text) {
-            if (command === 'insertText') {
-                if (options.failCaption) return false;
-                state.text = text; selection.isCollapsed = true; return true;
-            }
-            assert.equal(command, 'insertParagraph'); assert.equal(selection.range?.atEnd, true);
-            state.text += '\n'; selection.isCollapsed = true; return true;
-        },
-    };
-    class DomEvent { constructor(type) { this.type = type; } }
-    class DataTransfer { constructor() { this.files = []; this.items = { add: file => this.files.push(file) }; } }
-    const action = vm.runInNewContext('(' + bandComposerAction.toString() + ')', {
-        location, document, window: { getSelection: () => selection }, HTMLInputElement: FileInput,
-        DataTransfer, File: class { constructor(_data, name) { this.name = name; } },
-        Event: DomEvent, KeyboardEvent: DomEvent, MouseEvent: DomEvent, URL, Date, Uint8Array, atob,
-        setTimeout(callback, delay) { assert.equal(delay, 150); return setTimeout(() => { if (options.changeBand) location.pathname = '/band/456/post'; if (options.changeCaret) state.caretMoved = true; callback(); }, 0); },
-    });
-    const packet = { ...source(), id: 'prepared', expiresAt: Date.now() + 60000, expectedBandId: '123', expectedComposerId: 'editor-test:postPhotoInput_test' };
-    return { state, attach: () => action(packet) };
-}
-
-test('photo insertion follows the caption even when the editor previously remembered its beginning', async () => {
-    for (const existingText of ['', '관리자가 먼저 작성한 문구', '새로운 소식을 남겨보세요.']) {
-        const f = await orderingFixture({ existingText }); const result = await f.attach();
-        assert.equal(f.state.order, 'caption -> photos'); assert.equal(f.state.changes, 1);
-        assert.equal(f.state.text.trim(), existingText || source().text);
-        assert.equal(result.photoPlacement, 'after-caption'); assert.equal(result.published, false);
-        assert.ok(f.state.events.indexOf('keyup') < f.state.events.indexOf('file-change'));
-    }
-});
-
-test('failed caption insertion stops before attaching any photos', async () => {
-    const f = await orderingFixture({ failCaption: true });
-    await assert.rejects(f.attach, /공지 문구를 넣지 못해/);
-    assert.equal(f.state.changes, 0);
-});
-
-test('switching the BAND during selection settlement stops before file delivery', async () => {
-    const f = await orderingFixture({ changeBand: true });
-    await assert.rejects(f.attach, /글쓰기 화면이나 입력 위치가 바뀌었/);
-    assert.equal(f.state.changes, 0);
-});
-
-test('moving the caret back before text during settlement stops before file delivery', async () => {
-    const f = await orderingFixture({ changeCaret: true });
-    await assert.rejects(f.attach, /커서가 문구 앞으로 이동/);
-    assert.equal(f.state.changes, 0);
+    assert.doesNotMatch(text, /fetch\(|XMLHttpRequest|\.submit\(|document\.cookie|localStorage|sessionStorage|CKEDITOR|openapi|_btnSubmitPost/);
+    assert.equal((text.match(/\.click\(/g)||[]).length, 1);
+    assert.match(text, /attachButton\.click\(\)/);
+    for (const exact of ['사진 올리기', '첨부하기', 'button._submitBtn', '.mediaContentItem > img._thumbImg', ':scope > .cke_widget_wrapper[type="photo"]', 'img._thumbnail']) assert.ok(text.includes(exact));
+    assert.match(text, /Date\.now\(\) \+ 30000/); assert.match(text, /layoutVerified: false/); assert.match(text, /layoutVerified: true/);
+    assert.ok(text.indexOf("new Event('change'") < text.indexOf('insertCaption(aboveText'));
+    assert.ok(text.indexOf('const finalPhotos = photos()') > text.indexOf('insertCaption(belowText'));
+    assert.match(text, /published: false/); assert.match(readPreparedSource.toString(), /approval\?\.checked/);
+    assert.doesNotMatch(text, /innerHTML\s*=/);
 });

@@ -1,0 +1,48 @@
+BAND photo helper 0.2.2 — upload confirmation and caption order
+Date: 2026-10-26
+Base: 5185bc311240d58ae2d4b96808397e6b73ff9eee
+Branch: codex/band-official-share-20261026
+
+Cause confirmed on actual BAND:
+- File change opens a separate photo-upload/selection dialog.
+- Uploaded thumbnails require the exact photo-dialog Attach button before
+  editor photo widgets exist. Version 0.2.1 inserted captions too early.
+- Uploaded four harmless generated test PNGs through the normal file chooser,
+  clicked Attach, then entered the caption before the photos using normal UI.
+  Actual BAND kept the caption above all four photo widgets.
+- Screenshot: scratch/band-order-real-band-caption-above.png (local only).
+- No post was published. The test draft was cancelled afterward.
+
+Fix:
+- Upload only once, wait for loaded thumbnails in the specific photo dialog,
+  click only its exact Attach button once, then wait for editor photo widgets.
+- Insert separate above/below captions after attachment. Preserve existing
+  formatted text rather than overwriting it; place that text before photos.
+- Verify final ordering and photo count. Report a warning on an unverified
+  layout; consume the packet after dispatch and do not retry the upload.
+- Bound waiting to 30 seconds; stop if target composer/BAND or text changes.
+- Permissions unchanged. No private APIs, credentials, editor internals or
+  final Publish button automation. No publication-success history is written.
+
+Verification:
+- BAND and league-weekly Node tests: 131 passed, 0 failed.
+- Chromium two-stage fixture using the actual adapter function:
+  1. Empty draft: above caption -> four photos -> below caption, verified.
+  2. Existing formatted text: two paragraphs and strong markup preserved
+     before four photos, verified.
+  3. Literal placeholder-like user text preserved before four photos.
+  4. Second dispatch blocked; file change and Attach each occurred once.
+  5. Target BAND changed after upload: stopped before Attach and captions;
+     unverified-layout warning, no retry.
+  Each fixture scenario published zero times.
+- JavaScript syntax checks and git diff --check passed.
+
+Limits:
+- Actual BAND normal-UI sequence was verified separately from the extension
+  adapter running in the Chromium fixture. Installed-extension end-to-end
+  verification on the user's Chrome profile remains after extension reload.
+- This version updates extension files only. Next.js application source,
+  production service, database, OAuth, mobile and PNG generation are unchanged.
+  No server redeploy or database migration is needed for this fix.
+- Reload the existing unpacked extension to 0.2.2, refresh BowlingManager and
+  use a new BAND draft. Old already-attached drafts are deliberately excluded.

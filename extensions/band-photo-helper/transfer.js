@@ -5,6 +5,9 @@ export function validatePacket(value, now = Date.now()) {
     if (!value || value.version !== 1 || typeof value.text !== 'string' || !value.text.trim() || value.text.length > 20000) throw Error('공지 문구를 확인해주세요.');
     const url = new URL(value.sourceUrl);
     if (url.protocol !== 'https:' || !['bowlingmanager.co.kr', 'www.bowlingmanager.co.kr'].includes(url.hostname) || url.port || url.username || url.password) throw Error('볼링매니저 공식 사이트의 결과표만 가져올 수 있습니다.');
+    const aboveText = value.aboveText === undefined ? value.text : value.aboveText;
+    const belowText = value.belowText === undefined ? '' : value.belowText;
+    if (typeof aboveText !== 'string' || typeof belowText !== 'string' || [aboveText, belowText].filter(Boolean).join('\n\n') !== value.text) throw Error('사진 위·아래 공지 문구가 일치하지 않습니다.');
     if (!Array.isArray(value.images) || !value.images.length || value.images.length > 20) throw Error('PNG 사진 1~20개를 준비해주세요.');
     let total = value.text.length;
     const names = new Set();
@@ -18,7 +21,7 @@ export function validatePacket(value, now = Date.now()) {
     // Construct an allowlisted copy. Do not persist arbitrary page fields.
     return {
         version: 1, id: crypto.randomUUID(), sourceUrl: url.origin + url.pathname,
-        text: value.text, images: value.images.map(({ name, dataUrl }) => ({ name, dataUrl })),
+        text: value.text, aboveText, belowText, images: value.images.map(({ name, dataUrl }) => ({ name, dataUrl })),
         createdAt: now, expiresAt: now + EXPIRY_MS,
     };
 }
@@ -47,7 +50,8 @@ export function readPreparedSource() {
         return { name, dataUrl: image.getAttribute('src') };
     });
     if (!images.length) throw Error('선택 주차 결과표 4종 준비 또는 사진 만들기를 먼저 눌러주세요.');
-    return { version: 1, sourceUrl: location.href, text: [field('공유할 공지 문구'), field('사진 아래에 쓰기')].filter(Boolean).join('\n\n'), images };
+    const aboveText = field('공유할 공지 문구'), belowText = field('사진 아래에 쓰기');
+    return { version: 1, sourceUrl: location.href, text: [aboveText, belowText].filter(Boolean).join('\n\n'), aboveText, belowText, images };
 }
 
 export async function bandComposerAction(packet = null) {
@@ -81,53 +85,108 @@ export async function bandComposerAction(packet = null) {
         const bytes = Uint8Array.from(atob(image.dataUrl.split(',')[1]), char => char.charCodeAt(0));
         transfer.items.add(new File([bytes], image.name, { type: 'image/png' }));
     }
-    // No page API, cookie, token or network calls. Only the normal file input
-    // change event that BAND's own photo selector handles. Never click publish.
-    const selection = window.getSelection();
-    if (!selection) throw Error('사진을 붙일 문구 아래 위치를 확인하지 못했습니다. 다시 시도해주세요.');
-    const selectEditor = collapseToEnd => {
-        editor.focus();
-        const range = document.createRange();
-        range.selectNodeContents(editor);
-        if (collapseToEnd) range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
+    const fold = text => text.replace(/[\u200b-\u200d\ufeff\s]/g, '');
+    const originalText = fold(content.textContent);
+    const aboveText = packet.aboveText === undefined ? packet.text : packet.aboveText;
+    const belowText = packet.belowText || '';
+    if (typeof aboveText !== 'string' || typeof belowText !== 'string' || [aboveText, belowText].filter(Boolean).join('\n\n') !== packet.text) throw Error('사진 위·아래 공지 문구를 다시 가져와주세요.');
+    const sameComposer = () => dialog.isConnected && editor.isConnected && dialog.contains(editor) &&
+        dialog.getAttribute('aria-labelledby') + ':' + dialog.querySelector('input[id^="postPhotoInput_"]')?.id === composerId &&
+        location.protocol === 'https:' && ['band.us', 'www.band.us'].includes(location.hostname) &&
+        location.pathname.match(/^\/band\/(\d+)\//)?.[1] === packet.expectedBandId &&
+        dialog.dataset.bmBandPhotoTransfer === packet.id;
+    const photos = () => [...editor.querySelectorAll(':scope > .cke_widget_wrapper[type="photo"]')];
+    const userText = () => {
+        const clone = editor.cloneNode(true);
+        clone.querySelectorAll('.cke_widget_wrapper[type="photo"], .placeholder[aria-hidden="true"]').forEach(node => node.remove());
+        return fold(clone.textContent);
     };
-    let textInserted = false;
-    if (!hasText) {
-        // Replace only the known-empty editor, including BAND's placeholder.
-        // Never select or replace a draft that already contains user text.
-        selectEditor(false);
-        try { textInserted = document.execCommand('insertText', false, packet.text); } catch { /* Report below before attaching photos. */ }
-        if (!textInserted) throw Error('공지 문구를 넣지 못해 사진 전달을 멈췄습니다. BAND에 문구를 먼저 붙여넣은 뒤 다시 첨부해주세요.');
-    }
-    // BAND's rich editor remembers the caret separately from the file input.
-    // Put it after the caption and notify normal editor selection handlers
-    // before delivering files; otherwise its old bookmark may precede the text.
-    selectEditor(true);
-    document.execCommand('insertParagraph', false);
-    editor.dispatchEvent(new KeyboardEvent('keyup', { key: 'End', code: 'End', bubbles: true }));
-    editor.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-    await new Promise(resolve => setTimeout(resolve, 150));
-    if (!dialog.isConnected || !visible(editor) || !dialog.contains(editor) || !inputs[0].isConnected || !dialog.contains(inputs[0]) ||
-        dialog.getAttribute('aria-labelledby') + ':' + inputs[0].id !== composerId ||
-        location.pathname.match(/^\/band\/(\d+)\//)?.[1] !== packet.expectedBandId ||
-        Date.now() >= packet.expiresAt || inputs[0].files?.length || dialog.querySelector('img') ||
-        !selection.isCollapsed || !selection.anchorNode || !editor.contains(selection.anchorNode)) {
-        throw Error('사진을 준비하는 동안 글쓰기 화면이나 입력 위치가 바뀌었습니다. 현재 작성창을 다시 확인해주세요.');
-    }
-    const remaining = document.createRange();
-    remaining.selectNodeContents(editor);
-    remaining.setStart(selection.anchorNode, selection.anchorOffset);
-    if (remaining.toString().replace(/[\u200b-\u200d\ufeff]/g, '').trim()) {
-        throw Error('사진을 준비하는 동안 커서가 문구 앞으로 이동했습니다. 현재 작성창을 다시 확인해주세요.');
-    }
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'files')?.set;
     if (!setter) throw Error('이 브라우저에서 파일 전달을 지원하지 않습니다.');
     setter.call(inputs[0], transfer.files);
     dialog.dataset.bmBandPhotoTransfer = packet.id;
     const count = inputs[0].files.length;
     if (count !== packet.images.length) throw Error('사진 파일을 모두 전달하지 못했습니다. BAND 화면을 확인해주세요.');
+    // BAND first uploads into its own photo picker, then requires Attach.
+    // Do not insert captions until those widgets exist in the actual editor.
     inputs[0].dispatchEvent(new Event('change', { bubbles: true }));
-    return { bandId: match[1], bandName, count, textInserted, keptExistingText: hasText, photoPlacement: 'after-caption', uploadRequested: true, published: false };
+    const base = { bandId: match[1], bandName, count, textInserted: false, keptExistingText: hasText, uploadRequested: true, published: false };
+    try {
+        let attachmentConfirmed = false;
+        const deadline = Date.now() + 30000;
+        while (true) {
+            if (!sameComposer() || Date.now() >= packet.expiresAt) throw Error('대상 밴드나 작성창이 바뀌었습니다.');
+            if (userText() !== originalText) throw Error('사진을 올리는 동안 문구가 변경돼 자동 정리를 멈췄습니다.');
+            const widgets = photos();
+            if (widgets.length > count) throw Error('예상하지 않은 사진이 추가돼 자동 정리를 멈췄습니다.');
+            if (widgets.length === count && widgets.every(widget => {
+                const image = widget.querySelector('img._thumbnail');
+                return image?.complete && image.naturalWidth > 0 && ![...widget.querySelectorAll('.uLoading')].some(visible);
+            })) break;
+            if (Date.now() >= deadline) throw Error('사진 첨부 완료를 확인하지 못했습니다. BAND의 업로드 상태를 확인해주세요.');
+            const modals = [...document.querySelectorAll('[role="dialog"][aria-modal="true"]')].filter(visible);
+            const uploadDialogs = modals.filter(node => node.querySelector('h1')?.textContent.trim() === '사진 올리기');
+            if (uploadDialogs.length > 1) throw Error('사진 선택창이 여러 개 열려 자동 첨부를 멈췄습니다.');
+            const upload = uploadDialogs[0];
+            if (!attachmentConfirmed && upload && modals[modals.length - 1] === upload) {
+                const thumbs = [...upload.querySelectorAll('.mediaContentItem > img._thumbImg')];
+                if (thumbs.length > count) throw Error('사진 선택창의 사진 수가 달라 자동 첨부를 멈췄습니다.');
+                const buttons = [...upload.querySelectorAll('button._submitBtn')].filter(button => button.textContent.trim() === '첨부하기');
+                if (thumbs.length === count && buttons.length === 1 && !buttons[0].disabled &&
+                    thumbs.every(image => image.complete && image.naturalWidth > 0) && ![...upload.querySelectorAll('.uLoading')].some(visible)) {
+                    const attachButton = buttons[0];
+                    attachmentConfirmed = true;
+                    attachButton.click(); // Only photo Attach, never the post Publish button.
+                }
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        const widgets = photos();
+        if (hasText) {
+            // Preserve the original formatted text nodes; never rebuild a draft
+            // with innerHTML or overwrite edits made during the upload.
+            const nodes = [...editor.childNodes].filter(node => !widgets.includes(node) && fold(node.textContent || ''));
+            if (nodes.some(node => node.nodeType === 1 && node.querySelector('.cke_widget_wrapper[type="photo"]'))) throw Error('작성창 구조가 달라 기존 글을 그대로 유지했습니다.');
+            const fragment = document.createDocumentFragment();
+            nodes.forEach(node => fragment.appendChild(node));
+            editor.insertBefore(fragment, widgets[0]);
+        } else {
+            const insertCaption = (text, before) => {
+                if (!text) return;
+                const paragraph = document.createElement('p');
+                paragraph.appendChild(document.createElement('br'));
+                editor.insertBefore(paragraph, before);
+                editor.focus();
+                const selection = window.getSelection();
+                if (!selection) throw Error('문구 입력 위치를 확인하지 못했습니다.');
+                const range = document.createRange();
+                range.selectNodeContents(paragraph);
+                selection.removeAllRanges(); selection.addRange(range);
+                if (!document.execCommand('insertText', false, text)) throw Error('문구를 넣지 못했습니다. 공지 문구 복사로 직접 입력해주세요.');
+            };
+            insertCaption(aboveText, widgets[0]);
+            insertCaption(belowText, widgets[widgets.length - 1].nextSibling);
+            base.textInserted = true;
+        }
+        editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: null }));
+        editor.dispatchEvent(new KeyboardEvent('keyup', { key: 'Home', code: 'Home', bubbles: true }));
+        await new Promise(resolve => setTimeout(resolve, 500));
+        if (!sameComposer()) throw Error('문구 확인 중 작성창이 바뀌었습니다.');
+        const finalPhotos = photos(), children = [...editor.childNodes];
+        const first = children.indexOf(finalPhotos[0]), last = children.indexOf(finalPhotos[finalPhotos.length - 1]);
+        const captionText = node => {
+            const clone = node.cloneNode(true);
+            clone.querySelectorAll?.('.placeholder[aria-hidden="true"]').forEach(element => element.remove());
+            return clone.textContent || '';
+        };
+        const before = fold(children.slice(0, first).map(captionText).join(''));
+        const after = fold(children.slice(last + 1).map(captionText).join(''));
+        if (finalPhotos.length !== count || first < 0 || before !== (hasText ? originalText : fold(aboveText)) || after !== (hasText ? '' : fold(belowText))) throw Error('문구와 사진의 최종 순서를 확인하지 못했습니다. 게시 전에 확인해주세요.');
+        editor.firstElementChild?.scrollIntoView({ block: 'nearest' });
+        return { ...base, layoutVerified: true, photoPlacement: 'between-captions' };
+    } catch (error) {
+        // Files were already sent: consume the packet and never retry an upload
+        // or report publishing success. The user can inspect the intact draft.
+        return { ...base, layoutVerified: false, message: error.message || '사진과 문구 위치를 BAND에서 확인해주세요.' };
+    }
 }
