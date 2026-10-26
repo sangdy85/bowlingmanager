@@ -33,3 +33,20 @@ be restored, with a full database backup and guarded transaction. Scores,
 rankings and other entries must remain unchanged. User confirmed all four
 affected people attended. Deployment and recovery receipts are recorded after
 execution; this document alone does not assert production completion.
+
+Production completion receipt:
+- Runtime patch commit: 478b36ed4b85287946a6b9494b770ff48ca7380e
+- Release: champ-lane-478b36e-e07af45f261e-20261026
+- Build: T84Gvoiscl07FgndaxlAq
+- Server regression tests: 211 passed.
+- Runtime files changed: 2; other baseline source files preserved: 1295.
+- PM2 online; startup active/enabled; new application errors: 0.
+- External HTTPS checks: 26 passed; APIs remain 84; migrations unchanged.
+- Recovery backup: /home/user/bowling-backups/champ-lane-repair-20261026T083634Z/database-before.db
+- Four original lanes/manual flags and four PENDING statuses restored.
+- All scores and all other participants/registrations unchanged.
+- Actual production announcement builder: 48 entries, 0 unassigned;
+  historical-round cancellation guard returns false; no BAND calls or posts.
+- Public production browser also reports 48 participants / 48 lanes assigned.
+- Source/build rollback (does not restore the DB): bash /home/user/bowling-deploy/champ-lane-478b36e-e07af45f261e-20261026/rollback.sh
+- No schema migration, API removal, automatic BAND publication or main merge.
