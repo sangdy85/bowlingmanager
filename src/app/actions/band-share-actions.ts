@@ -41,11 +41,11 @@ export async function getBandSharePreviewAction(input: BandShareInput): Promise<
         const tournament = await prisma.tournament.findUnique({
             where: { id: input.tournamentId },
             select: {
-                id: true, name: true, centerId: true, type: true, settings: true, maxParticipants: true,
+                id: true, name: true, centerId: true, type: true, settings: true, maxParticipants: true, startDate: true,
                 leagueRounds: {
                     where: { id: input.roundId || '' },
                     select: {
-                        id: true, roundNumber: true,
+                        id: true, roundNumber: true, date: true,
                         participants: { select: { registrationId: true, createdAt: true } },
                         individualScores: { select: { registrationId: true, gameNumber: true, score: true } },
                     },
@@ -92,11 +92,14 @@ export async function getBandSharePreviewAction(input: BandShareInput): Promise<
         if (built.centerId !== input.centerId) return { success: false, message: '공지 대상이 변경되었습니다. 다시 확인해주세요.' };
         const table = round && ['PARTICIPANTS', 'LANE_ASSIGNMENT', 'FINAL_RESULT'].includes(input.type)
             ? await getBandShareTableData(tournament.id, round.id, input.type as BandShareTable['kind'], input.centerId) : undefined;
+        const generatedAt = new Date();
         return { success: true, preview: {
             content: built.content,
             ...(table ? { table } : {}),
-            ...buildBandShareCaption(tournament.name, round?.roundNumber ?? null, input.type, readBandShareDefaults(tournament.settings)),
-            generatedAt: new Date().toISOString(),
+            ...buildBandShareCaption(tournament.name, round?.roundNumber ?? null, input.type, readBandShareDefaults(tournament.settings), {
+                eventDate: round?.date ?? tournament.startDate, now: generatedAt,
+            }),
+            generatedAt: generatedAt.toISOString(),
             roundId: round?.id || null,
             week: input.type === 'LEAGUE_WEEKLY_RESULT' ? round!.roundNumber : null,
         } };

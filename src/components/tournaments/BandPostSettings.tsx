@@ -12,7 +12,7 @@ export default function BandPostSettings({ centerId, tournamentId, initialSettin
     const [message, setMessage] = useState('');
     return <section className={styles.panel} aria-label="BAND 게시글 설정">
         <h3 className={styles.title}>BAND 게시글 설정</h3>
-        <p className={styles.hint}>기본 안내는 대회명·주차(회차)·항목명만 표시합니다. 아래 문구는 이 대회의 모든 회차에서 불러오며, 공유할 때 이번 공지만 수정할 수도 있습니다.</p>
+        <p className={styles.hint}>기본 안내에는 대회명·주차(회차)·항목명·날짜와 홈페이지 안내가 들어갑니다. 결과는 경기일, 명단·레인·모집 안내는 공유 당일 날짜를 사용합니다. 아래 문구는 모든 회차에서 불러오며, 공유할 때 이번 공지만 수정할 수도 있습니다.</p>
         <form onSubmit={async event => {
             event.preventDefault(); if (busy) return; setBusy(true); setMessage('');
             try {

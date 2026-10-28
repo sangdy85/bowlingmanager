@@ -15,7 +15,7 @@ test('extension only bridges official source sites; BAND access remains temporar
     assert.deepEqual(manifest.permissions.sort(), ['activeTab', 'alarms', 'scripting']);
     for (const key of ['host_permissions', 'optional_host_permissions', 'externally_connectable', 'update_url']) assert.equal(manifest[key], undefined);
     const official = ['https://bowlingmanager.co.kr/*', 'https://www.bowlingmanager.co.kr/*'];
-    assert.equal(manifest.version, '0.2.4');
+    assert.equal(manifest.version, '0.2.5');
     assert.deepEqual(manifest.content_scripts, [{ matches: official, js: ['bridge.js'], run_at: 'document_idle' }]);
     assert.deepEqual(manifest.web_accessible_resources, [{ resources: ['transfer.js'], matches: official }]);
     assert.equal(manifest.manifest_version, 3);
@@ -160,7 +160,7 @@ test('adapter limits automation to observed photo Attach step and verifies widge
     assert.match(text, /Date\.now\(\) \+ 30000/); assert.match(text, /layoutVerified: false/); assert.match(text, /layoutVerified: true/);
     assert.ok(text.indexOf("new Event('change'") < text.indexOf('insertCaption(aboveText'));
     assert.ok(text.indexOf('const finalPhotos = photos()') > text.indexOf('insertCaption(belowText'));
-    assert.match(text, /published: false/); assert.match(readPreparedSource.toString(), /approval\?\.checked/);
+    assert.match(text, /published: false/); assert.doesNotMatch(readPreparedSource.toString(), /approval|checkbox/);
     assert.doesNotMatch(text, /innerHTML\s*=/);
 });
 

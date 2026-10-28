@@ -71,7 +71,7 @@ export default function Controls(){
  const [native,setNative]=useState(false),[nativeCancel,setNativeCancel]=useState(false),[fileEvents,setFileEvents]=useState([]);
  const [helper,setHelper]=useState(false);
  useEffect(()=>{
-   if(helper)document.documentElement.dataset.bmBandPhotoHelper='0.2.0';else delete document.documentElement.dataset.bmBandPhotoHelper;
+   if(helper)document.documentElement.dataset.bmBandPhotoHelper='0.2.5';else delete document.documentElement.dataset.bmBandPhotoHelper;
    window.dispatchEvent(new Event('bm-band-photo-helper-ready'));
    const mockBridge=e=>{const b=e.target.closest('button[data-band-photo-helper="capture"]');if(!helper||!e.isTrusted||!b||b.disabled)return;const requestId=b.getAttribute('data-band-photo-request');const count=document.querySelectorAll('dialog[open] section[aria-label="BAND 첨부 사진"] figure').length;setTimeout(()=>window.dispatchEvent(new CustomEvent('bm-band-photo-helper-result',{detail:{requestId,ok:true,count}})),40);};
    document.addEventListener('click',mockBridge,true);return()=>document.removeEventListener('click',mockBridge,true);

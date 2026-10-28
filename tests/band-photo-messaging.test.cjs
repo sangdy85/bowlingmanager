@@ -95,7 +95,7 @@ test('missing worker responses and stale extension contexts tell the administrat
             Event: class { constructor(type) { this.type = type; } },
             CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
             queueMicrotask, mockRead: packet,
-            chrome: { runtime: { getManifest: () => ({ version: '0.2.4' }), sendMessage: async () => {
+            chrome: { runtime: { getManifest: () => ({ version: '0.2.5' }), sendMessage: async () => {
                 if (stale) throw Error('Extension context invalidated.');
                 return undefined;
             } } },

@@ -21,14 +21,12 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
     const [text, setText] = useState('');
     const [belowText, setBelowText] = useState('');
     const sharedText = combineBandShareText(text, belowText);
-    const [approved, setApproved] = useState(false);
     const [copied, setCopied] = useState('');
     const [loading, setBusy] = useState(false);
     const [imageBusy, setImageBusy] = useState(false);
     const [images, setImages] = useState<BandShareImage[]>([]);
     const [files, setFiles] = useState<File[]>([]);
     const [shareMode, setShareMode] = useState<'photos' | 'text'>('photos');
-    const [manualPhotoReady, setManualPhotoReady] = useState(false);
     const [helperReady, setHelperReady] = useState(false);
     const [helperBusy, setHelperBusy] = useState(false);
     const helperTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,7 +42,11 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
             (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
     }, []);
     useEffect(() => {
-        const ready = () => setHelperReady(/^0\.(?:[2-9]|\d{2,})\.|^[1-9]\d*\./.test(document.documentElement.dataset.bmBandPhotoHelper || ''));
+        const ready = () => {
+            const version = (document.documentElement.dataset.bmBandPhotoHelper || '').split('.').map(Number);
+            setHelperReady(version.length === 3 && version.every(Number.isInteger) &&
+                (version[0] > 0 || version[1] > 2 || (version[1] === 2 && version[2] >= 5)));
+        };
         const result = (event: Event) => {
             const detail: unknown = (event as CustomEvent).detail;
             if (!detail || typeof detail !== 'object' || !('requestId' in detail) || detail.requestId !== helperRequest.current || !dialogRef.current?.open) return;
@@ -71,10 +73,10 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
         const dialog = dialogRef.current;
         requests.current++;
         busyRef.current = false;
-        setBusy(false); setPreview(null); setText(''); setApproved(false); setCopied(''); setMessage('');
+        setBusy(false); setPreview(null); setText(''); setCopied(''); setMessage('');
         setBelowText('');
         setImageBusy(false); setImages([]); setFiles([]);
-        setShareMode('photos'); setManualPhotoReady(false);
+        setShareMode('photos');
         helperRequest.current = null; setHelperBusy(false);
         if (helperTimeout.current) clearTimeout(helperTimeout.current);
         dialog?.close();
@@ -93,17 +95,17 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
     const close = () => {
         sequence.current++; busyRef.current = false; setBusy(false);
         setImageBusy(false); setImages([]); setFiles([]);
-        setShareMode('photos'); setManualPhotoReady(false);
+        setShareMode('photos');
         helperRequest.current = null; setHelperBusy(false);
         if (helperTimeout.current) clearTimeout(helperTimeout.current);
-        setPreview(null); setApproved(false); dialogRef.current?.close();
+        setPreview(null); dialogRef.current?.close();
     };
     const load = async () => {
         if (busyRef.current) return;
         busyRef.current = true;
         const request = ++sequence.current;
-        setBusy(true); setMessage(''); setApproved(false); setCopied('');
-        setImages([]); setFiles([]); setManualPhotoReady(false);
+        setBusy(true); setMessage(''); setCopied('');
+        setImages([]); setFiles([]);
         try {
             const result = await getBandSharePreviewAction({ centerId, tournamentId, roundId, type, week });
             if (request !== sequence.current) return;
@@ -117,7 +119,7 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
     };
     const prepareImages = async () => {
         if (busyRef.current || !preview) return;
-        busyRef.current = true; setImageBusy(true); setMessage(''); setImages([]); setFiles([]); setManualPhotoReady(false);
+        busyRef.current = true; setImageBusy(true); setMessage(''); setImages([]); setFiles([]);
         const request = ++sequence.current;
         try {
             // Recheck manager permission and current completion before preparing images.
@@ -125,7 +127,7 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
             if (request !== sequence.current) return;
             if (!latest.success) { setMessage(latest.message); return; }
             if (latest.preview.content !== preview.content || latest.preview.shareText !== preview.shareText || latest.preview.belowImageText !== preview.belowImageText || JSON.stringify(latest.preview.table) !== JSON.stringify(preview.table)) {
-                setPreview(latest.preview); setText(latest.preview.shareText); setBelowText(latest.preview.belowImageText); setApproved(false);
+                setPreview(latest.preview); setText(latest.preview.shareText); setBelowText(latest.preview.belowImageText);
                 setMessage('경기 기록 또는 기본 문구가 변경되었습니다. 최신 공지를 다시 확인한 뒤 사진을 준비해주세요.'); return;
             }
             // Keep full participant/lane/result data in the image, even though
@@ -174,7 +176,7 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
     const saveAllImages = async () => {
         if (busyRef.current || !images.length) return;
         const request = sequence.current;
-        busyRef.current = true; setImageBusy(true); setManualPhotoReady(false);
+        busyRef.current = true; setImageBusy(true);
         try {
             for (const image of images) {
                 if (request !== sequence.current) return;
@@ -188,11 +190,11 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
             if (request === sequence.current) { busyRef.current = false; setImageBusy(false); }
         }
     };
-    const canShare = Boolean(preview && approved && !busy && links && sharedText);
+    const canShare = Boolean(preview && !busy && links && sharedText);
     const helperShare = (event: React.MouseEvent<HTMLButtonElement>) => {
         if (!canShare || !images.length) return;
         if (!helperReady) {
-            setMessage('확장프로그램 연결이 확인되지 않았습니다. 설치한 확장프로그램을 0.2.0 이상으로 새로고침한 뒤 이 페이지도 새로고침해주세요. 기존 0.1.0은 브라우저 상단의 확장프로그램 아이콘에서 ‘사진 가져오고 BAND 열기’를 사용할 수 있습니다.');
+            setMessage('사진 전달에는 확장프로그램 0.2.5 이상이 필요합니다. 업데이트한 확장프로그램을 새로고침한 뒤 이 페이지도 새로고침해주세요.');
             return;
         }
         helperRequest.current = event.currentTarget.getAttribute('data-band-photo-request');
@@ -202,7 +204,7 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
             setMessage('확장프로그램의 응답을 확인하지 못했습니다. 열린 BAND와 브라우저 상단 확장프로그램의 준비된 사진을 확인해주세요. 확장프로그램과 이 페이지를 새로고침하면 다시 연결할 수 있습니다.');
         }, 20000);
     };
-    const canOpenTextShare = canShare && (shareMode === 'text' || (images.length > 0 && manualPhotoReady));
+    const canOpenTextShare = canShare && (shareMode === 'text' || images.length > 0);
     const webShare = () => {
         if (!canOpenTextShare) return;
         try {
@@ -232,19 +234,19 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
                     <p className={styles.previewNote}>서버 조회: {new Date(preview.generatedAt).toLocaleString('ko-KR')}{preview.week ? ` · ${preview.week}주차` : ''}. 아래 문구를 수정할 수 있습니다. 기록 변경 후에는 새로 불러와 확인해주세요.</p>
                     <fieldset className={styles.shareMode} disabled={busy}>
                         <legend>공유할 내용</legend>
-                        <label><input type="radio" name={`${titleId}-mode`} checked={shareMode === 'photos'} onChange={() => { setShareMode('photos'); setManualPhotoReady(false); setMessage(''); }} /> 문구 + 사진</label>
-                        <label><input type="radio" name={`${titleId}-mode`} checked={shareMode === 'text'} onChange={() => { setShareMode('text'); setManualPhotoReady(false); setMessage(''); }} /> 사진 없이 문구만</label>
+                        <label><input type="radio" name={`${titleId}-mode`} checked={shareMode === 'photos'} onChange={() => { setShareMode('photos'); setMessage(''); }} /> 문구 + 사진</label>
+                        <label><input type="radio" name={`${titleId}-mode`} checked={shareMode === 'text'} onChange={() => { setShareMode('text'); setMessage(''); }} /> 사진 없이 문구만</label>
                     </fieldset>
                     {shareMode === 'text' && <p className={styles.previewNote}>현재 사진 없이 문구만 공유하도록 선택했습니다.</p>}
                     {shareMode === 'photos' && !mobile && <div className={styles.helperPanel}>
                         <strong>PC 사진 전달 {helperReady ? '· 확장프로그램 연결됨' : '· 확장프로그램 연결 확인 필요'}</strong>
-                        <p>사진을 준비하고 공유 범위를 확인한 뒤 ‘PC BAND에 사진 전달’을 누르세요. 사진 저장과 파일 선택 없이 BAND의 새 글쓰기 창에 전달할 수 있습니다.</p>
-                        {!helperReady && <p>설치했다면 확장프로그램과 이 페이지를 새로고침해주세요. 0.1.0에서는 브라우저 상단 확장프로그램의 ‘사진 가져오고 BAND 열기’를 먼저 눌러주세요.</p>}
+                        <p>사진을 준비한 뒤 ‘PC BAND에 사진 전달’을 누르세요. 사진 저장과 파일 선택 없이 BAND의 새 글쓰기 창에 전달할 수 있습니다.</p>
+                        {!helperReady && <p>0.2.5 이상으로 업데이트한 뒤 확장프로그램과 이 페이지를 새로고침해주세요.</p>}
                     </div>}
                     <label className={styles.shareLabel} htmlFor={`${titleId}-text`}>공유할 공지 문구</label>
-                    <p className={styles.previewNote}>대회명·주차(회차)·항목명과 사진 위 기본 문구입니다. 이번 공지에만 내용을 추가하거나 수정할 수 있습니다.</p>
+                    <p className={styles.previewNote}>대회명·주차(회차)·항목명·날짜와 홈페이지 안내가 기본으로 들어갑니다. 결과는 경기일, 명단·레인·모집 안내는 오늘 날짜를 사용합니다. 이번 공지에만 내용을 추가하거나 수정할 수 있습니다.</p>
                     <textarea id={`${titleId}-text`} className={`${styles.previewText} ${styles.shareEditor} ${styles.captionEditor}`} value={text} disabled={busy}
-                        onChange={event => { setText(event.target.value); setApproved(false); setCopied(''); setMessage(''); setImages([]); setFiles([]); setManualPhotoReady(false); }} />
+                        onChange={event => { setText(event.target.value); setCopied(''); setMessage(''); setImages([]); setFiles([]); }} />
                     <p className={styles.previewNote}>{links ? `${links.contentBytes.toLocaleString('ko-KR')} UTF-8 바이트` : '공유할 수 없는 문자가 있습니다. 문구를 다시 입력해주세요.'}</p>
                     {links?.tooLong && <p role="status" className={styles.previewWarning}>전체 공지가 공유 URL 안전 기준({BAND_SHARE_URL_BUDGET.toLocaleString('ko-KR')}자)을 넘었습니다. 내용은 자르지 않습니다. ‘공지 문구 복사’ 후 빈 BAND 공유 화면에 붙여넣어주세요.{copied === sharedText ? ' 전체 문구 복사 완료.' : ''}</p>}
                     {shareMode === 'photos' && <section className={styles.imageArea} aria-label="BAND 첨부 사진">
@@ -261,7 +263,7 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
                                 <img src={image.dataUrl} alt={`${index + 1}번 첨부 사진: ${image.name}`} />
                                 <figcaption><button type="button" className={styles.cancelButton} onClick={() => saveBandShareImage(image)} disabled={busy}>{image.name} 저장</button></figcaption>
                             </figure>)}</div>
-                            {!mobile && <p className={styles.previewNote}>공유 범위 확인 후 하단 ‘PC BAND에 사진 전달’을 눌러주세요. BAND에서 대상 밴드의 글쓰기를 열고 확장프로그램으로 첨부 대상을 확인합니다.</p>}
+                            {!mobile && <p className={styles.previewNote}>하단 ‘PC BAND에 사진 전달’을 눌러주세요. BAND에서 대상 밴드의 글쓰기를 열고 확장프로그램으로 첨부 대상을 확인합니다.</p>}
                             <details className={styles.manualAttachment}><summary>사진 저장·직접 첨부 (확장프로그램 없이 이용)</summary>
                             <button type="button" className={styles.cancelButton} disabled={busy} onClick={saveAllImages}>사진 {images.length}개 모두 저장</button>
                             <ol className={styles.attachmentSteps}>
@@ -269,10 +271,6 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
                                 <li>아래에서 BAND를 연 뒤 사진 첨부 버튼으로 저장한 PNG를 선택해주세요. 공유 화면에서 첨부가 안 되면 BAND 글쓰기를 열고 문구 복사·사진 첨부를 해주세요.</li>
                                 <li>BAND 게시 미리보기에 사진이 실제로 보이는지 확인한 뒤 게시해주세요.</li>
                             </ol>
-                            <label className={styles.approval}>
-                                <input type="checkbox" checked={manualPhotoReady} disabled={busy} onChange={event => setManualPhotoReady(event.target.checked)} />
-                                사진 파일 저장을 확인했으며, BAND에서 직접 사진을 첨부하겠습니다.
-                            </label>
                             <button type="button" className={styles.cancelButton} disabled={!canOpenTextShare} onClick={webShare}>BAND 웹 열기 · 저장한 사진 직접 첨부</button>
                             {canOpenTextShare && <p><a href={links?.webUrl} target="_blank" rel="noopener noreferrer">새 탭에서 BAND 열기 · 문구만 전달</a></p>}
                             </details>
@@ -282,12 +280,8 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
                     <label className={styles.shareLabel} htmlFor={`${titleId}-below`}>사진 아래에 쓰기</label>
                     <textarea id={`${titleId}-below`} className={styles.settingsEditor} rows={3} value={belowText} disabled={busy}
                         placeholder="이번 공지에 추가할 안내 문구를 입력해주세요."
-                        onChange={event => { setBelowText(event.target.value); setApproved(false); setCopied(''); setMessage(''); setImages([]); setFiles([]); setManualPhotoReady(false); }} />
+                        onChange={event => { setBelowText(event.target.value); setCopied(''); setMessage(''); setImages([]); setFiles([]); }} />
                     <p className={styles.previewNote}>위·아래 문구를 함께 복사·공유합니다. BAND가 사진과 문구의 배치를 자동으로 맞추지는 않으므로, BAND에서 사진 첨부 후 위치를 확인해주세요.</p>
-                    <label className={styles.approval}>
-                        <input type="checkbox" checked={approved} disabled={busy} onChange={event => setApproved(event.target.checked)} />
-                        선수 이름·팀·경기 기록의 공유 범위와 수정 문구를 확인했습니다. 비공개 자료나 불필요한 개인정보는 포함하지 않습니다.
-                    </label>
                     <p className={styles.previewNote}>공유 화면을 여는 것은 게시 완료가 아닙니다. 실제 BAND 게시 완료 여부·알림 발송은 볼링매니저에서 확인하거나 기록하지 않습니다. 결과 링크의 기존 접근 권한도 유지됩니다.</p>
                     {message && <p role="status" className={styles.previewWarning}>{message}</p>}
                 </div>

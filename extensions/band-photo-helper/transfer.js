@@ -35,8 +35,6 @@ export function readPreparedSource() {
         document.getElementById(element.getAttribute('aria-labelledby'))?.textContent.trim() === 'BAND 공식 공유하기');
     if (dialogs.length !== 1) throw Error('볼링매니저에서 BAND 공유 미리보기를 먼저 열어주세요.');
     const dialog = dialogs[0];
-    const approval = [...dialog.querySelectorAll('label')].find(label => label.textContent.includes('선수 이름·팀·경기 기록의 공유 범위'))?.querySelector('input[type="checkbox"]');
-    if (!approval?.checked || approval.disabled) throw Error('공유 범위 확인을 체크하고 사진 준비가 끝날 때까지 기다려주세요.');
     const field = name => {
         const label = [...dialog.querySelectorAll('label[for]')].find(element => element.textContent.trim() === name);
         const element = label && document.getElementById(label.htmlFor);

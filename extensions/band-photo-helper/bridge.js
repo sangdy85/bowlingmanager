@@ -13,7 +13,7 @@ void (async () => {
         busy = true;
         try {
             // Read synchronously before React marks the preview busy. The same
-            // checked approval, edited caption and prepared PNGs are reused.
+            // edited caption and prepared PNGs are reused.
             const packet = readPreparedSource();
             const response = await chrome.runtime.sendMessage({ action: 'capture-prepared', packet });
             if (!response?.ok) throw Error(response?.message || '사진 전달 확장프로그램의 응답이 없습니다. 확장프로그램 목록에서 새로고침한 뒤 볼링매니저 페이지도 새로고침해주세요.');

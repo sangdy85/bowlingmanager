@@ -4,7 +4,7 @@ import { validatePacket, readPreparedSource, bandComposerAction } from './transf
 // document can move between same-origin Next.js routes without being reloaded;
 // its message context URL need not match the current location.href byte for
 // byte. Bind both URLs to the same official origin instead. The content script
-// reads the visible, approved preview itself after a trusted click, never a
+// reads the visible preview itself after a trusted click, never a
 // page-supplied packet. It cannot inspect/attach/clear another tab's packet.
 export function sourceCaptureCommand(message, sender, runtimeId) {
     if (sender.id !== runtimeId || sender.frameId !== 0 || !Number.isInteger(sender.tab?.id) || message?.action !== 'capture-prepared') return null;
