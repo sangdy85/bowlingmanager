@@ -5,6 +5,8 @@ import { verifyCenterAdmin } from '@/lib/auth-utils';
 import { prepareBandAnnouncement } from '@/lib/band/announcement';
 import type { BandPostType } from '@/lib/band/types';
 import { buildBandShareCaption, readBandShareDefaults } from '@/lib/band/share-caption';
+import { getBandShareTableData } from '@/lib/band/share-table-data';
+import type { BandShareTable } from '@/lib/band/share-table';
 
 export type BandShareInput = {
     centerId: string;
@@ -20,6 +22,7 @@ export type BandSharePreview = {
     generatedAt: string;
     roundId: string | null;
     week: number | null;
+    table?: BandShareTable;
 };
 
 // Read-only and deliberately separate from the OAuth publisher. Never reads a
@@ -87,8 +90,11 @@ export async function getBandSharePreviewAction(input: BandShareInput): Promise<
         });
         if (built.status !== 'SUCCESS') return { success: false, message: built.message };
         if (built.centerId !== input.centerId) return { success: false, message: '공지 대상이 변경되었습니다. 다시 확인해주세요.' };
+        const table = round && ['PARTICIPANTS', 'LANE_ASSIGNMENT', 'FINAL_RESULT'].includes(input.type)
+            ? await getBandShareTableData(tournament.id, round.id, input.type as BandShareTable['kind'], input.centerId) : undefined;
         return { success: true, preview: {
             content: built.content,
+            ...(table ? { table } : {}),
             ...buildBandShareCaption(tournament.name, round?.roundNumber ?? null, input.type, readBandShareDefaults(tournament.settings)),
             generatedAt: new Date().toISOString(),
             roundId: round?.id || null,

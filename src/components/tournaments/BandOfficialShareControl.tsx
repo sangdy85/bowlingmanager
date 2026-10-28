@@ -124,13 +124,13 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
             const latest = await getBandSharePreviewAction({ centerId, tournamentId, roundId, type, week });
             if (request !== sequence.current) return;
             if (!latest.success) { setMessage(latest.message); return; }
-            if (latest.preview.content !== preview.content || latest.preview.shareText !== preview.shareText || latest.preview.belowImageText !== preview.belowImageText) {
+            if (latest.preview.content !== preview.content || latest.preview.shareText !== preview.shareText || latest.preview.belowImageText !== preview.belowImageText || JSON.stringify(latest.preview.table) !== JSON.stringify(preview.table)) {
                 setPreview(latest.preview); setText(latest.preview.shareText); setBelowText(latest.preview.belowImageText); setApproved(false);
                 setMessage('경기 기록 또는 기본 문구가 변경되었습니다. 최신 공지를 다시 확인한 뒤 사진을 준비해주세요.'); return;
             }
             // Keep full participant/lane/result data in the image, even though
             // the default external caption is deliberately short.
-            const prepared = onPrepareImages ? await onPrepareImages() : await createAnnouncementImages(preview.content);
+            const prepared = onPrepareImages ? await onPrepareImages() : await createAnnouncementImages(latest.preview.content, latest.preview.table);
             if (request !== sequence.current) return;
             if (!prepared.length) throw new Error('No images');
             const preparedFiles = bandShareImageFiles(prepared);
@@ -249,7 +249,7 @@ export default function BandOfficialShareControl({ centerId, tournamentId, round
                     {links?.tooLong && <p role="status" className={styles.previewWarning}>전체 공지가 공유 URL 안전 기준({BAND_SHARE_URL_BUDGET.toLocaleString('ko-KR')}자)을 넘었습니다. 내용은 자르지 않습니다. ‘공지 문구 복사’ 후 빈 BAND 공유 화면에 붙여넣어주세요.{copied === sharedText ? ' 전체 문구 복사 완료.' : ''}</p>}
                     {shareMode === 'photos' && <section className={styles.imageArea} aria-label="BAND 첨부 사진">
                         <h4>1. 첨부할 사진 준비</h4>
-                        <p className={styles.previewNote}>{onPrepareImages ? '선택 주차의 공식 결과표 4종을 기존 다운로드와 같은 형식으로 준비합니다.' : '선택한 항목의 전체 내용을 PNG로 만듭니다. 짧은 안내 문구와 별도로 기록 전체를 유지합니다.'}</p>
+                        <p className={styles.previewNote}>{onPrepareImages ? '선택 주차의 공식 결과표 4종을 기존 다운로드와 같은 형식으로 준비합니다.' : preview.table ? '참가자·레인 배정은 표로, 최종 결과는 게임별 점수와 핸디·총점이 포함된 공식 결과표로 만듭니다.' : '선택한 항목의 전체 내용을 PNG로 만듭니다. 짧은 안내 문구와 별도로 기록 전체를 유지합니다.'}</p>
                         <button type="button" className={styles.cancelButton} disabled={busy} onClick={prepareImages}>
                             {imageBusy ? '사진 처리 중…' : onPrepareImages ? '선택 주차 결과표 4종 준비' : '이 공지를 사진으로 만들기'}
                         </button>
