@@ -26,6 +26,22 @@ BAND 공유 체크박스 제거·날짜·홈페이지 기본 안내 — 2026-10-
 - 실제 결과 PNG 986,121바이트를 체크박스 없는 확장 전달 모형에서 확인.
 - 스크린샷: scratch/band-share-date-no-checkbox.png
 
-운영 반영: 분리된 Linux 후보 빌드/회귀 검사와 소스 비교 후 진행.
+운영 반영: 분리된 Linux 후보 빌드/회귀 검사와 소스 비교 후 완료.
 서버 변경 대상 4개: band-share-actions.ts, BandOfficialShareControl.tsx,
 BandPostSettings.tsx, share-caption.ts. 기존 빌드/DB 백업 후 전환.
+
+운영 완료:
+- 기능 커밋 ff37eaed3f4e43d4134442d1cb24332a39cd588a, GitHub 작업 브랜치 반영.
+- 릴리스 band-caption-ff37eae-60f334b10599-20261028
+- 빌드 oRHsseYdpexWHcJu-t7wi, 2026-10-28 10:18:58 KST 전환.
+- 서버 테스트 221개, 후보 HTTP 287개/운영 HTTP 48개/외부 HTTPS 26개 통과.
+- 실제 4회차: 결과 날짜 2026.10.21 (수), 명단·레인·모집 2026.10.28 (수).
+  각 표 48행, 복구 레인 네 건 유지, 체크박스 0개 확인.
+- 다른 소스 1296개와 환경 파일 유지. API 84개, 마이그레이션 변경 없음.
+  DB 86개 테이블 행 수 유지, quick_check ok. PM2 online, 새 오류 로그 0.
+- 설치 폴더 BAND-Photo-Helper-0.1.0을 0.2.5로 업데이트, 11개 파일 해시 검증.
+  이전 파일은 BAND-Photo-Helper-0.2.4-before-0.2.5에 보존.
+  사용자 브라우저에서 확장프로그램 및 사이트 새로고침 필요.
+- 백업 /home/user/bowling-backups/band-caption-ff37eae-60f334b10599-20261028-before
+- 소스/빌드 롤백: bash /home/user/bowling-deploy/band-caption-ff37eae-60f334b10599-20261028/rollback.sh
+- 실제 BAND 게시글은 생성·수정하지 않음.
