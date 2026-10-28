@@ -4,6 +4,10 @@ const helper=path.resolve(__dirname,'../extensions/band-photo-helper');
 const transfer=fs.readFileSync(path.join(helper,'transfer.js'),'utf8').replace(/^export /gm,'');
 const controller=fs.readFileSync(path.join(helper,'controller.js'),'utf8').replace(/^import .*\r?\n/gm,'').replace(/^export /gm,'');
 const bridge=fs.readFileSync(path.join(helper,'bridge.js'),'utf8').replace("const { readPreparedSource } = await import(chrome.runtime.getURL('transfer.js'))",'const { readPreparedSource: readFromPreview } = await Promise.resolve({readPreparedSource})').replace('const packet = readPreparedSource();','const packet = readFromPreview();');
+const worker=fs.readFileSync(path.join(helper,'worker.js'),'utf8').replace(/^import .*\r?\n/gm,'');
+// Optional real, locally rendered table PNG. Never uploaded to BAND by this QA.
+const photoArg=process.argv.find(arg=>arg.startsWith('--table-photo='));
+const tablePhoto=photoArg?{name:path.basename(photoArg.slice(14)),dataUrl:'data:image/png;base64,'+fs.readFileSync(photoArg.slice(14)).toString('base64')}:null;
 const page=`<!doctype html><html lang="ko"><meta charset="utf-8"><title>BAND 사진 전달 확장 QA</title><style>
 body{font:14px Arial,sans-serif;color:#10283e;background:#f2f5fa;margin:24px}main{max-width:1000px;margin:auto}button{padding:10px 14px;margin:5px;border:1px solid #087e70;border-radius:7px;background:#fff;cursor:pointer}section,.uploadFixture{padding:20px;margin:16px 0;background:white;border:1px solid #cbd5e1;border-radius:12px}dialog{position:static;width:auto;margin:10px 0;padding:16px;border:1px solid #94a3b8}textarea{display:block;width:95%;margin:8px 0;padding:8px}figure{display:inline-block;margin:8px;width:210px}img{width:100%;max-height:150px;object-fit:contain}.contentEditor{min-height:90px;border:1px solid #94a3b8;padding:14px;margin:10px 0}.contentEditor .cke_widget_wrapper{display:inline-block;vertical-align:top;width:22%;margin:1%}.mediaContentItem{display:inline-block;width:20%;margin:1%}[hidden]{display:none!important}#status{background:#fff1cd;padding:14px;white-space:pre-wrap}label{display:block;margin:8px 0}
 </style><main><h1>PC BAND 사진 전달 · 2단계 첨부 검증</h1><p>사진 올리기 → 첨부하기 → 편집기 사진 위젯 → 문구 배치. 모형은 사진을 항상 글 앞에 삽입합니다. 실제 BAND 전송·게시는 없습니다.</p>
@@ -29,8 +33,17 @@ el('existing-text').onclick=()=>{editor().innerHTML='<p><strong>관리자가 이
 el('literal-text').onclick=()=>{editor().textContent='새로운 소식을 남겨보세요.';};
 el('change-band').onclick=()=>{changeBand=true;el('status').textContent='첨부 도중 밴드 변경 모형 켜짐';};
 el('reset').onclick=()=>{el('postPhotoInput_qa').value='';el('composer').dataset.bmBandPhotoTransfer='';editor().innerHTML='<p>​​​​​​​<span class="placeholder" aria-hidden="true">새로운 소식을 남겨보세요.</span><br></p>';document.querySelectorAll('.uploadFixture').forEach(n=>n.remove());changed=0;confirmed=0;published=0;changeBand=false;destination=null;location.pathname='/band/123/post';update();el('status').textContent='작성창 초기화';};
-const fromPage=createController({activeTab:async()=>{throw Error('Page capture must not request activeTab');},execute:async()=>{throw Error('Page capture must not inject');},getPacket,putPacket,clearPacket,createAlarm:async()=>{},clearAlarm:async()=>{},openBand:async()=>{el('show-band').click();}});
-const chrome={runtime:{getManifest:()=>({version:'0.2.3'}),sendMessage:async message=>{try{return {ok:true,result:await fromPage(message)};}catch(error){return {ok:false,message:error.message};}}}};
+// Use the real worker listener, not a shortcut straight into the controller.
+// Emulate a content script created on /centers before an in-site navigation.
+let workerMessage;
+const chrome={runtime:{id:'qa-helper',getURL:file=>'chrome-extension://qa-helper/'+file,getManifest:()=>({version:'0.2.4'}),
+onMessage:{addListener:fn=>{workerMessage=fn;}},onStartup:{addListener(){}},onInstalled:{addListener(){}},
+sendMessage:message=>new Promise(resolve=>{const retained=workerMessage(JSON.parse(JSON.stringify(message)),{id:'qa-helper',frameId:0,tab:{id:1},url:'https://www.bowlingmanager.co.kr/centers',origin:'https://www.bowlingmanager.co.kr'},resolve);if(!retained)resolve(undefined);})},
+alarms:{create:async()=>{},clear:async()=>{},onAlarm:{addListener(){}}},
+tabs:{create:async()=>{el('show-band').click();},query:async()=>{throw Error('Source button must not request activeTab');}}};
+${worker}
+const realTablePhoto=${JSON.stringify(tablePhoto)};
+if(realTablePhoto){el('source-photos').replaceChildren();pictures=[realTablePhoto];const f=document.createElement('figure'),img=document.createElement('img'),cap=document.createElement('figcaption'),b=document.createElement('button');img.src=realTablePhoto.dataUrl;img.alt='최종 결과표 실제 PNG';b.textContent=realTablePhoto.name+' 저장';cap.append(b);f.append(img,cap);el('source-photos').append(f);el('caption').value='가상 챔프전 4회차\\n최종 결과표';}
 window.addEventListener('bm-band-photo-helper-result',async event=>{const d=event.detail;el('status').textContent=d.ok?'사진 '+d.count+'개 준비됨 · BAND 모형 열림':d.message;const p=await getPacket();el('metadata').textContent=JSON.stringify({connected:document.documentElement.dataset.bmBandPhotoHelper,count:p?.images.length||0,aboveText:p?.aboveText,belowText:p?.belowText});});
 ${bridge}
 `;

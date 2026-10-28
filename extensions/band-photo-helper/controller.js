@@ -1,14 +1,20 @@
 import { validatePacket, readPreparedSource, bandComposerAction } from './transfer.js';
 
-// Content scripts may only import prepared photos from the exact top-level
-// official source page. They cannot inspect/attach/clear another tab's packet.
+// Only our isolated top-level content script may import prepared photos. A
+// document can move between same-origin Next.js routes without being reloaded;
+// its message context URL need not match the current location.href byte for
+// byte. Bind both URLs to the same official origin instead. The content script
+// reads the visible, approved preview itself after a trusted click, never a
+// page-supplied packet. It cannot inspect/attach/clear another tab's packet.
 export function sourceCaptureCommand(message, sender, runtimeId) {
     if (sender.id !== runtimeId || sender.frameId !== 0 || !Number.isInteger(sender.tab?.id) || message?.action !== 'capture-prepared') return null;
     try {
         const source = new URL(sender.url);
+        const current = new URL(message.packet?.sourceUrl);
         if (source.protocol !== 'https:' || source.port || source.username || source.password ||
             !['bowlingmanager.co.kr', 'www.bowlingmanager.co.kr'].includes(source.hostname) ||
-            new URL(message.packet?.sourceUrl).href !== source.href) return null;
+            (sender.origin !== undefined && sender.origin !== source.origin) ||
+            current.origin !== source.origin || current.username || current.password) return null;
         return { action: 'capture-prepared', packet: message.packet };
     } catch { return null; }
 }

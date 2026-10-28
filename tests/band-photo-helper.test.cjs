@@ -15,7 +15,7 @@ test('extension only bridges official source sites; BAND access remains temporar
     assert.deepEqual(manifest.permissions.sort(), ['activeTab', 'alarms', 'scripting']);
     for (const key of ['host_permissions', 'optional_host_permissions', 'externally_connectable', 'update_url']) assert.equal(manifest[key], undefined);
     const official = ['https://bowlingmanager.co.kr/*', 'https://www.bowlingmanager.co.kr/*'];
-    assert.equal(manifest.version, '0.2.3');
+    assert.equal(manifest.version, '0.2.4');
     assert.deepEqual(manifest.content_scripts, [{ matches: official, js: ['bridge.js'], run_at: 'document_idle' }]);
     assert.deepEqual(manifest.web_accessible_resources, [{ resources: ['transfer.js'], matches: official }]);
     assert.equal(manifest.manifest_version, 3);
@@ -34,7 +34,8 @@ test('source bridge accepts only its own top-level official page and cannot requ
         assert.equal(sourceCaptureCommand({ action: 'capture-prepared', packet }, { ...sender, ...patch }, 'our-extension'), null);
     }
     for (const action of ['attach', 'inspect', 'status', 'clear']) assert.equal(sourceCaptureCommand({ action, packet }, sender, 'our-extension'), null);
-    assert.equal(sourceCaptureCommand({ action: 'capture-prepared', packet: { ...packet, sourceUrl: 'https://www.bowlingmanager.co.kr/other' } }, sender, 'our-extension'), null);
+    assert.deepEqual(sourceCaptureCommand({ action: 'capture-prepared', packet: { ...packet, sourceUrl: 'https://www.bowlingmanager.co.kr/other' } }, sender, 'our-extension')?.packet.sourceUrl, 'https://www.bowlingmanager.co.kr/other');
+    assert.equal(sourceCaptureCommand({ action: 'capture-prepared', packet: { ...packet, sourceUrl: 'https://bowlingmanager.co.kr/other' } }, sender, 'our-extension'), null);
     const bridge = fs.readFileSync(path.join(root, 'extensions/band-photo-helper/bridge.js'), 'utf8');
     assert.match(bridge, /!event\.isTrusted/); assert.match(bridge, /readPreparedSource\(\)/);
     assert.doesNotMatch(bridge, /postMessage|document\.cookie|fetch\(|\.click\(/);

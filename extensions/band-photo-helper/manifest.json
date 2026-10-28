@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BowlingManager BAND 사진 전달",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "관리자가 준비한 결과표 PNG를 직접 연 BAND 글쓰기 창에 첨부합니다. 게시 버튼은 누르지 않습니다.",
   "minimum_chrome_version": "102",
   "permissions": ["activeTab", "scripting", "alarms"],

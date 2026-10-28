@@ -20,7 +20,14 @@ const handleCommand = createController({ activeTab, execute, getPacket, putPacke
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
     const fromPopup = sender.id === chrome.runtime.id && sender.url === chrome.runtime.getURL('popup.html');
     const command = fromPopup ? message : sourceCaptureCommand(message, sender, chrome.runtime.id);
-    if (!command) return false;
+    if (!command) {
+        // Do not silently drop our own source button's rejected request: the
+        // page would mistake an empty response for a missing extension.
+        if (sender.id === chrome.runtime.id && message?.action === 'capture-prepared') {
+            respond({ ok: false, message: '공식 볼링매니저 화면 주소를 확인하지 못했습니다. 볼링매니저 페이지를 새로고침한 뒤 사진을 다시 준비해주세요.' });
+        }
+        return false;
+    }
     handleCommand(command).then(result => respond({ ok: true, result }), error => respond({ ok: false, message: error.message || '작업에 실패했습니다.' }));
     return true;
 });

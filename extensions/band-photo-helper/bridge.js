@@ -16,13 +16,15 @@ void (async () => {
             // checked approval, edited caption and prepared PNGs are reused.
             const packet = readPreparedSource();
             const response = await chrome.runtime.sendMessage({ action: 'capture-prepared', packet });
-            if (!response?.ok) throw Error(response?.message || '확장프로그램 연결을 확인해주세요.');
+            if (!response?.ok) throw Error(response?.message || '사진 전달 확장프로그램의 응답이 없습니다. 확장프로그램 목록에서 새로고침한 뒤 볼링매니저 페이지도 새로고침해주세요.');
             queueMicrotask(() => window.dispatchEvent(new CustomEvent('bm-band-photo-helper-result', {
                 detail: { requestId, ok: true, count: response.result.packet.names.length },
             })));
         } catch (error) {
             queueMicrotask(() => window.dispatchEvent(new CustomEvent('bm-band-photo-helper-result', {
-                detail: { requestId, ok: false, message: error.message || '사진을 가져오지 못했습니다.' },
+                detail: { requestId, ok: false, message: /Extension context invalidated|Receiving end does not exist/i.test(error.message || '')
+                    ? '확장프로그램이 업데이트되었습니다. 볼링매니저 페이지를 새로고침한 뒤 사진을 다시 준비해주세요.'
+                    : error.message || '사진을 가져오지 못했습니다.' },
             })));
         } finally { busy = false; }
     }, true);
