@@ -1,0 +1,28 @@
+마이볼 스펙 가이드 운영 반영 (2026-10-29)
+
+GitHub 브랜치: codex/band-official-share-20261026
+기능 커밋: bb5b49074aaeecb567e7248fb4f9eb8035cb9b43
+변경: 초보자용 RG·Diff 비교, 무게별 공식 제품표, 커버·표면·Int. Diff 설명과 구매 가이드 연결.
+Git 변경: src/lib/guide-data.ts, tests/public-web.test.cjs.
+
+운영 릴리스: myball-guide-bb5b490-a49195f169ee-20261029
+Build ID: VbyAEeYEijzFsyXWNvs4D
+운영 반영: 2026-10-29 10:39 KST
+직전 릴리스: competition-admin-e2fc872-30962c0d39b3-20261028
+운영은 직전 릴리스 전체 소스에 src/lib/guide-data.ts 1개만 반영했다.
+다른 운영 소스 1,299개를 해시로 대조해 보존했다. Git 전체 트리 교체나 main 병합은 하지 않았다.
+이전 대회 관리자·BAND·모바일 기능은 기존 운영 소스를 유지한다.
+
+검증: 로컬 및 Linux 후보 관련 테스트 25개 통과, lint 오류 0, typecheck·build 통과.
+후보 HTTP 27건, 운영 내부 HTTP 27건, 외부 HTTPS 7건 통과.
+실제 운영 브라우저에서 새 제목, 비교표 6개, 검토일과 구매 가이드 링크 확인.
+ads.txt 200, text/plain, 기존 게시자 정보 유지. robots.txt·sitemap.xml 정상.
+PM2 online, startup active/enabled, 배포 이후 새 애플리케이션 오류 로그 0바이트.
+DB 86개 테이블 행 수 유지, quick_check ok, 마이그레이션 없음. 환경 파일 해시 유지.
+
+백업: /home/user/bowling-backups/myball-guide-bb5b490-a49195f169ee-20261029-before
+롤백: bash /home/user/bowling-deploy/myball-guide-bb5b490-a49195f169ee-20261029/rollback.sh
+롤백은 소스와 빌드만 복구하며 운영 DB를 이전 데이터로 덮어쓰지 않는다.
+
+https://www.bowlingmanager.co.kr/guide/bowling-ball-specifications-coverstock-core-rg-diff-guide
+https://www.bowlingmanager.co.kr/guide/bowling-ball-selection-guide
