@@ -219,7 +219,18 @@ USBC 현행 장비 규격의 볼 최대 무게는 16파운드입니다. 이 값�
 
 폴리에스터, 우레탄, 리액티브 같은 표기는 선택 조건의 일부입니다. 같은 분류 안에서도 표면 상태, 코어, 레이아웃, 볼러의 PAP·구속·회전, 레인 패턴과 표면에 따라 실제 반응은 달라집니다. 제품 이름만으로 궤적을 단정하지 말고 제조사 제품표와 프로샵의 측정 결과를 함께 보세요.
 
-제품표의 RG, Diff, 표면 표기부터 읽고 싶다면 [볼링공 제품표 읽는 법](/guide/bowling-ball-specifications-coverstock-core-rg-diff-guide)을 먼저 확인할 수 있습니다.
+## 마이볼 스펙은 무엇부터 볼까요?
+
+제품 소개에 RG 2.50, Diff 0.045가 적혀 있어도 숫자가 높다고 더 좋은 공이라는 뜻은 아닙니다. RG는 공의 질량 분포와 회전이 발달하는 성향을, Diff는 회전하면서 레인에 닿는 자국이 벌어질 수 있는 정도를 비교하는 단서입니다. 실제 움직임은 커버와 표면, 지공, 투구와 레인 조건을 함께 봐야 합니다.
+
+| 구매 전에 확인할 것 | 처음 읽을 때의 질문 |
+| :--- | :--- |
+| 무게별 제품표 | 내가 살 무게의 RG·Diff인가요? |
+| 커버와 출고 표면 | 어떤 외피이며, 연마·폴리시 처리는 어떻게 되어 있나요? |
+| RG와 Diff | 기존 공과 회전 발달 성향·트랙 플레어 잠재력이 어떻게 다른가요? |
+| 현재 장비와 사용 목적 | 첫 개인 볼인지, 스페어용인지, 기존 공과 다른 역할이 필요한가요? |
+
+[마이볼 스펙 확인방법: RG·Diff 쉽게 읽기 →](/guide/bowling-ball-specifications-coverstock-core-rg-diff-guide)에서 RG 2.48과 2.58, Diff 0.020과 0.050을 비교하는 가상 예제와 제조사의 실제 무게별 제품표를 확인할 수 있습니다.
 
 ## 잘못 이해하기 쉬운 부분
 
@@ -650,17 +661,19 @@ BowlingManager와 함께 내 볼링 데이터를 기록하고, 건강과 성장�
   },
   {
     slug: 'bowling-ball-specifications-coverstock-core-rg-diff-guide',
-    title: '볼링공 제품표 읽는 법: 커버·표면·RG·Diff·코어·레이아웃',
+    title: '마이볼 스펙 확인방법: RG·Diff 쉽게 읽기',
     category: '장비 가이드',
-    description: '볼링공 제품표의 커버스톡, 표면, RG, Differential, Intermediate Differential, 코어, 레이아웃을 구분해 읽는 용어사전입니다.',
+    description: '볼링공 RG·Diff 수치가 낮거나 높으면 무엇이 다른지, 숫자 비교 예제와 제조사 무게별 제품표로 설명합니다. 커버·표면·코어를 함께 확인하는 순서도 정리했습니다.',
     date: '2026-08-24',
-    readTime: '9분 읽기',
+    readTime: '12분 읽기',
     references: [
       { title: 'USBC · Equipment Specifications Manual (03/26)', url: 'https://images.bowl.com/bowl/media/assets/usbc/equipment%20specs/26_231-26-march-es-manual.pdf' },
       { title: 'Storm · Questions Before Buying a New Bowling Ball', url: 'https://www.stormbowling.com/read/questions-before-buying-new-bowling-ball' },
     ],
     content: `
-볼링공 제품표는 하나의 등급표가 아니라 서로 다른 조건을 모아 둔 설명서입니다. 같은 제품도 무게별 수치, 표면 변화, 지공 레이아웃, 볼러의 PAP·구속·회전, 레인 패턴과 표면에 따라 다르게 반응할 수 있습니다.
+마이볼을 고르다 보면 RG 2.48, Diff 0.050 같은 숫자를 만나게 됩니다. 처음에는 **RG는 회전이 발달하는 성향을, Diff는 트랙 플레어 잠재력을 비교하는 단서**로 이해해 보세요. 둘 다 성능 점수나 초보·상급자 등급은 아닙니다.
+
+볼링공 제품표는 하나의 등급표가 아니라 서로 다른 조건을 모아 둔 설명서입니다. 같은 제품도 무게별 수치, 표면 변화, 지공 레이아웃, 볼러의 PAP·구속·회전, 레인 패턴과 표면에 따라 다르게 반응할 수 있습니다. 아래에서는 먼저 쉬운 뜻과 숫자 예제를 보고, 실제 제품표를 확인하는 순서로 살펴봅니다.
 
 ---
 
@@ -670,6 +683,84 @@ BowlingManager와 함께 내 볼링 데이터를 기록하고, 건강과 성장�
 - RG, Differential RG, Intermediate Differential의 뜻
 - 대칭·비대칭 코어 표기가 가리키는 범위
 - 제품표를 실제 구매 질문으로 바꾸는 순서
+
+## 1. 제조사 제품표에서 내 무게부터 찾기
+
+제조사 공식 제품 페이지의 Specs, Technical Specifications 또는 Tech Sheet에서 **구매할 무게의 행**을 찾습니다. 15 lb는 15파운드라는 뜻입니다. 대표 이미지 옆의 RG·Diff가 15파운드 기준이라면, 13파운드 제품에도 그대로 적용하지 않습니다.
+
+비교할 때는 제품명과 출시 버전, 무게, 커버, 출고 표면을 먼저 맞춰 적으세요. 제품명이 비슷해도 다른 버전일 수 있고, 같은 모델도 무게에 따라 코어와 수치가 달라질 수 있습니다. 판매처 설명과 제조사 표가 다르면 정확한 모델·무게를 확인한 뒤 공식 제품표를 대조합니다.
+
+## 2. RG: 회전이 발달하는 성향 읽기
+
+RG는 Radius of Gyration의 약자로 **회전 반경**을 뜻하며, 인치 단위로 표시합니다. 공의 지름이나 회전수(RPM)가 아니라, 회전축에 대해 질량이 어떻게 분포했는지를 나타내는 값입니다. 같은 무게에서 RG가 낮으면 회전 관성을 작게, 높으면 크게 보는 단서가 됩니다.
+
+피겨 선수가 팔을 모을 때와 펼칠 때 회전하는 모습을 떠올리면 쉽습니다. 이는 질량 분포를 설명하는 비유이며, 볼링공 안에서 코어가 움직인다는 뜻은 아닙니다.
+
+아래는 **같은 무게에서 나머지 조건이 비슷하다고 가정한 가상 데이터**입니다. 제품 등급을 나누는 공식 경계값은 아닙니다.
+
+| 가상 비교 | 낮은 쪽 RG 2.48 | 높은 쪽 RG 2.58 |
+| :--- | :--- | :--- |
+| 무엇을 비교하나요? | 상대적으로 작은 회전 관성 | 상대적으로 큰 회전 관성 |
+| 일반적인 성향 | 마찰을 만나 회전이 발달하는 전환이 더 이르게 나타나는 경향 | 회전 발달이 상대적으로 늦어지는 경향 |
+| 숫자만으로 알 수 없는 것 | 정확히 몇 m에서 훅이 시작되는지 | 반드시 더 긴 스키드나 더 큰 백엔드 각도가 나오는지 |
+
+**RG 2.48이 2.58보다 좋은 공이라는 뜻은 아닙니다.** 어느 쪽이 필요한지는 현재 공이 너무 일찍 반응하는지, 너무 늦게 반응하는지와 커버·표면·투구 조건을 함께 보고 결정합니다. 구속이나 오일 양에 따라 추천 RG를 하나로 고정할 수 없습니다.
+
+## 3. Diff: 오일 자국이 벌어지는 잠재력 읽기
+
+Diff는 Differential RG의 줄임말로, **가장 큰 RG와 가장 작은 RG의 차이**입니다. 이 값도 인치 단위이며 0.050을 5%나 훅 50점으로 읽지 않습니다.
+
+공을 회수했을 때 표면에 여러 줄의 오일 자국이 보일 수 있습니다. 회전축이 이동하면서 레인에 닿는 트랙이 달라져 자국이 벌어지는 현상을 **트랙 플레어**라고 합니다. Diff는 이 플레어의 잠재력과 관련이 있습니다. 실제 플레어는 투구 회전과 지공 레이아웃 등의 영향을 함께 받습니다.
+
+| 가상 비교 | 낮은 쪽 Diff 0.020 | 높은 쪽 Diff 0.050 |
+| :--- | :--- | :--- |
+| 일반적인 잠재력 | 트랙이 상대적으로 덜 벌어지는 쪽 | 트랙이 상대적으로 더 벌어지는 쪽 |
+| 이해할 점 | 낮다고 성능이 떨어지는 것은 아님 | 새 표면이 레인에 닿는 범위가 늘어날 수 있음 |
+| 단정하면 안 되는 것 | 초보자는 이 수치만 써야 한다 | 훅 각도나 핀 액션이 일정 비율로 커진다 |
+
+0.050은 0.020의 2.5배라는 산술 관계가 있지만, **훅이 2.5배 커지거나 스트라이크 확률이 2.5배가 된다는 뜻은 아닙니다.** 높은 Diff가 곧바로 큰 백엔드 각도를 뜻하지 않습니다. 외피와 현재 표면, 레이아웃, 투구와 레인 조건까지 함께 읽어야 합니다.
+
+## 4. RG와 Diff를 함께 비교하는 연습
+
+다음 네 조합은 숫자 읽기용 가상 데이터입니다. 모든 볼링공을 네 등급으로 나누는 분류표나 레인별 추천표가 아닙니다.
+
+| 가상 제품 | RG | Diff | 코어 수치에서 먼저 비교할 점 |
+| :--- | :--- | :--- | :--- |
+| A | 2.48 | 0.020 | 상대적으로 이른 회전 발달 성향, 낮은 플레어 잠재력 |
+| B | 2.48 | 0.050 | A와 RG는 같지만 플레어 잠재력이 더 큼 |
+| C | 2.58 | 0.020 | A와 Diff는 같지만 회전 발달이 상대적으로 늦어지는 성향 |
+| D | 2.58 | 0.050 | 상대적으로 늦은 회전 발달 성향과 높은 플레어 잠재력의 조합 |
+
+A와 B는 RG가 같아도 Diff가 다릅니다. B와 D는 Diff가 같아도 RG가 다릅니다. **RG가 높으면 Diff도 높다는 관계는 없습니다.** 네 제품의 커버와 표면까지 다르다면 이 표만으로 실제 훅 순서를 매길 수 없습니다.
+
+## 5. 실제 제조사 표: 같은 공도 무게에 따라 다릅니다
+
+[Storm LEVEL 공식 제품 페이지](https://www.stormbowling.com/storm-level-bowling-ball/)에서 확인한 RG·Diff입니다. 2026-10-29 확인 기준이며 지공 전 제조사 공시값입니다. 이 예시는 수치 읽기용으로, 특정 제품의 구매 추천이 아닙니다.
+
+| 무게 | RG | Diff |
+| :--- | :--- | :--- |
+| 16 lb | 2.58 | 0.028 |
+| 15 lb | 2.59 | 0.027 |
+| 14 lb | 2.60 | 0.026 |
+| 13 lb | 2.62 | 0.011 |
+| 12 lb | 2.64 | 0.013 |
+
+15 lb를 구매한다면 RG 2.59와 Diff 0.027을 읽습니다. 13 lb의 Diff는 0.011이므로 15 lb의 대표 수치를 그대로 적으면 다른 정보를 비교하게 됩니다. 무게가 줄면 모든 수치가 한 방향으로 변한다는 규칙도 없습니다. 먼저 무리 없이 제어할 수 있는 무게와 피팅을 정한 뒤 해당 무게의 스펙을 비교하세요.
+
+## 6. Int. Diff·MB·PSA는 무엇인가요?
+
+비대칭 코어 제품표에서는 Intermediate Differential, Int. Diff 또는 Mass Bias(MB)처럼 추가 숫자를 만날 수 있습니다. 표기 방식은 제조사 설명을 확인하세요. Intermediate Differential은 **High RG와 Intermediate RG 축 값의 차이**로, 전체 Diff와 다른 값입니다. PSA는 Preferred Spin Axis라는 축을 가리키므로, 숫자 항목과 축 이름도 구분합니다.
+
+Int. Diff는 코어의 비대칭 특성을 비교하는 단서이지, 그 값만으로 실제 반응의 급격함이나 나에게 맞는 공을 결정하는 점수는 아닙니다. 지공도 질량 특성을 바꿀 수 있습니다. PAP는 볼러가 공을 놓을 때의 회전축을 기준으로 잡는 지점으로, 지공 설계에 사용합니다. 제품표 숫자만 보고 레이아웃을 복사하기보다 프로샵에서 자신의 PAP와 투구 특성을 확인하세요.
+
+## 7. 커버와 표면을 함께 읽기
+
+커버스톡은 공의 외피이고, 코어는 내부의 질량 분포에 관여합니다. RG·Diff가 비슷한 두 공도 외피 재질·배합과 현재 표면이 다르면 레인에서 다른 움직임을 보일 수 있습니다.
+
+- **Solid·Pearl·Hybrid:** 외피 계열을 설명하는 제조사 표기입니다. 같은 계열이라고 모든 브랜드·제품이 같은 반응을 보이지는 않습니다.
+- **Grit:** 출고 연마 단계 표기입니다. 같은 연마재·작업 조건에서는 낮은 숫자가 더 거친 쪽을 뜻하지만, 제품의 전체 연마 순서와 마무리 처리를 함께 봅니다.
+- **Polish·Compound:** 광택·마무리 처리입니다. 2000 grit 뒤 폴리시를 한 공과 2000 grit으로만 마감한 공을 같은 표면으로 보지 않습니다.
+- **현재 표면:** 사용하면서 생긴 마모, 레인 샤인과 재연마 이력이 영향을 줍니다. 오래 사용한 공이 출고 표면과 같은 상태라고 가정하지 않습니다.
 
 ## 제품표 용어사전
 
@@ -724,7 +815,7 @@ USBC는 미지공 볼의 High RG 축과 Intermediate RG 축 차이가 전체 Dif
 
 ## 마지막 검토일
 
-2026-09-30. RG·Differential RG·Intermediate Differential과 코어 대칭성 정의는 USBC 03/26 장비 규격을 기준으로 확인했습니다. Storm 자료는 해당 제조사가 제시하는 구매 질문과 제품 관리 맥락에 한해 참고했습니다.
+2026-10-29. USBC의 RG·Differential 설명 및 03/26 장비 규격과 Storm 공식 자료를 대조했습니다. 예제는 실제 제품표와 가상 비교를 구분했으며, 낮음·높음의 숫자를 공통 추천 등급으로 사용하지 않았습니다.
 `
 },
   {
@@ -1058,7 +1149,7 @@ Storm은 자사 볼 관리 안내에서 매 투구 뒤 닦기, 게임 직후 세
 
 type PublicGuideMetadata = Pick<
   GuideArticle,
-  'lastReviewed' | 'references' | 'relatedArticles' | 'relatedResources' | 'reviewNote'
+  'lastReviewed' | 'updatedAt' | 'references' | 'relatedArticles' | 'relatedResources' | 'reviewNote'
 >;
 
 const PUBLIC_GUIDE_METADATA: Partial<Record<string, PublicGuideMetadata>> = {
@@ -1104,7 +1195,8 @@ const PUBLIC_GUIDE_METADATA: Partial<Record<string, PublicGuideMetadata>> = {
     ],
   },
   'bowling-ball-selection-guide': {
-    lastReviewed: '2026-09-30',
+    lastReviewed: '2026-10-29',
+    updatedAt: '2026-10-29',
     references: [
       {
         title: 'Ball Selection for Entry Level Bowlers',
@@ -1177,7 +1269,8 @@ const PUBLIC_GUIDE_METADATA: Partial<Record<string, PublicGuideMetadata>> = {
     ],
   },
   'bowling-ball-specifications-coverstock-core-rg-diff-guide': {
-    lastReviewed: '2026-09-30',
+    lastReviewed: '2026-10-29',
+    updatedAt: '2026-10-29',
     references: [
       {
         title: 'Equipment Specifications and Certifications Manual',
@@ -1185,6 +1278,24 @@ const PUBLIC_GUIDE_METADATA: Partial<Record<string, PublicGuideMetadata>> = {
         url: 'https://images.bowl.com/bowl/media/assets/usbc/equipment%20specs/26_231-26-march-es-manual.pdf',
         version: '03/26',
         scope: 'RG·Differential RG·Intermediate Differential과 코어 대칭성 정의 및 허용 범위',
+      },
+      {
+        title: 'Core Properties',
+        publisher: 'United States Bowling Congress (USBC)',
+        url: 'https://images.bowl.com/bowl/media/legacy/internap/bowl/equipandspecs/pdfs/articles/CoreProperties042207.pdf',
+        scope: 'RG와 회전 관성의 관계, Differential과 트랙 플레어의 기본 원리. 과거 문서의 규격 수치는 인용하지 않음',
+      },
+      {
+        title: 'Inside the 900 Global Portal',
+        publisher: 'Storm Bowling / 900 Global',
+        url: 'https://www.stormbowling.com/inside-the-900-global-portal/',
+        scope: 'RG·Differential·Intermediate Differential을 커버·표면·레이아웃과 함께 해석하는 제조사 설명',
+      },
+      {
+        title: 'LEVEL — Official Product Specifications',
+        publisher: 'Storm Bowling',
+        url: 'https://www.stormbowling.com/storm-level-bowling-ball/',
+        scope: 'LEVEL 12~16 lb의 무게별 RG·Diff 실제 수치 비교',
       },
       {
         title: 'Questions Before Buying a New Bowling Ball',

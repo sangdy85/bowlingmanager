@@ -225,7 +225,8 @@ test('equipment guides use sourced decision frameworks without result guarantees
  const slugs=['bowling-ball-selection-guide','bowling-specifications-and-dimensions','bowling-ball-specifications-coverstock-core-rg-diff-guide','bowling-lane-oiling-and-cleaning-maintenance-guide','bowling-shoes-and-accessory-maintenance-guide'];
  const guides=Object.fromEntries(slugs.map(slug=>[slug,findPublishedGuideArticle(slug)]));
  for(const [slug,article] of Object.entries(guides)){
-  assert.ok(article,slug);assert.ok(article.content.length>1200,slug);assert.equal(article.lastReviewed,'2026-09-30',slug);assert.ok(article.references?.length,slug);
+  const reviewed=['bowling-ball-selection-guide','bowling-ball-specifications-coverstock-core-rg-diff-guide'].includes(slug)?'2026-10-29':'2026-09-30';
+  assert.ok(article,slug);assert.ok(article.content.length>1200,slug);assert.equal(article.lastReviewed,reviewed,slug);assert.ok(article.references?.length,slug);
   for(const claim of ['완벽 정복','강력 추천','극대화','100%'])assert.equal((article.title+'\n'+article.description+'\n'+article.content).includes(claim),false,`${slug}: ${claim}`);
  }
  const selection=guides['bowling-ball-selection-guide'];
@@ -338,7 +339,8 @@ test('all published guides expose scoped document metadata and canonical related
  const publishedSlugs=new Set(PUBLISHED_GUIDE_ARTICLES.map(article=>article.slug));
  assert.equal(PUBLISHED_GUIDE_ARTICLES.length,13);
  for(const article of PUBLISHED_GUIDE_ARTICLES){
-  assert.match(article.lastReviewed,/^2026-09-30$/,article.slug+': lastReviewed');
+  const reviewed=['bowling-ball-selection-guide','bowling-ball-specifications-coverstock-core-rg-diff-guide'].includes(article.slug)?'2026-10-29':'2026-09-30';
+  assert.equal(article.lastReviewed,reviewed,article.slug+': lastReviewed');
   assert.equal(article.content.includes('## 마지막 검토일'),false,article.slug+': duplicate review section');
   const related=article.relatedArticles??[];
   assert.ok(related.length>=2&&related.length<=4,article.slug+': related article count');
