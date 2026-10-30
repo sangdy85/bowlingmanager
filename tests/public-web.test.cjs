@@ -175,7 +175,7 @@ test('ads remain off, even on eligible content; form/private/error inventory is 
  assert.equal(policy.AD_CONTENT_ALLOWLIST.includes('/tools/average'),false);
  assert.equal(policy.AD_CONTENT_ALLOWLIST.includes('/guide/missing'),false);
  const layout=fs.readFileSync(path.join(__dirname,'../src/app/layout.tsx'),'utf8');
- assert.ok(layout.includes('ca-pub-6753153221253393'));assert.equal(layout.includes('adsbygoogle.js'),false);
+ assert.ok(layout.includes('ca-pub-7555847394586550'));assert.equal(layout.includes('adsbygoogle.js'),false);
 });
 test('all source articles survive while unpublished and merged articles stay out of public inventory',()=>{
  assert.equal(GUIDE_ARTICLES.length,18);assert.equal(new Set(GUIDE_ARTICLES.map(a=>a.slug)).size,18);
