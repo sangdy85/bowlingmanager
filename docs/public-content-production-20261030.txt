@@ -1,0 +1,54 @@
+공개 콘텐츠·경기 기록 안내 개선 — 운영 반영 (2026-10-30)
+
+GitHub 브랜치: codex/band-official-share-20261026
+변경 커밋: 0b1b9e7639bc4b25b4cb8d9e8683af8bb575c968
+운영 반영 시각: 2026. 10. 30. 10:29 KST
+릴리스: public-content-0b1b9e7-db4c10047244-20261030
+Build ID: V9phWVYeR5KUrU9OGJ4Nx
+직전 릴리스: ads-account-624b5ca-62ca77d2e3a5-20261030
+
+반영 내용:
+- 비회원 이메일 문의·콘텐츠 정정 안내, Footer 및 개인정보처리방침 연락 경로.
+- 상주리그 결과표, 챔프전·이벤트전, 점수판 확인 안내 3편과 커뮤니티 운영 노트.
+- SWAG FUSION PEARL·BLACK DRAGON HYBRID·VIRTUE의 공식 이미지 사양 검증,
+  13~16lb RG·Diff 표 및 동일 15lb 비교 해설. 추가 확인일과 사이트맵 수정일 반영.
+- 공개 센터·대회·결과표 메타데이터, 결과표 직접 링크, 한국 시간 날짜 표시.
+- 다른 센터·대회 ID로 결과를 요청하는 경우의 경로 검증.
+- 홈 본문 구성 유지. 기존 API·인증·모바일·BAND 자동 게시·대회 계산 로직은 변경하지 않음.
+
+운영 소스 전체를 로컬 브랜치로 교체하지 않고 검토한 런타임 파일 25개만 반영했다.
+신규 7개·기존 18개이며, 다른 운영 파일 1282개의 해시를 보존했다.
+변경 전 25개 대상의 해시가 커밋 부모와 일치함을 확인했다.
+
+검증:
+- 로컬 및 Linux 후보 관련 테스트 224개 통과.
+- lint·typecheck·프로덕션 build 통과. 기존 lint 경고는 유지.
+- BAND 확장프로그램 소스 11개는 회귀 테스트 참조용으로 후보 폴더에만 복사했다.
+  실제 BAND 게시, 확장프로그램 버전 변경·재배포는 하지 않았다.
+- 후보 HTTP 40건·운영 내부 HTTP 40건·외부 HTTPS 17건 통과.
+- 실제 상주리그 개인 기록표 18개 표·149개 HTML 행과 신규 안내·제품 표의 브라우저 표시 확인.
+- 새 가이드 3편·제품 사양표·비회원 문의·개인정보처리방침·사이트맵 정상 응답.
+- 루트/www ads.txt 모두 200, text/plain, redirect 없이 새 게시자 계정 한 줄 유지.
+  google.com, pub-7555847394586550, DIRECT, f08c47fec0942fa0
+- PM2 online, startup active/enabled, API 84개 유지.
+- 전환 중 DB 86개 테이블 행 수 유지, quick_check ok, 마이그레이션 없음.
+- 운영 환경 파일 해시 유지, 배포 이후 애플리케이션 오류 로그 증가 0바이트.
+- 사용이 끝난 이전·이번 후보 환경의 node_modules 복사본만 정리했다.
+  운영 의존성·사용자 업로드·DB·롤백용 백업을 보존했고 최종 여유 공간은 2.49GiB였다.
+
+백업: /home/user/bowling-backups/public-content-0b1b9e7-db4c10047244-20261030-before
+롤백: bash /home/user/bowling-deploy/public-content-0b1b9e7-db4c10047244-20261030/rollback.sh
+롤백은 소스와 빌드만 복구하며 DB를 이전 데이터로 덮어쓰지 않는다.
+
+확인 URL:
+https://www.bowlingmanager.co.kr/community#operating-notes
+https://www.bowlingmanager.co.kr/guide/league-results-reading-guide
+https://www.bowlingmanager.co.kr/guide/champ-event-participant-lane-results-guide
+https://www.bowlingmanager.co.kr/guide/score-photo-verification-checklist
+https://www.bowlingmanager.co.kr/equipment/products/lordfield-swag-fusion-pearl-875#verified-specs
+https://www.bowlingmanager.co.kr/inquiry
+https://bowlingmanager.co.kr/ads.txt
+https://www.bowlingmanager.co.kr/ads.txt
+
+이번 제품 사양 보강 범위는 위 3종이며 전체 759개 상품의 사양을 새로 전수 검증한 것은 아니다.
+AdSense·Search Console 계정 설정이나 심사 요청은 변경하지 않았다.
