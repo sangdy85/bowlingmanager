@@ -66,6 +66,30 @@ test('equipment and community provide editorial content even without member reco
     }
 });
 
+test('community editorial notes stay distinct from member counts and preserve public contact',async()=>{
+ const f=fixture(),html=await f.render('community');
+ assert(html.includes('총 0개 글'));assert(html.includes('회원 게시글·사용 후기와 구분'));
+ for(const slug of ['league-results-reading-guide','champ-event-participant-lane-results-guide','score-photo-verification-checklist'])assert(html.includes('href="/guide/'+slug+'"'));
+ const footer=renderToStaticMarkup(React.createElement(f.load('src/components/Footer.tsx').default));
+ assert(footer.includes('href="mailto:sangdy85@gmail.com"'));assert(footer.includes('비회원'));
+});
+
+test('verified product notes transcribe manufacturer weights without treating absent MB as zero',()=>{
+ const f=fixture(),{PRODUCT_SPEC_NOTES}=f.load('src/lib/product-spec-notes.ts');
+ const {manufacturerEquipment}=f.load('src/lib/manufacturer-equipment.ts');
+ assert.equal(PRODUCT_SPEC_NOTES.length,3);
+ const expected=[['2.538','0.041',undefined],['2.499','0.051','0.017'],['2.522','0.032',undefined]];
+ PRODUCT_SPEC_NOTES.forEach((note,i)=>{
+  assert.deepEqual(note.weights.map(row=>row.lb),[13,14,15,16]);
+  assert.equal(manufacturerEquipment(note.slug).updatedAt,'2026-10-30');
+  const row=note.weights.find(row=>row.lb===15);assert.deepEqual([row.rg,row.diff,row.mb],expected[i]);
+  const html=renderToStaticMarkup(React.createElement(f.load('src/components/equipment/ProductSpecNotes.tsx').default,{slug:note.slug}));
+  assert(html.includes('모두 15lb 기준'));assert(html.includes(note.sourceUrl));assert(html.includes('scope="row"'));assert(html.includes('2026-10-30'));
+  for(const other of PRODUCT_SPEC_NOTES)assert(html.includes(other.model));
+ });
+ assert.equal(renderToStaticMarkup(React.createElement(f.load('src/components/equipment/ProductSpecNotes.tsx').default,{slug:'not-reviewed'})),'');
+});
+
 test('equipment retains member reviews, escaped user text, filters and write entry', async () => {
     const f = fixture({ posts: [{ id: 'equipment-fixture', title: '<script>fixture</script>', content: '가상 후기', category: 'EQUIPMENT', createdAt: new Date('2026-10-19'), equipmentType: 'REVIEW', equipmentCategory: 'BALL', equipmentBrand: '가상 브랜드', equipmentModel: '가상 모델', author: { name: '가상 작성자' }, _count: { comments: 2 } }] });
     const html = await f.render('equipment', { category: 'BALL', type: 'REVIEW', q: '가상', page: '2' });
@@ -395,7 +419,7 @@ test('Lordfield accounts for all 212 official listings with correct brand groups
   const html=await f.render('equipment',{category:'BALL',brand:brand.toLowerCase()});assert(html.includes('조건에 맞는 제품 '+count+'개'));assert(html.includes('aria-label="볼링공 제조사"'));
  }
  for(const item of bundle.listingCoverage){const p=catalog.manufacturerEquipment(item.slug);assert(p);assert.equal(p.sourceUrl,item.sourceUrl);assert.equal(p.brand,item.brand);}
- for(const p of bundle.products){assert.equal(p.category,'BALL');assert.equal(p.releaseDate,null);assert.equal(new URL(p.sourceUrl).hostname,'www.lordfield.com');assert.equal(new URL(p.image.sourceUrl).hostname,'www.lordfield.com');assert(p.image.src.endsWith('.webp'));assert(p.specs.some(([k])=>k==='공식몰 상품번호'));assert(!p.specs.some(([k])=>/RG|DIFF|코어|출시/.test(k)));assert(p.paragraphs.some(t=>t.includes('전수 검수하지')));for(const link of p.additionalSources){assert.equal(new URL(link.url).hostname,'www.lordfield.com');assert(new URL(link.url).pathname.startsWith('/web/'));}}
+ for(const p of bundle.products){assert.equal(p.category,'BALL');assert.equal(p.releaseDate,null);assert.equal(new URL(p.sourceUrl).hostname,'www.lordfield.com');assert.equal(new URL(p.image.sourceUrl).hostname,'www.lordfield.com');assert(p.image.src.endsWith('.webp'));assert(p.specs.some(([k])=>k==='공식몰 상품번호'));assert(!p.specs.some(([k])=>/RG|DIFF|코어|출시/.test(k)));assert(p.paragraphs.some(t=>t.includes(['lordfield-swag-fusion-pearl-875','lordfield-swag-black-dragon-hybrid-874','lordfield-swag-virtue-873'].includes(p.slug)?'추가 확인':'전수 검수하지')));for(const link of p.additionalSources){assert.equal(new URL(link.url).hostname,'www.lordfield.com');assert(new URL(link.url).pathname.startsWith('/web/'));}}
  const fusion=bundle.products.find(p=>p.specs.some(([k,v])=>k==='공식몰 상품번호'&&v==='875'));assert(fusion.specs.some(([k,v])=>k==='원문에 표시된 무게 옵션'&&v==='13 · 14 · 15 · 16 lb'));
  const black=bundle.products.find(p=>p.specs.some(([k,v])=>k==='공식몰 상품번호'&&v==='819'));assert(!black.specs.some(([k])=>k.includes('무게')));assert(black.paragraphs.some(t=>t.includes('확인하지 못했습니다')));
 });

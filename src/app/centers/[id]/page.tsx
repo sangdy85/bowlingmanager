@@ -7,6 +7,13 @@ import TournamentListManager from "@/components/tournaments/TournamentListManage
 import JoinCenterSection from "@/components/centers/JoinCenterSection";
 import styles from "./CenterDetail.module.css";
 import { DashboardShell } from "@/components/dashboard/DashboardUI";
+import { PUBLIC_ORIGIN } from '@/lib/public-web';
+
+export async function generateMetadata({params}:{params:Promise<{id:string}>}) {
+    const {id}=await params;
+    const center=await prisma.bowlingCenter.findUnique({where:{id},select:{name:true,address:true}});
+    return center?{title:`${center.name} · 대회와 경기 기록 | 볼링매니저`,description:`${center.name}의 상주리그·챔프전·이벤트전 일정과 등록된 경기 기록을 확인하세요. ${center.address}`,alternates:{canonical:PUBLIC_ORIGIN+`/centers/${id}`}}:{title:'볼링장을 찾을 수 없습니다',robots:{index:false}};
+}
 
 // ... (existing code, ensure imports are correct)
 
@@ -311,8 +318,10 @@ export default async function CenterDetailPage({ params }: { params: Promise<{ i
                     <section className={`card ${styles.introCard}`}>
                         <h2 className={styles.sectionTitle}>볼링장 안내</h2>
                         <p className={styles.description}>
-                            {center.description || "등록된 소개 내용이 없습니다."}
+                            {center.description || `${center.name}에 등록된 ${formattedTournaments.length}개 대회의 일정과 경기 기록을 확인할 수 있습니다. 위 대회 목록에서 진행 중·종료된 대회를 선택한 뒤 해당 주차 또는 회차의 결과를 확인하세요.`}
                         </p>
+                        <p className={styles.description}>이 페이지는 볼링매니저에 등록된 대회를 안내합니다. 참가 조건·시설 이용과 기록 정정은 해당 센터 또는 대회 운영자에게 확인해주세요.</p>
+                        <Link href="/guide/champ-event-participant-lane-results-guide" className="text-primary underline">참가 명단·레인 배정·결과 확인 방법 →</Link>
                     </section>
 
                     {!session?.user?.id && (

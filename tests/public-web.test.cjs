@@ -14,6 +14,7 @@ function loadWithMocks(relative,mocks) {
  const compiled=ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,esModuleInterop:true}}).outputText;
  new Function('exports','require','module',compiled)(m.exports,id=>{
   if(Object.prototype.hasOwnProperty.call(mocks,id))return mocks[id];
+  if(id==='./product-spec-notes')return load('src/lib/product-spec-notes.ts');
   throw new Error('Unexpected module: '+id);
  },m);
  return m.exports;
@@ -178,12 +179,12 @@ test('ads remain off, even on eligible content; form/private/error inventory is 
  assert.ok(layout.includes('ca-pub-7555847394586550'));assert.equal(layout.includes('adsbygoogle.js'),false);
 });
 test('all source articles survive while unpublished and merged articles stay out of public inventory',()=>{
- assert.equal(GUIDE_ARTICLES.length,18);assert.equal(new Set(GUIDE_ARTICLES.map(a=>a.slug)).size,18);
+ assert.equal(GUIDE_ARTICLES.length,21);assert.equal(new Set(GUIDE_ARTICLES.map(a=>a.slug)).size,21);
  assert.equal(GUIDE_ARTICLES.filter(article=>article.status==='unpublished').length,3);
  assert.equal(GUIDE_ARTICLES.filter(article=>article.status==='merged').length,2);
  for(const article of GUIDE_ARTICLES){assert.ok(article.content.length>100);assert.equal(/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(article.content),false);assert.equal(article.content.includes('\\text{'),false);}
  const hidden=['kpba-official-bowling-tournament-rules-2026','health-benefits-and-effects-of-bowling','bowling-injury-prevention-and-stretching-guide'];
- assert.equal(PUBLISHED_GUIDE_ARTICLES.length,13);
+ assert.equal(PUBLISHED_GUIDE_ARTICLES.length,16);
  for(const slug of hidden){assert.equal(GUIDE_ARTICLES.find(a=>a.slug===slug).status,'unpublished');assert.equal(findPublishedGuideArticle(slug),undefined);}
  assert.ok(PUBLISHED_GUIDE_ARTICLES.every(a=>a.status==='published'));
  const scoring=findPublishedGuideArticle('bowling-scoring-system');assert.ok(scoring.content.includes('168점'));assert.ok(scoring.content.includes('5/를 반복하고 마지막 보너스도 5핀이면 150점'));assert.ok(scoring.references.some(ref=>ref.url==='https://bowl.com/keeping-score'));assert.ok(scoring.references.some(ref=>ref.url.includes('bowling.sport')));
@@ -331,15 +332,18 @@ test('all published guides expose scoped document metadata and canonical related
   'bowling-shoes-and-accessory-maintenance-guide',
  ]);
  const noteOnlySlugs=new Set([
+  'league-results-reading-guide',
+  'champ-event-participant-lane-results-guide',
+  'score-photo-verification-checklist',
   'bowling-mental-game-and-pre-shot-routine-guide',
   'average-and-score-distribution',
   'club-event-checklist',
   'bowling-practice-checklist',
  ]);
  const publishedSlugs=new Set(PUBLISHED_GUIDE_ARTICLES.map(article=>article.slug));
- assert.equal(PUBLISHED_GUIDE_ARTICLES.length,13);
+ assert.equal(PUBLISHED_GUIDE_ARTICLES.length,16);
  for(const article of PUBLISHED_GUIDE_ARTICLES){
-  const reviewed=['bowling-ball-selection-guide','bowling-ball-specifications-coverstock-core-rg-diff-guide'].includes(article.slug)?'2026-10-29':'2026-09-30';
+  const reviewed=['league-results-reading-guide','champ-event-participant-lane-results-guide','score-photo-verification-checklist'].includes(article.slug)?'2026-10-30':['bowling-ball-selection-guide','bowling-ball-specifications-coverstock-core-rg-diff-guide'].includes(article.slug)?'2026-10-29':'2026-09-30';
   assert.equal(article.lastReviewed,reviewed,article.slug+': lastReviewed');
   assert.equal(article.content.includes('## 마지막 검토일'),false,article.slug+': duplicate review section');
   const related=article.relatedArticles??[];
@@ -366,7 +370,8 @@ test('all published guides expose scoped document metadata and canonical related
   }
   for(const resource of article.relatedResources??[]){
    assert.equal(policy.safeContentUrl(resource.url),resource.url,article.slug+': resource URL');
-   assert.equal(resource.url,'/tools/average',article.slug+': unknown resource');
+   const allowedResources=['league-results-reading-guide','champ-event-participant-lane-results-guide','score-photo-verification-checklist'].includes(article.slug)?['/centers','/personal','/inquiry']:['/tools/average'];
+   assert.ok(allowedResources.includes(resource.url),article.slug+': unknown resource '+resource.url);
   }
  }
  const detail=fs.readFileSync(path.join(__dirname,'../src/app/guide/[slug]/page.tsx'),'utf8');

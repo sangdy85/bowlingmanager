@@ -1285,7 +1285,7 @@
       "model": "FUSION PEARL",
       "category": "BALL",
       "title": "SWAG FUSION PEARL",
-      "summary": "로드필드 공식몰의 SWAG 분류에서 확인한 FUSION PEARL. 무게 옵션 13 · 14 · 15 · 16 lb와 제품 사진·공식 상품 링크·상세 이미지로 확인하세요.",
+      "summary": "FUSION 코어·XPLODE PEARL AP26 커버와 #4000 SANDED 표면. 15lb RG 2.538·Diff 0.041을 무게별 사양표와 함께 비교합니다.",
       "sourceUrl": "https://www.lordfield.com/product/fusion-pearl/875/category/23/display/1/",
       "releaseDate": null,
       "specs": [
@@ -1309,7 +1309,7 @@
       "paragraphs": [
         "FUSION PEARL은 로드필드 공식몰의 SWAG 볼링볼 분류에서 확인한 제품입니다. 같은 이름의 다른 상품과 혼동하지 않도록 공식몰 상품번호 875와 원문 링크를 함께 표시했습니다.",
         "확인일의 상품 옵션에는 13 · 14 · 15 · 16 lb가 표시되어 있습니다. 옵션이 표시된다는 사실과 현재 주문 가능 여부는 다르므로 원하는 무게의 재고는 공식몰에서 다시 확인하세요.",
-        "커버·코어·표면 마감과 RG·Diff 등 세부 사양은 원문의 상세 이미지에서 확인할 수 있습니다. 이 소개에서는 해당 이미지의 수치를 전수 검수하지 않았으므로 확정 사양으로 옮기지 않았습니다."
+        "2026-10-30에 공식 상세 이미지의 커버·코어·출고 표면 및 무게별 RG·Diff를 추가 확인했습니다. 위 사양표와 비교 해설에서 확인할 수 있으며, 다른 무게의 수치나 실제 투구 반응과 혼동하지 않도록 기준 무게를 함께 표시합니다."
       ],
       "checks": [
         "비교할 두 제품의 정확한 모델명·상품번호와 구매할 무게를 먼저 맞춘 뒤 공식 사양 이미지를 비교하세요.",
@@ -1319,7 +1319,7 @@
         {
           "label": "공식몰 상세 이미지 확인",
           "url": "https://www.lordfield.com/web/upload/NNEditor/20261008/FUSION-PEARL.png",
-          "checkedAt": "2026-10-21"
+          "checkedAt": "2026-10-30"
         }
       ],
       "image": {
@@ -1338,7 +1338,7 @@
       "model": "BLACK DRAGON HYBRID",
       "category": "BALL",
       "title": "SWAG BLACK DRAGON HYBRID",
-      "summary": "로드필드 공식몰의 SWAG 분류에서 확인한 BLACK DRAGON HYBRID. 무게 옵션 13 · 14 · 15 · 16 lb와 제품 사진·공식 상품 링크·상세 이미지로 확인하세요.",
+      "summary": "DRAGON 코어·SCORCH HYBRID AP26 커버와 #1500 SANDED 표면. 15lb RG 2.499·Diff 0.051·MB 0.017을 비교합니다.",
       "sourceUrl": "https://www.lordfield.com/product/black-dragon-hybrid/874/category/23/display/1/",
       "releaseDate": null,
       "specs": [
@@ -1362,7 +1362,7 @@
       "paragraphs": [
         "BLACK DRAGON HYBRID은 로드필드 공식몰의 SWAG 볼링볼 분류에서 확인한 제품입니다. 같은 이름의 다른 상품과 혼동하지 않도록 공식몰 상품번호 874와 원문 링크를 함께 표시했습니다.",
         "확인일의 상품 옵션에는 13 · 14 · 15 · 16 lb가 표시되어 있습니다. 옵션이 표시된다는 사실과 현재 주문 가능 여부는 다르므로 원하는 무게의 재고는 공식몰에서 다시 확인하세요.",
-        "커버·코어·표면 마감과 RG·Diff 등 세부 사양은 원문의 상세 이미지에서 확인할 수 있습니다. 이 소개에서는 해당 이미지의 수치를 전수 검수하지 않았으므로 확정 사양으로 옮기지 않았습니다."
+        "2026-10-30에 공식 상세 이미지의 커버·코어·출고 표면 및 무게별 RG·Diff를 추가 확인했습니다. 위 사양표와 비교 해설에서 확인할 수 있으며, 다른 무게의 수치나 실제 투구 반응과 혼동하지 않도록 기준 무게를 함께 표시합니다."
       ],
       "checks": [
         "비교할 두 제품의 정확한 모델명·상품번호와 구매할 무게를 먼저 맞춘 뒤 공식 사양 이미지를 비교하세요.",
@@ -1372,7 +1372,7 @@
         {
           "label": "공식몰 상세 이미지 확인",
           "url": "https://www.lordfield.com/web/upload/NNEditor/20260909/BLACK-DRAGON-HYBRID.png",
-          "checkedAt": "2026-10-21"
+          "checkedAt": "2026-10-30"
         }
       ],
       "image": {
@@ -1391,7 +1391,7 @@
       "model": "VIRTUE",
       "category": "BALL",
       "title": "SWAG VIRTUE",
-      "summary": "로드필드 공식몰의 SWAG 분류에서 확인한 VIRTUE. 무게 옵션 13 · 14 · 15 · 16 lb와 제품 사진·공식 상품 링크·상세 이미지로 확인하세요.",
+      "summary": "VIRTUE 코어·SR300 AP26 커버와 #3000 SANDED 표면. 15lb RG 2.522·Diff 0.032와 13~16lb 수치 차이를 살펴봅니다.",
       "sourceUrl": "https://www.lordfield.com/product/virtue/873/category/23/display/1/",
       "releaseDate": null,
       "specs": [
@@ -1415,7 +1415,7 @@
       "paragraphs": [
         "VIRTUE은 로드필드 공식몰의 SWAG 볼링볼 분류에서 확인한 제품입니다. 같은 이름의 다른 상품과 혼동하지 않도록 공식몰 상품번호 873와 원문 링크를 함께 표시했습니다.",
         "확인일의 상품 옵션에는 13 · 14 · 15 · 16 lb가 표시되어 있습니다. 옵션이 표시된다는 사실과 현재 주문 가능 여부는 다르므로 원하는 무게의 재고는 공식몰에서 다시 확인하세요.",
-        "커버·코어·표면 마감과 RG·Diff 등 세부 사양은 원문의 상세 이미지에서 확인할 수 있습니다. 이 소개에서는 해당 이미지의 수치를 전수 검수하지 않았으므로 확정 사양으로 옮기지 않았습니다."
+        "2026-10-30에 공식 상세 이미지의 커버·코어·출고 표면 및 무게별 RG·Diff를 추가 확인했습니다. 위 사양표와 비교 해설에서 확인할 수 있으며, 다른 무게의 수치나 실제 투구 반응과 혼동하지 않도록 기준 무게를 함께 표시합니다."
       ],
       "checks": [
         "비교할 두 제품의 정확한 모델명·상품번호와 구매할 무게를 먼저 맞춘 뒤 공식 사양 이미지를 비교하세요.",
@@ -1425,7 +1425,7 @@
         {
           "label": "공식몰 상세 이미지 확인",
           "url": "https://www.lordfield.com/web/upload/NNEditor/20260828/VIRTUE.png",
-          "checkedAt": "2026-10-21"
+          "checkedAt": "2026-10-30"
         }
       ],
       "image": {

@@ -19,11 +19,17 @@ import GrandFinaleQualifiersButton from "@/components/tournaments/GrandFinaleQua
 import EventManager from "@/components/tournaments/EventManager";
 import TournamentMemberView from "@/components/tournaments/TournamentMemberView";
 import { getLeagueLeaderboard, getIndividualLeaderboard } from "@/app/actions/league-leaderboard";
-import { getEffectiveRoundDate, calculateTournamentStatus } from "@/lib/tournament-utils";
+import { getEffectiveRoundDate, calculateTournamentStatus, formatKSTCalendarDate } from "@/lib/tournament-utils";
+import { publicRecordMetadata } from '@/lib/public-record-metadata';
 import styles from "./TournamentDetail.module.css";
 import { isBandConfigured } from "@/lib/band/config";
 import { isKingPerfect } from '@/lib/king-perfect/rules';
 import KingPerfectPage from '@/components/tournaments/KingPerfectPage';
+
+export async function generateMetadata({params}:{params:Promise<{id:string;tournamentId:string}>}) {
+    const {id,tournamentId}=await params;
+    return publicRecordMetadata(id,tournamentId,'overview');
+}
 
 export default async function TournamentDetailPage({ params, searchParams }: { params: Promise<{ id: string, tournamentId: string }>; searchParams: Promise<{ edition?: string }> }) {
     const { id: centerId, tournamentId } = await params;
@@ -291,7 +297,7 @@ export default async function TournamentDetailPage({ params, searchParams }: { p
                     </h1>
 
                     <div className={styles.meta}>
-                        <span className={styles.metaItem}>📅 {new Date(safeTournament.startDate).toLocaleDateString('ko-KR')} ~ {new Date(safeTournament.endDate).toLocaleDateString('ko-KR')}</span>
+                        <span className={styles.metaItem}>📅 {formatKSTCalendarDate(safeTournament.startDate)} ~ {formatKSTCalendarDate(safeTournament.endDate)} · 한국 시간</span>
                         <span className={styles.metaItem}>💰 {safeTournament.entryFee.toLocaleString()}원</span>
                         <span className={styles.metaItem}>🏠 {safeTournament.center.name}</span>
                     </div>
@@ -354,7 +360,7 @@ export default async function TournamentDetailPage({ params, searchParams }: { p
                                                         value: (() => {
                                                             if (safeTournament.type !== 'EVENT') return s.startDateText;
                                                             const d = new Date(safeTournament.startDate);
-                                                            return isNaN(d.getTime()) ? '일정 미정' : d.toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+                                                            return isNaN(d.getTime()) ? '일정 미정' : d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
                                                         })(),
                                                         icon: '📅'
                                                     },
@@ -364,7 +370,7 @@ export default async function TournamentDetailPage({ params, searchParams }: { p
                                                         value: (() => {
                                                             if (!s.registrationStart) return null;
                                                             const d = new Date(s.registrationStart);
-                                                            return isNaN(d.getTime()) ? null : d.toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+                                                            return isNaN(d.getTime()) ? null : d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
                                                         })(),
                                                         icon: '📝'
                                                     },

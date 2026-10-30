@@ -4,6 +4,7 @@ import twins from '../../content/equipment/twins-20261021.json';
 import mk from '../../content/equipment/mk-20261021.json';
 import brunswickKorea from '../../content/equipment/brunswick-korea-20261021.json';
 import lordfield from '../../content/equipment/lordfield-20261021.json';
+import { productSpecNote } from './product-spec-notes';
 
 const manufacturerProducts = bundle.products.map(product => {
     const additionalSources = [
@@ -16,7 +17,7 @@ const manufacturerProducts = bundle.products.map(product => {
         sourceBadge: '제조사 자료 정리', sourceLabel: '제조사 공식 제품 자료', sourceLinkLabel: '제조사 공식 제품 페이지', additionalSources };
 });
 export const MANUFACTURER_EQUIPMENT = [
-    ...lordfield.products.map(product => ({ ...product, checkedAt: lordfield.checkedAt, updatedAt: lordfield.checkedAt,
+    ...lordfield.products.map(product => ({ ...product, checkedAt: lordfield.checkedAt, updatedAt: productSpecNote(product.slug)?.checkedAt ?? lordfield.checkedAt,
         sourceBadge: '공식몰 자료 정리', sourceLabel: '로드필드 공식몰 제품 자료', sourceLinkLabel: '로드필드 공식 상품 페이지' })),
     ...brunswickKorea.products.map(product => ({ ...product, checkedAt: brunswickKorea.checkedAt, updatedAt: brunswickKorea.checkedAt,
         sourceBadge: '판매처 자료 정리', sourceLabel: '브런스윅 코리아 제품 자료', sourceLinkLabel: '브런스윅 코리아 제품 페이지' })),

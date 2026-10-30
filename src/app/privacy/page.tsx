@@ -2,6 +2,7 @@ import Link from 'next/link';
 import styles from '@/components/public/Public.module.css';
 import PublicNav from '@/components/public/PublicNav';
 import { ADS_EXECUTION_ENABLED, PUBLIC_ORIGIN } from '@/lib/public-web';
+import { PUBLIC_CONTACT_EMAIL, PUBLIC_CONTACT_HREF } from '@/lib/public-contact';
 
 export const metadata = {
   alternates: { canonical: `${PUBLIC_ORIGIN}/privacy` },
@@ -122,13 +123,14 @@ export default function PrivacyPolicy() {
           </h3>
           <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-slate-700">
             <p><strong>서비스</strong>: BowlingManager</p>
+            <p><strong>문의 이메일</strong>: <a href={PUBLIC_CONTACT_HREF} className="text-blue-600 underline">{PUBLIC_CONTACT_EMAIL}</a> · 비회원 문의 가능</p>
 
             <p><strong>고객지원 페이지</strong>: <Link href="/inquiry" className="text-blue-600 underline">1:1 문의하기 센터 바로가기</Link></p>
           </div>
         </div>
 
         <div className="pt-8 border-t border-slate-200 flex flex-wrap justify-between items-center text-xs text-slate-400">
-          <p>문서 편집: 2026년 10월 14일</p>
+          <p>문서 편집: 2026년 10월 30일</p>
           <div className="flex gap-4">
             <Link href="/terms" className="hover:underline">이용약관</Link>
             <Link href="/disclaimer" className="hover:underline">책임 한계 및 법적 고지</Link>

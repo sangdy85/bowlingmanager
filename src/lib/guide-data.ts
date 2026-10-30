@@ -1,4 +1,5 @@
 import { SCORING_CONTENT, NEW_PRIORITY_GUIDES } from './priority-guides';
+import { OPERATING_GUIDES } from './operating-guides';
 export interface GuideArticle {
   slug: string;
   title: string;
@@ -1459,6 +1460,7 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     } : {}),
   })),
   ...NEW_PRIORITY_GUIDES.map(article => applyPublicGuideMetadata({ ...article, status: article.status ?? ('published' as const) })),
+  ...OPERATING_GUIDES,
 ];
 
 export const PUBLISHED_GUIDE_ARTICLES = GUIDE_ARTICLES.filter(article => article.status === 'published');
