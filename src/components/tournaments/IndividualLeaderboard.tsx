@@ -134,7 +134,7 @@ export default function IndividualLeaderboard({ data, title }: { data: Individua
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(500px, 1fr))', gap: isMobile ? '1rem' : '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: isMobile ? '1rem' : '2rem' }}>
                 {teams.map((team) => (
                     <div key={team.teamId}>
                         <div style={teamHeaderStyle}>

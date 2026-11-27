@@ -11,7 +11,7 @@
   gap: 1rem;
   margin-bottom: 0.85rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid #2c3a52;
+  border-bottom: 1px solid var(--border);
 }
 
 .heading {
@@ -53,7 +53,7 @@
 
 .sectionLabel {
   margin: 0 0 0.45rem;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.68rem;
   font-weight: 850;
   letter-spacing: 0.08em;
@@ -73,22 +73,22 @@
   gap: 1rem;
   border: 1px solid transparent;
   border-radius: 0.7rem;
-  background: rgba(15, 23, 42, 0.28);
+  background: var(--card);
   padding: 0.65rem 0.75rem;
   cursor: pointer;
   transition: background-color 140ms ease, border-color 140ms ease;
 }
 
 .postRow:hover {
-  border-color: #334155;
-  background: rgba(59, 130, 246, 0.07);
+  border-color: var(--border);
+  background: var(--primary-soft);
 }
 
 .postTitle {
   min-width: 0;
   flex: 1;
   overflow: hidden;
-  color: #e2e8f0;
+  color: var(--foreground);
   font-size: 0.8rem;
   font-weight: 700;
   text-overflow: ellipsis;
@@ -96,7 +96,7 @@
 }
 
 .postRow:hover .postTitle {
-  color: #93c5fd;
+  color: var(--primary);
 }
 
 .postMeta {
@@ -104,22 +104,22 @@
   flex: 0 0 auto;
   align-items: center;
   gap: 0.65rem;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.68rem;
   white-space: nowrap;
 }
 
 .author {
-  color: #cbd5e1;
+  color: var(--secondary-foreground);
   font-weight: 700;
 }
 
 .empty {
-  border: 1px dashed #334155;
+  border: 1px dashed var(--border);
   border-radius: 0.75rem;
-  background: rgba(15, 23, 42, 0.2);
+  background: var(--card);
   padding: 2rem 1rem;
-  color: #94a3b8;
+  color: var(--muted);
   text-align: center;
   font-size: 0.78rem;
 }
@@ -131,7 +131,7 @@
 .linkButton {
   border: 0;
   background: transparent;
-  color: #93c5fd;
+  color: var(--primary);
   font-size: 0.75rem;
   font-weight: 750;
   cursor: pointer;
@@ -152,7 +152,7 @@
 }
 
 .field label {
-  color: #dbe4f0;
+  color: var(--secondary-foreground);
   font-size: 0.76rem;
   font-weight: 750;
 }
@@ -163,29 +163,29 @@
 
 .fileInput {
   width: 100%;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.75rem;
 }
 
 .fileInput::file-selector-button {
   margin-right: 0.7rem;
-  border: 1px solid #3b4a62;
+  border: 1px solid var(--border);
   border-radius: 0.65rem;
-  background: #172033;
+  background: var(--card);
   padding: 0.5rem 0.7rem;
-  color: #cbd5e1;
+  color: var(--secondary-foreground);
   font: inherit;
   font-weight: 750;
   cursor: pointer;
 }
 
 .fileInput::file-selector-button:hover {
-  background: #23314a;
+  background: var(--card);
 }
 
 .help {
   margin: 0;
-  color: #8190a6;
+  color: var(--muted);
   font-size: 0.68rem;
 }
 
@@ -193,9 +193,9 @@
   margin: 0;
   border: 1px solid rgba(239, 68, 68, 0.28);
   border-radius: 0.65rem;
-  background: rgba(127, 29, 29, 0.2);
+  background: #fff1f2;
   padding: 0.65rem 0.75rem;
-  color: #fecaca;
+  color: #b42335;
   font-size: 0.75rem;
   font-weight: 700;
 }
@@ -210,7 +210,7 @@
 .detailTitle {
   margin: 0 0 0.8rem;
   padding-bottom: 0.65rem;
-  border-bottom: 1px solid #2c3a52;
+  border-bottom: 1px solid var(--border);
   font-size: 1.05rem;
   font-weight: 900;
 }
@@ -218,7 +218,7 @@
 .detailContent {
   min-height: 6rem;
   margin-bottom: 1rem;
-  color: #dbe4f0;
+  color: var(--secondary-foreground);
   font-size: 0.82rem;
   line-height: 1.7;
   white-space: pre-wrap;
@@ -232,9 +232,9 @@
 
 .imageFrame {
   overflow: hidden;
-  border: 1px solid #334155;
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: #0f172a;
+  background: var(--card);
 }
 
 .imageLink {
@@ -255,8 +255,8 @@
   gap: 0.8rem;
   margin-bottom: 1rem;
   padding-top: 0.65rem;
-  border-top: 1px solid #2c3a52;
-  color: #94a3b8;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
   font-size: 0.68rem;
 }
 
@@ -269,14 +269,14 @@
 .deleteButton {
   border: 0;
   background: transparent;
-  color: #fca5a5;
+  color: #b42335;
   font-size: 0.7rem;
   font-weight: 750;
   cursor: pointer;
 }
 
 .deleteButton:hover {
-  color: #fecaca;
+  color: #b42335;
   text-decoration: underline;
 }
 
@@ -291,7 +291,7 @@
 
 .loading {
   padding: 2rem 1rem;
-  color: #94a3b8;
+  color: var(--muted);
   text-align: center;
   font-size: 0.78rem;
 }

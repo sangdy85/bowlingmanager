@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/components/dashboard/requireAdminPage";
 import Link from "next/link";
 import prisma from "@/lib/prisma";
 import { createBowlingCenter, deleteBowlingCenter } from "@/app/actions/admin";
@@ -6,6 +7,7 @@ import styles from "../AdminUI.module.css";
 import { DashboardHeader, EmptyState, StatusBadge, dashboardStyles } from "@/components/dashboard/DashboardUI";
 
 export default async function AdminCentersPage() {
+    await requireAdminPage();
     const centers = await prisma.bowlingCenter.findMany({
         orderBy: { createdAt: 'desc' },
         include: {

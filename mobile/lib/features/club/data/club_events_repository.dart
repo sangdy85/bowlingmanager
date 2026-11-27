@@ -9,6 +9,9 @@ class ClubEventsRepository {
   ClubEventsRepository(this._api);
   final ClubEventsApi _api;
 
+  Future<void> updateGameFee(String teamId, String eventId, Map<String, dynamic> body) =>
+      _api.updateGameFee(teamId, eventId, body);
+
   Future<ClubEventsEnvelope> fetchEvents(
     String teamId,
     ClubEventListScope scope,

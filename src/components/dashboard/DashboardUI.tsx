@@ -15,7 +15,7 @@ export function DashboardShell({ children, current = "personal", navigation, tit
                     { href: "/dashboard", label: "대시보드", key: "dashboard", icon: "⌂" },
                     { href: "/personal", label: "나의 기록실", key: "personal", icon: "◷" },
                     { href: "/team", label: "팀 관리", key: "team", icon: "♧" },
-                    { href: "/stats", label: "통계 / 순위", key: "stats", icon: "▥" },
+                    { href: "/community", label: "볼링 커뮤니티", key: "community", icon: "▥" },
                     { href: "/centers", label: "볼링장 / 대회", key: "centers", icon: "⚑" },
                 ]).map(item => <Link key={item.key} href={item.href} aria-current={current === item.key ? "page" : undefined}>
                     <span aria-hidden="true">{item.icon}</span>{item.label}

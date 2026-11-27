@@ -225,7 +225,8 @@ export async function getBowlerHiddenCompetition(actorUserId: string, teamId: st
     if (!event.competitionEnabled || event.competitionType !== "INDIVIDUAL") {
         throw new BowlerHiddenError("COMPETITION_NOT_AVAILABLE", "개인전 설정이 활성화되지 않았습니다.", 409);
     }
-    if (event.competitionStatus === "PUBLISHED") {
+    // MINI has no season publication; read its locked event scores as for TEAM.
+    if (event.competitionStatus === "PUBLISHED" && event.competitionMode !== "MINI") {
         const publication = event.seasonPublications[0];
         if (!publication) throw new BowlerHiddenError("INVALID_RESULT_SNAPSHOT", "발표 결과를 불러올 수 없습니다.", 500);
         try {
@@ -291,7 +292,8 @@ export async function getBowlerHiddenCompetition(actorUserId: string, teamId: st
         const scores = eventByParticipant.get(participant.participantId) ?? [];
         return { ...participant, order: index, scores, total: scores.reduce((sum, score) => sum + score, 0) };
     }).filter((item) => item.scores.length > 0)
-        .sort((left, right) => right.total - left.total || left.order - right.order)
+        .sort((left, right) => right.total - left.total || (event.competitionStatus === "PUBLISHED"
+            ? left.participantId.localeCompare(right.participantId) : left.order - right.order))
         .map((item, index) => ({
             rank: index + 1, participantId: item.participantId, memberId: item.memberId, guestId: item.guestId, name: item.name,
             scores: item.scores, gameCount: item.scores.length, total: item.total,

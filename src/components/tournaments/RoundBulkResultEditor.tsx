@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateLeagueRoundResults } from '@/app/actions/league-actions';
 import * as XLSX from 'xlsx';
 import { uploadRawLaneScores } from '@/app/actions/raw-score-actions';
 import { calculateGameLaneAssignments } from '@/lib/lane-movement';
+import { changeLeaguePlayerName, initializeLeagueTeamRows, leagueRosterNames, type LeagueMemberOption, type LeagueRosterName } from '@/lib/league-score-identity';
 
 interface User {
     id: string;
@@ -57,6 +58,8 @@ interface RoundBulkResultEditorProps {
         roundNumber: number;
         date: Date | null;
         matchups: Matchup[];
+        registeredPlayers?: LeagueMemberOption[];
+        rosterPlayers?: LeagueRosterName[];
         moveLaneType?: string;
         moveLaneCount?: number;
         startLane?: number;
@@ -81,8 +84,8 @@ export default function RoundBulkResultEditor({
     const [results, setResults] = useState<{ [matchupId: string]: { teamA: IndividualScore[], teamB: IndividualScore[] } }>(() => {
         const initial: { [key: string]: { teamA: IndividualScore[], teamB: IndividualScore[] } } = {};
         round.matchups.forEach(m => {
-            const teamAScores = m.individualScores.filter(s => s.teamId === m.teamAId && s.teamSquad === m.teamASquad);
-            const teamBScores = m.individualScores.filter(s => s.teamId === m.teamBId && s.teamSquad === m.teamBSquad);
+            const teamAScores = initializeLeagueTeamRows(m.individualScores, m.teamAId, m.teamASquad);
+            const teamBScores = initializeLeagueTeamRows(m.individualScores, m.teamBId, m.teamBSquad);
 
             const fillRows = (team: Team | null, teamId: string | null, squad: string | null, existing: IndividualScore[]) => {
                 const rows: IndividualScore[] = [...existing.map(s => ({ ...s, teamSquad: squad }))];
@@ -114,12 +117,9 @@ export default function RoundBulkResultEditor({
     const handlePlayerChange = (matchupId: string, team: 'teamA' | 'teamB', index: number, field: keyof IndividualScore, value: any) => {
         setResults(prev => {
             const teamResults = [...prev[matchupId][team]];
-            const updatedRow = { ...teamResults[index], [field]: value };
-
-            // If playerName is manually changed, clear userId to prevent wrong name from being shown in leaderboard
-            if (field === 'playerName') {
-                updatedRow.userId = null;
-            }
+            const updatedRow = field === 'playerName'
+                ? changeLeaguePlayerName(teamResults[index], value)
+                : { ...teamResults[index], [field]: value };
 
             teamResults[index] = updatedRow;
             return {
@@ -528,6 +528,7 @@ export default function RoundBulkResultEditor({
             const dataToSave = Object.entries(results).map(([matchupId, teamData]) => ({
                 matchupId,
                 teamAScores: teamData.teamA.map(s => ({
+                    id: s.id,
                     userId: s.userId || undefined,
                     playerName: s.playerName || undefined,
                     teamId: s.teamId,
@@ -536,6 +537,7 @@ export default function RoundBulkResultEditor({
                     score1: s.score1, score2: s.score2, score3: s.score3,
                 })),
                 teamBScores: teamData.teamB.map(s => ({
+                    id: s.id,
                     userId: s.userId || undefined,
                     playerName: s.playerName || undefined,
                     teamId: s.teamId,
@@ -620,6 +622,9 @@ export default function RoundBulkResultEditor({
                 </div>
             </div>
 
+            <p className="rounded-xl border border-slate-300 bg-slate-50 p-4 text-sm text-slate-700">
+                팀별로 실제 출전한 선수 이름과 점수를 입력하세요. 사이트 가입 여부와 관계없이 팀·이름으로 기록하며, 일치하는 가입 계정이 확인되면 연결합니다. 사이트에 가입하지 않은 선수도 별도 구분 없이 입력할 수 있습니다.
+            </p>
             <div className="space-y-20">
                 {[...round.matchups]
                     .sort((a, b) => {
@@ -638,6 +643,9 @@ export default function RoundBulkResultEditor({
                             const s = isRight ? stat.teamB : stat.teamA;
                             const res = isRight ? stat.resultsB : stat.resultsA;
                             const pts = isRight ? stat.pointsB : stat.pointsA;
+                            const names = leagueRosterNames([...(round.rosterPlayers || []), ...(round.registeredPlayers || []), ...teamRows])
+                                .filter(player => player.teamId === team?.id);
+                            const rosterId = `league-roster-${matchup.id}-${teamKey}`;
 
                             return (
                                 <div className="flex-1 flex flex-col bg-white border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] overflow-hidden rounded-2xl">
@@ -670,6 +678,8 @@ export default function RoundBulkResultEditor({
                                                         <input
                                                             type="text"
                                                             placeholder="이름 입력"
+                                                            aria-label={`${team?.name || ''} ${rowIdx + 1}번 선수 성명`}
+                                                            list={rosterId}
                                                             value={r.playerName ?? ''}
                                                             onChange={(e) => handlePlayerChange(matchup.id, teamKey, rowIdx, 'playerName', e.target.value)}
                                                             className="w-full h-10 px-3 text-center bg-transparent border-2 border-transparent focus:border-black rounded-lg outline-none transition-all text-sm"
@@ -734,6 +744,7 @@ export default function RoundBulkResultEditor({
                                             </tr>
                                         </tfoot>
                                     </table>
+                                    <datalist id={rosterId}>{names.map(player => <option key={player.name} value={player.name}/>)}</datalist>
                                 </div>
                             );
                         };

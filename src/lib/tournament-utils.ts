@@ -183,6 +183,15 @@ export function formatKSTDate(dateInput: Date | string | null): string {
     return `${y}. ${m}. ${d}. ${hh}:${mm}`;
 }
 
+/** Calendar date only, independent of the server/browser timezone. */
+export function formatKSTCalendarDate(dateInput: Date | string | null): string {
+    if (!dateInput) return '일정 미정';
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return '일정 미정';
+    const kst = new Date(date.getTime() + 9 * 60 * 60000);
+    return `${kst.getUTCFullYear()}. ${kst.getUTCMonth() + 1}. ${kst.getUTCDate()}.`;
+}
+
 /**
  * Formats a Date to "M월 D일 (요일)" in KST.
  */

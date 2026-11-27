@@ -1,0 +1,209 @@
+{
+  "releaseId": "ocr-member-5b1fe7a6ff4d-20261105",
+  "buildId": "O8OTE0sb5cuv4EqylUQkS",
+  "deployedAt": "2026-11-05T02:47:50.562Z",
+  "previousRelease": "ocr-quota-adfe066e5b55-20261105",
+  "previousBuild": "AuB9Y5tZbf1ZY11-CNOfI",
+  "source": {
+    "baseCommit": "1299cca08dd2ec6cc04457e0234d369f90a643be",
+    "workingTreePatch": true,
+    "uncommitted": true,
+    "fullGitTreeMatch": false,
+    "baselineRelease": "ocr-quota-adfe066e5b55-20261105",
+    "baselineSource": {
+      "baseCommit": "1299cca08dd2ec6cc04457e0234d369f90a643be",
+      "workingTreePatch": true,
+      "uncommitted": true,
+      "fullGitTreeMatch": false,
+      "baselineRelease": "ocr-cascade-1a8f82e81432-20261105",
+      "baselineSource": {
+        "baseCommit": "1299cca08dd2ec6cc04457e0234d369f90a643be",
+        "workingTreePatch": true,
+        "uncommitted": true,
+        "fullGitTreeMatch": false,
+        "baselineRelease": "lottery-female-c529da039bcc-20261105",
+        "baselineSource": {
+          "gitBase": "1299cca08dd2ec6cc04457e0234d369f90a643be",
+          "commit": "19c87230e75aba474088c4ad9a819ed5fac9dc97",
+          "workingTreePatch": true,
+          "uncommitted": true,
+          "patchCommit": null,
+          "patchSha256": "c529da039bcc85e0069681dda972c31b8d9de9cafb20d83800fa28deef8bd9e9",
+          "baselineRelease": "ocr-annotations-1e4e1b564f03-20261104",
+          "fullGitTreeMatch": false,
+          "files": [
+            {
+              "path": "src/lib/lottery-ui.ts",
+              "sha256": "468943c2ab4a9328938e4efe90dbb8bcdee66aee03f7f6a7cca176966aaf7640"
+            },
+            {
+              "path": "src/components/tournaments/RoundLuckyDrawTab.tsx",
+              "sha256": "6875e36a8a589812e84d3aa0e38fe24c1ab9186934a3d21397d246d31735425a"
+            }
+          ]
+        },
+        "patchSha256": "1a8f82e814321ebab3b5ca868628836f4f72a3c396df873f963771278ea48e9b",
+        "files": [
+          {
+            "path": "src/lib/gemini-free-scoreboard.ts",
+            "sha256": "f43ada8a46fc4b1a3163bd883a6dc76e872ebf67d48d787d0fab1ec31901a9e4"
+          },
+          {
+            "path": "src/lib/scoreboard-provider-cascade.ts",
+            "sha256": "d8864564c789583dfdd0e8a4f6f420867f7ea155af6e1c5ff97474ab13f1fe4f"
+          },
+          {
+            "path": "src/lib/scoreboard-ocr.ts",
+            "sha256": "e8dd5d83dab9891cdefd7e1e07905c80455d73349c366968450818bcf3f7f1d7"
+          },
+          {
+            "path": "src/lib/scoreboard-auto-analysis.ts",
+            "sha256": "f624b872192a90ad02efcd44f500a15e7304850a4a650172d7695e573b38bdf0"
+          },
+          {
+            "path": "src/components/GeminiScoreUpload.tsx",
+            "sha256": "82c319cad61aa147944d62d2a2549177159fe79a14a3c0cabaf581c3519febb2"
+          },
+          {
+            "path": "src/app/api/mobile/v1/ocr/scoreboard/route.ts",
+            "sha256": "d064cf1bbefefd2ee37ae02afbfe78178a0dd0405699d1357dc41ea97838e412"
+          }
+        ]
+      },
+      "patchSha256": "adfe066e5b55a97edeac9f2620348d68c68ec46100885509432690651558f212",
+      "files": [
+        {
+          "path": "src/lib/gemini-free-scoreboard.ts",
+          "sha256": "4ba8162913d65b1fbcd160a2aed85d5e95ce629e3c96cdd2005a31ff5a6921cd"
+        }
+      ]
+    },
+    "patchSha256": "5b1fe7a6ff4d8ddb3fedfdcc5c63fc5b31af3eeb5751f11d81b6e98509135100",
+    "files": [
+      {
+        "path": "src/lib/scoreboard-member-quota.ts",
+        "sha256": "ab8bcfea9c39722e8bca2e5344baa04de972fa421c383eb105e379820e2689a6"
+      },
+      {
+        "path": "src/lib/scoreboard-ocr.ts",
+        "sha256": "74d5c751a52b8ddc9577daae18e3816dac752f7916d919eb22dfbce9eb1b4634"
+      },
+      {
+        "path": "src/lib/scoreboard-provider-cascade.ts",
+        "sha256": "4a7bddde5a2725840f2b36c244207f8dd79e056a830e0eac328446310d8ccca0"
+      },
+      {
+        "path": "src/lib/gemini-free-scoreboard.ts",
+        "sha256": "e3e2ccf287214eb339884884af330b7f1843a1e00bc90182d3a901da9a78298f"
+      },
+      {
+        "path": "src/lib/ocr-space-scoreboard.ts",
+        "sha256": "f44e057b39bdbff6aa842d42c80c0ff25021b3cce2a9890eaf01b60d9f1875db"
+      }
+    ]
+  },
+  "pm2": {
+    "name": "bowling-manager",
+    "status": "online",
+    "pid": 607506,
+    "cwd": "/home/user/bowling-score-manager"
+  },
+  "startup": {
+    "active": "active",
+    "enabled": "enabled",
+    "changed": false
+  },
+  "nginx": {
+    "status": 200
+  },
+  "database": {
+    "oldBusinessTables": 88,
+    "businessFingerprintsUnchanged": true,
+    "quickCheck": "ok",
+    "foreignKeyViolations": 0,
+    "migrations": 28,
+    "migrationApplied": false,
+    "productionScoresWritten": 0
+  },
+  "originalEnvironmentPreserved": true,
+  "unrelatedEnvironmentPreserved": true,
+  "existingPaidKeyUnchanged": true,
+  "environmentChangedKeys": [],
+  "ocrServerEnvironmentAdded": true,
+  "ocrServerEnvironmentPreserved": true,
+  "photoAreaSelection": true,
+  "perGameEditing": true,
+  "suspiciousScoreReview": true,
+  "clientKeyLeak": false,
+  "clientFilesChecked": 195,
+  "preciseUiPresent": true,
+  "apiRoutes": 86,
+  "tests": 94,
+  "photoOcr": {
+    "provider": "free-cascade",
+    "geminiModel": "gemini-3.1-flash-lite",
+    "priority": [
+      "gemini-free",
+      "ocr-space-3",
+      "ocr-space-2"
+    ],
+    "geminiFreeDailyLimit": 500,
+    "geminiFreeRpmLimit": 15,
+    "verifiedInputTpm": 250000,
+    "usageCountersReset": false,
+    "freeProjectOperatorVerified": true,
+    "paidGoogleKeyUsed": false,
+    "automaticPhotoAnalysis": true,
+    "legacy80PercentPolicyBypassed": true,
+    "explicitRetryRefresh": true,
+    "sharedMobilePolicy": true,
+    "mobileDeadlineMs": 80000,
+    "annotationFiltering": true,
+    "handicapArithmetic": false,
+    "dailyLimit": 400,
+    "monthlyLimit": 20000,
+    "userDailyLimit": 5,
+    "memberQuotaTimezone": "Asia/Seoul",
+    "memberQuotaSharedAcrossProviders": true,
+    "memberQuotaExemptEmail": "sangdy85@naver.com",
+    "testAccountCountsTowardGlobalLimits": true,
+    "preciseDailyLimit": 20,
+    "preciseMonthlyLimit": 800
+  },
+  "productionProbe": {
+    "passed": true,
+    "provider": "gemini-free",
+    "priority": [
+      "gemini-free",
+      3,
+      2
+    ],
+    "geminiRequests": 1,
+    "ocrRequests": 0,
+    "webCalls": 1,
+    "recognitionCoverage": 1,
+    "players": 2,
+    "duplicateNotRecharged": true,
+    "memberDailyLimit": 5,
+    "serverResolvedExemption": true,
+    "testAccountMemberUsageUnchanged": true,
+    "allGlobalReservationsEnforced": true,
+    "productionScoresWritten": 0
+  },
+  "logs": [
+    {
+      "kind": "error",
+      "newBytes": 0,
+      "errorLines": 0
+    },
+    {
+      "kind": "stdout",
+      "newBytes": 198,
+      "errorLines": 0
+    }
+  ],
+  "backup": "/home/user/bowling-backups/ocr-member-e7ba357f635a-20261105-before",
+  "runtimeBackup": "/home/user/bowling-deploy/ocr-member-e7ba357f635a-20261105/previous-next",
+  "reusedStage": "/home/user/bowling-deploy/ocr-cascade-1a8f82e81432-20261105/stage",
+  "rollbackCommand": "bash /home/user/bowling-deploy/ocr-member-e7ba357f635a-20261105/rollback.sh"
+}

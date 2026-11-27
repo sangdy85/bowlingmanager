@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/components/dashboard/requireAdminPage";
 import Link from "next/link";
 import prisma from "@/lib/prisma";
 import { deleteUser } from "@/app/actions/admin";
@@ -6,6 +7,7 @@ import styles from "../AdminUI.module.css";
 import { DashboardHeader, EmptyState, StatusBadge } from "@/components/dashboard/DashboardUI";
 
 export default async function AdminUsersPage() {
+    await requireAdminPage();
     const users = await prisma.user.findMany({
         orderBy: { createdAt: 'desc' },
         include: {

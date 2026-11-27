@@ -1,6 +1,14 @@
+import type { Metadata } from 'next';
+import { PUBLIC_ORIGIN } from '@/lib/public-web';
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import styles from "./CentersDiscovery.module.css";
+
+export const metadata: Metadata = {
+    title: '볼링장 · 대회 찾기 | 볼링매니저',
+    description: '등록된 볼링장을 둘러보고 진행 중인 상주리그, 챔프전과 이벤트 대회를 확인하세요.',
+    alternates: { canonical: PUBLIC_ORIGIN + '/centers' },
+};
 
 export default async function CentersDiscoveryPage() {
     const centers = await prisma.bowlingCenter.findMany({

@@ -5,9 +5,19 @@ import { revalidatePath } from "next/cache";
 import { parseKSTDate } from "@/lib/tournament-utils";
 import { redirect } from "next/navigation";
 import { verifyCenterAdmin } from "@/lib/auth-utils";
+import { publishTournamentFinalResult, publishTournamentRecruitment } from "@/lib/band/publisher";
+import { createKingPerfect } from '@/lib/king-perfect/service';
+import { isKingPerfect } from '@/lib/king-perfect/rules';
 
 export async function createTournament(centerId: string, formData: FormData) {
-    await verifyCenterAdmin(centerId);
+    const actorId = await verifyCenterAdmin(centerId);
+
+    if (formData.get('customMode') === 'KING_PERFECT') {
+        if (formData.get('type') !== 'CUSTOM') throw new Error('킹퍼펙트는 CUSTOM 유형이어야 합니다.');
+        const id = await createKingPerfect(actorId, centerId, String(formData.get('name') || ''), String(formData.get('month') || ''), String(formData.get('requestKey') || ''));
+        revalidatePath(`/centers/${centerId}`);
+        redirect(`/centers/${centerId}/tournaments/${id}`);
+    }
 
     const type = formData.get("type") as string;
     const iterationStr = formData.get("iteration") as string;
@@ -122,13 +132,17 @@ export async function createTournament(centerId: string, formData: FormData) {
 }
 
 export async function updateTournamentStatus(tournamentId: string, status: string) {
+    const allowedStatuses = new Set(['PLANNING', 'OPEN', 'JOINING', 'ONGOING', 'FINISHED']);
+    if (!allowedStatuses.has(status)) throw new Error('Invalid tournament status');
+
     const tournament = await prisma.tournament.findUnique({
         where: { id: tournamentId },
-        select: { centerId: true }
+        select: { centerId: true, status: true, type: true, settings: true }
     });
 
     if (!tournament) throw new Error("Tournament not found");
-    await verifyCenterAdmin(tournament.centerId);
+    const actorId = await verifyCenterAdmin(tournament.centerId);
+    if (isKingPerfect(tournament.type, tournament.settings)) throw new Error('킹퍼펙트 상태는 전용 일정운영에서 변경하세요.');
 
     await prisma.tournament.update({
         where: { id: tournamentId },
@@ -136,6 +150,22 @@ export async function updateTournamentStatus(tournamentId: string, status: strin
     });
 
     revalidatePath(`/centers/${tournament.centerId}/tournaments/${tournamentId}`);
+    revalidatePath(`/centers/${tournament.centerId}`);
+
+    let band = null;
+    try {
+        const opened = tournament.status === 'PLANNING' && ['OPEN', 'JOINING'].includes(status);
+        const finished = tournament.status !== 'FINISHED' && status === 'FINISHED';
+        // League results are explicitly posted by week; changing its overall
+        // tournament status must never trigger a second generic BAND post.
+        const eligibleAutoType = tournament.type === 'CHAMP' || tournament.type === 'EVENT';
+        if (eligibleAutoType && opened) band = await publishTournamentRecruitment({ tournamentId, requestedById: actorId });
+        if (eligibleAutoType && finished) band = await publishTournamentFinalResult({ tournamentId, requestedById: actorId });
+    } catch {
+        band = { status: 'FAILED' as const, message: '대회 상태는 변경했지만 BAND 게시를 처리하지 못했습니다.' };
+    }
+
+    return { success: true, band };
 }
 
 export async function deleteTournament(tournamentId: string) {
@@ -227,13 +257,14 @@ export async function deleteTournamentAttachment(attachmentId: string) {
 export async function updateGrandFinaleSettings(tournamentId: string, grandFinaleSettings: any) {
     const tournament = await (prisma.tournament as any).findUnique({
         where: { id: tournamentId },
-        select: { centerId: true, settings: true }
+        select: { centerId: true, settings: true, type: true }
     });
 
     if (!tournament) throw new Error("Tournament not found");
     await verifyCenterAdmin(tournament.centerId);
 
     const currentSettings = tournament.settings ? JSON.parse(tournament.settings) : {};
+    if (isKingPerfect(tournament.type, tournament.settings)) throw new Error('킹퍼펙트 설정은 전용 화면에서 변경하세요.');
     const newSettings = {
         ...currentSettings,
         ...grandFinaleSettings
@@ -256,6 +287,7 @@ export async function updateTournamentBasicInfo(tournamentId: string, formData: 
 
     if (!tournament) throw new Error("Tournament not found");
     await verifyCenterAdmin(tournament.centerId);
+    if (isKingPerfect(tournament.type, tournament.settings)) throw new Error('킹퍼펙트 설정은 전용 화면에서 변경하세요.');
 
     const name = formData.get("name") as string;
     const startDateRaw = formData.get("startDate") as string;

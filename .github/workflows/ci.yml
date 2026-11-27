@@ -33,6 +33,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: node --test tests/*.test.cjs
+      # The sitemap reads the database at build time, so build against a migrated empty DB.
+      - run: npx prisma migrate deploy
       - run: npx next build
 
   mobile:

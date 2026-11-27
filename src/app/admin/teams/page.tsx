@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/components/dashboard/requireAdminPage";
 import prisma from "@/lib/prisma";
 import { deleteTeam, setTeamBowlerHiddenEnabled } from "@/app/actions/admin";
 import Link from 'next/link';
@@ -5,6 +6,7 @@ import styles from "../AdminUI.module.css";
 import { DashboardHeader, EmptyState, StatusBadge } from "@/components/dashboard/DashboardUI";
 
 export default async function AdminTeamsPage() {
+    await requireAdminPage();
     const teams = await prisma.team.findMany({
         where: { isActive: true },
         include: {

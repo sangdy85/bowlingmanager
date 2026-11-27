@@ -14,10 +14,13 @@ import {
 } from "@/lib/mobile-api/response";
 import { listManageableScoreTeams } from "@/lib/score-bulk-service";
 import { analyzeScoreboardImage } from "@/lib/scoreboard-ocr";
+import { parseScoreImageCrop } from '@/lib/score-image-crop';
+import { analyzeScoreboardAutomatically } from '@/lib/scoreboard-auto-analysis';
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+    const deadlineAt = Date.now() + 80_000;
     try {
         const userId = await getMobileApiUserId(request);
         if (!userId) return unauthorizedResponse();
@@ -30,6 +33,13 @@ export async function POST(request: Request) {
         }
         const image = formData.get(MOBILE_OCR_IMAGE_FIELD);
         const teamId = formData.get(MOBILE_OCR_TEAM_FIELD);
+        const engine = Number(formData.get('engine') || 2);
+        const expectedGameCount = Number(formData.get('gameCount') || 0);
+        let crop;
+        try { crop = parseScoreImageCrop(formData.get('crop')); } catch { return mobileApiError('INVALID_CROP', '사진 영역을 다시 선택해주세요.', 400); }
+        if (![2, 3].includes(engine) || !Number.isInteger(expectedGameCount) || expectedGameCount < 0 || expectedGameCount > 12) {
+            return mobileApiError('INVALID_OCR_OPTIONS', '분석 방식과 게임 수를 확인해주세요.', 400);
+        }
         if (!(image instanceof File) || image.size === 0) {
             return mobileApiError("MISSING_IMAGE", "점수판 이미지를 선택해주세요.", 400);
         }
@@ -49,12 +59,20 @@ export async function POST(request: Request) {
             return mobileApiError("FORBIDDEN", "선택한 팀에 점수를 등록할 권한이 없습니다.", 403);
         }
 
-        const analysis = await analyzeScoreboardImage({
+        const imageBytes = Buffer.from(await image.arrayBuffer());
+        const automatic = await analyzeScoreboardAutomatically((selectedEngine, automaticCrop) => analyzeScoreboardImage({
             userId,
-            image: Buffer.from(await image.arrayBuffer()),
+            image: imageBytes,
             mimeType: image.type,
             knownMembers: team.members.map((member) => member.name),
-        });
+            engine: selectedEngine,
+            forceRefresh: engine === 3,
+            expectedGameCount,
+            crop: automaticCrop ?? crop,
+            deadlineAt,
+        }), { expectedGameCount, forcePrecision:engine === 3, knownMembers:team.members.map(member => member.name) });
+        const analysis = automatic.result;
+        if (automatic.precisionIssue) for (const row of analysis.data ?? []) row.reviewWarnings = [...(row.reviewWarnings ?? []), automatic.precisionIssue];
         if (!analysis.success) {
             if (analysis.errorType === "QUOTA") {
                 return mobileApiError(
@@ -65,11 +83,14 @@ export async function POST(request: Request) {
             }
             return mobileApiError(
                 "OCR_ANALYSIS_FAILED",
-                "점수판을 분석하지 못했습니다. 이미지를 확인하고 다시 시도해주세요.",
+                analysis.message || "점수판을 분석하지 못했습니다. 이미지를 확인하고 다시 시도해주세요.",
                 502,
             );
         }
 
+        if (formData.get('scoreSlotsVersion') !== '1' && analysis.data?.some(row => row.scoreSlots?.includes(null))) {
+            return mobileApiError('OCR_REVIEW_UPDATE_REQUIRED', '불분명한 점수를 확인하려면 앱을 최신 버전으로 업데이트해주세요.', 409);
+        }
         const players = normalizeMobileOcrPlayers(analysis.data, team.members);
         if (!players || players.length === 0) {
             return mobileApiError(

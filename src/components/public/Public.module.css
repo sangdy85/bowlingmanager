@@ -1,10 +1,10 @@
-.surface { background: #f7f9fc; color: #192941; border-radius: 20px; padding: clamp(20px, 4vw, 48px); font-size: 17px; line-height: 1.75; overflow-wrap: anywhere; }
+.surface { background: var(--background); color: var(--foreground); border-radius: 0; padding: clamp(20px, 4vw, 48px); font-size: 17px; line-height: 1.75; overflow-wrap: anywhere; }
 .surface h1 { font-size: clamp(1.85rem, 4vw, 3.1rem); line-height: 1.25; margin: 16px 0 24px; color: #112644; }
 .surface h2 { font-size: 1.5rem; line-height: 1.4; margin: 36px 0 16px; color: #112644; scroll-margin-top: 96px; }
 .surface h3 { font-size: 1.15rem; margin: 24px 0 12px; color: #112644; scroll-margin-top: 96px; }
 .surface p { margin: 14px 0; }
-.surface a { color: #174faf; text-decoration: underline; text-underline-offset: 3px; }
-.surface a:hover { color: #0b3378; }
+.surface a { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.surface a:hover { color: var(--primary-hover); }
 .surface :is(a, button, input, textarea, summary):focus-visible { outline: 3px solid #b64b00; outline-offset: 4px; }
 .eyebrow { font-size: 13px; font-weight: 750; letter-spacing: .12em; color: #345377; }
 .intro { max-width: 680px; font-size: 19px; }
@@ -15,8 +15,8 @@
 .card h2, .card h3 { margin-top: 10px; }
 .tag { font-size: 13px; color: #38526f; }
 .actions { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin: 24px 0; }
-.surface .button, .surface button { display: inline-block; border: 1px solid #2153a4; background: #184992; color: white; border-radius: 8px; padding: 11px 18px; font: inherit; cursor: pointer; text-decoration: none; }
-.surface .button:hover, .surface button:hover { background: #10366d; color: white; }
+.surface .button, .surface button { display: inline-block; border: 1px solid var(--primary); background: var(--primary); color: var(--primary-foreground); border-radius: 10px; padding: 11px 18px; font: inherit; cursor: pointer; text-decoration: none; }
+.surface .button:hover, .surface button:hover { background: var(--primary-hover); color: var(--primary-foreground); }
 .notice { background: #e8eff9; border-left: 4px solid #3264b7; padding: 18px 22px; border-radius: 4px; margin: 24px 0; }
 .appCta { background: #eef3f9; border: 1px solid #b8c8dc; border-radius: 14px; padding: 24px; margin: 32px 0; }
 .appCta[data-variant="compact"] { padding: 20px 22px; margin: 32px 0; }
@@ -52,10 +52,12 @@
 .results dt { font-size: 14px; }
 .results dd { font-size: 25px; font-weight: 750; margin: 4px 0 0; }
 .error { color: #992c16; font-weight: 650; }
-.footer { color: #cbd5e1; padding: 32px 20px; margin: 36px auto 0; max-width: 1024px; border-top: 1px solid #334155; font-size: 14px; }
-.footer a { color: #d9e7ff; text-decoration: underline; }
+.footer { color: var(--muted); padding: 32px max(20px, calc((100% - 1230px) / 2)); margin: 0; width: 100%; border-top: 1px solid var(--border); font-size: 14px; background: var(--card); }
+.footer strong { color: var(--foreground); }
+.footer a { color: var(--secondary-foreground); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+.footer a:hover { color: var(--primary); text-decoration: underline; }
 .footer nav { display: flex; flex-wrap: wrap; gap: 12px 24px; }
-.footer a:focus-visible { outline: 3px solid #ffbc70; outline-offset: 4px; }
+.footer a:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 4px; }
 @media (max-width: 480px) { .surface { padding: 20px 16px; border-radius: 12px; } .card { padding: 18px; } .surface h1 { font-size: 1.9rem; } .appCta { padding: 20px 16px; } .appCtaActions { align-items: stretch; flex-direction: column; } .appCtaActions a { text-align: center; } .documentInfo { padding: 18px 16px; } .documentMeta div { grid-template-columns: 1fr; gap: 2px; } }
 
 .legacyAbout :global(.content-card) :is(h2,h3,h4) { color: #f8fafc; }

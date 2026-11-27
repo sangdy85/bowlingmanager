@@ -2,13 +2,12 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    border: 1px solid #2f405a;
+    border: 1px solid var(--border);
     border-radius: 1rem;
     background:
-        radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 18rem),
-        linear-gradient(180deg, #162136, #111a2b);
+        var(--card);
     padding: 1rem;
-    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.14);
+    box-shadow: var(--shadow-sm);
 }
 
 .sectionHeader {
@@ -21,7 +20,7 @@
 
 .sectionTitle {
     margin: 0;
-    color: #f8fafc;
+    color: var(--foreground);
     font-size: 1.05rem;
     font-weight: 900;
     letter-spacing: -0.025em;
@@ -29,14 +28,14 @@
 
 .sectionDescription {
     margin: 0.22rem 0 0;
-    color: #94a3b8;
+    color: var(--muted);
     font-size: 0.72rem;
     font-weight: 650;
 }
 
 .sectionCount {
     flex: 0 0 auto;
-    color: #93c5fd;
+    color: var(--primary);
     font-size: 0.72rem;
     font-weight: 850;
 }
@@ -48,7 +47,7 @@
     padding: 0.35rem;
     border: 1px solid var(--border);
     border-radius: 0.9rem;
-    background: rgba(23, 32, 51, 0.88);
+    background: var(--card);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
@@ -57,7 +56,7 @@
     border: 1px solid transparent;
     border-radius: 0.68rem;
     background: transparent;
-    color: #94a3b8;
+    color: var(--muted);
     font-size: 0.84rem;
     font-weight: 850;
     letter-spacing: -0.01em;
@@ -66,15 +65,15 @@
 }
 
 .tabButtonActive {
-    border-color: rgba(96, 165, 250, 0.25);
-    background: linear-gradient(180deg, #3b82f6, #2563eb);
+    border-color: var(--border-strong);
+    background: var(--primary);
     color: #fff;
     box-shadow: 0 5px 14px rgba(37, 99, 235, 0.25);
 }
 
 .tabButtonInactive:hover {
-    background: rgba(148, 163, 184, 0.08);
-    color: #e2e8f0;
+    background: var(--primary-soft);
+    color: var(--foreground);
 }
 
 .filterContainer {
@@ -87,10 +86,10 @@
 .filterButton {
     min-height: 2.35rem;
     padding: 0.45rem 0.9rem;
-    border: 1px solid #3b4a62;
+    border: 1px solid var(--border);
     border-radius: 999px;
-    background: rgba(15, 23, 42, 0.42);
-    color: #cbd5e1;
+    background: var(--card);
+    color: var(--secondary-foreground);
     font-size: 0.8rem;
     font-weight: 780;
     cursor: pointer;
@@ -99,19 +98,19 @@
 
 .filterButton:hover {
     border-color: #64748b;
-    background: #1e293b;
-    color: #fff;
+    background: var(--card);
+    color: var(--foreground);
 }
 
 .filterButtonActive {
     border-color: transparent;
-    color: #fff;
-    box-shadow: 0 5px 14px rgba(2, 6, 23, 0.22);
+    color: var(--primary-foreground);
+    box-shadow: var(--shadow-sm);
 }
 
 .typeLeague { background-color: #7c3aed; }
 .typeChamp { background-color: #d97706; }
-.typeEvent { background-color: #2563eb; }
+.typeEvent { background-color: var(--primary); }
 .typeCustom { background-color: #0f766e; }
 
 .listContainer {
@@ -129,10 +128,10 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border: 1px dashed #475569;
+    border: 1px dashed var(--border);
     border-radius: 1rem;
-    background: rgba(23, 32, 51, 0.55);
-    color: #94a3b8;
+    background: var(--card);
+    color: var(--muted);
     text-align: center;
 }
 
@@ -151,20 +150,20 @@
     position: relative;
     display: block;
     overflow: hidden;
-    border: 1px solid #314158;
+    border: 1px solid var(--border);
     border-radius: 0.95rem;
-    background: linear-gradient(145deg, #182338, #121b2c);
+    background: var(--card);
     padding: 1rem 1rem 1rem 1.15rem;
     color: inherit;
     text-decoration: none;
-    box-shadow: 0 7px 18px rgba(2, 6, 23, 0.12);
+    box-shadow: var(--shadow-sm);
     transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .card:hover {
     transform: translateY(-1px);
     border-color: #4f79b8;
-    box-shadow: 0 12px 28px rgba(2, 6, 23, 0.22);
+    box-shadow: var(--shadow-sm);
     text-decoration: none;
 }
 
@@ -214,7 +213,7 @@
 }
 
 .date {
-    color: #94a3b8;
+    color: var(--muted);
     font-size: 0.73rem;
     font-weight: 700;
 }
@@ -227,19 +226,19 @@
 }
 
 .statusActive {
-    background: rgba(34, 197, 94, 0.15);
-    color: #86efac;
+    background: #edf8f1;
+    color: #166534;
 }
 
 .statusFinished {
-    background: rgba(239, 68, 68, 0.14);
-    color: #fca5a5;
+    background: #fff1f2;
+    color: #b42335;
 }
 
 .title {
     overflow: hidden;
     margin: 0;
-    color: #f8fafc;
+    color: var(--foreground);
     font-size: 1.05rem;
     font-weight: 850;
     line-height: 1.35;
@@ -253,17 +252,17 @@
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    border: 1px solid #3b4a62;
+    border: 1px solid var(--border);
     border-radius: 999px;
-    background: rgba(15, 23, 42, 0.45);
-    color: #cbd5e1;
+    background: var(--card);
+    color: var(--secondary-foreground);
     opacity: 0.75;
     transition: transform 150ms ease, opacity 150ms ease, background-color 150ms ease;
 }
 
 .card:hover .arrowIcon {
     transform: translateX(2px);
-    background: rgba(59, 130, 246, 0.18);
+    background: var(--primary-soft);
     opacity: 1;
 }
 
@@ -305,3 +304,7 @@
         transition: none;
     }
 }
+
+.filterButton.filterButtonActive { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+
+.filterButton.filterButtonActive:hover { background: var(--primary-hover); color: var(--primary-foreground); }

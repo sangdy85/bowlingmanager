@@ -49,7 +49,7 @@ export default function ChampManager({ tournament, centerId, isManager, currentU
                 <div className="flex items-center justify-between px-2">
                     <div className="flex items-center gap-4">
                         <span style={{ fontSize: '24px' }}>🏆</span>
-                        <h3 style={{ fontSize: '20px', fontWeight: 900, color: 'white', margin: 0 }}>챔프전 회차 목록</h3>
+                        <h3 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--foreground)', margin: 0 }}>챔프전 회차 목록</h3>
                     </div>
                     {isManager && tournament.settings && (() => {
                         try {
@@ -112,27 +112,27 @@ export default function ChampManager({ tournament, centerId, isManager, currentU
                                 borderRadius: '24px',
                                 transition: 'all 0.2s',
                                 cursor: 'default',
-                                border: status === 'CLOSED' ? '2px solid rgba(148, 163, 184, 0.2)' : '2px solid rgba(59, 130, 246, 0.2)',
-                                background: status === 'CLOSED' ? 'rgba(15, 23, 42, 0.5)' : '#0f172a'
+                                border: '1px solid var(--border)',
+                                background: 'var(--card)'
                             }}>
                                 {/* Header */}
                                 <div className="flex items-center gap-3" style={{ marginBottom: '24px' }}>
                                     <span style={{ color: status === 'CLOSED' ? '#94a3b8' : '#a78bfa', fontSize: '20px' }}>
                                         {status === 'CLOSED' ? '🏁' : '⚙️'}
                                     </span>
-                                    <h4 style={{ fontSize: '18px', fontWeight: 700, color: 'white', margin: 0 }}>
+                                    <h4 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--foreground)', margin: 0 }}>
                                         {round.roundNumber}회차 {isManager ? '관리' : '대회 정보'}
                                     </h4>
                                 </div>
 
                                 {/* Info */}
                                 <div style={{ marginBottom: '32px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    <p style={{ fontSize: '14px', fontWeight: 500, color: '#e2e8f0', margin: 0 }}>
+                                    <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--muted)', margin: 0 }}>
                                         대회 일시: {dateStr}
                                     </p>
-                                    <p style={{ fontSize: '14px', fontWeight: 500, color: '#e2e8f0', margin: 0 }}>
+                                    <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--muted)', margin: 0 }}>
                                         현재 상태: <span style={{
-                                            color: status === 'OPEN' ? '#60a5fa' : status === 'FINISHED' ? '#ef4444' : status === 'CLOSED' ? '#94a3b8' : '#facc15',
+                                            color: status === 'OPEN' ? 'var(--primary)' : status === 'FINISHED' ? 'var(--destructive)' : status === 'CLOSED' ? 'var(--muted)' : '#92400e',
                                             fontWeight: 700
                                         }}>{statusText}</span>
                                     </p>

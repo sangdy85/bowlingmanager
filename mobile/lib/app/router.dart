@@ -1,3 +1,4 @@
+import 'package:bowlingmanager_mobile/features/club/presentation/club_payment_accounts_screen.dart';
 import 'package:bowlingmanager_mobile/features/auth/presentation/login_screen.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_state.dart';
@@ -301,6 +302,11 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                           teamId: state.pathParameters['teamId']!,
                         ),
                     routes: <RouteBase>[
+                      GoRoute(
+                        path: 'payment-accounts',
+                        builder: (BuildContext context, GoRouterState state) =>
+                            ClubPaymentAccountsScreen(teamId: state.pathParameters['teamId']!),
+                      ),
                       GoRoute(
                         path: 'members',
                         builder: (BuildContext context, GoRouterState state) =>

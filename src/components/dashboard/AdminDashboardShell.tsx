@@ -9,6 +9,8 @@ const navigation = [
     { href: "/admin/centers", label: "볼링장 관리", key: "centers", icon: "⚑" },
     { href: "/admin/teams", label: "팀 관리", key: "teams", icon: "♧" },
     { href: "/admin/users", label: "계정 관리", key: "users", icon: "◎" },
+    { href: "/competitions/manage", label: "대회정보 관리", key: "competitions", icon: "▦" },
+    { href: "/community/moderation", label: "커뮤니티 관리", key: "community", icon: "☷" },
     { href: "/inquiry", label: "문의 관리", key: "inquiry", icon: "✉" },
     { href: "/personal", label: "나의 기록실", key: "personal", icon: "◷" },
 ];

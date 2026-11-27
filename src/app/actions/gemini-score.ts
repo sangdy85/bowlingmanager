@@ -2,6 +2,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { auth } from '@/auth'; // Your auth (NextAuth/Auth.js)
+import { parseScoreImageCrop } from '@/lib/score-image-crop';
 import {
     analyzeScoreboardImage,
     type GeminiParsedRow,
@@ -132,19 +133,40 @@ export async function analyzeScoreboardWithGemini(
             return { success: false, message: "로그인이 필요합니다." };
         }
 
-        const file = formData.get('image') as File;
-        if (!file) {
+        const file = formData.get('image');
+        if (!(file instanceof File) || !file.size) {
             return { success: false, message: "이미지 파일이 없습니다." };
         }
 
+        if (file.size > 9 * 1024 * 1024 || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            return { success: false, message: 'JPEG, PNG, WebP 사진을 9MB 이하로 올려주세요.' };
+        }
         const knownMembersStr = formData.get('knownMembers') as string;
         const knownMembers = knownMembersStr ? JSON.parse(knownMembersStr) : [];
+        if (!Array.isArray(knownMembers) || knownMembers.length > 5000 || knownMembers.some(name => typeof name !== 'string' || name.length > 100)) {
+            return { success: false, message: '팀원 정보를 확인해주세요.' };
+        }
+        const engine = Number(formData.get('engine') || 2);
+        const expectedGameCount = Number(formData.get('gameCount') || 0);
+        const refresh = formData.get('forceRefresh');
+        if (refresh !== null && refresh !== 'true' && refresh !== 'false') {
+            return { success: false, message: '다시 분석 요청을 확인해주세요.' };
+        }
+        let crop;
+        try { crop = parseScoreImageCrop(formData.get('crop')); } catch { return { success: false, message: '사진 영역을 다시 선택해주세요.' }; }
+        if (![2, 3].includes(engine) || !Number.isInteger(expectedGameCount) || expectedGameCount < 0 || expectedGameCount > 12) {
+            return { success: false, message: '분석 방식과 게임 수를 확인해주세요.' };
+        }
 
         return analyzeScoreboardImage({
             userId: session.user.id,
             image: Buffer.from(await file.arrayBuffer()),
             mimeType: file.type || 'image/jpeg',
             knownMembers,
+            engine: engine as 2 | 3,
+            expectedGameCount,
+            crop,
+            forceRefresh: refresh === 'true',
         });
     } catch (error: any) {
         const handled = handleGeminiError(error);

@@ -1,5 +1,4 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import { requireAdminPage } from "@/components/dashboard/requireAdminPage";
 import AdminDashboardShell from "@/components/dashboard/AdminDashboardShell";
 
 export default async function AdminLayout({
@@ -7,11 +6,7 @@ export default async function AdminLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const session = await auth();
-
-    if (session?.user?.role !== "SUPER_ADMIN") {
-        redirect("/");
-    }
+    await requireAdminPage();
 
     return <AdminDashboardShell>{children}</AdminDashboardShell>;
 }

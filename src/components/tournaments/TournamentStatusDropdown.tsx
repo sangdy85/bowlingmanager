@@ -28,8 +28,11 @@ export default function TournamentStatusDropdown({
 
         try {
             setBusy(true);
-            await updateTournamentStatus(tournamentId, status);
+            const result = await updateTournamentStatus(tournamentId, status);
             setIsOpen(false);
+            if (result.band?.status === 'FAILED') {
+                alert(`대회 상태는 변경되었습니다.\n${result.band.message}`);
+            }
         } catch (error) {
             console.error("Failed to update status:", error);
             alert("상태 변경에 실패했습니다.");
@@ -56,6 +59,16 @@ export default function TournamentStatusDropdown({
                         onClick={() => setIsOpen(false)}
                     />
                     <div className={styles.menu}>
+                        {currentStatus === 'PLANNING' && (
+                            <button
+                                type="button"
+                                onClick={() => handleStatusChange('OPEN')}
+                                className={styles.menuButton}
+                                disabled={busy}
+                            >
+                                모집 공개 및 BAND 게시
+                            </button>
+                        )}
                         {currentStatus !== 'FINISHED' && (
                             <button
                                 type="button"

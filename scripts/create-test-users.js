@@ -5,8 +5,9 @@ const prisma = new PrismaClient();
 
 // Local development only: creates test1..test10@test.com with a weak shared password.
 async function main() {
-    if (process.env.NODE_ENV === 'production' || !/^file:\.\/dev\.db|^file:dev\.db/.test(process.env.DATABASE_URL || '')) {
-        console.error('Refusing to run: only for the local dev.db (DATABASE_URL=file:./dev.db) outside production.');
+    // The production database is also named dev.db, so require an explicit opt-in.
+    if (process.env.NODE_ENV === 'production' || process.env.ALLOW_TEST_USERS !== 'yes') {
+        console.error('Refusing to run: set ALLOW_TEST_USERS=yes, and only against a local development database.');
         process.exitCode = 1;
         return;
     }

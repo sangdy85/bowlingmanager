@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { assertEventScoresMutable, EventCompetitionError } from "@/lib/mobile-api/event-competition";
 import { v4 as uuidv4 } from "uuid";
+import { normalizeScoreMemberName } from "@/lib/reviewed-score-import";
 
 export const SCORE_GAME_TYPES = ["정기전", "벙개", "상주", "교류전", "기타"] as const;
 
@@ -207,6 +208,10 @@ export async function saveBulkScoreRows(
 
     const records: ScoreCreateRecord[] = [];
     for (const row of input.rows) {
+        if (!Array.isArray(row.scores) ||
+            row.scores.some(score => !Number.isInteger(score) || score < 0 || score > 300)) {
+            throw new ScoreBulkServiceError("INVALID_SCORE", "모든 점수는 빈칸 없이 0에서 300 사이의 정수여야 합니다.", 400);
+        }
         const member = resolveMember(team.members, row, input.memberMatchMode);
         for (const score of row.scores) {
             records.push({
@@ -252,13 +257,14 @@ function resolveMember(
         return member;
     }
     if (mode === "none") return null;
-    const cleanName = row.memberName.trim();
-    if (mode === "preferred-name") {
-        return members.find((member) => (member.alias || member.user.name) === cleanName) ?? null;
+    const cleanName = normalizeScoreMemberName(row.memberName);
+    const matches = members.filter(member => mode === "preferred-name"
+        ? normalizeScoreMemberName(member.alias || member.user.name) === cleanName
+        : (member.alias && normalizeScoreMemberName(member.alias) === cleanName) || normalizeScoreMemberName(member.user.name) === cleanName);
+    if (matches.length > 1) {
+        throw new ScoreBulkServiceError("AMBIGUOUS_MEMBER", "같은 이름의 회원이 여러 명입니다. 회원을 지정한 뒤 저장해주세요.", 400);
     }
-    return members.find(
-        (member) => member.alias === cleanName || member.user.name === cleanName,
-    ) ?? null;
+    return matches[0] ?? null;
 }
 
 export async function listManageableScoreTeams(userId: string) {

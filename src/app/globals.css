@@ -1,31 +1,36 @@
 @import "./dashboard-tokens.css";
 
 :root {
-  --background: #0b1220;
-  --foreground: #f8fafc;
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
-  --primary-soft: rgba(59, 130, 246, 0.12);
+  color-scheme: light;
+  --background: #f3f6fa;
+  --foreground: #172e47;
+  --primary: #087d68;
+  --primary-hover: #066352;
+  --primary-soft: #e6f3ef;
   --primary-foreground: #ffffff;
-  --secondary: #172033;
-  --secondary-hover: #23314a;
-  --secondary-foreground: #dbe4f0;
-  --accent: #8b5cf6;
+  --secondary: #ffffff;
+  --secondary-hover: #edf2f7;
+  --secondary-foreground: #385169;
+  --accent: #087d68;
   --accent-foreground: #ffffff;
-  --card: #151f31;
-  --card-elevated: #1b273b;
-  --card-foreground: #f1f5f9;
-  --muted: #94a3b8;
-  --destructive: #ef4444;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --card-foreground: #172e47;
+  --muted: #53697f;
+  --destructive: #b42335;
   --destructive-foreground: #ffffff;
-  --input: #1d2a3f;
-  --border: #2c3a52;
-  --border-strong: #41516e;
-  --focus-ring: rgba(96, 165, 250, 0.35);
+  --input: #ffffff;
+  --border: #d5dfe9;
+  --border-strong: #9aafc2;
+  --focus-ring: rgba(8, 125, 104, 0.38);
+  --surface-soft: #edf2f7;
+  --navy: #172e47;
+  --site-content-width: 1280px;
+  --site-gutter: 20px;
   --radius: 0.8rem;
   --radius-lg: 1rem;
-  --shadow-sm: 0 4px 12px rgba(2, 6, 23, 0.12);
-  --shadow-md: 0 12px 30px rgba(2, 6, 23, 0.2);
+  --shadow-sm: 0 2px 6px rgba(23, 46, 71, 0.04);
+  --shadow-md: 0 8px 24px rgba(23, 46, 71, 0.06);
 }
 
 * {
@@ -34,11 +39,9 @@
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top, rgba(59, 130, 246, 0.08), transparent 28rem),
-    var(--background);
+  background: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   margin: 0;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -88,15 +91,23 @@ textarea {
 /* Utilities */
 .container {
   width: 100%;
-  max-width: 1120px;
+  max-width: var(--site-content-width);
   margin: 0 auto;
-  padding: 1rem 1.25rem;
+  padding: 1rem var(--site-gutter);
 }
 
+.site-shell { min-height: 100dvh; }
+.site-main { padding-top: 32px; padding-bottom: 48px; min-width: 0; }
+.input::placeholder, .select::placeholder { color: var(--muted); opacity: 1; }
+input[type=checkbox], input[type=radio] { accent-color: var(--primary); }
+
 @media (max-width: 768px) {
+  :root { --site-gutter: 12px; }
   .container {
-    padding: 0.75rem;
+    padding: 0.75rem var(--site-gutter);
   }
+  .site-main { padding-top: 20px; padding-bottom: 32px; }
+  .input, .select { font-size: 16px; }
 }
 
 /* Responsive Table Wrapper */
@@ -217,12 +228,12 @@ textarea {
 .btn-primary {
   background-color: var(--primary);
   color: var(--primary-foreground);
-  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+  box-shadow: none;
 }
 
 .btn-primary:hover {
   background-color: var(--primary-hover);
-  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.28);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-secondary {
@@ -234,11 +245,13 @@ textarea {
 
 .btn-secondary:hover {
   background-color: var(--secondary-hover);
-  border-color: #52627e;
+  border-color: var(--primary);
 }
 
+.copy-button { min-width: 64px; min-height: 44px; padding: 8px 12px; font-size: .8rem; box-shadow: none; }
+
 .card {
-  background: linear-gradient(180deg, var(--card-elevated), var(--card));
+  background: var(--card);
   color: var(--card-foreground);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
@@ -270,14 +283,14 @@ textarea {
 
 .input:hover,
 .select:hover {
-  border-color: #52627e;
+  border-color: var(--primary);
 }
 
 .input:focus,
 .select:focus {
   outline: none;
-  border-color: #60a5fa;
-  background-color: #213049;
+  border-color: var(--primary);
+  background-color: var(--input);
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
@@ -304,10 +317,7 @@ textarea.input {
 .page-title {
   font-size: 2rem;
   margin-bottom: 2rem;
-  background: linear-gradient(to right, #60a5fa, #a78bfa);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--foreground);
 }
 
 @media (max-width: 768px) {
@@ -315,6 +325,10 @@ textarea.input {
     font-size: 1.25rem;
     margin-bottom: 1rem;
   }
+}
+
+@media (max-width: 768px) {
+  .input, .select { font-size: 16px; }
 }
 
 /* Mobile Font Scale */
@@ -465,7 +479,7 @@ table {
 }
 
 ::selection {
-  background: rgba(59, 130, 246, 0.35);
+  background: var(--primary);
   color: #fff;
 }
 

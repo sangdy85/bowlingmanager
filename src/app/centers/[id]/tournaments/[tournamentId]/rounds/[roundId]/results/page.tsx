@@ -6,6 +6,13 @@ import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { ManagementBackLink } from "@/components/tournaments/ManagementUI";
+import PublicRecordIntro from '@/components/tournaments/PublicRecordIntro';
+import { publicRecordMetadata } from '@/lib/public-record-metadata';
+
+export async function generateMetadata({params}:{params:Promise<{id:string;tournamentId:string;roundId:string}>}) {
+    const {id,tournamentId,roundId}=await params;
+    return publicRecordMetadata(id,tournamentId,'round',roundId);
+}
 
 export default async function ResultsPage({ params, searchParams }: any) {
     const { id: centerId, tournamentId, roundId } = await params;
@@ -25,7 +32,9 @@ export default async function ResultsPage({ params, searchParams }: any) {
         }
     })) as any;
 
-    if (!tournament) notFound();
+    if (!tournament || tournament.centerId !== centerId) notFound();
+    const round=await prisma.leagueRound.findUnique({where:{id:roundId},select:{tournamentId:true,roundNumber:true}});
+    if (!round || round.tournamentId !== tournamentId) notFound();
 
     const isManager = tournament.center.managers.some((m: any) => m.id === session?.user?.id) || tournament.center.ownerId === session?.user?.id;
 
@@ -39,6 +48,7 @@ export default async function ResultsPage({ params, searchParams }: any) {
                         <ManagementBackLink href={backUrl} />
                     </div>
 
+                    <PublicRecordIntro title={`${tournament.name} ${round.roundNumber}주차`} kind="round" base={`/centers/${centerId}/tournaments/${tournamentId}`}/>
                     <LeagueRoundResultTabs
                         round={leagueData}
                         tournamentName={tournament.name}
@@ -62,6 +72,7 @@ export default async function ResultsPage({ params, searchParams }: any) {
                         <ManagementBackLink href={backUrl} />
                     </div>
 
+                    <PublicRecordIntro title={`${tournament.name} ${round.roundNumber}회차`} kind="round" base={`/centers/${centerId}/tournaments/${tournamentId}`}/>
                     <RoundResultLeaderboard
                         data={resultsData}
                         title={tournament.name}

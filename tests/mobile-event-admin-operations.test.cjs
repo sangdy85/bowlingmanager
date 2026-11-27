@@ -30,7 +30,7 @@ function fixture(overrides = {}) {
     competitionStatus: 'GROUPS_READY', competitionGameCount: 3, rankPoints: '{}',
     draftGeneration: 1, currentPickNumber: 1, laneDrawStatus: 'NOT_STARTED',
     team: {
-      ownerId: 'owner', User: [{ id: 'manager' }],
+      ownerId: 'owner', User: [{ id: 'manager' }], bowlerHiddenEnabled: true,
       members: [
         { id: 'm1', userId: 'owner', alias: null, user: { name: '팀장' } },
         { id: 'm2', userId: 'member', alias: null, user: { name: '회원' } },
@@ -106,6 +106,19 @@ test('admin state is owner/manager only and cross-team/member access is hidden',
   await assert.rejects(() => h.service.getEventAdminOperationsState('owner', 'other-team', 'event-1'), error => error.code === 'EVENT_NOT_FOUND');
 });
 
+test('competition admin operations are blocked for teams with Bowler Hidden disabled, except deleting the event', async () => {
+  const disabled = () => fixture({ team: { ...fixture().team, bowlerHiddenEnabled: false } });
+  let h = harness(disabled());
+  await assert.rejects(
+    () => h.service.runEventAdminOperation('owner', 'team-1', 'event-1', { action: 'REOPEN_ATTENDANCE', clearScores: true }),
+    error => error.code === 'FEATURE_DISABLED' && error.status === 404,
+  );
+  assert.equal(h.calls.length, 0);
+  h = harness(disabled());
+  await h.service.runEventAdminOperation('owner', 'team-1', 'event-1', { action: 'DELETE_EVENT', confirmTitle: '가을 정기전' });
+  assert.equal(h.deleted, true);
+});
+
 test('individual groups rollback preserves manual groups and requires explicit score deletion', async () => {
   const h = harness(fixture({ _count: { scores: 4, charges: 0 } }));
   await assert.rejects(
@@ -121,12 +134,15 @@ test('individual groups rollback preserves manual groups and requires explicit s
   assert.equal(h.calls.some(call => call[0] === 'scores.deleteMany'), true);
 });
 
-test('individual manual group clearing is explicit and does not reset attendance', async () => {
+test('individual manual group clearing is explicit, keeps attendance and reopens group setup', async () => {
   const h = harness(fixture());
   const result = await h.service.runEventAdminOperation('manager', 'team-1', 'event-1', { action: 'CLEAR_INDIVIDUAL_GROUPS' });
   assert.equal(result.groupsCleared, true);
+  assert.equal(result.attendancePreserved, true);
   assert.equal(h.calls.filter(call => call[0].endsWith('updateMany')).length, 2);
-  assert.equal(h.event.competitionStatus, 'GROUPS_READY');
+  assert.equal(h.calls.some(call => call[0] === 'lanes.deleteMany'), true);
+  assert.equal(h.event.competitionStatus, 'ATTENDANCE_OPEN');
+  assert.equal(h.event.laneDrawStatus, 'NOT_STARTED');
 });
 
 test('TEAM lane reset returns to finalized while preserving slot configuration', async () => {

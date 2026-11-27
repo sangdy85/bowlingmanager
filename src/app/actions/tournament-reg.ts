@@ -23,7 +23,7 @@ export async function registerForTournament(tournamentId: string, participants: 
 
     // Check if tournament is recruiting
     const now = new Date();
-    let isRecruiting = tournament.status === 'JOINING' || tournament.status === 'ONGOING';
+    let isRecruiting = tournament.status === 'OPEN' || tournament.status === 'JOINING' || tournament.status === 'ONGOING';
 
     if (tournament.type === 'CHAMP') {
         const settings = tournament.settings ? JSON.parse(tournament.settings) : {};

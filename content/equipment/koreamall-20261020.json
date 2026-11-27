@@ -1,0 +1,1950 @@
+{
+  "checkedAt": "2026-10-20",
+  "sourceName": "진승 쇼핑몰",
+  "listingUrl": "https://bowlingkoreamall.com/shop/big_section.php?cno1=1001",
+  "listingTotal": 43,
+  "editorialNote": "진승 쇼핑몰 제품 상세의 사양 이미지와 대표 사진을 확인해 작성. 제조사 직접 자료·회원 후기와 구분하며 가격·재고·출시일·대회 사용 허용을 확정하지 않음.",
+  "products": [
+    {
+      "slug": "storm-iq-focus",
+      "brand": "STORM",
+      "model": "!Q FOCUS",
+      "category": "BALL",
+      "title": "STORM !Q FOCUS · 커버·코어·표면 비교",
+      "summary": "XT Shine Pearl Reactive 커버, C3 Centripetal Control Core와 Power Edge 공장 표면. 진승 쇼핑몰의 MASTER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=3A0A92A3572E8C0B7088EA134DD6AF3F",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "MASTER LINE"
+        ],
+        [
+          "커버",
+          "XT Shine Pearl Reactive"
+        ],
+        [
+          "코어",
+          "C3 Centripetal Control Core"
+        ],
+        [
+          "공장 표면",
+          "Power Edge"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM !Q FOCUS 제품은 MASTER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 XT Shine Pearl Reactive, 코어는 C3 Centripetal Control Core, 공장 표면은 Power Edge다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "IQ TOUR 78/U와 같은 Centripetal Control 명칭이 보여도 커버와 표면은 다르다. !Q FOCUS의 펄 리액티브·Power Edge 표기를 우레탄 제품의 사양으로 읽지 않도록 구분한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-iq-focus.jpg",
+        "alt": "STORM !Q FOCUS 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202610/15/9c23a3037ef34d5715242a3da505360b.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-the-code-black",
+      "brand": "STORM",
+      "model": "THE CODE BLACK",
+      "category": "BALL",
+      "title": "STORM THE CODE BLACK · 커버·코어·표면 비교",
+      "summary": "NeX+ Solid Reactive 커버, RAD4 Core와 1500-grit Polished 공장 표면. 진승 쇼핑몰의 PREMIER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=2F01807AD5D67DE3E46E244252DD55E5",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "PREMIER LINE"
+        ],
+        [
+          "커버",
+          "NeX+ Solid Reactive"
+        ],
+        [
+          "코어",
+          "RAD4 Core"
+        ],
+        [
+          "공장 표면",
+          "1500-grit Polished"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM THE CODE BLACK 제품은 PREMIER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 NeX+ Solid Reactive, 코어는 RAD4 Core, 공장 표면은 1500-grit Polished다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "CODE CRUSH와 모델명이 비슷하지만 이 제품은 NeX+ 솔리드와 RAD4 Core, CODE CRUSH는 R2S Deep Pearl과 RAD4 A.I. Core로 안내된다. CODE라는 이름만으로 같은 공을 다른 색으로 판매한다고 판단하지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-the-code-black.png",
+        "alt": "STORM THE CODE BLACK 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202610/08/c523a5dcb2ce705f02d8debdc9a2674a.png",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "900-global-portal",
+      "brand": "900 GLOBAL",
+      "model": "PORTAL",
+      "category": "BALL",
+      "title": "900 GLOBAL PORTAL · 커버·코어·표면 비교",
+      "summary": "RB 92 Solid 커버, Conduit A.I. Core와 Power Edge 공장 표면. 진승 쇼핑몰의 900 Series 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=2F16FD62828C3604806FC60D69DCF495",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "900 Series"
+        ],
+        [
+          "커버",
+          "RB 92 Solid"
+        ],
+        [
+          "코어",
+          "Conduit A.I. Core"
+        ],
+        [
+          "공장 표면",
+          "Power Edge"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 900 GLOBAL PORTAL 제품은 900 Series 분류로 안내되어 있다. 상세 이미지의 커버 표기는 RB 92 Solid, 코어는 Conduit A.I. Core, 공장 표면은 Power Edge다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "이 목록의 STORM·ROTO GRIP 제품과 달리 900 GLOBAL의 900 Series에 분류된다. 다른 브랜드의 등급 명칭을 같은 성능 척도로 환산하지 않고 커버·코어의 실제 명칭으로 비교한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/900-global-portal.jpg",
+        "alt": "900 GLOBAL PORTAL 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202609/30/ad0326387419ffb08780563d4e2668fd.jpg",
+        "credit": "진승 쇼핑몰 · 900 GLOBAL",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-mix-daybreak",
+      "brand": "STORM",
+      "model": "MIX DAYBREAK",
+      "category": "BALL",
+      "title": "STORM MIX DAYBREAK · 커버·코어·표면 비교",
+      "summary": "U1S Pearl Urethane 커버, Traditional 3-piece Core와 3500-grit Polished 공장 표면. 진승 쇼핑몰의 ICE LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=94562FFCAA342D74138028B39B9D03D0",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "ICE LINE"
+        ],
+        [
+          "커버",
+          "U1S Pearl Urethane"
+        ],
+        [
+          "코어",
+          "Traditional 3-piece Core"
+        ],
+        [
+          "공장 표면",
+          "3500-grit Polished"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM MIX DAYBREAK 제품은 ICE LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 U1S Pearl Urethane, 코어는 Traditional 3-piece Core, 공장 표면은 3500-grit Polished다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "MIX 계열이지만 폴리에스터 커버인 ICE 30과는 소재 표기가 다르다. TEAL·ULTRA SILVER·R/W/N 모델과 비교할 때 색상명과 구매 무게, 각 원문 사양을 함께 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-mix-daybreak.jpg",
+        "alt": "STORM MIX DAYBREAK 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202609/16/da5464eb3fd93621fc8696f8633e9155.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-equinox-hybrid",
+      "brand": "STORM",
+      "model": "EQUINOX HYBRID",
+      "category": "BALL",
+      "title": "STORM EQUINOX HYBRID · 커버·코어·표면 비교",
+      "summary": "A2S Hybrid Reactive 커버, Solarion A.I. Core와 Power Edge 공장 표면. 진승 쇼핑몰의 PREMIER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=B88524C1561B782A1A78BD24D1712FFB",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "PREMIER LINE"
+        ],
+        [
+          "커버",
+          "A2S Hybrid Reactive"
+        ],
+        [
+          "코어",
+          "Solarion A.I. Core"
+        ],
+        [
+          "공장 표면",
+          "Power Edge"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM EQUINOX HYBRID 제품은 PREMIER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 A2S Hybrid Reactive, 코어는 Solarion A.I. Core, 공장 표면은 Power Edge다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "HYBRID는 이 제품의 커버 표기에 포함된다. 같은 목록의 솔리드·펄 모델과 구분하고, 특정 표면 명칭 하나만으로 자신의 레인에 맞는다고 판단하기보다 현재 사용하는 공의 사양과 나란히 비교한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-equinox-hybrid.jpg",
+        "alt": "STORM EQUINOX HYBRID 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202609/04/e7f50833ea687e07e8255716887a0d22.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-concept",
+      "brand": "STORM",
+      "model": "CONCEPT",
+      "category": "BALL",
+      "title": "STORM CONCEPT · 커버·코어·표면 비교",
+      "summary": "ARC Pearl Reactive 커버, Radius Weight Block와 1000-grit Abralon 공장 표면. 진승 쇼핑몰의 SPI-Lab 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=FBBB76A10E33A4DC61102A3276927C71",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "SPI-Lab"
+        ],
+        [
+          "커버",
+          "ARC Pearl Reactive"
+        ],
+        [
+          "코어",
+          "Radius Weight Block"
+        ],
+        [
+          "공장 표면",
+          "1000-grit Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM CONCEPT 제품은 SPI-Lab 분류로 안내되어 있다. 상세 이미지의 커버 표기는 ARC Pearl Reactive, 코어는 Radius Weight Block, 공장 표면은 1000-grit Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "CONCEPT PURPLE의 ARC+ Pearl과 이 제품의 ARC Pearl은 원문 커버 명칭이 다르다. 같은 Radius 명칭과 1000-grit 표면을 사용한다고 해서 두 모델의 사양을 그대로 바꿔 읽지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-concept.jpg",
+        "alt": "STORM CONCEPT 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202604/20/5c6b6789421ff48a3a3d84f54139ea8b.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-lock-axis",
+      "brand": "STORM",
+      "model": "LOCK AXIS",
+      "category": "BALL",
+      "title": "STORM LOCK AXIS · 커버·코어·표면 비교",
+      "summary": "N2X Hybrid Reactive 커버, RAD-X Core와 2000-grit Abralon 공장 표면. 진승 쇼핑몰의 PREMIER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=A46271B12BD598C1859E0B7118DAD925",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "PREMIER LINE"
+        ],
+        [
+          "커버",
+          "N2X Hybrid Reactive"
+        ],
+        [
+          "코어",
+          "RAD-X Core"
+        ],
+        [
+          "공장 표면",
+          "2000-grit Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM LOCK AXIS 제품은 PREMIER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 N2X Hybrid Reactive, 코어는 RAD-X Core, 공장 표면은 2000-grit Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "LOCK ON도 RAD-X Core로 안내되지만 커버와 표면은 RX Pearl·Power Edge다. AXIS의 N2X 하이브리드·2000-grit 표기를 구분하면 LOCK 계열 안에서 비교할 항목이 명확해진다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-lock-axis.jpg",
+        "alt": "STORM LOCK AXIS 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202608/13/0273f611ad2f77d56ec6d38ea4d9715a.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-phaze-crimson",
+      "brand": "STORM",
+      "model": "PHAZE CRIMSON",
+      "category": "BALL",
+      "title": "STORM PHAZE CRIMSON · 커버·코어·표면 비교",
+      "summary": "NeX Pearl Reactive 커버, Velocity A.I. Core와 2000-grit Abralon 공장 표면. 진승 쇼핑몰의 MASTER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=AB8E9EF52F45F5CCD819E0D96F017447",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "MASTER LINE"
+        ],
+        [
+          "커버",
+          "NeX Pearl Reactive"
+        ],
+        [
+          "코어",
+          "Velocity A.I. Core"
+        ],
+        [
+          "공장 표면",
+          "2000-grit Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM PHAZE CRIMSON 제품은 MASTER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 NeX Pearl Reactive, 코어는 Velocity A.I. Core, 공장 표면은 2000-grit Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "PHAZE라는 시리즈 이름만으로 다른 PHAZE 모델의 커버를 적용하면 안 된다. 이 제품은 NeX 펄과 2000-grit Abralon 표기가 함께 있으므로 펄이라는 단어를 무조건 유광 표면으로 해석하지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-phaze-crimson.jpg",
+        "alt": "STORM PHAZE CRIMSON 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202608/07/41c177e3840bc79f5e7224dd571fe328.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "roto-grip-hustle-sos",
+      "brand": "ROTO GRIP",
+      "model": "HUSTLE SOS",
+      "category": "BALL",
+      "title": "ROTO GRIP HUSTLE SOS · 커버·코어·표면 비교",
+      "summary": "VTC Hybrid Reactive 커버, Hustle Core와 4000 Abralon 공장 표면. 진승 쇼핑몰의 HP-1 LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=8CF290E6F48EF39E24B2D88E1DC7B5DF",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "HP-1 LINE"
+        ],
+        [
+          "커버",
+          "VTC Hybrid Reactive"
+        ],
+        [
+          "코어",
+          "Hustle Core"
+        ],
+        [
+          "공장 표면",
+          "4000 Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 ROTO GRIP HUSTLE SOS 제품은 HP-1 LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 VTC Hybrid Reactive, 코어는 Hustle Core, 공장 표면은 4000 Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "HUSTLE VP와 코어 명칭은 같지만 SOS는 하이브리드·4000 Abralon, VP는 펄·Power Edge로 안내된다. 같은 HUSTLE 제품을 찾을 때 뒤의 SOS·VP까지 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/roto-grip-hustle-sos.jpg",
+        "alt": "ROTO GRIP HUSTLE SOS 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202608/06/9380e3a9f982ebdd7f7ef35670c6acee.jpg",
+        "credit": "진승 쇼핑몰 · ROTO GRIP",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "roto-grip-attention-b-p",
+      "brand": "ROTO GRIP",
+      "model": "ATTENTION B/P",
+      "category": "BALL",
+      "title": "ROTO GRIP ATTENTION B/P · 커버·코어·표면 비교",
+      "summary": "V-RT Pearl Reactive 커버, Momentous Core와 1500-grit Polished 공장 표면. 진승 쇼핑몰의 HP-4 LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=776AF9671DBFA3AC15C6E0711001BDEA",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "HP-4 LINE"
+        ],
+        [
+          "커버",
+          "V-RT Pearl Reactive"
+        ],
+        [
+          "코어",
+          "Momentous Core"
+        ],
+        [
+          "공장 표면",
+          "1500-grit Polished"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 ROTO GRIP ATTENTION B/P 제품은 HP-4 LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 V-RT Pearl Reactive, 코어는 Momentous Core, 공장 표면은 1500-grit Polished다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "ATTENTION 78/U와 Momentous Core 명칭이 같아도 이 제품은 펄 리액티브 커버다. 78/U의 우레탄 커버와 서로 바꿔 읽지 않고 B/P라는 모델 표기까지 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/roto-grip-attention-b-p.jpg",
+        "alt": "ROTO GRIP ATTENTION B/P 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202607/31/87a1e1e3cbaffb2e26bc4eacd6fc2a67.jpg",
+        "credit": "진승 쇼핑몰 · ROTO GRIP",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-ultimate-motor",
+      "brand": "STORM",
+      "model": "ULTIMATE MOTOR",
+      "category": "BALL",
+      "title": "STORM ULTIMATE MOTOR · 커버·코어·표면 비교",
+      "summary": "N2X Solid Reactive 커버, Torque A.I. Core와 2000-grit Abralon 공장 표면. 진승 쇼핑몰의 PREMIER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=A2B58F07313388CD23868784A6759B64",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "PREMIER LINE"
+        ],
+        [
+          "커버",
+          "N2X Solid Reactive"
+        ],
+        [
+          "코어",
+          "Torque A.I. Core"
+        ],
+        [
+          "공장 표면",
+          "2000-grit Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM ULTIMATE MOTOR 제품은 PREMIER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 N2X Solid Reactive, 코어는 Torque A.I. Core, 공장 표면은 2000-grit Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "LOCK AXIS에도 N2X라는 명칭이 있지만 AXIS는 하이브리드, ULTIMATE MOTOR는 솔리드로 표기된다. 같은 커버 계열 이름과 별도로 솔리드·하이브리드 구분 및 코어를 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-ultimate-motor.jpg",
+        "alt": "STORM ULTIMATE MOTOR 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202607/03/d327e143fcbd63e239162bde313e1065.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-mix-teal",
+      "brand": "STORM",
+      "model": "MIX TEAL",
+      "category": "BALL",
+      "title": "STORM MIX TEAL · 커버·코어·표면 비교",
+      "summary": "U1S Pearl Urethane 커버, Traditional 3-piece Core와 3500-grit Polished 공장 표면. 진승 쇼핑몰의 ICE LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=5F75E8EEA894213D75A7C471116A3378",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "ICE LINE"
+        ],
+        [
+          "커버",
+          "U1S Pearl Urethane"
+        ],
+        [
+          "코어",
+          "Traditional 3-piece Core"
+        ],
+        [
+          "공장 표면",
+          "3500-grit Polished"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM MIX TEAL 제품은 ICE LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 U1S Pearl Urethane, 코어는 Traditional 3-piece Core, 공장 표면은 3500-grit Polished다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "MIX DAYBREAK와 함께 U1S Pearl Urethane으로 안내되는 색상 모델이다. 검정색 MIX-BLACKOUT의 원문은 Hybrid Urethane으로 표기되므로 MIX라는 이름만으로 커버 소재의 세부 유형까지 같다고 보지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-mix-teal.jpg",
+        "alt": "STORM MIX TEAL 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202607/02/eb32b174eaf01703ef9e9e170c39a230.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "roto-grip-transform-pearl",
+      "brand": "ROTO GRIP",
+      "model": "TRANSFORM Pearl",
+      "category": "BALL",
+      "title": "ROTO GRIP TRANSFORM Pearl · 커버·코어·표면 비교",
+      "summary": "MicroTrax Pearl Reactive 커버, Morph-Wing Core와 Power Edge 공장 표면. 진승 쇼핑몰의 HP-5 LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=8480CE3751484EF6EA7471AD04EAA9A7",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "HP-5 LINE"
+        ],
+        [
+          "커버",
+          "MicroTrax Pearl Reactive"
+        ],
+        [
+          "코어",
+          "Morph-Wing Core"
+        ],
+        [
+          "공장 표면",
+          "Power Edge"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 ROTO GRIP TRANSFORM Pearl 제품은 HP-5 LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 MicroTrax Pearl Reactive, 코어는 Morph-Wing Core, 공장 표면은 Power Edge다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "원문 모델명에는 Pearl이 포함된다. 다른 TRANSFORM 또는 TRANSFORMER 제품을 찾고 있다면 MicroTrax Pearl과 Morph-Wing이라는 두 명칭까지 맞는지 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/roto-grip-transform-pearl.jpg",
+        "alt": "ROTO GRIP TRANSFORM Pearl 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202606/25/59dcff2a3bee38909f6b8b7cc56c78eb.jpg",
+        "credit": "진승 쇼핑몰 · ROTO GRIP",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-physix-burst",
+      "brand": "STORM",
+      "model": "PHYSIX BURST",
+      "category": "BALL",
+      "title": "STORM PHYSIX BURST · 커버·코어·표면 비교",
+      "summary": "RX Solid Reactive 커버, Atomic Core와 2000-grit Abralon 공장 표면. 진승 쇼핑몰의 PREMIER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=35BFA72D9899BF43087E4EA42E4A6423",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "PREMIER LINE"
+        ],
+        [
+          "커버",
+          "RX Solid Reactive"
+        ],
+        [
+          "코어",
+          "Atomic Core"
+        ],
+        [
+          "공장 표면",
+          "2000-grit Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM PHYSIX BURST 제품은 PREMIER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 RX Solid Reactive, 코어는 Atomic Core, 공장 표면은 2000-grit Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "같은 목록의 LOCK ON은 RX Pearl, PHYSIX BURST는 RX Solid로 표기된다. PHYSIX의 다른 모델과도 BURST라는 이름, Atomic 코어, 표면 사양을 함께 대조한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-physix-burst.jpg",
+        "alt": "STORM PHYSIX BURST 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202606/15/9bd712ad24bc53be700c71e250ad8c57.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "roto-grip-hustle-vp",
+      "brand": "ROTO GRIP",
+      "model": "HUSTLE VP",
+      "category": "BALL",
+      "title": "ROTO GRIP HUSTLE VP · 커버·코어·표면 비교",
+      "summary": "VTC Pearl Reactive 커버, Hustle Core와 Power Edge 공장 표면. 진승 쇼핑몰의 HP-1 LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=EF864EBBB6F6386038671578E2548CDF",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "HP-1 LINE"
+        ],
+        [
+          "커버",
+          "VTC Pearl Reactive"
+        ],
+        [
+          "코어",
+          "Hustle Core"
+        ],
+        [
+          "공장 표면",
+          "Power Edge"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 ROTO GRIP HUSTLE VP 제품은 HP-1 LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 VTC Pearl Reactive, 코어는 Hustle Core, 공장 표면은 Power Edge다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "HUSTLE SOS와 공통 코어 명칭을 사용하지만 커버와 공장 표면이 다르다. SOS의 VTC Hybrid·4000 Abralon과 VP의 VTC Pearl·Power Edge를 구분해 비교한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/roto-grip-hustle-vp.jpg",
+        "alt": "ROTO GRIP HUSTLE VP 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202606/11/909aa6eb3a7e23167dd4290ca136b198.jpg",
+        "credit": "진승 쇼핑몰 · ROTO GRIP",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-epic-summit",
+      "brand": "STORM",
+      "model": "EPIC SUMMIT",
+      "category": "BALL",
+      "title": "STORM EPIC SUMMIT · 커버·코어·표면 비교",
+      "summary": "NRG-2 Pearl Reactive 커버, Centripetal HD A.I. Core와 1500-grit Polished 공장 표면. 진승 쇼핑몰의 MASTER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=2FCF433E2EF21FFDB3745D4A1AD2FAF7",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "MASTER LINE"
+        ],
+        [
+          "커버",
+          "NRG-2 Pearl Reactive"
+        ],
+        [
+          "코어",
+          "Centripetal HD A.I. Core"
+        ],
+        [
+          "공장 표면",
+          "1500-grit Polished"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM EPIC SUMMIT 제품은 MASTER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 NRG-2 Pearl Reactive, 코어는 Centripetal HD A.I. Core, 공장 표면은 1500-grit Polished다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "Centripetal이라는 이름이 보이더라도 !Q 계열의 Centripetal Control과 이 제품의 HD A.I.는 원문 표기가 다르다. SUMMIT 계열 제품을 찾을 때 EPIC이라는 모델명까지 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-epic-summit.png",
+        "alt": "STORM EPIC SUMMIT 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202606/09/9dce61f0d9c09eac248f39c71ef41d5d.png",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-tropical-surge-silver-purple",
+      "brand": "STORM",
+      "model": "TROPICAL SURGE SILVER/PURPLE",
+      "category": "BALL",
+      "title": "STORM TROPICAL SURGE SILVER/PURPLE · 커버·코어·표면 비교",
+      "summary": "Reactor Pearl Reactive 커버, Surge Core와 Power Edge 공장 표면. 진승 쇼핑몰의 TROPICAL LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=51331FCD89D45304A118755678DA4A8B",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "TROPICAL LINE"
+        ],
+        [
+          "커버",
+          "Reactor Pearl Reactive"
+        ],
+        [
+          "코어",
+          "Surge Core"
+        ],
+        [
+          "공장 표면",
+          "Power Edge"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM TROPICAL SURGE SILVER/PURPLE 제품은 TROPICAL LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 Reactor Pearl Reactive, 코어는 Surge Core, 공장 표면은 Power Edge다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "같은 TROPICAL SURGE라도 BLACK/BLUE/PINK의 표는 Reactor Solid로, 이 색상은 Reactor Pearl로 안내된다. 색상만 선택하는 것으로 생각하지 말고 각 모델의 커버 표기를 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-tropical-surge-silver-purple.jpg",
+        "alt": "STORM TROPICAL SURGE SILVER/PURPLE 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202606/09/f6892105912fe18a66f19c5fd40077fe.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-hy-road",
+      "brand": "STORM",
+      "model": "HY-ROAD",
+      "category": "BALL",
+      "title": "STORM HY-ROAD · 커버·코어·표면 비교",
+      "summary": "R2S Hybrid Reactive 커버, Inverted Fe2 Technology와 Reacta Gloss 공장 표면. 진승 쇼핑몰의 THUNDER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=E515DF0D202AE52FCEBB14295743063B",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "THUNDER LINE"
+        ],
+        [
+          "커버",
+          "R2S Hybrid Reactive"
+        ],
+        [
+          "코어",
+          "Inverted Fe2 Technology"
+        ],
+        [
+          "공장 표면",
+          "Reacta Gloss"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM HY-ROAD 제품은 THUNDER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 R2S Hybrid Reactive, 코어는 Inverted Fe2 Technology, 공장 표면은 Reacta Gloss다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "HY-ROAD BOOST와 코어 명칭은 같지만 이 제품은 R2S Hybrid·Reacta Gloss, BOOST는 NRG Solid·2000-grit Abralon이다. 오래된 다른 HY-ROAD 자료의 표면 정보를 그대로 적용하지 말고 이번 원문을 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-hy-road.png",
+        "alt": "STORM HY-ROAD 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/201904/12/c49a281fa489585f7b6935a341d4e8d3.png",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-concept-purple",
+      "brand": "STORM",
+      "model": "CONCEPT PURPLE",
+      "category": "BALL",
+      "title": "STORM CONCEPT PURPLE · 커버·코어·표면 비교",
+      "summary": "ARC+ Pearl Reactive 커버, Radius Weight Block와 1000-grit Abralon 공장 표면. 진승 쇼핑몰의 SPI-Lab 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=75F3A8FBBB2AF06371E02EA8BCE5AA65",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "SPI-Lab"
+        ],
+        [
+          "커버",
+          "ARC+ Pearl Reactive"
+        ],
+        [
+          "코어",
+          "Radius Weight Block"
+        ],
+        [
+          "공장 표면",
+          "1000-grit Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM CONCEPT PURPLE 제품은 SPI-Lab 분류로 안내되어 있다. 상세 이미지의 커버 표기는 ARC+ Pearl Reactive, 코어는 Radius Weight Block, 공장 표면은 1000-grit Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "일반 CONCEPT의 커버는 ARC Pearl, PURPLE은 ARC+ Pearl로 구분된다. 이름 끝의 PURPLE을 단순 색상 옵션으로 넘기지 말고 커버 명칭의 + 표기까지 함께 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-concept-purple.jpg",
+        "alt": "STORM CONCEPT PURPLE 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202605/28/b3b9fe39da1f3b09c9fa3f3ba1ec1860.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "roto-grip-attention-78-u",
+      "brand": "ROTO GRIP",
+      "model": "ATTENTION 78/U",
+      "category": "BALL",
+      "title": "ROTO GRIP ATTENTION 78/U · 커버·코어·표면 비교",
+      "summary": "XS 78 Solid Urethane 커버, Momentous Core와 1000-grit Abralon 공장 표면. 진승 쇼핑몰의 HP-4 LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=4218470A524EF1991202BB63ABEE5D72",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "HP-4 LINE"
+        ],
+        [
+          "커버",
+          "XS 78 Solid Urethane"
+        ],
+        [
+          "코어",
+          "Momentous Core"
+        ],
+        [
+          "공장 표면",
+          "1000-grit Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 ROTO GRIP ATTENTION 78/U 제품은 HP-4 LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 XS 78 Solid Urethane, 코어는 Momentous Core, 공장 표면은 1000-grit Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "ATTENTION B/P의 펄 리액티브 커버와 구분되는 우레탄 모델이다. 78/U라는 모델명만으로 특정 대회의 사용 허용 여부를 확정하지 않고 참가하려는 대회의 현행 장비 규정을 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/roto-grip-attention-78-u.jpg",
+        "alt": "ROTO GRIP ATTENTION 78/U 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202605/26/dfc7273db328920034319e3c5b1a5de6.jpg",
+        "credit": "진승 쇼핑몰 · ROTO GRIP",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-code-crush",
+      "brand": "STORM",
+      "model": "CODE CRUSH",
+      "category": "BALL",
+      "title": "STORM CODE CRUSH · 커버·코어·표면 비교",
+      "summary": "R2S Deep Pearl 커버, RAD4 A.I. Core와 Power Edge 공장 표면. 진승 쇼핑몰의 PREMIER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=E58E3A33512DD5CBB9E07DAA9CCA8D19",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "PREMIER LINE"
+        ],
+        [
+          "커버",
+          "R2S Deep Pearl"
+        ],
+        [
+          "코어",
+          "RAD4 A.I. Core"
+        ],
+        [
+          "공장 표면",
+          "Power Edge"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM CODE CRUSH 제품은 PREMIER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 R2S Deep Pearl, 코어는 RAD4 A.I. Core, 공장 표면은 Power Edge다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "THE CODE BLACK의 NeX+ Solid·RAD4 Core와 구분한다. RAD4와 RAD4 A.I.라는 원문 코어 명칭, 커버, 표면을 각각 따로 기록하면 같은 CODE 계열을 비교하기 쉽다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-code-crush.png",
+        "alt": "STORM CODE CRUSH 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202605/15/276dea283735fb563d0257472da422a0.png",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-monsoon",
+      "brand": "STORM",
+      "model": "MONSOON",
+      "category": "BALL",
+      "title": "STORM MONSOON · 커버·코어·표면 비교",
+      "summary": "Reactor Solid Reactive 커버, Atmos A.I. Core와 2000-grit Abralon 공장 표면. 진승 쇼핑몰의 HOT LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=916CBD6F20415C2214D441DEAEFEDF75",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "HOT LINE"
+        ],
+        [
+          "커버",
+          "Reactor Solid Reactive"
+        ],
+        [
+          "코어",
+          "Atmos A.I. Core"
+        ],
+        [
+          "공장 표면",
+          "2000-grit Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM MONSOON 제품은 HOT LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 Reactor Solid Reactive, 코어는 Atmos A.I. Core, 공장 표면은 2000-grit Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "Reactor라는 커버 이름은 TROPICAL SURGE에도 등장하지만 MONSOON은 Atmos A.I. Core로 안내된다. 커버 계열 하나만으로 다른 제품과 같은 구성이라고 보지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-monsoon.jpg",
+        "alt": "STORM MONSOON 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202605/12/c760b5c71d9b699fe25aa667c64bf96d.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "roto-grip-exit-rush",
+      "brand": "ROTO GRIP",
+      "model": "EXIT RUSH",
+      "category": "BALL",
+      "title": "ROTO GRIP EXIT RUSH · 커버·코어·표면 비교",
+      "summary": "U-RT Pearl Reactive 커버, Defense A.I. Core와 Power Edge 공장 표면. 진승 쇼핑몰의 HP-4 LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=2A774E39028F01DDDA0A84AA85D069E8",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "HP-4 LINE"
+        ],
+        [
+          "커버",
+          "U-RT Pearl Reactive"
+        ],
+        [
+          "코어",
+          "Defense A.I. Core"
+        ],
+        [
+          "공장 표면",
+          "Power Edge"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 ROTO GRIP EXIT RUSH 제품은 HP-4 LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 U-RT Pearl Reactive, 코어는 Defense A.I. Core, 공장 표면은 Power Edge다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "EXIT라는 제품군 이름에 더해 RUSH와 Defense A.I. Core를 확인한다. 이 글은 표면·커버·코어를 비교하기 위한 자료이며 판매처의 반응 설명을 모든 투구에 대한 결과 보장으로 사용하지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/roto-grip-exit-rush.jpg",
+        "alt": "ROTO GRIP EXIT RUSH 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202604/30/e8250cde6b865c4583c170bf79eed90a.jpg",
+        "credit": "진승 쇼핑몰 · ROTO GRIP",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-iq-tour-78-u",
+      "brand": "STORM",
+      "model": "IQ TOUR 78/U",
+      "category": "BALL",
+      "title": "STORM IQ TOUR 78/U · 커버·코어·표면 비교",
+      "summary": "Controll 78 Solid Urethane 커버, C3 Centripetal Control Core와 500-grit Abralon 공장 표면. 진승 쇼핑몰의 MASTER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=2B0AA0D9E30EA3A55FC271CED8364536",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "MASTER LINE"
+        ],
+        [
+          "커버",
+          "Controll 78 Solid Urethane"
+        ],
+        [
+          "코어",
+          "C3 Centripetal Control Core"
+        ],
+        [
+          "공장 표면",
+          "500-grit Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM IQ TOUR 78/U 제품은 MASTER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 Controll 78 Solid Urethane, 코어는 C3 Centripetal Control Core, 공장 표면은 500-grit Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "!Q FOCUS는 XT Shine Pearl·Power Edge, IQ TOUR 78/U는 Controll 78 우레탄·500-grit Abralon으로 구분된다. 우레탄이라는 소재와 대회별 사용 가능 여부도 별개 항목으로 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-iq-tour-78-u.jpg",
+        "alt": "STORM IQ TOUR 78/U 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202401/08/50e6a8d40dfb0161ac856080084ece45.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-level-up",
+      "brand": "STORM",
+      "model": "LEVEL UP",
+      "category": "BALL",
+      "title": "STORM LEVEL UP · 커버·코어·표면 비교",
+      "summary": "RPM-XT Solid 커버, Equalizer A.I. Core와 1000-grit Abralon 공장 표면. 진승 쇼핑몰의 SPI-Lab 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=6A992AFB7A430EB66B188393AAFE3105",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "SPI-Lab"
+        ],
+        [
+          "커버",
+          "RPM-XT Solid"
+        ],
+        [
+          "코어",
+          "Equalizer A.I. Core"
+        ],
+        [
+          "공장 표면",
+          "1000-grit Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM LEVEL UP 제품은 SPI-Lab 분류로 안내되어 있다. 상세 이미지의 커버 표기는 RPM-XT Solid, 코어는 Equalizer A.I. Core, 공장 표면은 1000-grit Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "판매처의 SPI-Lab 분류에 있는 모델이다. 같은 분류의 CONCEPT는 ARC Pearl·Radius이고 LEVEL UP은 RPM-XT Solid·Equalizer A.I.로, 분류 이름이 같아도 구성이 다르다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-level-up.jpg",
+        "alt": "STORM LEVEL UP 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202604/20/4e72273604c195dd6e312454e9b722be.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-hy-road-boost",
+      "brand": "STORM",
+      "model": "HY-ROAD BOOST",
+      "category": "BALL",
+      "title": "STORM HY-ROAD BOOST · 커버·코어·표면 비교",
+      "summary": "NRG Solid Reactive 커버, Inverted Fe2 Technology와 2000-grit Abralon 공장 표면. 진승 쇼핑몰의 THUNDER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=AF5906F2FB4338B7CB15760CDBC48D0D",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "THUNDER LINE"
+        ],
+        [
+          "커버",
+          "NRG Solid Reactive"
+        ],
+        [
+          "코어",
+          "Inverted Fe2 Technology"
+        ],
+        [
+          "공장 표면",
+          "2000-grit Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM HY-ROAD BOOST 제품은 THUNDER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 NRG Solid Reactive, 코어는 Inverted Fe2 Technology, 공장 표면은 2000-grit Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "일반 HY-ROAD와 Inverted Fe2 명칭을 공유하지만 커버와 표면은 다르다. BOOST의 NRG Solid·2000-grit 표기를 일반 HY-ROAD의 R2S Hybrid·Reacta Gloss와 구분한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-hy-road-boost.jpg",
+        "alt": "STORM HY-ROAD BOOST 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202604/13/21ec64164e2c0f057f60d66136ea106b.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "roto-grip-gremlin-tour-x",
+      "brand": "ROTO GRIP",
+      "model": "GREMLIN TOUR-X",
+      "category": "BALL",
+      "title": "ROTO GRIP GREMLIN TOUR-X · 커버·코어·표면 비교",
+      "summary": "V-RT Hybrid Reactive 커버, Rondure TOUR-X Core와 4000 Abralon 공장 표면. 진승 쇼핑몰의 HP-3 LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=2544D963FBD32A5E0649E7A244CC921B",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "HP-3 LINE"
+        ],
+        [
+          "커버",
+          "V-RT Hybrid Reactive"
+        ],
+        [
+          "코어",
+          "Rondure TOUR-X Core"
+        ],
+        [
+          "공장 표면",
+          "4000 Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 ROTO GRIP GREMLIN TOUR-X 제품은 HP-3 LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 V-RT Hybrid Reactive, 코어는 Rondure TOUR-X Core, 공장 표면은 4000 Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "TOUR-X는 원문 코어 명칭에도 포함된다. GREMLIN이라는 이름만으로 다른 모델의 수치를 가져오지 않으며, 판매 페이지 무게 옵션과 사양표의 전체 무게 구성을 별도로 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/roto-grip-gremlin-tour-x.png",
+        "alt": "ROTO GRIP GREMLIN TOUR-X 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202603/27/317660a8d2e41e306464a3b005b05c24.png",
+        "credit": "진승 쇼핑몰 · ROTO GRIP",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-pitch-black-78-u",
+      "brand": "STORM",
+      "model": "PITCH BLACK 78/U",
+      "category": "BALL",
+      "title": "STORM PITCH BLACK 78/U · 커버·코어·표면 비교",
+      "summary": "Controll 2-78 Urethane 커버, Capacitor Core와 1000-grit Abralon 공장 표면. 진승 쇼핑몰의 THUNDER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=437389B63CA307F2500B8B031957A824",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "THUNDER LINE"
+        ],
+        [
+          "커버",
+          "Controll 2-78 Urethane"
+        ],
+        [
+          "코어",
+          "Capacitor Core"
+        ],
+        [
+          "공장 표면",
+          "1000-grit Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM PITCH BLACK 78/U 제품은 THUNDER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 Controll 2-78 Urethane, 코어는 Capacitor Core, 공장 표면은 1000-grit Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "일반 PITCH BLACK의 Controll Solid Urethane과 달리 78/U 원문은 Controll 2-78 Urethane으로 표기된다. 외형과 코어 이름이 비슷하더라도 정확한 모델명과 참가 대회의 장비 규정을 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-pitch-black-78-u.jpg",
+        "alt": "STORM PITCH BLACK 78/U 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202603/16/432b2aa82c9b8d5cf8921b233de3a40b.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "roto-grip-gem-blue-sapphire",
+      "brand": "ROTO GRIP",
+      "model": "GEM BLUE SAPPHIRE",
+      "category": "BALL",
+      "title": "ROTO GRIP GEM BLUE SAPPHIRE · 커버·코어·표면 비교",
+      "summary": "Hyper-Response Pearl Reactive 커버, Defiant LRG Core와 2000-grit Abralon 공장 표면. 진승 쇼핑몰의 HP-4 LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=6F663611EC21E8F820B91DA1ABF9AD1F",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "HP-4 LINE"
+        ],
+        [
+          "커버",
+          "Hyper-Response Pearl Reactive"
+        ],
+        [
+          "코어",
+          "Defiant LRG Core"
+        ],
+        [
+          "공장 표면",
+          "2000-grit Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 ROTO GRIP GEM BLUE SAPPHIRE 제품은 HP-4 LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 Hyper-Response Pearl Reactive, 코어는 Defiant LRG Core, 공장 표면은 2000-grit Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "GEM 계열 안에서도 BLUE SAPPHIRE 모델의 커버는 Hyper-Response Pearl로 명시돼 있다. 펄이라는 분류와 2000-grit 공장 표면을 함께 확인하고 다른 GEM 제품의 사양과 혼동하지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/roto-grip-gem-blue-sapphire.jpg",
+        "alt": "ROTO GRIP GEM BLUE SAPPHIRE 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202512/17/6f952b38a18ddbb4451b58b709abe684.jpg",
+        "credit": "진승 쇼핑몰 · ROTO GRIP",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-prime-gate",
+      "brand": "STORM",
+      "model": "PRIME GATE",
+      "category": "BALL",
+      "title": "STORM PRIME GATE · 커버·코어·표면 비교",
+      "summary": "XT Solid Reactive 커버, Ignition Core와 Xtra Shine 공장 표면. 진승 쇼핑몰의 PREMIER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=A8D3B1E36A14DA038A06F675D1693DD8",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "PREMIER LINE"
+        ],
+        [
+          "커버",
+          "XT Solid Reactive"
+        ],
+        [
+          "코어",
+          "Ignition Core"
+        ],
+        [
+          "공장 표면",
+          "Xtra Shine"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM PRIME GATE 제품은 PREMIER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 XT Solid Reactive, 코어는 Ignition Core, 공장 표면은 Xtra Shine다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "THE CODE BLACK과는 커버·코어·표면 명칭이 모두 다르다. 검정색 외관이나 상위 라인이라는 공통점보다 XT Solid·Ignition·Xtra Shine이라는 실제 구성으로 구분한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-prime-gate.jpg",
+        "alt": "STORM PRIME GATE 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202510/31/dbc5f0d060570c8188e40008aaf36b30.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-lock-on",
+      "brand": "STORM",
+      "model": "LOCK ON",
+      "category": "BALL",
+      "title": "STORM LOCK ON · 커버·코어·표면 비교",
+      "summary": "RX Pearl Reactive 커버, RAD-X Core와 Power Edge 공장 표면. 진승 쇼핑몰의 PREMIER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=840C3EDA3EA42ECD90AEB3434F3510B7",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "PREMIER LINE"
+        ],
+        [
+          "커버",
+          "RX Pearl Reactive"
+        ],
+        [
+          "코어",
+          "RAD-X Core"
+        ],
+        [
+          "공장 표면",
+          "Power Edge"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM LOCK ON 제품은 PREMIER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 RX Pearl Reactive, 코어는 RAD-X Core, 공장 표면은 Power Edge다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "LOCK AXIS와 RAD-X Core를 공유하지만 AXIS는 N2X Hybrid·2000-grit Abralon, LOCK ON은 RX Pearl·Power Edge다. 같은 LOCK 계열을 찾을 때 ON과 AXIS를 구분한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-lock-on.jpg",
+        "alt": "STORM LOCK ON 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202508/05/adf29b00b36528ee0f60fe9bb6002845.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-ice-30-flame",
+      "brand": "STORM",
+      "model": "ICE 30 FLAME",
+      "category": "BALL",
+      "title": "STORM ICE 30 FLAME · 커버·코어·표면 비교",
+      "summary": "Solid Polyester 커버, Traditional 3-piece Core와 3500-grit Polished 공장 표면. 진승 쇼핑몰의 ICE LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=84CA205FE6BC691C41C3BFE5A2820A15",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "ICE LINE"
+        ],
+        [
+          "커버",
+          "Solid Polyester"
+        ],
+        [
+          "코어",
+          "Traditional 3-piece Core"
+        ],
+        [
+          "공장 표면",
+          "3500-grit Polished"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM ICE 30 FLAME 제품은 ICE LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 Solid Polyester, 코어는 Traditional 3-piece Core, 공장 표면은 3500-grit Polished다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "ICE 30 SNOW WHITE와 함께 솔리드 폴리에스터·3피스 코어로 안내되는 모델이다. FLAME은 Red/White 색상으로 구분하며 우레탄 커버인 MIX 계열과 소재 표기를 혼동하지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-ice-30-flame.jpg",
+        "alt": "STORM ICE 30 FLAME 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202507/08/8264d9a9660dfc033943537b9e9921d0.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-ice-30-snow-white",
+      "brand": "STORM",
+      "model": "ICE 30 SNOW WHITE",
+      "category": "BALL",
+      "title": "STORM ICE 30 SNOW WHITE · 커버·코어·표면 비교",
+      "summary": "Solid Polyester 커버, Traditional 3-piece Core와 3500-grit Polished 공장 표면. 진승 쇼핑몰의 ICE LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=801A089759389EA9FA5F77ECC339F4BE",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "ICE LINE"
+        ],
+        [
+          "커버",
+          "Solid Polyester"
+        ],
+        [
+          "코어",
+          "Traditional 3-piece Core"
+        ],
+        [
+          "공장 표면",
+          "3500-grit Polished"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM ICE 30 SNOW WHITE 제품은 ICE LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 Solid Polyester, 코어는 Traditional 3-piece Core, 공장 표면은 3500-grit Polished다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "ICE 30 FLAME과 공통으로 솔리드 폴리에스터·3피스 코어가 표기된다. 이 모델은 Snow White 색상이며, 눈에 보이는 흰색 외관만으로 커버가 펄이라고 추정하지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-ice-30-snow-white.jpg",
+        "alt": "STORM ICE 30 SNOW WHITE 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202507/01/f13a3e075b3f64abed484a023dcdb36d.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-tropical-surge-black-blue-pink",
+      "brand": "STORM",
+      "model": "TROPICAL SURGE BLACK/BLUE/PINK",
+      "category": "BALL",
+      "title": "STORM TROPICAL SURGE BLACK/BLUE/PINK · 커버·코어·표면 비교",
+      "summary": "Reactor Solid Reactive 커버, Surge Core와 Power Edge 공장 표면. 진승 쇼핑몰의 TROPICAL LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=DB64F68DEE27EB08D29117C7DA678F81",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "TROPICAL LINE"
+        ],
+        [
+          "커버",
+          "Reactor Solid Reactive"
+        ],
+        [
+          "코어",
+          "Surge Core"
+        ],
+        [
+          "공장 표면",
+          "Power Edge"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM TROPICAL SURGE BLACK/BLUE/PINK 제품은 TROPICAL LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 Reactor Solid Reactive, 코어는 Surge Core, 공장 표면은 Power Edge다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "SILVER/PURPLE의 Reactor Pearl과 달리 이 색상 원문은 Reactor Solid로 안내된다. TROPICAL SURGE라는 공통 이름 뒤에 붙는 색상과 실제 사양표를 함께 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-tropical-surge-black-blue-pink.jpg",
+        "alt": "STORM TROPICAL SURGE BLACK/BLUE/PINK 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202506/09/ff28c293c9d1a420154c9964a7d6e442.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-mix-ultra-silver",
+      "brand": "STORM",
+      "model": "MIX ULTRA SILVER",
+      "category": "BALL",
+      "title": "STORM MIX ULTRA SILVER · 커버·코어·표면 비교",
+      "summary": "U1S Pearl Urethane 커버, Traditional 3-piece Core와 3500-grit Polished 공장 표면. 진승 쇼핑몰의 ICE LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=C055DCC749C2632FD4DD806301F05BA6",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "ICE LINE"
+        ],
+        [
+          "커버",
+          "U1S Pearl Urethane"
+        ],
+        [
+          "코어",
+          "Traditional 3-piece Core"
+        ],
+        [
+          "공장 표면",
+          "3500-grit Polished"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM MIX ULTRA SILVER 제품은 ICE LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 U1S Pearl Urethane, 코어는 Traditional 3-piece Core, 공장 표면은 3500-grit Polished다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "사진은 은색 계열이지만 원문 커버는 폴리에스터가 아닌 Pearl Urethane이다. ICE STORM과 MIX를 외관만으로 같은 소재로 분류하지 않고 U1S 표기를 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-mix-ultra-silver.jpg",
+        "alt": "STORM MIX ULTRA SILVER 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202504/15/74b93b057d665d144904f4a3a71249bf.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-ice-storm-purple-white",
+      "brand": "STORM",
+      "model": "ICE STORM PURPLE/WHITE",
+      "category": "BALL",
+      "title": "STORM ICE STORM PURPLE/WHITE · 커버·코어·표면 비교",
+      "summary": "Pearl Polyester 커버, Traditional 3-piece Core와 3500-grit Polished 공장 표면. 진승 쇼핑몰의 ICE LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=4E38D30E656DA5AE9D3A425109CE9E04",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "ICE LINE"
+        ],
+        [
+          "커버",
+          "Pearl Polyester"
+        ],
+        [
+          "코어",
+          "Traditional 3-piece Core"
+        ],
+        [
+          "공장 표면",
+          "3500-grit Polished"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM ICE STORM PURPLE/WHITE 제품은 ICE LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 Pearl Polyester, 코어는 Traditional 3-piece Core, 공장 표면은 3500-grit Polished다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "PURPLE/WHITE 원문은 Pearl Polyester로 표기된다. 비슷한 색상의 MIX-SKY/COBALT/VIOLET은 U1S Pearl Urethane이므로 색상이 닮았다고 같은 커버로 보지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-ice-storm-purple-white.jpg",
+        "alt": "STORM ICE STORM PURPLE/WHITE 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202504/15/d727508e68b3e71e569ac5d0c182eb84.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-mix-r-w-n",
+      "brand": "STORM",
+      "model": "MIX R/W/N",
+      "category": "BALL",
+      "title": "STORM MIX R/W/N · 커버·코어·표면 비교",
+      "summary": "U1S Pearl Urethane 커버, Traditional 3-piece Core와 3500-grit Polished 공장 표면. 진승 쇼핑몰의 ICE LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=955D864A62659945CC9434898E275DEB",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "ICE LINE"
+        ],
+        [
+          "커버",
+          "U1S Pearl Urethane"
+        ],
+        [
+          "코어",
+          "Traditional 3-piece Core"
+        ],
+        [
+          "공장 표면",
+          "3500-grit Polished"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM MIX R/W/N 제품은 ICE LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 U1S Pearl Urethane, 코어는 Traditional 3-piece Core, 공장 표면은 3500-grit Polished다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "R/W/N은 원문의 Red/White/Navy 색상 표기와 대응된다. MIX-BLACKOUT의 Hybrid Urethane과 구분하고, 이름을 줄여 주문할 때에도 색상과 구매 무게를 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-mix-r-w-n.jpg",
+        "alt": "STORM MIX R/W/N 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202409/20/92335fdb9df8c300c32f45ac4bb0e774.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-ice-storm-cotton-candy",
+      "brand": "STORM",
+      "model": "ICE STORM COTTON CANDY",
+      "category": "BALL",
+      "title": "STORM ICE STORM COTTON CANDY · 커버·코어·표면 비교",
+      "summary": "Polyester 커버, Traditional 3-piece Core와 3500-grit Polished 공장 표면. 진승 쇼핑몰의 ICE LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=E2459AE2CF7921589685A6835EC08A7C",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "ICE LINE"
+        ],
+        [
+          "커버",
+          "Polyester"
+        ],
+        [
+          "코어",
+          "Traditional 3-piece Core"
+        ],
+        [
+          "공장 표면",
+          "3500-grit Polished"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM ICE STORM COTTON CANDY 제품은 ICE LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 Polyester, 코어는 Traditional 3-piece Core, 공장 표면은 3500-grit Polished다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "원문은 커버를 Polyester로만 안내하므로 이 소개에서도 임의로 Solid 또는 Pearl을 덧붙이지 않는다. MARBLE과 비교할 때 색상과 정확한 모델명을 먼저 구분한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-ice-storm-cotton-candy.png",
+        "alt": "STORM ICE STORM COTTON CANDY 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202408/21/9755eb15d273a749645bfe039f33a6fd.png",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-ice-storm-marble",
+      "brand": "STORM",
+      "model": "ICE STORM MARBLE",
+      "category": "BALL",
+      "title": "STORM ICE STORM MARBLE · 커버·코어·표면 비교",
+      "summary": "Polyester 커버, Traditional 3-piece Core와 3500-grit Polished 공장 표면. 진승 쇼핑몰의 ICE LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=90365351CCC7437A1309DC64E4DB32A3",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "ICE LINE"
+        ],
+        [
+          "커버",
+          "Polyester"
+        ],
+        [
+          "코어",
+          "Traditional 3-piece Core"
+        ],
+        [
+          "공장 표면",
+          "3500-grit Polished"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM ICE STORM MARBLE 제품은 ICE LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 Polyester, 코어는 Traditional 3-piece Core, 공장 표면은 3500-grit Polished다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "원문에는 White & Black 색상과 Polyester 커버가 기재돼 있다. 사진의 마블 무늬를 특정 성능이나 제조사에서 명시하지 않은 커버 유형으로 해석하지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-ice-storm-marble.jpg",
+        "alt": "STORM ICE STORM MARBLE 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202405/09/18b326573f02036dbf06d8051330544c.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-mix-sky-cobalt-violet",
+      "brand": "STORM",
+      "model": "MIX-SKY/COBALT/VIOLET",
+      "category": "BALL",
+      "title": "STORM MIX-SKY/COBALT/VIOLET · 커버·코어·표면 비교",
+      "summary": "U1S Pearl Urethane 커버, Traditional 3-piece Core와 3500-grit Polished 공장 표면. 진승 쇼핑몰의 ICE LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=E1696007BE4EEFB81B1A1D39CE48681B",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "ICE LINE"
+        ],
+        [
+          "커버",
+          "U1S Pearl Urethane"
+        ],
+        [
+          "코어",
+          "Traditional 3-piece Core"
+        ],
+        [
+          "공장 표면",
+          "3500-grit Polished"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM MIX-SKY/COBALT/VIOLET 제품은 ICE LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 U1S Pearl Urethane, 코어는 Traditional 3-piece Core, 공장 표면은 3500-grit Polished다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "SKY/COBALT/VIOLET은 원문에 함께 표기된 색상 조합이다. 다른 MIX 색상 모델과 구매 무게 및 표면 상태를 비교하되, 색상만으로 실제 레인 반응 차이를 단정하지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-mix-sky-cobalt-violet.png",
+        "alt": "STORM MIX-SKY/COBALT/VIOLET 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/202004/08/d768ccb462bcc37c87f618833c5fe43c.png",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-mix-blackout",
+      "brand": "STORM",
+      "model": "MIX-BLACKOUT",
+      "category": "BALL",
+      "title": "STORM MIX-BLACKOUT · 커버·코어·표면 비교",
+      "summary": "U1S Hybrid Urethane 커버, Traditional 3-piece Core와 3500-grit Polished 공장 표면. 진승 쇼핑몰의 ICE LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=4C5BDE74A8F110656874902F07378009",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "ICE LINE"
+        ],
+        [
+          "커버",
+          "U1S Hybrid Urethane"
+        ],
+        [
+          "코어",
+          "Traditional 3-piece Core"
+        ],
+        [
+          "공장 표면",
+          "3500-grit Polished"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM MIX-BLACKOUT 제품은 ICE LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 U1S Hybrid Urethane, 코어는 Traditional 3-piece Core, 공장 표면은 3500-grit Polished다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "다른 여러 MIX 색상 모델의 원문은 Pearl Urethane이지만 BLACKOUT은 Hybrid Urethane으로 안내된다. 검정색이라는 이유로 PITCH BLACK의 Controll 우레탄과 같은 제품으로 분류하지 않는다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-mix-blackout.jpg",
+        "alt": "STORM MIX-BLACKOUT 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/201812/28/62550d50034a471a9f7c2afb702ec2ae.jpg",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    },
+    {
+      "slug": "storm-pitch-black",
+      "brand": "STORM",
+      "model": "PITCH BLACK",
+      "category": "BALL",
+      "title": "STORM PITCH BLACK · 커버·코어·표면 비교",
+      "summary": "Controll Solid Urethane 커버, Capacitor Core와 1000-grit Abralon 공장 표면. 진승 쇼핑몰의 THUNDER LINE 제품 자료를 정리했습니다.",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=0777D5C17D4066B82AB86DFF8A46AF6F",
+      "releaseDate": null,
+      "specs": [
+        [
+          "판매처 분류",
+          "THUNDER LINE"
+        ],
+        [
+          "커버",
+          "Controll Solid Urethane"
+        ],
+        [
+          "코어",
+          "Capacitor Core"
+        ],
+        [
+          "공장 표면",
+          "1000-grit Abralon"
+        ]
+      ],
+      "paragraphs": [
+        "진승 쇼핑몰의 STORM PITCH BLACK 제품은 THUNDER LINE 분류로 안내되어 있다. 상세 이미지의 커버 표기는 Controll Solid Urethane, 코어는 Capacitor Core, 공장 표면은 1000-grit Abralon다. 사진과 표에 적힌 정확한 모델명을 기준으로 정리했으며, 독립 시험이나 사용 후기를 뜻하지 않는다.",
+        "PITCH BLACK 78/U와 별개 모델로, 이 원문 커버 명칭에는 2-78이 없다. 제품명이 비슷해도 현재 대회에서 허용하는 모델인지와 실제 사용 중인 표면 상태는 따로 확인한다."
+      ],
+      "checks": [
+        "구매할 무게의 코어 구성과 RG·DIFF를 원문 무게별 사양표에서 확인한다. 다른 무게의 숫자를 구매 무게의 사양으로 비교하지 않는다.",
+        "원문에 표시되는 무게 옵션·판매 상태·가격은 변경될 수 있다. 원하는 무게의 재고와 지공 포함 여부는 제품 링크에서 다시 확인한다.",
+        "공장 표면은 사용 중인 공의 현재 표면과 다를 수 있다. 대회 장비 규정과 보증·교환 조건도 구매 전에 별도로 확인한다."
+      ],
+      "image": {
+        "src": "/images/equipment/koreamall/storm-pitch-black.png",
+        "alt": "STORM PITCH BLACK 제품 사진 · 진승 쇼핑몰",
+        "width": 400,
+        "height": 400,
+        "sourceUrl": "https://bowlingkoreamall.com/_data/product/201812/28/349b67ca028ef186951464dc7be27ed0.png",
+        "credit": "진승 쇼핑몰 · STORM",
+        "checkedAt": "2026-10-20"
+      }
+    }
+  ],
+  "existingLinks": [
+    {
+      "slug": "storm-rocket-ai",
+      "model": "Rocket A.I.",
+      "brand": "STORM",
+      "sourceUrl": "https://bowlingkoreamall.com/shop/detail.php?pno=988286D764EC371787DD265C24D410D6",
+      "checkedAt": "2026-10-20"
+    }
+  ]
+}

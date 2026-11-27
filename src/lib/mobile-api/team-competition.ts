@@ -175,7 +175,12 @@ export async function updateTeamCompetition(actorUserId: string, teamId: string,
         case "LUCKY_DRAW": return luckyDraw(actorUserId, teamId, eventId);
         case "AUTO_ASSIGN_REMAINDER": return autoAssignRemainder(actorUserId, teamId, eventId);
         case "RESET": return resetDraft(actorUserId, teamId, eventId);
-        case "ASSIGN_LANES": return assignTeamLanes(actorUserId, teamId, eventId, body.teams);
+        case "ASSIGN_LANES": {
+            if (body.randomize !== undefined && typeof body.randomize !== "boolean") {
+                throw new TeamCompetitionError("INVALID_LANE_TEAMS", "랜덤 배정 설정을 확인해주세요.", 400);
+            }
+            return assignTeamLanes(actorUserId, teamId, eventId, body.teams, body.randomize === true);
+        }
         case "ADJUST_LANES": return adjustTeamLanes(actorUserId, teamId, eventId, body.assignments);
         case "SET_HANDICAP": return setTeamHandicap(actorUserId, teamId, eventId, body.competitionTeamId, body.teamHandicap);
         case "PUBLISH": return publishTeamCompetition(actorUserId, teamId, eventId, body.tieBreakPolicy);
@@ -584,7 +589,13 @@ async function resetDraft(actorUserId: string, teamId: string, eventId: string) 
     return { status: "ATTENDANCE_LOCKED", generation: event.draftGeneration + 1 };
 }
 
-async function assignTeamLanes(actorUserId: string, teamId: string, eventId: string, raw: unknown) {
+export function randomizeTeamLaneOrder(teams: readonly LaneTeam[], pick = randomInt): LaneTeam[] {
+    return secureShuffle(teams, pick).map((team, index) => ({
+        ...team, lanePriority: index + 1, memberIds: secureShuffle(team.memberIds, pick),
+    }));
+}
+
+async function assignTeamLanes(actorUserId: string, teamId: string, eventId: string, raw: unknown, randomize = false) {
     const event = await loadEvent(actorUserId, teamId, eventId); requireManager(event, actorUserId); requireTeamCompetition(event);
     if (event.competitionStatus !== "TEAMS_FINALIZED") throw stateError();
     if (!Array.isArray(raw)) throw new TeamCompetitionError("INVALID_LANE_TEAMS", "팀별 레인 순서를 확인해주세요.", 400);
@@ -604,9 +615,12 @@ async function assignTeamLanes(actorUserId: string, teamId: string, eventId: str
     if (new Set(submitted).size !== participants.length || submitted.length !== participants.length || input.some((item) => {
         const expected = expectedByTeam.get(item.id); return !expected || item.memberIds.length !== expected.size || item.memberIds.some((id) => !expected.has(id));
     })) throw new TeamCompetitionError("INVALID_MEMBER_ORDER", "각 팀의 모든 참가자 순서를 명시해주세요.", 400);
-    const blocks = allocateTeamLaneBlocks(input, event.laneSlots);
+    const blocks = allocateTeamLaneBlocks(randomize ? randomizeTeamLaneOrder(input) : input, event.laneSlots);
     const participantById = new Map(participants.map((item) => [item.id, item]));
     await prisma.$transaction(async (tx) => {
+        if (randomize && await tx.score.count({ where: { teamEventId: eventId } }) > 0) {
+            throw new TeamCompetitionError("COMPETITION_SCORE_STARTED", "이미 경기 점수가 입력되어 랜덤 배정을 할 수 없습니다.", 409);
+        }
         const claimed = await tx.teamEvent.updateMany({
             where: { id: eventId, draftGeneration: event.draftGeneration, competitionStatus: "TEAMS_FINALIZED" },
             data: { competitionStatus: "LANES_ASSIGNED", laneDrawStatus: "COMPLETED" },

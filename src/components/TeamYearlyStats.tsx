@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { TEAM_GAME_TYPES } from '@/lib/team-records';
+import { TEAM_GAME_TYPES, calculateTeamAttendance, getRegularAttendanceStarts, teamActivityDateKey } from '@/lib/team-records';
 
 interface ScoreWithUser {
     id: string;
@@ -16,6 +16,7 @@ interface ScoreWithUser {
 }
 
 interface TeamYearlyStatsProps {
+    regularAttendanceStarts?: ReadonlyMap<string, string>;
     scores: ScoreWithUser[];
     currentYear: number;
     teamName: string;
@@ -30,9 +31,10 @@ interface TeamYearlyStatsProps {
 
 export const GAME_TYPES = [...TEAM_GAME_TYPES];
 
-export default function TeamYearlyStats({ scores, currentYear, teamName, selectedTypes, onToggleType, ownerId, managerIds, aceUserId, recentRankings, members = [] }: TeamYearlyStatsProps) {
+export default function TeamYearlyStats({ scores, currentYear, teamName, selectedTypes, onToggleType, ownerId, managerIds, aceUserId, recentRankings, members = [], regularAttendanceStarts }: TeamYearlyStatsProps) {
     // scores is already filtered by parent container
     const filteredScores = scores;
+    const attendanceStarts = getRegularAttendanceStarts(scores, regularAttendanceStarts);
 
     // Create a map for quick member name lookup
     const memberNameMap = useMemo(() => {
@@ -55,8 +57,8 @@ export default function TeamYearlyStats({ scores, currentYear, teamName, selecte
     } = {};
 
     filteredScores.forEach(score => {
-        const dateStr = new Date(score.gameDate).toISOString().split('T')[0];
-        const month = new Date(score.gameDate).getMonth(); // 0-11
+        const dateStr = teamActivityDateKey(new Date(score.gameDate));
+        const month = Number(dateStr.slice(5, 7)) - 1;
 
         // Track games per day for participation denominator
         // IMPORTANT: Participation denominator should probably be based on filtered games too?
@@ -97,8 +99,7 @@ export default function TeamYearlyStats({ scores, currentYear, teamName, selecte
     });
 
     // 2. Count Total Active Days (Global filtered days)
-    const activeDates = Object.keys(gamesByDate);
-    const totalActiveDays = activeDates.length;
+    const activeDates = new Set(Object.keys(gamesByDate));
 
     // Prepare Rows with Raw Data for Sorting
     const rows = Object.entries(userStats).map(([userId, stat]) => {
@@ -111,13 +112,12 @@ export default function TeamYearlyStats({ scores, currentYear, teamName, selecte
         const userUniqueDates = new Set(
             filteredScores
                 .filter(s => s.userId === userId)
-                .map(s => new Date(s.gameDate).toISOString().split('T')[0])
+                .map(s => teamActivityDateKey(new Date(s.gameDate)))
         );
-        const userAttendedDays = userUniqueDates.size;
-
-        const participationRaw = totalActiveDays > 0 ? (userAttendedDays / totalActiveDays) : 0;
+        const attendance = calculateTeamAttendance(activeDates, userUniqueDates, attendanceStarts.get(userId));
+        const participationRaw = attendance.attendanceRaw;
         const participationDisplay = (participationRaw * 100).toFixed(1) + "%";
-        const participationDetail = `(${userAttendedDays}/${totalActiveDays})`;
+        const participationDetail = `(${attendance.attended}/${attendance.activityCount})`;
 
         return {
             userId, // Pass userId for rendering check
@@ -223,6 +223,7 @@ export default function TeamYearlyStats({ scores, currentYear, teamName, selecte
             </div>
 
             <h3 className="text-xl font-bold mb-4">{currentYear}년 팀원별 정보</h3>
+            <p className="text-sm text-secondary-foreground mb-4">출석률은 첫 정기전 참가일부터 계산합니다. 같은 날 여러 게임을 쳐도 출석은 1회로 집계합니다.</p>
 
             <div className="overflow-x-auto pb-4">
                 <table className="w-full text-center text-xs border-collapse" style={{ minWidth: '800px' }}>

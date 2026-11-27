@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { defaultTeamGamePointTables, parseTeamGamePointTables, readTeamGamePointTables, serializeTeamGamePointTables } from "@/lib/mobile-api/team-game-points";
 import { revokeSeasonPointPublication } from "@/lib/mobile-api/unified-season";
+import { fisherYatesShuffle, kstDateKey } from "@/lib/mobile-api/team-events";
 
 export const EVENT_ADMIN_ACTIONS = [
     "REOPEN_ATTENDANCE",
@@ -12,6 +13,10 @@ export const EVENT_ADMIN_ACTIONS = [
     "RESET_EVENT_PARTICIPANTS",
     "RESET_EVENT_VOTING",
     "RESET_EVENT_BALLOT",
+    "UNDO_EVENT_REVEAL",
+    "RESET_EVENT_REVEAL",
+    "RANDOMIZE_LANES",
+    "ADJUST_LANES",
     "REOPEN_PUBLICATION",
     "CHANGE_GAME_COUNT",
     "CLEAR_SCORES",
@@ -31,11 +36,14 @@ const adminInclude = {
     team: {
         select: {
             ownerId: true,
+            bowlerHiddenEnabled: true,
             User: { select: { id: true } },
             members: { select: { id: true, userId: true, alias: true, user: { select: { name: true } } } },
         },
     },
-    laneAssignments: { select: { id: true } },
+    laneSlots: { orderBy: [{ laneNumber: "asc" as const }, { position: "asc" as const }] },
+    laneAssignments: true,
+    attendances: { select: { memberId: true, status: true } },
     competitionTeams: {
         include: {
             captain: { select: { id: true, alias: true, user: { select: { name: true } } } },
@@ -97,6 +105,23 @@ export async function runEventAdminOperation(
     return prisma.$transaction(async (tx) => {
         const event = await loadAdminEvent(tx, actorUserId, teamId, eventId);
         requireManager(event, actorUserId);
+        if (event.competitionEnabled && !event.team.bowlerHiddenEnabled && action !== "DELETE_EVENT") {
+            throw new EventAdminOperationError("FEATURE_DISABLED", "Bowler Hidden 기능이 활성화되지 않은 팀입니다.", 404);
+        }
+        if ("expectedStatus" in body && body.expectedStatus !== event.competitionStatus) {
+            throw new EventAdminOperationError("ADMIN_STATE_CHANGED", "대회 단계가 변경되었습니다. 새로고침 후 다시 시도해주세요.", 409);
+        }
+        if ("expectedScoreCount" in body && body.expectedScoreCount !== event._count.scores) {
+            throw new EventAdminOperationError("ADMIN_STATE_CHANGED", "경기 점수가 변경되었습니다. 삭제할 점수 건수를 다시 확인해주세요.", 409);
+        }
+        if ((event.competitionStatus === "PUBLISHED" || event.seasonPublications.length > 0) &&
+            action !== "REOPEN_PUBLICATION" && action !== "DELETE_EVENT") {
+            throw new EventAdminOperationError("REOPEN_REQUIRED", "발표 결과를 먼저 다시 열어주세요.", 409);
+        }
+        if (["UNDO_EVENT_REVEAL", "RESET_EVENT_REVEAL"].includes(action as string) &&
+            body.expectedRevealIndex !== event.eventRevealIndex) {
+            throw new EventAdminOperationError("ADMIN_STATE_CHANGED", "개표 진행 단계가 변경되었습니다. 새로고침 후 다시 시도해주세요.", 409);
+        }
         const beforeStatus = event.competitionStatus;
         let result: Record<string, unknown>;
         switch (action as EventAdminAction) {
@@ -104,7 +129,7 @@ export async function runEventAdminOperation(
                 result = await reopenAttendance(tx, event, body);
                 break;
             case "CLEAR_INDIVIDUAL_GROUPS":
-                result = await clearIndividualGroups(tx, event);
+                result = await clearIndividualGroups(tx, event, body);
                 break;
             case "RESET_TEAM_DRAFT":
                 result = await resetTeamDraft(tx, event, body);
@@ -124,6 +149,16 @@ export async function runEventAdminOperation(
             case "RESET_EVENT_BALLOT":
                 result = await resetEventBallot(tx, event, body);
                 break;
+            case "UNDO_EVENT_REVEAL":
+                result = await undoEventReveal(tx, event);
+                break;
+            case "RESET_EVENT_REVEAL":
+                result = await resetEventReveal(tx, event, now);
+                break;
+            case "RANDOMIZE_LANES":
+            case "ADJUST_LANES":
+                result = await updateLanes(tx, event, body, action === "RANDOMIZE_LANES", now);
+                break;
             case "REOPEN_PUBLICATION":
                 result = await reopenPublication(tx, event, now);
                 break;
@@ -141,15 +176,21 @@ export async function runEventAdminOperation(
             await createAudit(tx, event, actorUserId, action as EventAdminAction, beforeStatus, (result.status as string | null) ?? beforeStatus, result);
         }
         return result;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 60_000 });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 60_000 }).catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) {
+            throw new EventAdminOperationError("ADMIN_STATE_CHANGED", "다른 관리자 작업이 먼저 처리되었습니다. 새로고침 후 다시 시도해주세요.", 409);
+        }
+        throw error;
+    });
 }
 
 async function reopenAttendance(tx: AdminTx, event: AdminEvent, body: Record<string, unknown>) {
     if (event.competitionType === "INDIVIDUAL") {
         if (event.competitionStatus !== "GROUPS_READY") stateError();
         await requireScoreClear(tx, event, body);
-        await tx.teamEvent.update({ where: { id: event.id }, data: { competitionStatus: "ATTENDANCE_OPEN" } });
-        return { status: "ATTENDANCE_OPEN", manualGroupsPreserved: true };
+        await clearLaneAssignments(tx, event);
+        await tx.teamEvent.update({ where: { id: event.id }, data: { competitionStatus: "ATTENDANCE_OPEN", laneDrawStatus: "NOT_STARTED" } });
+        return { status: "ATTENDANCE_OPEN", manualGroupsPreserved: true, laneAssignmentsReset: event.laneAssignments.length > 0 };
     }
     if (event.competitionType === "TEAM") return reopenTeamAttendance(tx, event, body);
     if (event.competitionType === "EVENT") return resetEventParticipants(tx, event, body);
@@ -181,12 +222,19 @@ async function reopenTeamAttendance(tx: AdminTx, event: AdminEvent, body: Record
     };
 }
 
-async function clearIndividualGroups(tx: AdminTx, event: AdminEvent) {
+async function clearIndividualGroups(tx: AdminTx, event: AdminEvent, body: Record<string, unknown>) {
     requireType(event, "INDIVIDUAL");
     if (!["ATTENDANCE_OPEN", "GROUPS_READY"].includes(event.competitionStatus)) stateError();
+    const scoresCleared = await requireScoreClear(tx, event, body);
     await tx.teamEventAttendance.updateMany({ where: { eventId: event.id }, data: { manualGroup: null } });
     await tx.teamEventGuest.updateMany({ where: { eventId: event.id }, data: { manualGroup: null } });
-    return { status: event.competitionStatus, groupsCleared: true };
+    await clearLaneAssignments(tx, event);
+    await tx.teamEvent.update({ where: { id: event.id }, data: { competitionStatus: "ATTENDANCE_OPEN", laneDrawStatus: "NOT_STARTED" } });
+    return { status: "ATTENDANCE_OPEN", groupsCleared: true, attendancePreserved: true, scoresCleared };
+}
+
+async function clearLaneAssignments(tx: AdminTx, event: AdminEvent) {
+    await tx.teamEventLaneAssignment.deleteMany({ where: { eventId: event.id } });
 }
 
 async function resetTeamDraft(tx: AdminTx, event: AdminEvent, body: Record<string, unknown>) {
@@ -266,9 +314,11 @@ async function resetEventParticipants(tx: AdminTx, event: AdminEvent, body: Reco
     const scoreCount = await requireScoreClear(tx, event, body);
     await tx.eventCompetitionBallot.deleteMany({ where: { eventId: event.id } });
     await tx.eventCompetitionParticipant.deleteMany({ where: { eventId: event.id } });
+    await clearLaneAssignments(tx, event);
     await tx.teamEvent.update({ where: { id: event.id }, data: {
         competitionStatus: "ATTENDANCE_OPEN", eventRevealIndex: 0,
         eventNonVoterPolicy: null, eventTieBreakPolicy: null, eventVotingDeadlineAt: null,
+        laneDrawStatus: "NOT_STARTED",
     } });
     return { status: "ATTENDANCE_OPEN", attendancePreserved: true, scoresCleared: scoreCount };
 }
@@ -303,6 +353,95 @@ async function resetEventBallot(tx: AdminTx, event: AdminEvent, body: Record<str
     const deleted = await tx.eventCompetitionBallot.deleteMany({ where: { eventId: event.id, voterParticipantId: voter.id } });
     if (deleted.count !== 1) throw new EventAdminOperationError("BALLOT_NOT_FOUND", "제출된 투표가 없습니다.", 404);
     return { status: "EVENT_READY", voterParticipantId: voter.id, ballotReset: true };
+}
+
+async function undoEventReveal(tx: AdminTx, event: AdminEvent) {
+    requireType(event, "EVENT");
+    if (!["REVEALING", "FINAL_READY"].includes(event.competitionStatus) || event.eventRevealIndex < 1) stateError();
+    const last = event.eventCompetitionParticipants.find((item) => item.revealOrder === event.eventRevealIndex && item.revealedAt);
+    if (!last) stateError();
+    const revealedCount = event.eventRevealIndex - 1;
+    const changed = await tx.eventCompetitionParticipant.updateMany({
+        where: { id: last.id, eventId: event.id, revealedAt: { not: null } }, data: { revealedAt: null },
+    });
+    if (changed.count !== 1) stateError();
+    await tx.teamEvent.update({ where: { id: event.id }, data: {
+        competitionStatus: "REVEALING", eventRevealIndex: revealedCount,
+    } });
+    return { status: "REVEALING", revealedCount, ballotsPreserved: true, scoresPreserved: true };
+}
+
+async function resetEventReveal(tx: AdminTx, event: AdminEvent, now: Date) {
+    requireType(event, "EVENT");
+    if (!["REVEALING", "FINAL_READY"].includes(event.competitionStatus)) stateError();
+    await tx.eventCompetitionParticipant.updateMany({ where: { eventId: event.id }, data: { revealedAt: null } });
+    await tx.teamEvent.update({ where: { id: event.id }, data: {
+        competitionStatus: "EVENT_READY", eventRevealIndex: 0, eventVotingDeadlineAt: now,
+        eventNonVoterPolicy: null, eventTieBreakPolicy: null,
+    } });
+    return { status: "EVENT_READY", votingClosed: true, ballotsPreserved: true, scoresPreserved: true };
+}
+
+async function updateLanes(tx: AdminTx, event: AdminEvent, body: Record<string, unknown>, randomize: boolean, now: Date) {
+    if (!event.laneDrawEnabled || event.competitionType === "TEAM") {
+        throw new EventAdminOperationError("LANE_OPERATION_NOT_AVAILABLE", "TEAM 레인 배정은 TEAM 운영 화면에서 조정해주세요.", 409);
+    }
+    if (event.competitionType === "EVENT" && !["ATTENDANCE_OPEN", "EVENT_READY"].includes(event.competitionStatus)) stateError();
+    if (event._count.scores > 0) {
+        throw new EventAdminOperationError("COMPETITION_SCORE_STARTED", "경기 점수가 입력되어 있습니다. 점수를 명시적으로 초기화한 뒤 레인을 조정해주세요.", 409);
+    }
+    const expected = body.expectedAssignments;
+    if (!Array.isArray(expected) || expected.length !== event.laneAssignments.length ||
+        new Set(expected.map((item) => asRecord(item).assignmentId)).size !== expected.length ||
+        expected.some((item) => {
+            const row = asRecord(item);
+            return !event.laneAssignments.some((existing) => existing.id === row.assignmentId && existing.slotId === row.slotId);
+        })) {
+        throw new EventAdminOperationError("LANE_ASSIGNMENT_CONFLICT", "레인 배정이 변경되었습니다. 새로고침 후 다시 조정해주세요.", 409);
+    }
+    const configured = new Set(event.laneSlots.map((slot) => slot.id));
+    let rows: Prisma.TeamEventLaneAssignmentCreateManyInput[];
+    if (randomize) {
+        if (kstDateKey(event.eventDate) !== kstDateKey(now)) {
+            throw new EventAdminOperationError("DRAW_DATE_RESTRICTED", "레인 랜덤 배정은 일정 당일에만 가능합니다.", 409);
+        }
+        const attendingIds = new Set(event.attendances.filter((item) => item.status === "ATTENDING").map((item) => item.memberId));
+        const members = event.team.members.filter((item) => attendingIds.has(item.id));
+        // Guest rows are fetched separately to keep the existing admin snapshot compact.
+        const guests = await tx.teamEventGuest.findMany({ where: { eventId: event.id }, select: { id: true, name: true } });
+        const participants = [
+            ...members.map((item) => ({ memberId: item.id, guestId: null as string | null, participantKind: "MEMBER", participantDisplayName: displayName(item) })),
+            ...guests.map((item) => ({ memberId: null as string | null, guestId: item.id, participantKind: "GUEST", participantDisplayName: item.name })),
+        ];
+        if (participants.length === 0 || participants.length !== event.laneSlots.length) {
+            throw new EventAdminOperationError("PARTICIPANT_SLOT_MISMATCH", "참석자·게스트 수와 설정한 레인 좌석 수가 같아야 합니다.", 409);
+        }
+        const slots = fisherYatesShuffle(event.laneSlots);
+        rows = fisherYatesShuffle(participants).map((participant, index) => ({ ...participant, eventId: event.id, slotId: slots[index].id }));
+    } else {
+        if (event.laneDrawStatus !== "COMPLETED" || event.laneAssignments.length === 0) stateError();
+        const raw = body.assignments;
+        if (!Array.isArray(raw) || raw.length !== event.laneAssignments.length) invalidLaneAssignments();
+        const assignments = raw.map((item) => asRecord(item));
+        if (new Set(assignments.map((item) => item.assignmentId)).size !== assignments.length ||
+            new Set(assignments.map((item) => item.slotId)).size !== assignments.length ||
+            assignments.some((item) => typeof item.slotId !== "string" || !configured.has(item.slotId) ||
+                !event.laneAssignments.some((existing) => existing.id === item.assignmentId))) invalidLaneAssignments();
+        rows = assignments.map((item) => {
+            const previous = event.laneAssignments.find((existing) => existing.id === item.assignmentId)!;
+            return { ...previous, slotId: item.slotId as string };
+        });
+    }
+    // Delete/recreate inside one transaction allows occupied-seat swaps without
+    // violating slotId's unique constraint; any failed insertion restores all rows.
+    await tx.teamEventLaneAssignment.deleteMany({ where: { eventId: event.id } });
+    for (const row of rows) await tx.teamEventLaneAssignment.create({ data: row });
+    await tx.teamEvent.update({ where: { id: event.id }, data: { laneDrawStatus: "COMPLETED" } });
+    return { status: event.competitionStatus, laneDrawStatus: "COMPLETED", assignmentsUpdated: rows.length, randomize };
+}
+
+function invalidLaneAssignments(): never {
+    throw new EventAdminOperationError("INVALID_LANE_ASSIGNMENTS", "현재 일정의 모든 배정과 중복 없는 레인 좌석을 확인해주세요.", 400);
 }
 
 async function reopenPublication(tx: AdminTx, event: AdminEvent, now: Date) {
@@ -414,19 +553,24 @@ async function createAudit(
     action: EventAdminAction,
     beforeStatus: string | null,
     afterStatus: string | null,
-    details: unknown,
+    details: Record<string, unknown>,
 ) {
+    // Keep the existing SQLite action CHECK intact. New sub-operations use an
+    // existing audit category and retain their exact name in detailsJson.
+    const auditAction = action === "UNDO_EVENT_REVEAL" || action === "RESET_EVENT_REVEAL"
+        ? "RESET_EVENT_VOTING"
+        : action === "RANDOMIZE_LANES" || action === "ADJUST_LANES" ? "ADMIN_LANE_OVERRIDE" : action;
     await tx.teamEventAdminAudit.create({ data: {
         eventId: event.id,
         eventSnapshotId: event.id,
         eventTitle: event.title,
         teamId: event.teamId,
         actorUserId,
-        action,
+        action: auditAction,
         competitionType: event.competitionType,
         beforeStatus,
         afterStatus,
-        detailsJson: JSON.stringify(details),
+        detailsJson: JSON.stringify({ ...details, operation: action }),
     } });
 }
 
@@ -453,6 +597,8 @@ function serializeAdminState(event: AdminEvent) {
         competitionType: event.competitionType,
         competitionStatus: event.competitionStatus,
         laneDrawStatus: event.laneDrawStatus,
+        laneDrawEnabled: event.laneDrawEnabled,
+        revealedCount: event.eventRevealIndex,
         gameCount: event.competitionGameCount,
         teamGamePointTables: event.competitionType === "TEAM" && event.competitionGameCount != null
             ? readTeamGamePointTables(event.rankPoints, event.competitionGameCount)
@@ -485,10 +631,18 @@ function serializeAdminState(event: AdminEvent) {
             hasBallot: event.eventCompetitionBallots.some((ballot) => ballot.voterParticipantId === item.id),
         })),
         audits: event.adminAudits.map((audit) => ({
-            id: audit.id, action: audit.action, beforeStatus: audit.beforeStatus,
+            id: audit.id, action: auditOperation(audit), beforeStatus: audit.beforeStatus,
             afterStatus: audit.afterStatus, createdAt: audit.createdAt.toISOString(),
         })),
     };
+}
+
+function auditOperation(audit: { action: string; detailsJson: string }) {
+    try {
+        const details = JSON.parse(audit.detailsJson) as { operation?: unknown };
+        if (typeof details.operation === "string" && EVENT_ADMIN_ACTIONS.includes(details.operation as EventAdminAction)) return details.operation;
+    } catch { /* Legacy audit entries can keep their persisted category. */ }
+    return audit.action;
 }
 
 function previousTeamStatus(event: AdminEvent) {
