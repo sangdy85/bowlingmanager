@@ -1,0 +1,2 @@
+# Applied migrations are checksummed by Prisma; keep their bytes exactly as applied.
+prisma/migrations/**/migration.sql -text
