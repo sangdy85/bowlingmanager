@@ -25,7 +25,7 @@ export default function MemberSearchModal({ centerId }: { centerId: string }) {
         setIsSearching(true);
         setError(null);
         try {
-            const users = await searchUsers(query);
+            const users = await searchUsers(query, centerId);
             setResults(users);
         } catch (err: any) {
             setError(err.message || "검색 중 오류가 발생했습니다.");

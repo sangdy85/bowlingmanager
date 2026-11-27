@@ -59,6 +59,14 @@ export async function POST(request: NextRequest) {
             credentials.password,
         );
 
+        if (credentialCheck.isRateLimited) {
+            return mobileApiError(
+                "TOO_MANY_ATTEMPTS",
+                "로그인 시도가 너무 많습니다. 15분 후 다시 시도해주세요.",
+                429,
+            );
+        }
+
         if (!hasValidCredentials(credentialCheck)) {
             return mobileApiError(
                 "INVALID_CREDENTIALS",
