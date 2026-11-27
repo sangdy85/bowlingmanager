@@ -8,7 +8,7 @@ async function main() {
 
     if (!email) {
         console.error('Usage: node scripts/reset-ai-usage.js <email>');
-        console.error('Example: node scripts/reset-ai-usage.js sangdy85@gmail.com');
+        console.error('Example: node scripts/reset-ai-usage.js user@example.com');
         process.exit(1);
     }
 

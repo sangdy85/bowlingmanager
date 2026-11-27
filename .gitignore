@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -52,3 +53,8 @@ next-env.d.ts
 /scratch/
 
 mobile/android/app/google-services.json
+*.db.bak
+
+# user uploads and data exports (never commit real member data)
+/public/uploads/*
+/member-backup*.json

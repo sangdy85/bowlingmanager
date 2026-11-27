@@ -1,0 +1,185 @@
+BowlingManager UI/UX Renewal — Phase 1 결과
+작성일: 2026-10-13 (Asia/Seoul)
+
+1. 저장소 및 작업 상태
+실제 작업 경로: C:\Users\이강욱\Desktop\bowling manager
+브랜치: main
+HEAD: 1299cca08dd2ec6cc04457e0234d369f90a643be
+origin: https://github.com/sangdy85/bowlingmanager.git
+시작 전 fetch/status와 안전한 fast-forward pull 수행: 이미 최신, 앞섬/뒤처짐 0/0.
+시작 전 미커밋/미추적 파일 없음. 다른 로컬 브랜치 없음.
+작업 종료 시 HEAD 유지. 변경은 작업 폴더에만 남아 있습니다.
+commit, push, merge commit, 배포, DB migration/db push/seed 미실행.
+
+2. 기존 구조 분석
+아래 파일 경로는 모두 위 실제 작업 경로를 기준으로 합니다.
+- package.json/package-lock.json: Next.js 15.5.12, React/React DOM 19.0.0,
+  TypeScript 5.9.3, Prisma 5.22.0, Auth.js(next-auth) 5.0.0-beta.25.
+  Tailwind CSS, shadcn/ui, Radix, Recharts, Chart.js 의존성 없음.
+  기존 Tailwind 형태의 className 일부는 전역 수동 utility에만 의존합니다.
+  신규 의존성 없이 CSS Modules 및 SVG를 사용했습니다. 잠금파일 변경 없음.
+- src/app/layout.tsx: Inter 폰트, AuthContext, Navbar, main.container, Footer.
+- src/app/globals.css: 기존 전역 다크 토큰, 버튼/카드/표/수동 utility.
+- src/components/NavbarWrapper.tsx: 서버 auth 결과로 Navbar에 로그인/역할 전달.
+- src/components/Navbar.tsx: 기존 메뉴 및 로그아웃 처리. 행동 코드는 그대로입니다.
+- src/app/dashboard/page.tsx: 로그인·활성 소속 팀 확인 후 개인/팀/통계 진입.
+  팀 없는 사용자는 팀 생성/가입으로 안내합니다.
+- src/app/personal/page.tsx: 로그인 및 소속 팀 검증, 연도 선택, 통합 기록,
+  정기전/대회 프로필·메달·레이더·팀별 통계·공식 기록·일별 기록.
+- src/lib/personal-statistics.ts: 개인/리그/대회 기록 정규화 및 통합 요약.
+  summarizeIntegratedRecords를 그대로 재사용합니다.
+  통합 기록은 벙개 제외, 개인 0점 및 저장된 300점 초과 값 유지,
+  리그는 양수 원점수만 포함하고 핸디캡 가산, 대회는 기존 핸디캡 가산.
+  연도 경계, 평균 반올림, 최근 10게임 날짜/ID 정렬 규칙 변경 없음.
+- src/lib/personal-profile.ts: 기존 레이더 및 프로필 계산. 변경 없음.
+- src/components/YearSelector.tsx, StatsDisplayRow.tsx, RadarChart.tsx 재사용.
+  통계 행의 중복 구현은 추가하지 않았습니다.
+- src/lib/mobile-api/dashboard.ts 및 모바일 기록 조회가 기존 통계 모듈 사용.
+  src/app/api/mobile/v1과 mobile Flutter 소스, API 응답 계약 변경 없음.
+- 기존 검사: npm run lint, npm run typecheck, npm run build.
+  tests/*.test.cjs는 node --test로 실행하는 테스트가 있습니다.
+  auth-authorization-db-e2e.test.cjs는 DB 구성/쓰기를 수행하므로 이번에는 실행하지 않았습니다.
+
+3. 디자인 시스템과 공통 컴포넌트
+토큰: Primary #2563EB, Background #F8FAFC, Surface #FFFFFF, Text #0F172A,
+Success #16A34A, Accent #F59E0B. border/muted/danger/warning/focus/disabled 및
+전경·연한 배경 쌍을 --dashboard-* CSS 변수로 정의했습니다.
+Light가 기본이며 명시적 data-dashboard-theme="dark" 변수 확장 지점을 준비했습니다.
+Dark 전환 UI와 기존 상세 표의 완전한 Dark 테마 검증은 이번 범위에 포함하지 않았습니다.
+카드 14~16px, 주요 버튼/메뉴 44px 이상, 최대 폭 1440px, 데스크톱 사이드바 248px.
+기존 Inter/시스템 폰트 유지. body:has([data-dashboard-shell]) 범위에서만 Light 토큰을 적용합니다.
+다른 운영 화면은 전역 토큰 교체로 함께 변경하지 않았습니다.
+
+src/components/dashboard/DashboardUI.tsx 공통 컴포넌트:
+- DashboardShell: 본문 이동 링크, 사이드바, 현재 메뉴, 반응형 탐색.
+  navigation/title/caption을 주입하여 후속 관리자 화면에서도 재사용 가능.
+- DashboardHeader: 페이지 제목/설명/액션.
+- StatCard: 의미 있는 dl/dt/dd 통계 값.
+- DashboardSection: 제목 연결된 section.
+- StatusBadge: 텍스트와 색을 함께 사용한 상태 표현.
+- EmptyState: 실제 기록 없는 상태 안내.
+- LoadingSkeleton: 로딩 상태 알림, reduced-motion 대응.
+- DashboardQuickActions: 기존 권한 조건의 점수 등록과 상세 기록 앵커.
+PersonalDashboardOverview.tsx는 위 컴포넌트로 개인 화면을 조합합니다.
+
+4. 개인 대시보드 개선
+- 이름/소속 팀/선택 연도 표시, 평균/최고/총 게임/최근 10게임 평균 카드.
+- 기존 통합 집계 함수 결과만 표시. 최근 10게임 미만이면 실제 게임 수를 표시합니다.
+- 빈 평균/최고 점수는 —, 총 게임 수는 실제 0. 가상의 성장률/통계를 표시하지 않습니다.
+- 최근 경기별 점수 SVG 그래프, 날짜/유형/팀/점수가 있는 최근 10게임 목록.
+  0점, 단일 게임, 300점 초과 값도 잘리지 않도록 표현했습니다.
+- 차트 설명과 동일 값을 텍스트로 제공해 포인터/색상에만 의존하지 않습니다.
+- 점수 등록은 기존 hasAuthority가 참일 때만 /score/add로 연결합니다.
+  일반 회원은 팀 관리자 등록 안내를 받으며 권한을 추가하지 않습니다.
+- 기존 연도 선택, 상세 집계·팀별 분류, 공식 경기·일별 표, 프로필/레이더/메달 유지.
+  메달은 동일 계산 결과의 금·은·동 개수를 간결하게 표시합니다.
+- /dashboard 진입 화면과 무소속 신규 사용자 화면에도 공통 UI 적용.
+- 표 스크롤 영역에 키보드 포커스/레이블, 표 헤더 scope 추가.
+  좁은 화면의 상세 표는 영역 내부에서 가로 스크롤하며 페이지 전체는 넘치지 않습니다.
+
+5. 관리자 후속 개선 계획 (핵심 로직 및 관리자 화면은 이번에 변경하지 않음)
+SUPER_ADMIN:
+- src/app/admin/layout.tsx의 SUPER_ADMIN 검사와 / 리다이렉트를 유지해야 합니다.
+- src/app/admin/page.tsx의 실제 user/team/bowlingCenter count를 StatCard로 대체 가능.
+- 기존 /admin/users, /admin/teams, /admin/centers 및 /inquiry 링크를 공통 탐색에 주입.
+- 문의는 src/app/actions/inquiry-actions.ts의 PENDING/ANSWERED 상태를 사용합니다.
+  전체 문의 조회/답변 권한은 SUPER_ADMIN에만 유지합니다.
+
+센터 소유자/관리자:
+- src/app/centers/[id]/page.tsx의 ownerId/managers 연결을 기준으로 센터 범위를 제한.
+  화면에서 보이는 메뉴와 Server Action의 verifyCenterAdmin 조건을 별개로 검토해야 합니다.
+  SUPER_ADMIN이라는 이유만으로 모든 센터 액션 권한을 자동 부여하지 않습니다.
+- 실제 센터 대회 목록·진행 상태와 /centers/[id]/tournaments/new 바로가기.
+- /centers/[id]/teams, /centers/[id]/members 참가 팀/회원 관리 바로가기.
+- 참가비는 TournamentRegistration.paymentStatus의 PENDING/PAID 및
+  src/components/tournaments/RoundParticipantManager.tsx의 입금 대기/완료 동작을 재사용.
+- 리그 PENDING 경기나 미입력 점수는 기존 경기 상태와 함께 별도 지표로 구분.
+  새로운 승인 대기 큐로 통합하거나 존재하지 않는 업무 상태를 만들지 않습니다.
+
+팀 OWNER/MANAGER/MEMBER:
+- src/app/team/[teamId]/page.tsx의 팀별 역할 판정을 유지.
+- OWNER/MANAGER는 기존 팀 관리/멤버/게스트 및 /score/add?teamId=... 메뉴로 연결.
+  MANAGER의 다른 MANAGER 조작 제한, OWNER의 권한 변경 전용 액션 등 기존 정책 유지.
+- MEMBER는 자신의 기록·참여 정보·납부 정보만 보도록 기존 서비스 범위를 유지.
+- 회비: src/lib/mobile-api/team-finance.ts의 DRAFT/OPEN/CLOSED/CANCELLED,
+  납부 상태 UNPAID/PAID/WAIVED와 기존 집계를 후속 UI 데이터 근거로 사용.
+- 게임비·게임포인트: src/lib/mobile-api/team-game-points.ts의 기존 원장·집계 계약을 재사용.
+  신규 웹 통합 카드 도입 시 API/서버 권한을 먼저 검증하고 금액 계산을 UI에서 재구현하지 않습니다.
+- 알림 전달 PENDING은 운영자의 승인 업무와 다르므로 일반 처리 대기 카드에 합산하지 않습니다.
+
+공통 적용 순서:
+1) 서버 권한을 통과한 메뉴만 DashboardShell navigation으로 제공.
+2) 기존 조회 결과를 DashboardHeader/StatCard/DashboardSection/StatusBadge로 교체.
+3) 목록·금액·표의 모바일 및 접근성 검증 후 점수 입력·레인 배정 등 복잡한 운영 화면 확대.
+이번 Phase 1에서는 관리자에게 임의 통계·임의 대기 건수를 표시하지 않았습니다.
+
+6. 변경 파일 목록
+수정 9개:
+src/app/dashboard/page.tsx
+src/app/globals.css
+src/app/personal/page.tsx
+src/app/personal/PersonalPage.module.css
+src/components/Navbar.module.css
+src/components/RadarChart.tsx
+src/components/YearSelector.tsx
+src/components/YearSelector.module.css
+src/components/public/Public.module.css
+
+신규 8개 (이 보고서 포함):
+src/app/dashboard-tokens.css
+src/app/personal/loading.tsx
+src/components/dashboard/DashboardUI.tsx
+src/components/dashboard/DashboardUI.module.css
+src/components/dashboard/PersonalDashboardOverview.tsx
+tests/dashboard-ui.test.cjs
+tests/helpers/dashboard-renderer.cjs
+docs/ui-ux-phase1-report.txt
+
+7. 검사 결과
+- npm run lint: 성공, 기존 경고 18개/오류 0. 신규 파일 경고 없음.
+- npm run typecheck: 성공.
+- node --test tests/dashboard-ui.test.cjs tests/personal-statistics.test.cjs
+  tests/mobile-dashboard-profile.test.cjs tests/production-security.test.cjs: 48개 통과.
+- npm run build: 최종 코드로 성공. build 내부 lint/typecheck/Prisma generate/Next build 완료.
+  Prisma generate는 클라이언트 생성이며 DB migration이 아닙니다.
+- git diff --check: 성공.
+- src/app/personal/page.tsx의 export부터 JSX return 이전까지 데이터/인증/계산 코드가
+  HEAD와 동일함을 별도로 비교 확인했습니다.
+- Chrome 렌더링: 1440, 1024, 768, 390, 360px × 기록 있음/빈 기록/긴 이름+단일 게임/무소속 신규 사용자 = 20개 조합.
+  문서 가로 넘침, 차트 넘침, 제목·수치 잘림, 새 대시보드 링크/버튼 44px 높이 문제 없음.
+  키보드 포커스 표시와 검사 대상 일반 텍스트 대비 확인.
+  SVG는 접근성 제목/설명 및 기록 목록 대체 텍스트 제공.
+  스크린리더 실사용 인증이나 전체 WCAG 적합성 인증을 의미하지 않습니다.
+- 브라우저에는 실제 페이지 TSX를 메모리 fixture로 렌더링했습니다.
+  인증/DB 응답은 테스트 안에서만 대체하며 운영 경로·인증 우회 코드는 추가하지 않았습니다.
+  가상 기록은 테스트 및 검증 파일에만 존재하고 실제 화면에 하드코딩되지 않았습니다.
+
+8. diff 요약
+기존 추적 파일: 9개, 153줄 추가 / 466줄 삭제.
+신규 미추적 파일: 위 8개. 일반 git diff --stat에는 신규 파일 내용이 아직 포함되지 않습니다.
+총 작업 파일: 17개. 스테이징/commit/push 없음.
+기존 프로필 표현과 CSS 중복을 정리하고, 데이터 집계는 공통 helper 재사용.
+Auth.js/세션/Server Actions/모바일 API/Prisma/핸디캡/랭킹/대회·정산 로직 변경 없음.
+브라우저 검증 이미지·로그는 저장소 밖 Codex 작업 폴더 phase1/verification에 보관했습니다.
+
+9. 남은 위험과 다음 작업
+- .env와 개발 DB가 없어 실제 로그인 세션·운영 계정 데이터의 브라우저 E2E는 미검증.
+  비밀 설정 및 안전한 개발 DB를 이전한 뒤 계정별 조회, 연도 변경, 등록 이동, 로그인/로그아웃을 실제 환경에서 검증해야 합니다.
+- DB를 구성/변경하는 통합 E2E는 사용자의 DB 변경 금지 조건에 따라 실행하지 않았습니다.
+- 기존 프로젝트 린트 경고 18개는 Phase 1 밖이며 남아 있습니다.
+- Dark는 토큰 확장 기반만 준비. 사용자 전환 기능/전체 상세 표 검증은 후속 작업입니다.
+- 새 레이아웃 범위 판별에 :has()를 사용하므로 오래된 브라우저는 별도 지원 검토가 필요합니다.
+- 실제 회원의 매우 많은 기록/긴 대회명 등은 개발 DB 준비 후 추가 확인이 필요합니다.
+- 다음 단계는 위 역할·범위에 따른 관리자 공통 UI 적용이며, 운영 핵심 로직 변경은 별도 승인·설계가 필요합니다.
+
+
+10. 오각형 그래프 후속 개선 (2026-10-13)
+- 기존 RadarChart를 개인 대시보드 요약 바로 아래로 이동. 데스크톱에서는 최근 점수 추이와 나란히, 800px 이하에서는 위아래 배치.
+- 기량(에버), 포텐셜, 기복, 안정감, 성실의 기존 5축 및 0–10 계산 기준 유지.
+- 정기전·볼링장 대회 각각 3회 이상일 때 해당 시리즈 표시. 부족한 기록은 안내 문구 표시.
+- 축 이름 글자 크기, 범례, 대비 개선. 두 시리즈를 함께 표시할 때 실선/점선으로 구분. 스크린리더용 실제 지표 수치 제공.
+- 하단의 중복 그래프 제거. 상세 통계와 메달 기록 유지.
+- 관련 회귀 테스트 48개 통과, TypeScript 검사 및 npm run build(내장 ESLint 포함) 성공. 기존 린트 경고는 유지.
+- 4개 상태 x 5개 화면 폭 20개 브라우저 검사 통과. 오각형 축 이름 5개 모두 1440/1024/768/390/360px에서 잘림 없음.
+- 검증은 메모리 테스트 데이터 기반이며 실제 로그인 및 DB 연결 E2E는 미검증.
+- main / HEAD 1299cca, fetch 후 origin/main과 차이 0. 기존 미커밋 작업 보존. 커밋·푸시·병합·배포·DB 변경 없음.

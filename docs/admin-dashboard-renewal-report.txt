@@ -1,0 +1,91 @@
+BowlingManager 관리자 대시보드 UI 개선 결과
+작성일: 2026-10-13
+
+1. 작업 상태
+저장소: C:\Users\이강욱\Desktop\bowling manager
+브랜치 main, HEAD 1299cca08dd2ec6cc04457e0234d369f90a643be.
+시작 전 fetch/status 확인. origin/main 대비 앞섬/뒤처짐 0/0, 로컬 브랜치 main만 존재.
+개인 대시보드의 기존 미커밋 작업을 보존했습니다. 추가 pull/병합은 필요하지 않았습니다.
+이번 변경 전 관리자 파일 사본: Codex 프로젝트 작업 폴더 phase1/before-admin.
+커밋, 푸시, 병합, DB 변경, 운영 배포 없음.
+
+2. 기존 구조와 적용 범위
+src/app/admin/layout.tsx: SUPER_ADMIN만 통과, 나머지 / 이동. 동일하게 유지.
+src/app/admin/page.tsx: user/team/bowlingCenter count 3개를 기존과 동일하게 조회.
+src/app/admin/{users,teams,centers}/page.tsx: 기존 조회·정렬·필터·Server Action 연결 유지.
+팀 목록은 활성 팀만 조회하지만 대시보드 총 팀은 비활성 팀도 포함하므로 카드 설명에 명시.
+src/app/actions/admin.ts의 verifySuperAdmin 및 DB 역할 재검증은 변경하지 않았습니다.
+센터 관리자·팀 운영자의 개별 업무 화면과 권한은 이번 범위 밖입니다.
+
+3. UI 변경
+- 개인 대시보드의 DashboardShell/Header/Section/StatCard/StatusBadge/EmptyState 재사용.
+- 신규 AdminDashboardShell: 현재 경로에 맞는 활성 메뉴, 반응형 탐색, 개인 기록실 복귀.
+  서버 AdminLayout 인증 검사를 통과한 후 표시합니다.
+- 사용자·팀·볼링장 실제 집계 카드, 서비스 관리 카드, 기존 대회·문의 경로 바로가기.
+  가상 수익/증가율/처리 대기 건수/차트는 추가하지 않았습니다.
+- 하위 계정·팀·볼링장 목록도 동일한 Light 토큰, 카드, 헤더, 상태 배지 적용.
+- 계정 목록의 표 스크롤, 권한 선택 레이블, 삭제 대상 레이블, 빈 목록 안내 추가.
+- 팀 고급 기능 켜기/끄기와 팀별 기록 링크, 기존 삭제 동작 유지.
+- 볼링장 등록은 기존 details와 Server Action을 사용한 펼침 폼.
+  입력 name/필수 조건 유지, label 연결 및 전화번호 입력 유형 개선.
+- 좁은 화면에서 폼/목록이 줄바꿈되고 입력·버튼 44px 및 키보드 포커스 표시 제공.
+- 새 UI 의존성 없음. Next.js/React/Prisma 및 잠금파일 변경 없음.
+
+4. 이번 요청의 변경 파일
+기존 추적 파일 7개:
+src/app/admin/layout.tsx
+src/app/admin/page.tsx
+src/app/admin/AdminUI.module.css
+src/app/admin/users/page.tsx
+src/app/admin/teams/page.tsx
+src/app/admin/centers/page.tsx
+src/components/admin/UserRoleSelect.tsx
+
+이전 작업에서 만든 파일 1개 추가 수정:
+tests/helpers/dashboard-renderer.cjs (관리자 메모리 fixture·역할·경로 지원)
+
+새 파일 3개:
+src/components/dashboard/AdminDashboardShell.tsx
+tests/admin-dashboard-ui.test.cjs
+docs/admin-dashboard-renewal-report.txt (이 보고서)
+
+5. 기능 보존 검토
+- 관리자 layout/page/하위 3개 page의 return 이전 인증·조회 코드가 변경 전과 동일함을 비교 확인.
+- 모든 form의 action 함수 및 bind 인자가 변경 전과 동일함을 비교 확인.
+- auth, src/app/actions, src/lib, src/app/api, prisma, mobile, package.json/lock 변경 없음.
+- 계정 삭제 표시 조건과 권한 선택 옵션·이벤트 처리 유지.
+- 문의는 기존 /inquiry, 대회는 기존 /centers 경로로 연결. 다른 역할 권한을 추가하지 않음.
+
+6. 검증 결과
+- npm run lint: 성공, 기존 경고 18개, 오류 0.
+- npm run typecheck: 성공.
+- npm run build: 성공 (lint/typecheck/Prisma client generate/Next build).
+  Prisma generate는 클라이언트 생성이며 DB migration/db push/seed를 수행하지 않습니다.
+- git diff --check: 성공. Git의 Windows 줄바꿈 변환 안내만 있음.
+- node --test: 아래 6개 테스트 파일에서 66개 모두 통과.
+  tests/admin-dashboard-ui.test.cjs
+  tests/dashboard-ui.test.cjs
+  tests/mobile-super-admin.test.cjs
+  tests/mobile-dashboard-profile.test.cjs
+  tests/personal-statistics.test.cjs
+  tests/production-security.test.cjs
+- 관리자 4개 화면 x 일반/빈 상태 x 1440/1024/768/390/360px = 40개 Chrome 검증 통과.
+  가로 넘침, 제목/수치 잘림, 입력·버튼 최소 높이, 일반 텍스트 대비 검사.
+  볼링장 등록 폼을 키보드로 열기·필드 입력·포커스 표시 확인, 제출하지 않음.
+- 개인 대시보드 20개 기존 화면 조합도 다시 검증하여 통과.
+- 실제 TSX 페이지/관리자 layout을 메모리 테스트 데이터로 렌더링했습니다.
+  fixture의 DB와 액션은 격리되어 있고 쓰기 호출은 예외를 발생시키도록 구성했습니다.
+  운영 코드에 인증 우회, 가상 통계 또는 테스트 계정을 추가하지 않았습니다.
+- 관리자 데스크톱 및 모바일 등록 화면 스크린샷을 직접 시각 검토했습니다.
+
+7. diff 및 남은 작업
+이번 관리자 추적 파일 7개: +125 / -480. 신규 파일과 기존 미추적 helper는 이 숫자에서 제외.
+개인 대시보드 변경도 계속 미커밋 상태로 보존되어 전체 git diff에는 함께 표시됩니다.
+검증 이미지/로그: Codex 프로젝트 작업 폴더 phase1/verification/admin-*.png 및 *.log.
+
+실제 로그인 세션과 개발 DB가 없는 상태이므로 인증·저장·삭제·권한변경의 실제 브라우저 E2E는 미검증.
+테스트는 실제 페이지의 정적 서버 렌더와 메모리 응답 기반이며 Next.js hydration/클라이언트 이동을 입증하지 않습니다.
+계정 목록의 가로 스크롤은 작은 화면에서 의도한 동작입니다.
+기존 린트 경고와 전용 코드 표시/즉시 삭제 등 기존 운영 정책은 그대로 유지됩니다.
+센터·팀 운영자 전용 대시보드, 문의 답변 화면, 대회/레인/점수/정산 상세 화면의 전면 리뉴얼은 후속 범위입니다.
+후속 실제 환경 검증은 안전한 비밀 파일 이전 및 개발 DB 준비 후 수행해야 합니다.

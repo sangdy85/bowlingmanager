@@ -4,9 +4,9 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { auth } from "@/auth";
+import { verifyCenterAdmin, verifyRegistrationAdmin, verifyRoundAdmin } from "@/lib/auth-utils";
 import { formatLane, parseKSTDate } from "@/lib/tournament-utils";
 import { updateTournamentBasicInfo } from "./tournament-center";
-import { verifyCenterAdmin } from "@/lib/auth-utils";
 import { canAutoCancelUnpaidRound, unpaidRoundEntryDeadline } from "@/lib/round-unpaid-cancellation";
 
 // Helper to get tournament info for revalidation
@@ -41,6 +41,7 @@ export async function updateRoundSettings(
         maxParticipants?: number;
     }
 ) {
+    await verifyRoundAdmin(roundId);
     try {
         // 1. Fetch current round to preserve dates if not provided
         const currentRound = await prisma.leagueRound.findUnique({
@@ -122,6 +123,7 @@ export async function updateRoundSettings(
 
 // 2. Update Round Participants (Bulk Selection from existing)
 export async function updateRoundParticipants(roundId: string, registrationIds: string[], manualRegIds: string[]) {
+    await verifyRoundAdmin(roundId);
     try {
         const current: any[] = await prisma.$queryRaw`
             SELECT "registrationId" FROM "RoundParticipant" WHERE "roundId" = ${roundId}
@@ -181,6 +183,7 @@ export async function updateRoundParticipants(roundId: string, registrationIds: 
 
 // 2-1. Update Entry Group ID (Explicit Grouping for Event Tournaments)
 export async function updateEntryGroupId(roundId: string, registrationIds: string[], groupId: string | null) {
+    await verifyRoundAdmin(roundId);
     try {
         if (registrationIds.length > 0) {
             await prisma.tournamentRegistration.updateMany({
@@ -201,6 +204,7 @@ export async function updateEntryGroupId(roundId: string, registrationIds: strin
 
 // 3. Update Lane Assignment (Manual with Smart Swap)
 export async function updateRoundLanes(roundId: string, laneData: { participantId: string, lane: number }[]) {
+    await verifyRoundAdmin(roundId);
     try {
         const round = await prisma.leagueRound.findUnique({
             where: { id: roundId },
@@ -292,6 +296,7 @@ export async function updateRoundScores(
     scores: { regId: string, game: number, score: number }[],
     sideGameData?: { regId: string, basic: boolean, ball: boolean, extra: boolean }[]
 ) {
+    await verifyRoundAdmin(roundId);
     try {
         // 1. Update Scores
         for (const item of scores) {
@@ -346,6 +351,7 @@ export async function updateRoundScores(
 
 // 4-1. Update Participant Female Champ Status
 export async function updateFemaleChampParticipants(roundId: string, femaleChampParticipantIds: string[]) {
+    await verifyRoundAdmin(roundId);
     try {
         // Reset all for this round first
         await prisma.$executeRaw`
@@ -379,6 +385,7 @@ export async function manualRegister(roundId: string, input: {
     guestTeam?: string,
     handicap?: number
 }) {
+    await verifyRoundAdmin(roundId);
     try {
         const info = await getTournamentInfo(roundId);
         if (!info) throw new Error("Round info not found");
@@ -527,6 +534,11 @@ export async function manualRegister(roundId: string, input: {
 
 // 6. Join Round (Online User)
 export async function joinRound(roundId: string, userId: string) {
+    const session = await auth();
+    const sessionUserId = session?.user?.id;
+    if (!sessionUserId) throw new Error("로그인이 필요합니다.");
+    // Only center admins may register someone other than themselves.
+    if (userId !== sessionUserId) await verifyRoundAdmin(roundId);
     try {
         const info = await getTournamentInfo(roundId);
         if (!info) throw new Error("라운드 정보를 찾을 수 없습니다.");
@@ -649,6 +661,7 @@ export async function joinRound(roundId: string, userId: string) {
 
 // 7. Update Lane Settings (Start/End Lane)
 export async function updateLaneSettings(roundId: string, startLane: number, endLane: number) {
+    await verifyRoundAdmin(roundId);
     try {
         // Use raw query to bypass potential Prisma client type issues with startLane/endLane
         await prisma.$executeRaw`
@@ -667,6 +680,7 @@ export async function updateLaneSettings(roundId: string, startLane: number, end
 
 // 7-1. Update Lane Config (JSON)
 export async function updateLaneConfig(roundId: string, config: string) {
+    await verifyRoundAdmin(roundId);
     try {
         await prisma.leagueRound.update({
             where: { id: roundId },
@@ -687,6 +701,7 @@ export async function updateLaneConfig(roundId: string, config: string) {
 
 // 8. Auto Assign Remaining Danes (Admin)
 export async function autoAssignRemaining(roundId: string) {
+    await verifyRoundAdmin(roundId);
     try {
         const round = await prisma.leagueRound.findUnique({
             where: { id: roundId },
@@ -923,6 +938,9 @@ export async function drawLane(roundId: string, registrationId: string) {
         }
 
         if (!participant) throw new Error("참가자가 아니거나 권한이 없습니다.");
+        if (!userId) throw new Error("로그인이 필요합니다.");
+        // Drawing for another participant (or a guest) is limited to center admins.
+        if (participant.registration.userId !== userId) await verifyRoundAdmin(roundId);
 
         // --- Waitlist Check ---
         const settings = round.tournament.settings ? JSON.parse(round.tournament.settings) : {};
@@ -1069,6 +1087,7 @@ export async function drawLane(roundId: string, registrationId: string) {
 
 // 10. Update Payment Status
 export async function updatePaymentStatus(registrationId: string, status: string) {
+    await verifyRegistrationAdmin(registrationId);
     try {
         await prisma.$executeRaw`
             UPDATE "TournamentRegistration" SET "paymentStatus" = ${status} WHERE "id" = ${registrationId}
@@ -1092,6 +1111,7 @@ export async function updatePaymentStatus(registrationId: string, status: string
 
 // 10. Delete Registration
 export async function deleteRegistration(registrationId: string) {
+    await verifyRegistrationAdmin(registrationId);
     try {
         const regs: any[] = await prisma.$queryRaw`SELECT "tournamentId" FROM "TournamentRegistration" WHERE id = ${registrationId}`;
         if (regs.length === 0) throw new Error("Registration not found");
@@ -1114,6 +1134,8 @@ export async function deleteRegistration(registrationId: string) {
 
 // 10-1. Remove From Round (Specific round only, preserve registration)
 export async function removeFromRound(roundId: string, registrationId: string) {
+    await verifyRoundAdmin(roundId);
+    await verifyRegistrationAdmin(registrationId);
     try {
         const info = await getTournamentInfo(roundId);
         if (!info) throw new Error("라운드 정보를 찾을 수 없습니다.");
@@ -1144,6 +1166,8 @@ export async function updateRegistration(
     roundId: string,
     data: { guestName?: string, guestTeamName?: string, handicap?: number }
 ) {
+    await verifyRoundAdmin(roundId);
+    await verifyRegistrationAdmin(registrationId);
     try {
         const reg = await prisma.tournamentRegistration.findUnique({
             where: { id: registrationId },
@@ -1250,6 +1274,7 @@ export async function updateRegistration(
 
 // 12. Update Lucky Draw Result
 export async function updateLuckyDrawResult(roundId: string, result: string | null) {
+    await verifyRoundAdmin(roundId);
     try {
         await prisma.leagueRound.update({
             where: { id: roundId },
@@ -1269,6 +1294,7 @@ export async function updateLuckyDrawResult(roundId: string, result: string | nu
 
 // 13. Search Players for Manual Registration
 export async function searchPlayers(query: string, centerId: string) {
+    await verifyCenterAdmin(centerId);
     if (!query || query.length < 1) return [];
     try {
         const users: any[] = await prisma.$queryRaw`
@@ -1305,6 +1331,7 @@ export async function searchPlayers(query: string, centerId: string) {
 
 // 14. Auto Cancel Unpaid Registrations
 export async function checkAndCancelUnpaidRegistrations(roundId: string) {
+    await verifyRoundAdmin(roundId);
     try {
         const target = await prisma.leagueRound.findUnique({
             where: { id: roundId }, select: { tournament: { select: { centerId: true } } }
@@ -1362,6 +1389,7 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
     laneDisplay?: string, // '1-2'
     entryGroupId?: string // 'group_1'
 }[]) {
+    await verifyRoundAdmin(roundId);
     try {
         const info = await getTournamentInfo(roundId);
         if (!info) throw new Error("라운드 정보를 찾을 수 없습니다.");
@@ -1511,6 +1539,7 @@ export async function bulkRegisterParticipants(roundId: string, participants: {
 
 // 2-2. Auto Assign Entry Groups by Team Size
 export async function autoAssignEntryGroups(roundId: string, teamSize: number) {
+    await verifyRoundAdmin(roundId);
     try {
         const round = await prisma.leagueRound.findUnique({
             where: { id: roundId },
@@ -1555,6 +1584,8 @@ export async function autoAssignEntryGroups(roundId: string, teamSize: number) {
 
 // 2-3. Update Single Registration Group
 export async function updateSingleRegistrationGroup(regId: string, groupId: string | null, roundId: string) {
+    await verifyRoundAdmin(roundId);
+    await verifyRegistrationAdmin(regId);
     try {
         await prisma.tournamentRegistration.update({
             where: { id: regId },

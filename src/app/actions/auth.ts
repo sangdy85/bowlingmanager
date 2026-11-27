@@ -8,6 +8,48 @@ import { redirect } from "next/navigation";
 import { generateVerificationToken } from "@/lib/tokens";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/mail";
 import { checkCredentials } from "@/lib/credentials-auth";
+import {
+    CODE_FAILURE_POLICY,
+    CODE_SEND_POLICY,
+    clearAttempts,
+    isAttemptLimited,
+    recordAttempt,
+} from "@/lib/attempt-limiter";
+
+const TOO_MANY_CODE_ATTEMPTS = "인증 코드 입력 횟수를 초과했습니다. 인증 코드를 다시 받아주세요.";
+const TOO_MANY_CODE_REQUESTS = "인증 코드 요청이 너무 많습니다. 1시간 후 다시 시도해주세요.";
+
+/**
+ * Checks a 6-digit e-mail code with a per-address failure limit. After too many
+ * wrong codes the outstanding code is deleted, so guessing has to start over
+ * with a new code that the attacker never sees.
+ */
+async function verifyEmailCode(
+    prisma: ReturnType<typeof getPrisma>,
+    purpose: "signup" | "reset",
+    email: string,
+    code: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+    const attemptKey = `code:${purpose}:${email}`;
+    if (isAttemptLimited(attemptKey, CODE_FAILURE_POLICY)) {
+        return { ok: false, message: TOO_MANY_CODE_ATTEMPTS };
+    }
+
+    const verificationToken = await prisma.verificationToken.findFirst({
+        where: { identifier: email, token: code }
+    });
+
+    if (!verificationToken || new Date(verificationToken.expires) < new Date()) {
+        if (recordAttempt(attemptKey, CODE_FAILURE_POLICY)) {
+            await prisma.verificationToken.deleteMany({ where: { identifier: email } });
+            return { ok: false, message: TOO_MANY_CODE_ATTEMPTS };
+        }
+        return { ok: false, message: "인증 코드가 틀리거나 만료되었습니다." };
+    }
+
+    clearAttempts(attemptKey);
+    return { ok: true };
+}
 
 /**
  * NOTE: We keep these actions in a dedicated "use server" file.
@@ -24,6 +66,10 @@ export async function login(prevState: string | undefined, formData: FormData) {
 
     try {
         const credentialCheck = await checkCredentials(email, password);
+
+        if (credentialCheck.isRateLimited) {
+            return "로그인 시도가 너무 많습니다. 15분 후 다시 시도해주세요.";
+        }
 
         if (
             !credentialCheck.user
@@ -70,13 +116,9 @@ export async function register(prevState: string | undefined, formData: FormData
         const prisma = getPrisma();
 
         // 1. Verify Code
-        const verificationToken = await prisma.verificationToken.findFirst({
-            where: { identifier: email, token: code }
-        });
+        const verification = await verifyEmailCode(prisma, "signup", email, code);
+        if (!verification.ok) return verification.message;
 
-        if (!verificationToken || new Date(verificationToken.expires) < new Date()) {
-            return "인증 코드가 틀리거나 만료되었습니다.";
-        }
         const existingUser = await prisma.user.findUnique({
             where: { email },
         });
@@ -148,6 +190,12 @@ export async function findEmail(name: string) {
 }
 
 export async function sendCode(email: string) {
+    if (!email) return { success: false, message: "이메일을 입력해주세요." };
+    // Counted before the account lookup so the limit does not reveal existing accounts.
+    if (isAttemptLimited(`send:signup:${email}`, CODE_SEND_POLICY)) {
+        return { success: false, message: TOO_MANY_CODE_REQUESTS };
+    }
+    recordAttempt(`send:signup:${email}`, CODE_SEND_POLICY);
     try {
         const prisma = getPrisma();
         const existingUser = await prisma.user.findUnique({
@@ -172,6 +220,12 @@ export async function sendCode(email: string) {
 }
 
 export async function requestPasswordReset(email: string) {
+    if (!email) return { success: false, message: "이메일을 입력해주세요." };
+    // Counted before the account lookup so the limit does not reveal existing accounts.
+    if (isAttemptLimited(`send:reset:${email}`, CODE_SEND_POLICY)) {
+        return { success: false, message: TOO_MANY_CODE_REQUESTS };
+    }
+    recordAttempt(`send:reset:${email}`, CODE_SEND_POLICY);
     try {
         const prisma = getPrisma();
         const existingUser = await prisma.user.findUnique({
@@ -204,13 +258,8 @@ export async function resetPassword(email: string, code: string, newPassword: st
         const prisma = getPrisma();
 
         // 1. Verify Code
-        const verificationToken = await prisma.verificationToken.findFirst({
-            where: { identifier: email, token: code }
-        });
-
-        if (!verificationToken || new Date(verificationToken.expires) < new Date()) {
-            return { success: false, message: "인증 코드가 틀리거나 만료되었습니다." };
-        }
+        const verification = await verifyEmailCode(prisma, "reset", email, code);
+        if (!verification.ok) return { success: false, message: verification.message };
 
         // 2. Hash new password
         const hashedPassword = await bcrypt.hash(newPassword, 10);

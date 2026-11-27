@@ -37,6 +37,10 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
                 const credentialCheck = await checkCredentials(email, password);
 
+                if (credentialCheck.isRateLimited) {
+                    throw new Error("Too many attempts");
+                }
+
                 if (!credentialCheck.user) {
                     throw new Error("User not found");
                 }
