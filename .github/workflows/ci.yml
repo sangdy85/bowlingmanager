@@ -47,6 +47,10 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # Pinned to the SDK line in mobile/pubspec.lock (flutter >=3.44.0).
+          # Newer stable releases deprecate package:flutter/material.dart, which
+          # makes `flutter analyze` fail on every screen; upgrade deliberately.
+          flutter-version: 3.44.x
           cache: true
       - run: flutter pub get
       - run: flutter analyze
