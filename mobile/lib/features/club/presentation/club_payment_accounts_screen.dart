@@ -28,7 +28,7 @@ class ClubPaymentAccountsScreen extends ConsumerWidget {
           TextButton(onPressed: () => ref.invalidate(provider), child: const Text('다시 시도')),
         ])),
         data: (accounts) => RefreshIndicator(
-          onRefresh: () async { await ref.refresh(provider.future); },
+          onRefresh: () => ref.refresh(provider.future),
           child: ListView(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.all(20), children: <Widget>[
             const Text('회원에게 안내할 은행명, 계좌번호, 예금주를 설정합니다.'),
             const SizedBox(height: 16),
