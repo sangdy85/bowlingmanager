@@ -1,5 +1,7 @@
 'use server';
 
+import { verifyTournamentAdmin } from "@/lib/auth-utils";
+
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
@@ -13,6 +15,7 @@ export async function updateTournamentRules(
         reportNotice?: string | null;
     }
 ) {
+    await verifyTournamentAdmin(tournamentId);
     try {
         await prisma.tournament.update({
             where: { id: tournamentId },
@@ -37,6 +40,7 @@ export async function updateTeamHandicaps(
     tournamentId: string,
     teamHandicaps: { [teamId: string]: number }
 ) {
+    await verifyTournamentAdmin(tournamentId);
     try {
         // Find existing tournament to merge or overwrite? Usually overwrite the JSON.
         // But let's just save the whole object as string.

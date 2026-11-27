@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
+import { verifyCenterAdmin } from "@/lib/auth-utils";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
 
@@ -45,15 +46,19 @@ export async function removeCenterMember(centerId: string, memberId: string) {
         throw new Error("Only managers can remove members");
     }
 
-    await prisma.centerMember.delete({
-        where: { id: memberId }
+    // Scope the delete to this center so a manager cannot remove another center's members.
+    const removed = await prisma.centerMember.deleteMany({
+        where: { id: memberId, centerId }
     });
+    if (removed.count === 0) throw new Error("Member not found");
 
     revalidatePath(`/centers/${centerId}/members`);
     revalidatePath(`/centers/${centerId}`);
 }
 
-export async function searchUsers(query: string) {
+export async function searchUsers(query: string, centerId: string) {
+    // Returns e-mail addresses, so it is limited to the center's admins.
+    await verifyCenterAdmin(centerId);
     if (!query || query.length < 2) return [];
 
     return await prisma.user.findMany({
