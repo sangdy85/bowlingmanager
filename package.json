@@ -28,14 +28,14 @@
     "firebase-admin": "^13.10.0",
     "html-to-image": "^1.11.13",
     "jose": "6.2.12",
-    "next": "15.5.12",
-    "next-auth": "5.0.0-beta.25",
-    "nodemailer": "^6.10.0",
+    "next": "15.5.29",
+    "next-auth": "5.0.0-beta.32",
+    "nodemailer": "^10.6.1",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-markdown": "10.1.0",
     "remark-gfm": "4.0.1",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.5",
     "tesseract.js": "^7.0.0",
     "uuid": "^13.0.0",
     "xlsx": "^0.18.5"
@@ -49,7 +49,7 @@
     "@types/react-dom": "19.2.3",
     "@types/uuid": "^10.0.0",
     "eslint": "8.57.0",
-    "eslint-config-next": "15.5.12",
+    "eslint-config-next": "15.5.29",
     "prisma": "^5.22.0",
     "typescript": "^5"
   }
