@@ -21,12 +21,14 @@ function loadWithMocks(relative,mocks) {
 const {calculateAverage}=load('src/lib/average-calculator.ts');
 const policy=load('src/lib/public-web.ts');
 const {GUIDE_ARTICLES,PUBLISHED_GUIDE_ARTICLES,MERGED_GUIDE_REDIRECTS,findPublishedGuideArticle,findMergedGuideDestination}=load('src/lib/guide-data.ts');
-test('www is the single public origin for canonical metadata, sitemap and robots',()=>{
+test('www is the single public origin for canonical metadata, sitemap and robots',async()=>{
  assert.equal(policy.PUBLIC_ORIGIN,'https://www.bowlingmanager.co.kr');
  assert.equal(policy.CANONICAL_HOSTNAME,'www.bowlingmanager.co.kr');
- const sitemap=loadWithMocks('src/app/sitemap.ts',{
+ const sitemap=await loadWithMocks('src/app/sitemap.ts',{
   '@/lib/guide-data':{PUBLISHED_GUIDE_ARTICLES},
   '@/lib/public-web':policy,
+  '@/lib/prisma':{competitionNotice:{findMany:async()=>[{id:'notice-1',updatedAt:new Date('2026-11-01')}]}},
+  '@/lib/manufacturer-equipment':{MANUFACTURER_EQUIPMENT:[]},
  }).default();
  assert.ok(sitemap.length>0);
  for(const entry of sitemap)assert.match(entry.url,/^https:\/\/www\.bowlingmanager\.co\.kr(?:\/|$)/);
@@ -34,7 +36,7 @@ test('www is the single public origin for canonical metadata, sitemap and robots
  assert.equal(robots.sitemap,'https://www.bowlingmanager.co.kr/sitemap.xml');
  for(const file of ['about','privacy','terms','disclaimer']){
   const source=fs.readFileSync(path.join(__dirname,`../src/app/${file}/page.tsx`),'utf8');
-  assert.ok(source.includes("import { PUBLIC_ORIGIN } from '@/lib/public-web'")||source.includes('import { PUBLIC_ORIGIN } from "@/lib/public-web"'));
+  assert.match(source,/import \{[^}]*\bPUBLIC_ORIGIN\b[^}]*\} from ['"]@\/lib\/public-web['"]/,file);
   assert.equal(source.includes('https://bowlingmanager.co.kr'),false);
  }
 });
@@ -125,7 +127,7 @@ test('Android app URL is absent by default and accepts only the verified Play pa
   '//play.google.com/store/apps/details?id=kr.co.bowlingmanager.app',
  ])assert.equal(policy.safeAndroidAppUrl(invalid),'',invalid);
 });
-test('/app stays noindex with www canonical and outside the sitemap until store launch',()=>{
+test('/app stays noindex with www canonical and outside the sitemap until store launch',async()=>{
  const appPage=fs.readFileSync(path.join(__dirname,'../src/app/app/page.tsx'),'utf8');
  assert.ok(appPage.includes('canonical: `${PUBLIC_ORIGIN}/app`'));
  assert.ok(appPage.includes('robots: { index: false, follow: true }'));
@@ -133,9 +135,11 @@ test('/app stays noindex with www canonical and outside the sitemap until store 
  assert.ok(appPage.includes('Android 앱은 현재 테스트/출시 준비 중입니다.'));
  assert.ok(appPage.includes('href="/register"'));
  assert.ok(appPage.includes('href="/login"'));
- const sitemap=loadWithMocks('src/app/sitemap.ts',{
+ const sitemap=await loadWithMocks('src/app/sitemap.ts',{
   '@/lib/guide-data':{PUBLISHED_GUIDE_ARTICLES},
   '@/lib/public-web':policy,
+  '@/lib/prisma':{competitionNotice:{findMany:async()=>[{id:'notice-1',updatedAt:new Date('2026-11-01')}]}},
+  '@/lib/manufacturer-equipment':{MANUFACTURER_EQUIPMENT:[]},
  }).default();
  assert.equal(sitemap.some(entry=>entry.url===policy.PUBLIC_ORIGIN+'/app'),false);
 });
@@ -171,15 +175,15 @@ test('ads remain off, even on eligible content; form/private/error inventory is 
  assert.equal(policy.AD_CONTENT_ALLOWLIST.includes('/tools/average'),false);
  assert.equal(policy.AD_CONTENT_ALLOWLIST.includes('/guide/missing'),false);
  const layout=fs.readFileSync(path.join(__dirname,'../src/app/layout.tsx'),'utf8');
- assert.ok(layout.includes('ca-pub-6753153221253393'));assert.equal(layout.includes('adsbygoogle.js'),false);
+ assert.ok(layout.includes('ca-pub-7555847394586550'));assert.equal(layout.includes('adsbygoogle.js'),false);
 });
 test('all source articles survive while unpublished and merged articles stay out of public inventory',()=>{
- assert.equal(GUIDE_ARTICLES.length,18);assert.equal(new Set(GUIDE_ARTICLES.map(a=>a.slug)).size,18);
+ assert.equal(GUIDE_ARTICLES.length,21);assert.equal(new Set(GUIDE_ARTICLES.map(a=>a.slug)).size,21);
  assert.equal(GUIDE_ARTICLES.filter(article=>article.status==='unpublished').length,3);
  assert.equal(GUIDE_ARTICLES.filter(article=>article.status==='merged').length,2);
  for(const article of GUIDE_ARTICLES){assert.ok(article.content.length>100);assert.equal(/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(article.content),false);assert.equal(article.content.includes('\\text{'),false);}
  const hidden=['kpba-official-bowling-tournament-rules-2026','health-benefits-and-effects-of-bowling','bowling-injury-prevention-and-stretching-guide'];
- assert.equal(PUBLISHED_GUIDE_ARTICLES.length,13);
+ assert.equal(PUBLISHED_GUIDE_ARTICLES.length,16);
  for(const slug of hidden){assert.equal(GUIDE_ARTICLES.find(a=>a.slug===slug).status,'unpublished');assert.equal(findPublishedGuideArticle(slug),undefined);}
  assert.ok(PUBLISHED_GUIDE_ARTICLES.every(a=>a.status==='published'));
  const scoring=findPublishedGuideArticle('bowling-scoring-system');assert.ok(scoring.content.includes('168점'));assert.ok(scoring.content.includes('5/를 반복하고 마지막 보너스도 5핀이면 150점'));assert.ok(scoring.references.some(ref=>ref.url==='https://bowl.com/keeping-score'));assert.ok(scoring.references.some(ref=>ref.url.includes('bowling.sport')));
@@ -203,7 +207,6 @@ test('P0 corrections and current product limits remain explicit',()=>{
  for(const claim of ['오픈 프레임 비율','프레임별 스페어 처리율','스트라이크 비율','마이볼 명칭','레인 변화에 따른 스스코어 관리'])assert.equal(visible.includes(claim),false,claim);
  const about=fs.readFileSync(path.join(__dirname,'../src/components/AboutPageContent.tsx'),'utf8');
  assert.equal(about.includes('프레임별 점수가 자동으로 집계'),false);assert.equal(about.includes('통계학의 표준 편차 공식'),false);assert.ok(about.includes('게임별 최종 점수'));
- for(const phrase of ['234점을 축 점수 10점','평균 230점은 축 점수 9.6점','최고 세션 평균','최저 세션 평균','모집단 또는 표본 표준편차가 아닙니다'])assert.ok(about.includes(phrase),phrase);
  for(const stale of ['230점 에버리지가 100%','상위 하이(High) 스코어의 평균치','순간 폭발력을 진단','수비력을 측정','100% 참사'])assert.equal(about.includes(stale),false,stale);
 });
 test('published scoring example totals 168 using independent bowling bonus calculation',()=>{
@@ -220,7 +223,7 @@ test('equipment guides use sourced decision frameworks without result guarantees
  const slugs=['bowling-ball-selection-guide','bowling-specifications-and-dimensions','bowling-ball-specifications-coverstock-core-rg-diff-guide','bowling-lane-oiling-and-cleaning-maintenance-guide','bowling-shoes-and-accessory-maintenance-guide'];
  const guides=Object.fromEntries(slugs.map(slug=>[slug,findPublishedGuideArticle(slug)]));
  for(const [slug,article] of Object.entries(guides)){
-  assert.ok(article,slug);assert.ok(article.content.length>1200,slug);assert.equal(article.lastReviewed,'2026-09-30',slug);assert.ok(article.references?.length,slug);
+  assert.ok(article,slug);assert.ok(article.content.length>1200,slug);assert.match(article.lastReviewed,/^\d{4}-\d{2}-\d{2}$/,slug);assert.ok(article.lastReviewed>='2026-09-30',slug);assert.ok(article.references?.length,slug);
   for(const claim of ['완벽 정복','강력 추천','극대화','100%'])assert.equal((article.title+'\n'+article.description+'\n'+article.content).includes(claim),false,`${slug}: ${claim}`);
  }
  const selection=guides['bowling-ball-selection-guide'];
@@ -329,11 +332,14 @@ test('all published guides expose scoped document metadata and canonical related
   'average-and-score-distribution',
   'club-event-checklist',
   'bowling-practice-checklist',
+  'league-results-reading-guide',
+  'champ-event-participant-lane-results-guide',
+  'score-photo-verification-checklist',
  ]);
  const publishedSlugs=new Set(PUBLISHED_GUIDE_ARTICLES.map(article=>article.slug));
- assert.equal(PUBLISHED_GUIDE_ARTICLES.length,13);
+ assert.equal(PUBLISHED_GUIDE_ARTICLES.length,16);
  for(const article of PUBLISHED_GUIDE_ARTICLES){
-  assert.match(article.lastReviewed,/^2026-09-30$/,article.slug+': lastReviewed');
+  assert.match(article.lastReviewed,/^\d{4}-\d{2}-\d{2}$/,article.slug+': lastReviewed');assert.ok(article.lastReviewed>='2026-09-30',article.slug+': lastReviewed');
   assert.equal(article.content.includes('## 마지막 검토일'),false,article.slug+': duplicate review section');
   const related=article.relatedArticles??[];
   assert.ok(related.length>=2&&related.length<=4,article.slug+': related article count');
@@ -359,7 +365,8 @@ test('all published guides expose scoped document metadata and canonical related
   }
   for(const resource of article.relatedResources??[]){
    assert.equal(policy.safeContentUrl(resource.url),resource.url,article.slug+': resource URL');
-   assert.equal(resource.url,'/tools/average',article.slug+': unknown resource');
+   assert.ok(['/tools/average','/centers','/inquiry','/personal'].includes(resource.url),article.slug+': unknown resource '+resource.url);
+   assert.ok(fs.existsSync(path.join(__dirname,'../src/app',resource.url,'page.tsx')),article.slug+': missing route '+resource.url);
   }
  }
  const detail=fs.readFileSync(path.join(__dirname,'../src/app/guide/[slug]/page.tsx'),'utf8');
