@@ -10,10 +10,12 @@ interface RadarChartProps {
     }[];
     labels: string[]; // 5 labels
     size?: number;
+    appearance?: "light" | "dark";
 }
 
-const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320 }) => {
-    const radius = size / 4; // Smaller chart for more label space
+const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320, appearance = "dark" }) => {
+    const descriptionId = React.useId();
+    const radius = size * (appearance === "light" ? 0.29 : 0.25);
     const center = size / 2;
     const angleStep = (Math.PI * 2) / 5;
 
@@ -30,13 +32,16 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320 })
     return (
         <div className="relative flex flex-col items-center w-full h-full justify-center">
             <svg
+                style={{ width: "100%", height: "auto", maxWidth: size }}
                 width={size}
                 height={size}
                 viewBox={`0 0 ${size} ${size}`}
                 className="w-full max-w-[500px] h-auto overflow-visible"
                 role="img"
-                aria-label="개인 기록 레이더 차트"
+                aria-label="개인 기록 오각형 그래프"
+                aria-describedby={descriptionId}
             >
+                <desc id={descriptionId}>{`0–10 척도. ${datasets.map(dataset => `${dataset.label}: ${labels.map((label, index) => `${label} ${dataset.points[index].toFixed(1)}`).join(", ")}`).join(". ")}`}</desc>
                 {/* Background Polygons (Grid) */}
                 {levels.map((level) => {
                     const points = labels.map((_, i) => {
@@ -48,8 +53,8 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320 })
                             key={level}
                             points={points}
                             fill="none"
-                            stroke="#ffffff"
-                            strokeOpacity="0.1"
+                            stroke={appearance === "light" ? "#475569" : "#ffffff"}
+                            strokeOpacity={appearance === "light" ? "0.22" : "0.1"}
                             strokeWidth="1"
                         />
                     );
@@ -65,8 +70,8 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320 })
                             y1={center}
                             x2={x}
                             y2={y}
-                            stroke="#ffffff"
-                            strokeOpacity="0.15"
+                            stroke={appearance === "light" ? "#475569" : "#ffffff"}
+                            strokeOpacity={appearance === "light" ? "0.25" : "0.15"}
                             strokeWidth="1"
                         />
                     );
@@ -85,7 +90,8 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320 })
                                 fill={dataset.color}
                                 fillOpacity="0.2"
                                 stroke={dataset.color}
-                                strokeWidth="2"
+                                strokeWidth={appearance === "light" ? 2.5 : 2}
+                                strokeDasharray={appearance === "light" && idx > 0 ? "6 4" : undefined}
                                 className="transition-all duration-500"
                             />
                             {dataset.points.map((val, i) => {
@@ -106,7 +112,7 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320 })
 
                 {/* Labels */}
                 {labels.map((label, i) => {
-                    const { x, y } = getCoordinates(15, i * angleStep); // Much further outside
+                    const { x, y } = getCoordinates(appearance === "light" ? 13.2 : 15, i * angleStep);
                     return (
                         <text
                             key={i}
@@ -115,7 +121,7 @@ const RadarChart: React.FC<RadarChartProps> = ({ datasets, labels, size = 320 })
                             textAnchor="middle"
                             dominantBaseline="middle"
                             className="text-[13px] font-black"
-                            style={{ fill: '#f8fafc', filter: 'drop-shadow(0px 0px 3px rgba(0,0,0,1))' }}
+                            style={{ fontSize: appearance === "light" ? 15 : undefined, fontWeight: 700, fill: appearance === "light" ? "#475569" : "#f8fafc", filter: appearance === "light" ? undefined : "drop-shadow(0px 0px 3px rgba(0,0,0,1))" }}
                         >
                             {label}
                         </text>

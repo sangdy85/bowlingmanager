@@ -1,6 +1,19 @@
 'use server';
 
 import prisma from "@/lib/prisma";
+import { createLeagueIdentityResolver, getLeagueMemberOptions, type LeaguePlayerIdentity } from '@/lib/league-score-identity';
+import { getCenterLeagueMembers } from '@/lib/center-league-identity';
+
+type LeagueScoreIdentity = {
+    teamId?: string | null;
+    userId?: string | null;
+    playerName?: string | null;
+    User?: { name?: string | null } | null;
+};
+
+function getLeaguePlayerName(score: LeagueScoreIdentity) {
+    return score.playerName?.trim() || score.User?.name?.trim() || 'Unknown';
+}
 
 export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: number) {
     const tournament = await prisma.tournament.findUnique({
@@ -29,6 +42,11 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
 
     if (!tournament) throw new Error("Tournament not found");
 
+    const resolveIdentity = createLeagueIdentityResolver(tournament.leagueRounds.flatMap(round =>
+        round.matchups.flatMap(match => match.individualScores.map(score => ({...score, matchupId: match.id})))),
+        [...getLeagueMemberOptions(tournament.registrations), ...await getCenterLeagueMembers(prisma, tournament.centerId)]);
+    const getLeaguePlayerKey = (score: LeaguePlayerIdentity) => resolveIdentity(score).key;
+
     // 1. Initialize Team Stats Map
     const teamStats: Record<string, {
         id: string;
@@ -54,6 +72,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
 
     // 2. Initialize Individual Stats Map
     const individualStats: Record<string, {
+        teamId: string;
         userId: string | null;
         playerName: string;
         teamName: string;
@@ -82,13 +101,15 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
     const manualHandicaps = tournament.manualTeamHandicaps ? JSON.parse(tournament.manualTeamHandicaps) : {};
     const teamHandicapLimit = tournament.teamHandicapLimit;
     const awardMinGames = tournament.awardMinGames;
+    const tournamentSettings = tournament.settings ? JSON.parse(tournament.settings) : {};
+    const useStoredTeamTotals = tournamentSettings.historicalImport?.useStoredTeamTotals === true;
 
     // 4. Global Squad Lookup for fallbacks
     const squadLookup: Record<string, string | null> = {};
     tournament.leagueRounds.forEach((round: any) => {
         round.matchups.forEach((match: any) => {
             match.individualScores.forEach((s: any) => {
-                const key = s.userId ? `${s.userId}-${s.playerName || ''}` : (s.playerName || 'Unknown');
+                const key = getLeaguePlayerKey(s);
                 if (s.teamSquad) {
                     squadLookup[key] = s.teamSquad;
                 } else {
@@ -115,7 +136,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                 const teamScores = individualScores.filter(s => {
                     if (s.teamId !== teamId) return false;
 
-                    const sKey = s.userId ? `${s.userId}-${s.playerName || ''}` : (s.playerName || 'Unknown');
+                    const sKey = getLeaguePlayerKey(s);
                     const sSquad = s.teamSquad || squadLookup[sKey] || null;
                     const targetSquad = squad || null;
                     return sSquad === targetSquad;
@@ -143,7 +164,7 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
             };
 
             // Helper to process team stats
-            const processTeam = (teamId: string | null, squad: string | null, teamName: string, points: number, opponentPoints: number, individualScores: any[]) => {
+            const processTeam = (teamId: string | null, squad: string | null, teamName: string, points: number, opponentPoints: number, individualScores: any[], storedGameScores: Array<number | null>) => {
                 if (!teamId) return;
 
                 const teamKey = squad ? `${teamId}-${squad}` : teamId;
@@ -176,9 +197,12 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                 stats.losses += opponentPoints;
 
                 // Calculate Adjusted Scores
-                const g1 = calculateTeamGameScore(teamId, squad, 0, individualScores);
-                const g2 = calculateTeamGameScore(teamId, squad, 1, individualScores);
-                const g3 = calculateTeamGameScore(teamId, squad, 2, individualScores);
+                const hasStoredGameScores = useStoredTeamTotals
+                    && storedGameScores.length === 3
+                    && storedGameScores.every(score => Number.isFinite(score));
+                const g1 = hasStoredGameScores ? Number(storedGameScores[0]) : calculateTeamGameScore(teamId, squad, 0, individualScores);
+                const g2 = hasStoredGameScores ? Number(storedGameScores[1]) : calculateTeamGameScore(teamId, squad, 1, individualScores);
+                const g3 = hasStoredGameScores ? Number(storedGameScores[2]) : calculateTeamGameScore(teamId, squad, 2, individualScores);
                 const series = g1 + g2 + g3;
 
                 stats.totalPinfall += series;
@@ -202,16 +226,17 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
             };
 
             // Team A
-            processTeam(match.teamAId, (match as any).teamASquad, match.teamA?.name || 'Team A', match.pointsA || 0, match.pointsB || 0, match.individualScores);
+            processTeam(match.teamAId, (match as any).teamASquad, match.teamA?.name || 'Team A', match.pointsA || 0, match.pointsB || 0, match.individualScores, [match.scoreA1, match.scoreA2, match.scoreA3]);
 
             // Team B
-            processTeam(match.teamBId, (match as any).teamBSquad, match.teamB?.name || 'Team B', match.pointsB || 0, match.pointsA || 0, match.individualScores);
+            processTeam(match.teamBId, (match as any).teamBSquad, match.teamB?.name || 'Team B', match.pointsB || 0, match.pointsA || 0, match.individualScores, [match.scoreB1, match.scoreB2, match.scoreB3]);
 
             // Individual Stats (unchanged logic mostly, but use awardMinGames)
             for (const score of match.individualScores) {
                 // Get squad for this score's team in this match
-                // COMPOSITE KEY: Important to prevent different guests sharing the same userId (e.g. admin id) from merging
-                const key = score.userId ? `${score.userId}-${score.playerName || ''}` : (score.playerName || 'Unknown');
+                // A linked member is one person even if a historical display name is
+                // missing or changes. Unlinked guests remain grouped by their name.
+                const key = getLeaguePlayerKey(score);
                 let currentSquad = score.teamSquad || squadLookup[key] || null;
 
                 if (!currentSquad) {
@@ -228,11 +253,12 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
                 const rawTeamName = match.teamAId === score.teamId ? match.teamA?.name : match.teamB?.name;
                 const teamDisplayName = currentSquad ? `${rawTeamName} (${currentSquad})` : (rawTeamName || '-');
 
-                const name = score.playerName || score.User?.name || 'Unknown';
+                const name = getLeaguePlayerName(score);
 
                 if (!individualStats[key]) {
                     individualStats[key] = {
-                        userId: score.userId,
+                        teamId: score.teamId,
+                        userId: resolveIdentity(score).userId,
                         playerName: name,
                         teamName: teamDisplayName,
                         totalPinfall: 0,
@@ -256,9 +282,9 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
 
                 if (s1 > 0 || s2 > 0 || s3 > 0) {
                     const hTotal = score.handicap * 3;
-                    const cs1 = Math.min(s1 + score.handicap, 300);
-                    const cs2 = Math.min(s2 + score.handicap, 300);
-                    const cs3 = Math.min(s3 + score.handicap, 300);
+                    const cs1 = useStoredTeamTotals ? s1 + score.handicap : Math.min(s1 + score.handicap, 300);
+                    const cs2 = useStoredTeamTotals ? s2 + score.handicap : Math.min(s2 + score.handicap, 300);
+                    const cs3 = useStoredTeamTotals ? s3 + score.handicap : Math.min(s3 + score.handicap, 300);
                     const series = cs1 + cs2 + cs3;
                     individualStats[key].totalPinfall += series;
                     individualStats[key].totalGames += 3;
@@ -333,8 +359,8 @@ export async function getLeagueLeaderboard(tournamentId: string, roundLimit?: nu
         highGame: [] as any[]
     };
 
-    // getWinnerId must use the same composite key to let different guests win awards
-    const getWinnerId = (p: any) => p.userId ? `${p.userId}-${p.playerName || ''}` : p.playerName;
+    // Keep award allocation on the same identity used by the cumulative table.
+    const getWinnerId = (p: any) => getLeaguePlayerKey(p);
 
     // 1-9. Interleaved Award Allocation based on Priority
     const steps = [
@@ -405,6 +431,14 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
 
     if (!tournament) throw new Error("Tournament not found");
 
+    const resolveIdentity = createLeagueIdentityResolver(tournament.leagueRounds.flatMap(round =>
+        round.matchups.flatMap(match => match.individualScores.map(score => ({...score, matchupId: match.id})))),
+        [...getLeagueMemberOptions(tournament.registrations), ...await getCenterLeagueMembers(prisma, tournament.centerId)]);
+    const getLeaguePlayerKey = (score: LeaguePlayerIdentity) => resolveIdentity(score).key;
+
+    const tournamentSettings = tournament.settings ? JSON.parse(tournament.settings) : {};
+    const preserveOfficialHandicappedScores = tournamentSettings.historicalImport?.useStoredTeamTotals === true;
+
     // Grouping by TeamId then by PlayerKey
     const dataByTeam: Record<string, {
         teamId: string;
@@ -430,7 +464,7 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
     tournament.leagueRounds.forEach((round: any) => {
         round.matchups.forEach((match: any) => {
             match.individualScores.forEach((s: any) => {
-                const key = s.userId ? `${s.userId}-${s.playerName || ''}` : (s.playerName || 'Unknown');
+                const key = getLeaguePlayerKey(s);
                 if (s.teamSquad) squadLookup[key] = s.teamSquad;
                 else {
                     const reg = tournament.registrations.find((r: any) =>
@@ -443,7 +477,10 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
     });
 
     let lastRoundNumber = 0;
-    const playedRounds = tournament.leagueRounds.filter((r: any) => r.matchups.some((m: any) => m.status === 'FINISHED'));
+    const playedRounds = tournament.leagueRounds.filter((r: any) =>
+        (!roundLimit || r.roundNumber <= roundLimit) &&
+        r.matchups.some((m: any) => m.status === 'FINISHED')
+    );
     if (playedRounds.length > 0) {
         lastRoundNumber = playedRounds[playedRounds.length - 1].roundNumber;
     }
@@ -481,8 +518,7 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                 const curTeamId = score.teamId;
                 if (!curTeamId) continue;
 
-                // COMPOSITE KEY
-                const playerKey = score.userId ? `${score.userId}-${score.playerName || ''}` : (score.playerName || 'Unknown');
+                const playerKey = getLeaguePlayerKey(score);
 
                 // Determine squad/team name for grouping using squadLookup too
                 const squadCandidate = score.teamSquad || squadLookup[playerKey] || (match.teamAId === curTeamId && match.teamAId !== match.teamBId ? (match as any).teamASquad : (match.teamBId === curTeamId && match.teamAId !== match.teamBId ? (match as any).teamBSquad : null));
@@ -504,8 +540,8 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
 
                 if (!dataByTeam[teamKey].players[playerKey]) {
                     dataByTeam[teamKey].players[playerKey] = {
-                        userId: score.userId,
-                        name: score.playerName || score.User?.name || 'Unknown',
+                        userId: resolveIdentity(score).userId,
+                        name: getLeaguePlayerName(score),
                         gamesCount: 0,
                         handicap: score.handicap,
                         totalRawPins: 0,
@@ -522,16 +558,16 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
                 const rawSeries = score.score1 + score.score2 + score.score3;
 
                 // Team Total Pinfall (capped individual pins like main leaderboard)
-                const teamCappedSeries = Math.min(score.score1 + score.handicap, 300) +
-                    Math.min(score.score2 + score.handicap, 300) +
-                    Math.min(score.score3 + score.handicap, 300);
+                const officialGames = [score.score1, score.score2, score.score3].map(value => {
+                    const handicapped = value + score.handicap;
+                    return preserveOfficialHandicappedScores ? handicapped : Math.min(handicapped, 300);
+                });
+                const teamCappedSeries = officialGames[0] + officialGames[1] + officialGames[2];
                 dataByTeam[teamKey].totalPinfall += teamCappedSeries;
 
                 if (rawSeries > 0) {
                     const hTotal = score.handicap * 3;
-                    const cs1 = Math.min(score.score1 + score.handicap, 300);
-                    const cs2 = Math.min(score.score2 + score.handicap, 300);
-                    const cs3 = Math.min(score.score3 + score.handicap, 300);
+                    const [cs1, cs2, cs3] = officialGames;
                     const hSeries = cs1 + cs2 + cs3;
                     p.gamesCount += 3;
                     p.totalRawPins += rawSeries; // raw remains uncapped for reference? or should it be capped? 
@@ -611,4 +647,27 @@ export async function getIndividualLeaderboard(tournamentId: string, roundLimit?
             reportNotice: (tournament as any).reportNotice
         }
     };
+}
+
+
+// One read path for the official PNGs and BAND; all standings retain their existing calculations.
+export async function getWeeklyLeagueReport(tournamentId: string, week: number) {
+    if (!Number.isSafeInteger(week) || week < 1) throw new Error('올바른 주차를 선택해주세요.');
+    const [leaderboard, individual, roundInfo] = await Promise.all([
+        getLeagueLeaderboard(tournamentId, week),
+        getIndividualLeaderboard(tournamentId, week),
+        prisma.leagueRound.findFirst({
+            where: { tournamentId, roundNumber: week },
+            include: { tournament: { select: { teamHandicapLimit: true, manualTeamHandicaps: true, settings: true } }, matchups: { include: {
+                teamA: { select: { id: true, name: true } },
+                teamB: { select: { id: true, name: true } },
+                individualScores: { include: { User: { select: { name: true } } } },
+            } } },
+        }),
+    ]);
+    if (!roundInfo) throw new Error('선택한 주차가 존재하지 않습니다.');
+    const manualTeamHandicaps = roundInfo.tournament.manualTeamHandicaps ? JSON.parse(roundInfo.tournament.manualTeamHandicaps) : {};
+    const tournamentSettings = roundInfo.tournament.settings ? JSON.parse(roundInfo.tournament.settings) : {};
+    const useStoredTeamTotals = tournamentSettings.historicalImport?.useStoredTeamTotals === true;
+    return { leaderboard, individual, roundInfo: { ...roundInfo, matchups: roundInfo.matchups.map(match => ({ ...match, manualTeamHandicaps, useStoredTeamTotals })), tournamentTeamHandicapLimit: roundInfo.tournament.teamHandicapLimit } };
 }

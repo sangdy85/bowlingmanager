@@ -4,9 +4,19 @@ import Link from 'next/link';
 import styles from './Navbar.module.css';
 import { useState } from 'react';
 import { signOut } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
 
 export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boolean, userRole?: string }) {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+  const primaryLinks = [
+    { label: '동호회', href: isLoggedIn ? '/team' : '/login', section: '/team' },
+    { label: '볼링장', href: '/centers', section: '/centers' },
+    { label: '대회 정보', href: '/competitions', section: '/competitions' },
+    { label: '볼링 용품', href: '/equipment', section: '/equipment' },
+    { label: '커뮤니티', href: '/community', section: '/community' },
+    { label: '이용방법 & 가이드', href: '/guide', section: '/guide' },
+  ];
 
   const toggleMenu = () => setIsOpen(!isOpen);
   const closeMenu = () => setIsOpen(false);
@@ -24,7 +34,7 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
   };
 
   return (
-    <nav className={styles.navbar}>
+    <nav className={styles.navbar} aria-label="사이트 메뉴">
       <div className={`container ${styles.navContent}`}>
         <Link href="/" className={styles.logo} onClick={closeMenu}>
           BowlingManager
@@ -41,13 +51,23 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
         </button>
 
         <div id="main-navigation" className={`${styles.links} ${isOpen ? styles.linksOpen : ''}`}>
+          <div className={styles.primaryLinks}>
+            {primaryLinks.map(({ label, href, section }) => (
+              <Link key={section} href={href} className={styles.link} onClick={closeMenu}
+                aria-current={pathname === section || pathname.startsWith(section + '/') ? 'page' : undefined}>
+                {label}
+              </Link>
+            ))}
+          </div>
+          <div className={styles.accountArea}>
           {isLoggedIn ? (
-            <>
-              <Link href="/about" className={styles.link} onClick={closeMenu}>이용 방법</Link>
-              <Link href="/guide" className={styles.link} onClick={closeMenu}>볼링 가이드</Link>
+            <details className={styles.accountMenu}>
+              <summary className={styles.link}>내 계정 ▾</summary>
+              <div className={styles.accountLinks}>
               {userRole === 'SUPER_ADMIN' ? (
                 <>
                   <Link href="/admin" className={styles.link} onClick={closeMenu}>사이트 관리</Link>
+                  <Link href="/competitions/manage" className={styles.link} onClick={closeMenu}>대회정보 관리</Link>
                   <Link href="/centers" className={styles.link} onClick={closeMenu}>센터/대회 관리</Link>
                   <Link href="/inquiry" className={styles.link} onClick={closeMenu}>문의 관리</Link>
                 </>
@@ -55,8 +75,6 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
                 <>
                   <Link href="/personal" className={styles.link} onClick={closeMenu}>나의 기록실</Link>
                   <Link href="/team" className={styles.link} onClick={closeMenu}>팀 관리</Link>
-                  <Link href="/stats" className={styles.link} onClick={closeMenu}>통계/순위</Link>
-                  <Link href="/centers" className={styles.link} onClick={closeMenu}>볼링장/대회</Link>
                   <Link href="/inquiry" className={styles.link} onClick={closeMenu}>문의하기</Link>
                 </>
               )}
@@ -68,16 +86,15 @@ export default function NavbarClient({ isLoggedIn, userRole }: { isLoggedIn: boo
               >
                 로그아웃
               </button>
-            </>
+              </div>
+            </details>
           ) : (
             <>
-              <Link href="/about" className={styles.link} onClick={closeMenu}>이용 방법</Link>
-              <Link href="/guide" className={styles.link} onClick={closeMenu}>볼링 가이드</Link>
-              <Link href="/centers" className={styles.link} onClick={closeMenu}>볼링장/대회</Link>
               <Link href="/login" className={styles.link} onClick={closeMenu}>로그인</Link>
               <Link href="/register" className="btn btn-primary" onClick={closeMenu}>회원가입</Link>
             </>
           )}
+          </div>
         </div>
       </div>
     </nav>

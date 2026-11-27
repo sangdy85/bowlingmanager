@@ -6,13 +6,12 @@
 }
 
 .card {
-  border: 1px solid #2c3a52;
+  border: 1px solid var(--border);
   border-radius: 1rem;
   background:
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 18rem),
-    linear-gradient(180deg, #162136, #111a2b);
+    var(--card);
   padding: 1.25rem;
-  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.22);
+  box-shadow: var(--shadow-sm);
 }
 
 .header {
@@ -22,7 +21,7 @@
 
 .title {
   margin: 0;
-  color: #f8fafc;
+  color: var(--foreground);
   font-size: 1.55rem;
   font-weight: 900;
   letter-spacing: -0.035em;
@@ -30,8 +29,8 @@
 
 .subtitle {
   margin: 0.35rem 0 0;
-  color: #94a3b8;
-  font-size: 0.78rem;
+  color: var(--muted);
+  font-size: .85rem;
   font-weight: 650;
 }
 
@@ -64,15 +63,15 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  color: #cbd5e1;
-  font-size: 0.78rem;
+  color: var(--secondary-foreground);
+  font-size: .85rem;
   font-weight: 650;
 }
 
 .remember input {
   width: 1rem;
   height: 1rem;
-  accent-color: #2563eb;
+  accent-color: var(--primary);
 }
 
 .notice {
@@ -80,32 +79,32 @@
   border-radius: 0.7rem;
   padding: 0.7rem 0.8rem;
   text-align: center;
-  font-size: 0.76rem;
+  font-size: .85rem;
   font-weight: 700;
 }
 
 .success {
   border-color: rgba(34, 197, 94, 0.28);
-  background: rgba(20, 83, 45, 0.22);
-  color: #bbf7d0;
+  background: #edf8f1;
+  color: #166534;
 }
 
 .info {
   border-color: rgba(59, 130, 246, 0.28);
-  background: rgba(30, 64, 175, 0.2);
-  color: #bfdbfe;
+  background: var(--primary-soft);
+  color: var(--primary);
 }
 
 .error {
   border-color: rgba(239, 68, 68, 0.28);
-  background: rgba(127, 29, 29, 0.22);
-  color: #fecaca;
+  background: #fff1f2;
+  color: #b42335;
 }
 
 .help {
   margin: 0.25rem 0 0;
-  color: #8190a6;
-  font-size: 0.66rem;
+  color: var(--muted);
+  font-size: .85rem;
 }
 
 .social {
@@ -117,9 +116,9 @@
   display: grid;
   gap: 0.45rem;
   margin-top: 0.9rem;
-  color: #94a3b8;
+  color: var(--muted);
   text-align: center;
-  font-size: 0.76rem;
+  font-size: .85rem;
 }
 
 .footer a {
@@ -152,11 +151,11 @@
   gap: .22rem;
   min-height: 4.5rem;
   align-content: center;
-  border: 1px solid #30425d;
+  border: 1px solid var(--border);
   border-radius: .8rem;
-  background: rgba(15,23,42,.36);
+  background: var(--card);
   padding: .8rem .9rem;
-  color: #e2e8f0;
+  color: var(--foreground);
   text-decoration: none;
   transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
 }
@@ -164,35 +163,35 @@
 .choiceCard:hover {
   transform: translateY(-1px);
   border-color: #4f79b8;
-  background: rgba(59,130,246,.08);
+  background: var(--primary-soft);
   text-decoration: none;
 }
 
 .choiceTitle {
-  color: #f8fafc;
+  color: var(--foreground);
   font-size: .9rem;
   font-weight: 850;
 }
 
 .choiceDescription {
-  color: #94a3b8;
-  font-size: .7rem;
+  color: var(--muted);
+  font-size: .85rem;
   font-weight: 650;
 }
 
 .resultBox {
   display: grid;
   gap: .55rem;
-  border: 1px solid #30425d;
+  border: 1px solid var(--border);
   border-radius: .8rem;
-  background: rgba(15,23,42,.36);
+  background: var(--card);
   padding: .8rem;
 }
 
 .resultLead {
   margin: 0;
-  color: #94a3b8;
-  font-size: .72rem;
+  color: var(--muted);
+  font-size: .85rem;
   line-height: 1.55;
 }
 
@@ -205,11 +204,11 @@
 }
 
 .resultItem {
-  border-bottom: 1px solid #2c3a52;
+  border-bottom: 1px solid var(--border);
   padding: .45rem 0;
-  color: #e2e8f0;
+  color: var(--foreground);
   text-align: center;
-  font-size: .8rem;
+  font-size: .85rem;
   font-weight: 800;
   overflow-wrap: anywhere;
 }
@@ -218,8 +217,8 @@
 
 .resultMeta {
   margin-top: .12rem;
-  color: #8190a6;
-  font-size: .65rem;
+  color: var(--muted);
+  font-size: .85rem;
   font-weight: 600;
 }
 
@@ -230,7 +229,7 @@
 
 .successTitle {
   margin: 0;
-  color: #86efac;
+  color: #166534;
   font-size: 1.05rem;
   font-weight: 900;
   text-align: center;
@@ -238,8 +237,8 @@
 
 .successText {
   margin: 0;
-  color: #94a3b8;
-  font-size: .76rem;
+  color: var(--muted);
+  font-size: .85rem;
   line-height: 1.6;
   text-align: center;
 }

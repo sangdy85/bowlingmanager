@@ -1,6 +1,8 @@
 'use server';
 
 import prisma from "@/lib/prisma";
+import { getLeagueMemberOptions, leagueRosterNames } from "@/lib/league-score-identity";
+import { getCenterLeagueMembers, getCenterLeagueRosterNames } from "@/lib/center-league-identity";
 
 export async function getLeagueRoundResults(roundId: string) {
     try {
@@ -8,7 +10,10 @@ export async function getLeagueRoundResults(roundId: string) {
             where: { id: roundId },
             include: {
                 tournament: {
-                    select: { name: true, settings: true, type: true, teamHandicapLimit: true, reportNotice: true }
+                    select: {
+                        centerId: true, name: true, settings: true, type: true, teamHandicapLimit: true, manualTeamHandicaps: true, reportNotice: true,
+                        registrations: { select: { userId: true, teamId: true, squad: true, user: { select: { name: true } } } }
+                    }
                 },
                 matchups: {
                     include: {
@@ -16,7 +21,7 @@ export async function getLeagueRoundResults(roundId: string) {
                             include: {
                                 members: {
                                     include: {
-                                        user: true
+                                        user: { select: { id: true, name: true, handicap: true } }
                                     }
                                 }
                             }
@@ -25,13 +30,13 @@ export async function getLeagueRoundResults(roundId: string) {
                             include: {
                                 members: {
                                     include: {
-                                        user: true
+                                        user: { select: { id: true, name: true, handicap: true } }
                                     }
                                 }
                             }
                         },
                         individualScores: {
-                            include: { User: true, Team: true },
+                            include: { User: { select: { id: true, name: true, handicap: true } }, Team: true },
                             orderBy: { id: 'asc' }
                         }
                     }
@@ -40,7 +45,7 @@ export async function getLeagueRoundResults(roundId: string) {
                     include: {
                         registration: {
                             include: {
-                                user: true,
+                                user: { select: { id: true, name: true, handicap: true } },
                                 team: true
                             }
                         }
@@ -53,6 +58,12 @@ export async function getLeagueRoundResults(roundId: string) {
 
         const settings = round.tournament.settings ? JSON.parse(round.tournament.settings) : {};
         const teamHandicapLimit = round.tournament.teamHandicapLimit ?? settings.teamHandicapLimit;
+        const manualTeamHandicaps = round.tournament.manualTeamHandicaps ? JSON.parse(round.tournament.manualTeamHandicaps) : {};
+        const useStoredTeamTotals = settings.historicalImport?.useStoredTeamTotals === true;
+        const registeredPlayers = [...getLeagueMemberOptions(round.tournament.registrations || []),
+            ...await getCenterLeagueMembers(prisma, round.tournament.centerId)];
+        const rosterPlayers = leagueRosterNames([...registeredPlayers,
+            ...await getCenterLeagueRosterNames(prisma, round.tournament.centerId)]);
 
         return {
             id: round.id,
@@ -60,6 +71,8 @@ export async function getLeagueRoundResults(roundId: string) {
             date: round.date,
             tournamentName: round.tournament.name,
             tournamentType: round.tournament.type,
+            registeredPlayers,
+            rosterPlayers,
             teamHandicapLimit,
             participants: round.participants.map((p: any) => ({
                 id: p.id,
@@ -79,13 +92,24 @@ export async function getLeagueRoundResults(roundId: string) {
                 teamA: m.teamA,
                 teamB: m.teamB,
                 lanes: m.lanes,
+                manualTeamHandicaps,
                 pointsA: m.pointsA,
                 pointsB: m.pointsB,
                 status: m.status,
+                scoreA1: m.scoreA1,
+                scoreA2: m.scoreA2,
+                scoreA3: m.scoreA3,
+                scoreB1: m.scoreB1,
+                scoreB2: m.scoreB2,
+                scoreB3: m.scoreB3,
+                useStoredTeamTotals,
                 individualScores: m.individualScores.map((s: any) => ({
                     id: s.id,
                     userId: s.userId,
-                    playerName: s.playerName,
+                    // Older merges cleared playerName after linking userId.
+                    // Prefer the score-sheet snapshot, then fall back to the
+                    // linked account so public result tables never lose a name.
+                    playerName: s.playerName || s.User?.name || null,
                     teamId: s.teamId,
                     teamSquad: s.teamSquad,
                     handicap: s.handicap,

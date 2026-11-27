@@ -21,6 +21,8 @@ export type MobileScoreEntryTeam = {
 export type MobileOcrPlayer = {
     name: string;
     scores: number[];
+    scoreSlots?: (number | null)[];
+    reviewWarnings?: string[];
     matchedMemberId: string | null;
 };
 
@@ -58,6 +60,15 @@ export function normalizeMobileOcrPlayers(
         const scores = record.scores.filter(
             (score): score is number => Number.isInteger(score) && Number(score) >= 0 && Number(score) <= 300,
         );
+        const slots = record.scoreSlots;
+        if (slots !== undefined) {
+            if (!Array.isArray(slots) || !slots.length || slots.length > 12 || slots.some(value => value !== null && (!Number.isInteger(value) || Number(value) < 0 || Number(value) > 300))) return null;
+            if (!name) continue;
+            players.push({ name, scores: slots.includes(null) ? [] : slots as number[], scoreSlots: slots,
+                reviewWarnings: Array.isArray(record.reviewWarnings) ? record.reviewWarnings.filter((value): value is string => typeof value === 'string') : [],
+                matchedMemberId: memberIdsByName.get(name) ?? null });
+            continue;
+        }
         if (!name || scores.length === 0) continue;
         players.push({
             name,

@@ -10,22 +10,22 @@
   align-items: center;
   gap: 0.55rem;
   margin-bottom: 0.8rem;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.78rem;
   font-weight: 750;
   text-decoration: none;
 }
 
-.back:hover { color: #fff; text-decoration: none; }
+.back:hover { color: var(--foreground); text-decoration: none; }
 
 .backIcon {
   display: inline-grid;
   width: 1.9rem;
   height: 1.9rem;
   place-items: center;
-  border: 1px solid #3b4a62;
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: #172033;
+  background: var(--card);
 }
 
 .hero {
@@ -34,18 +34,17 @@
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
-  border: 1px solid #30425d;
+  border: 1px solid var(--border);
   border-radius: 1rem;
   background:
-    radial-gradient(circle at top right, rgba(59,130,246,.15), transparent 18rem),
-    linear-gradient(145deg, #19263d, #101827);
+    var(--card);
   padding: 1.15rem;
-  box-shadow: 0 12px 26px rgba(2,6,23,.16);
+  box-shadow: var(--shadow-sm);
 }
 
 .title {
   margin: 0;
-  color: #f8fafc;
+  color: var(--foreground);
   font-size: clamp(1.45rem, 4vw, 1.95rem);
   font-weight: 900;
   letter-spacing: -.035em;
@@ -53,7 +52,7 @@
 
 .subtitle {
   margin: .3rem 0 0;
-  color: #9fb0c5;
+  color: var(--muted);
   font-size: .78rem;
   font-weight: 650;
   line-height: 1.55;
@@ -63,15 +62,15 @@
   display: grid;
   min-width: 7.2rem;
   gap: .15rem;
-  border: 1px solid rgba(96,165,250,.25);
+  border: 1px solid var(--border-strong);
   border-radius: .8rem;
-  background: rgba(59,130,246,.1);
+  background: var(--primary-soft);
   padding: .65rem .8rem;
   text-align: right;
 }
 
-.countLabel { color: #93c5fd; font-size: .66rem; font-weight: 850; }
-.countValue { color: #fff; font-size: 1.3rem; font-weight: 900; }
+.countLabel { color: var(--primary); font-size: .66rem; font-weight: 850; }
+.countValue { color: var(--foreground); font-size: 1.3rem; font-weight: 900; }
 
 .layout {
   display: grid;
@@ -94,10 +93,10 @@
 
 .section {
   overflow: hidden;
-  border: 1px solid #2f405a;
+  border: 1px solid var(--border);
   border-radius: .95rem;
-  background: linear-gradient(180deg, #172238, #111a2b);
-  box-shadow: 0 9px 22px rgba(2,6,23,.13);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
 }
 
 .sectionHeader {
@@ -106,19 +105,19 @@
   justify-content: space-between;
   gap: .8rem;
   padding: .85rem 1rem;
-  border-bottom: 1px solid #2c3a52;
+  border-bottom: 1px solid var(--border);
 }
 
 .sectionTitle {
   margin: 0;
-  color: #f8fafc;
+  color: var(--foreground);
   font-size: .98rem;
   font-weight: 900;
 }
 
 .sectionHint {
   margin: .2rem 0 0;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: .72rem;
   font-weight: 650;
 }
@@ -136,7 +135,7 @@
   justify-content: space-between;
   gap: .8rem;
   min-width: 0;
-  border: 1px solid #2f405a;
+  border: 1px solid var(--border);
   border-radius: .75rem;
   background: #151f32;
   padding: .75rem;
@@ -157,29 +156,29 @@
   place-items: center;
   border: 1px solid #3e5f90;
   border-radius: 999px;
-  background: rgba(59,130,246,.12);
-  color: #93c5fd;
+  background: var(--primary-soft);
+  color: var(--primary);
   font-weight: 900;
 }
 
 .name {
-  color: #f8fafc;
+  color: var(--foreground);
   font-size: .82rem;
   font-weight: 850;
 }
 
 .meta {
   margin-top: .15rem;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: .68rem;
   overflow-wrap: anywhere;
 }
 
 .empty {
-  border: 1px dashed #3b4a62;
+  border: 1px dashed var(--border);
   border-radius: .8rem;
   padding: 2rem 1rem;
-  color: #94a3b8;
+  color: var(--muted);
   text-align: center;
   font-size: .78rem;
 }
@@ -188,15 +187,15 @@
   min-height: 2.25rem;
   border: 1px solid rgba(248,113,113,.25);
   border-radius: .6rem;
-  background: rgba(127,29,29,.18);
+  background: #fff1f2;
   padding: .4rem .65rem;
-  color: #fca5a5;
+  color: #b42335;
   font-size: .7rem;
   font-weight: 800;
   cursor: pointer;
 }
 
-.dangerButton:hover { background: rgba(127,29,29,.3); }
+.dangerButton:hover { background: #fff1f2; }
 
 @media (max-width: 800px) {
   .layout { grid-template-columns: 1fr; }

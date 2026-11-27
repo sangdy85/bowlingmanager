@@ -29,6 +29,7 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
 
     // OCR State
     const [ocrRows, setOcrRows] = useState<GeminiParsedRow[]>([]);
+    const [isOcrAnalyzing, setIsOcrAnalyzing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -61,6 +62,10 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
     };
 
     const handleBulkSave = async () => {
+        if (isSaving || isOcrAnalyzing || !ocrRows.length || ocrRows.some(row => !row.scores.length || row.scoreSlots?.includes(null))) {
+            setSaveMessage({ success: false, message: '불분명한 점수를 먼저 확인해주세요.' });
+            return;
+        }
         setIsSaving(true);
         setSaveMessage(null);
         try {
@@ -123,7 +128,11 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                     <select
                         className="input"
                         value={selectedTeamId}
-                        onChange={(e) => setSelectedTeamId(e.target.value)}
+                        onChange={(e) => {
+                            setSelectedTeamId(e.target.value);
+                            setOcrRows([]);
+                            setSaveMessage(null);
+                        }}
                     >
                         {teams.map(team => (
                             <option key={team.id} value={team.id}>{team.name}</option>
@@ -173,8 +182,11 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                 ) : mode === 'ocr' ? (
                     <div className={styles.modePanel}>
                         <GeminiScoreUpload
+                            key={selectedTeamId}
                             knownMembers={currentTeamMembers.map(m => m.name)}
                             rows={ocrRows}
+                            disabled={isSaving}
+                            onAnalyzingChange={setIsOcrAnalyzing}
                             setRows={setOcrRows}
                         />
 
@@ -189,7 +201,7 @@ export default function AddScoreForm({ teams, currentUserId }: AddScoreFormProps
                             <button
                                 onClick={handleBulkSave}
                                 className="btn btn-primary w-full"
-                                disabled={isSaving || ocrRows.length === 0}
+                                disabled={isSaving || isOcrAnalyzing || ocrRows.length === 0 || ocrRows.some(row => !row.scores.length || row.scoreSlots?.includes(null))}
                             >
                                 {isSaving ? '저장 중...' : `${ocrRows.length}건 일괄 저장`}
                             </button>

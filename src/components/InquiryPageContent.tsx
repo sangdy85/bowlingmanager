@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { PUBLIC_CONTACT_EMAIL, PUBLIC_CONTACT_HREF } from '@/lib/public-contact';
 import { createInquiry, answerInquiry, deleteInquiry } from '@/app/actions/inquiry-actions';
 
 interface InquiryWithAuthor {
@@ -93,6 +94,13 @@ export default function InquiryPageContent({
                     신속하고 친절하게 답변해 드리겠습니다.
                 </p>
             </header>
+
+            <section className="max-w-4xl mx-auto mb-8 bg-white border border-slate-200 rounded-3xl p-8" aria-labelledby="public-contact">
+                <h2 id="public-contact" className="text-xl font-bold mb-3">비회원 문의 · 콘텐츠 정정</h2>
+                <p>로그인하지 않아도 <a className="text-primary underline" href={PUBLIC_CONTACT_HREF}>{PUBLIC_CONTACT_EMAIL}</a>로 문의할 수 있습니다.</p>
+                <p className="mt-3 text-slate-600">문제가 있는 페이지 주소, 확인 날짜, 수정이 필요한 항목과 근거 링크를 함께 보내주세요. 경기 점수·참가 내역의 확인은 해당 볼링장 또는 대회 운영자에게 먼저 요청해주세요.</p>
+                <p className="mt-2 text-sm text-slate-600">비밀번호·인증번호·주민등록번호는 보내지 마세요. 점수판 사진에는 문의와 관계없는 사람의 연락처 등 개인정보를 가려주세요.</p>
+            </section>
 
             <div className="max-w-4xl mx-auto bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
                 <h2 className="text-2xl font-bold mb-6 text-gray-800">문의 등록 및 내역</h2>

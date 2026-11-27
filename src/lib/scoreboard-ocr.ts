@@ -1,4 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { analyzeWithOcrSpace } from '@/lib/ocr-space-scoreboard';
+import { analyzeWithProviderCascade } from '@/lib/scoreboard-provider-cascade';
+import { withScoreboardMemberQuota } from '@/lib/scoreboard-member-quota';
+import type { ScoreImageCrop } from '@/lib/score-image-crop';
 import {
     checkUserAiQuota,
     extractJson,
@@ -10,6 +14,8 @@ import {
 export type GeminiParsedRow = {
     memberName: string;
     scores: number[];
+    scoreSlots?: (number | null)[];
+    reviewWarnings?: string[];
 };
 
 export type ScoreboardOcrResult = {
@@ -17,6 +23,21 @@ export type ScoreboardOcrResult = {
     data?: GeminiParsedRow[];
     message?: string;
     errorType?: "QUOTA" | "GENERAL";
+    quotaScope?: 'MEMBER';
+    suggestedCrop?: ScoreImageCrop;
+    provider?: 'gemini-free' | 'ocr-space-3' | 'ocr-space-2';
+};
+
+export type ScoreboardImageInput = {
+    userId: string;
+    image: Buffer;
+    mimeType: string;
+    knownMembers: string[];
+    engine?: 2 | 3;
+    expectedGameCount?: number;
+    crop?: ScoreImageCrop;
+    forceRefresh?: boolean;
+    deadlineAt?: number;
 };
 
 type GeneratedContent = {
@@ -26,6 +47,7 @@ type GeneratedContent = {
 };
 
 export type ScoreboardOcrDependencies = {
+    getProvider?: () => string;
     getApiKey: () => string | undefined;
     getDate: () => Promise<string>;
     checkQuota: (userId: string, date: string) => Promise<{ hasQuota: boolean; message?: string }>;
@@ -35,6 +57,7 @@ export type ScoreboardOcrDependencies = {
 };
 
 const defaultDependencies: ScoreboardOcrDependencies = {
+    getProvider: () => process.env.SCOREBOARD_OCR_PROVIDER || 'free-cascade',
     getApiKey: () => process.env.GOOGLE_API_KEY,
     getDate: getKstDate,
     checkQuota: checkUserAiQuota,
@@ -68,14 +91,16 @@ const defaultDependencies: ScoreboardOcrDependencies = {
 };
 
 export async function analyzeScoreboardImage(
-    input: {
-        userId: string;
-        image: Buffer;
-        mimeType: string;
-        knownMembers: string[];
-    },
+    input: ScoreboardImageInput,
     dependencies: ScoreboardOcrDependencies = defaultDependencies,
 ): Promise<ScoreboardOcrResult> {
+    const provider = dependencies.getProvider?.() ?? 'gemini';
+    if (provider === 'free-cascade') return withScoreboardMemberQuota(input.userId, () => analyzeWithProviderCascade(input));
+    if (provider === 'ocr-space') return withScoreboardMemberQuota(input.userId, () => analyzeWithOcrSpace(input));
+    if (provider === 'gemini' && dependencies === defaultDependencies) return {
+        success: false, errorType: 'GENERAL', message: '사진 분석은 무료 전용 프로젝트를 연결한 뒤 사용해주세요.',
+    };
+    if (provider !== 'gemini') return { success: false, errorType: 'GENERAL', message: '사진 분석 서비스 설정을 확인해주세요.' };
     try {
         const apiKey = dependencies.getApiKey();
         if (!apiKey) {

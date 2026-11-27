@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
+import { linkCenterTeamGuestRecords } from "@/lib/center-league-identity";
 
 export async function addCenterMember(centerId: string, userId: string, alias?: string) {
     const session = await auth();
@@ -19,12 +20,13 @@ export async function addCenterMember(centerId: string, userId: string, alias?: 
         throw new Error("Only managers can add members");
     }
 
-    await prisma.centerMember.create({
-        data: {
-            id: uuidv4(),
-            centerId,
-            userId,
-            alias
+    await prisma.$transaction(async tx => {
+        await tx.centerMember.create({ data: { id: uuidv4(), centerId, userId, alias } });
+        const memberships = await tx.teamMember.findMany({
+            where: { userId, team: { centerId } }, select: { teamId: true },
+        });
+        for (const membership of memberships) {
+            await linkCenterTeamGuestRecords(tx, centerId, membership.teamId, userId);
         }
     });
 
@@ -81,7 +83,10 @@ export async function joinCenter(centerId: string, teamId: string | null, alias:
     const userId = session.user.id;
 
     try {
-        await prisma.$transaction(async (tx) => {
+        const linked = await prisma.$transaction(async (tx) => {
+            if (teamId && !await tx.team.findFirst({ where: { id: teamId, centerId }, select: { id: true } })) {
+                throw new Error("해당 볼링장에 등록된 팀을 선택해주세요.");
+            }
             // 1. Check if already a center member
             const existingMember = await tx.centerMember.findUnique({
                 where: {
@@ -98,19 +103,12 @@ export async function joinCenter(centerId: string, teamId: string | null, alias:
                     where: { id: existingMember.id },
                     data: { teamId: teamId || undefined }
                 });
-                return;
+            } else {
+                // 2. Create CenterMember with team preference
+                await tx.centerMember.create({
+                    data: { id: uuidv4(), centerId, userId, teamId, alias }
+                });
             }
-
-            // 2. Create CenterMember with team preference
-            await tx.centerMember.create({
-                data: {
-                    id: uuidv4(),
-                    centerId,
-                    userId,
-                    teamId: teamId, // Save the selected team ID for future use
-                    alias: alias // User name as alias
-                }
-            });
 
             // 3. If team selected, join team
             if (teamId) {
@@ -134,11 +132,18 @@ export async function joinCenter(centerId: string, teamId: string | null, alias:
                         }
                     });
                 }
+                return await linkCenterTeamGuestRecords(tx, centerId, teamId, userId);
             }
+            return null;
         });
 
-        revalidatePath(`/centers/${centerId}`);
-        return { success: true, message: "가입되었습니다." };
+        revalidatePath(`/centers/${centerId}`, 'layout');
+        revalidatePath('/personal');
+        return { success: true, message: linked?.reviewRequired
+            ? "가입되었습니다. 동명 회원 또는 중복 참가 기록이 있어 일부 과거 기록은 센터 관리자 확인이 필요합니다."
+            : linked && (linked.linkedScores || linked.linkedRegistrations)
+                ? "가입되었습니다. 같은 볼링장·팀·이름의 과거 기록이 계정에 연결되었습니다."
+                : "가입되었습니다." };
     } catch (error: any) {
         console.error("Join Center Error:", error);
         return { success: false, message: error.message || "가입 중 오류가 발생했습니다." };

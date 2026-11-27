@@ -6,6 +6,8 @@ import { randomUUID } from "crypto";
 import { auth } from "@/auth";
 import { formatLane, parseKSTDate } from "@/lib/tournament-utils";
 import { updateTournamentBasicInfo } from "./tournament-center";
+import { verifyCenterAdmin } from "@/lib/auth-utils";
+import { canAutoCancelUnpaidRound, unpaidRoundEntryDeadline } from "@/lib/round-unpaid-cancellation";
 
 // Helper to get tournament info for revalidation
 async function getTournamentInfo(roundId: string) {
@@ -1304,54 +1306,47 @@ export async function searchPlayers(query: string, centerId: string) {
 // 14. Auto Cancel Unpaid Registrations
 export async function checkAndCancelUnpaidRegistrations(roundId: string) {
     try {
-        const info = await getTournamentInfo(roundId);
-        if (!info) return { count: 0 };
-
-        // Get Pending Registrations
-        const pendingRegs: any[] = await prisma.$queryRaw`
-            SELECT id, "createdAt" 
-            FROM "TournamentRegistration" 
-            WHERE "tournamentId" = ${info.tournamentId} 
-            AND "paymentStatus" = 'PENDING'
-        `;
-
-        if (!pendingRegs || pendingRegs.length === 0) return { count: 0 };
-
+        const target = await prisma.leagueRound.findUnique({
+            where: { id: roundId }, select: { tournament: { select: { centerId: true } } }
+        });
+        if (!target) return { count: 0 };
+        await verifyCenterAdmin(target.tournament.centerId);
         const now = new Date();
-        const idsToCancel: string[] = [];
-
-        for (const reg of pendingRegs) {
-            const createdAt = new Date(reg.createdAt);
-            // Rule: 72 hours passed AND it is past 23:59:59 of that day
-            const targetDate = new Date(createdAt);
-            targetDate.setDate(targetDate.getDate() + 3); // +72 hours
-            targetDate.setHours(23, 59, 59, 999); // End of that day
-
-            if (now > targetDate) {
-                idsToCancel.push(reg.id);
+        const outcome = await prisma.$transaction(async tx => {
+            const round = await tx.leagueRound.findUnique({
+                where: { id: roundId },
+                include: {
+                    tournament: { select: { id: true, centerId: true, startDate: true, leagueTime: true, status: true } },
+                    _count: { select: { individualScores: true, rawScores: true } }
+                }
+            });
+            if (!round || round.tournament.centerId !== target.tournament.centerId || !canAutoCancelUnpaidRound(round, now)) return null;
+            const pending = await tx.roundParticipant.findMany({
+                where: { roundId, registration: { tournamentId: round.tournamentId, paymentStatus: 'PENDING' } },
+                select: { id: true, registrationId: true, createdAt: true }
+            });
+            let count = 0;
+            for (const entry of pending) {
+                const deadline = unpaidRoundEntryDeadline(entry.createdAt);
+                if (!deadline || now <= deadline) continue;
+                const canceled = await tx.tournamentRegistration.updateMany({
+                    where: { id: entry.registrationId, tournamentId: round.tournamentId, paymentStatus: 'PENDING' },
+                    data: { paymentStatus: 'CANCELED' }
+                });
+                if (!canceled.count) continue;
+                // Scope by both the round and entry. Never clear earlier rounds.
+                await tx.roundParticipant.updateMany({
+                    where: { id: entry.id, roundId, registrationId: entry.registrationId },
+                    data: { lane: null, isManual: false }
+                });
+                count++;
             }
+            return { count, centerId: round.tournament.centerId, tournamentId: round.tournamentId };
+        });
+        if (outcome?.count) {
+            revalidatePath(`/centers/${outcome.centerId}/tournaments/${outcome.tournamentId}/rounds/${roundId}`);
         }
-
-        if (idsToCancel.length > 0) {
-            // Bulk Update Status
-            // Use raw query to avoid Prisma Client type issues with isManual
-            for (const id of idsToCancel) {
-                await prisma.$executeRaw`
-                    UPDATE "TournamentRegistration" SET "paymentStatus" = 'CANCELED' WHERE "id" = ${id}
-                `;
-            }
-
-            // Remove Lane Assignment
-            for (const id of idsToCancel) {
-                await prisma.$executeRaw`
-                    UPDATE "RoundParticipant" SET "lane" = null, "isManual" = false WHERE "registrationId" = ${id}
-                `;
-            }
-
-            revalidatePath(`/centers/${info.centerId}/tournaments/${info.tournamentId}/rounds/${roundId}`);
-        }
-
-        return { count: idsToCancel.length };
+        return { count: outcome?.count || 0 };
 
     } catch (e) {
         console.error("Auto cancel failed", e);

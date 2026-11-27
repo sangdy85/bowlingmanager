@@ -32,7 +32,7 @@ export default function ActiveTournaments({ tournaments, centerId, isManager = f
             <div className={styles.grid}>
                 {tournaments.map(t => {
                     let buttonText = '참가 신청';
-                    let buttonColor = '#2563eb';
+                    let buttonColor = 'var(--primary)';
 
                     if (isManager) {
                         buttonText = '대회 관리';

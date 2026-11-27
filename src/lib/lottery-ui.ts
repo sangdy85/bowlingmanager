@@ -37,20 +37,20 @@ export function randomCandidateIndex(count: number) {
 
 
 export function getPrizeWinnerRegistrationIds(
-    sortedResults: ReadonlyArray<{ id: string; scores?: number[]; registrationIds?: string[] }>,
+    sortedResults: ReadonlyArray<{ id: string; scores?: number[]; registrationIds?: string[]; isFemaleChamp?: boolean }>,
     isTeamEvent: boolean,
 ): string[] {
-    const podium = sortedResults
+    const prizeWinners = sortedResults
         .filter(result => (result.scores || []).some(score => score > 0))
-        .slice(0, 3);
+        .filter((result, rank) => rank < 3 || result.isFemaleChamp === true);
 
     if (!isTeamEvent) {
-        return podium.map(result => result.id);
+        return [...new Set(prizeWinners.map(result => result.id))];
     }
 
     const seen = new Set<string>();
     const ids: string[] = [];
-    podium.forEach(result => {
+    prizeWinners.forEach(result => {
         (result.registrationIds || []).forEach(id => {
             if (!seen.has(id)) {
                 seen.add(id);

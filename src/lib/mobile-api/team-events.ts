@@ -591,6 +591,7 @@ const eventInclude = {
     team: {
         select: {
             name: true,
+            paymentAccounts: { where: { kind: "GAME_FEE" }, select: { id: true, bankName: true, accountNumber: true, holderName: true, revision: true } },
             members: {
                 orderBy: { joinedAt: "asc" as const },
                 select: { id: true, userId: true, alias: true, user: { select: { name: true } } },
@@ -649,6 +650,8 @@ function serializeEvent(event: EventWithRelations, access: Awaited<ReturnType<ty
         competitionMode: competitionVisible ? event.competitionMode : null,
         laneDrawEnabled: event.laneDrawEnabled, laneDrawMode: event.laneDrawMode,
         laneDrawStatus: event.laneDrawStatus, myRole: access.role, myAttendance, counts,
+        gameFeeAccount: event.team.paymentAccounts?.[0] ?? null,
+        myGameFee: serializeGameFee(attendanceByMember.get(access.member.id)),
         bowlerHiddenEnabled: access.bowlerHiddenEnabled,
         competition: competitionVisible ? {
             enabled: true,
@@ -676,6 +679,8 @@ function serializeEvent(event: EventWithRelations, access: Awaited<ReturnType<ty
             memberId: member.id,
             name: attendanceByMember.get(member.id)?.memberDisplayName ?? member.alias?.trim() ?? member.user.name,
             status: attendanceByMember.get(member.id)?.status ?? "UNANSWERED",
+            gameFee: access.role !== "MEMBER" || member.id === access.member.id
+                ? serializeGameFee(attendanceByMember.get(member.id)) : null,
         })) : null,
         createdAt: event.createdAt.toISOString(), updatedAt: event.updatedAt.toISOString(),
     };
@@ -765,3 +770,14 @@ function parseDateKey(value: unknown): string {
 
 function dateKeyToDate(value: string): Date { return new Date(`${value}T00:00:00+09:00`); }
 function formatEventDate(value: Date): string { return kstDateKey(value); }
+
+function serializeGameFee(item: EventWithRelations["attendances"][number] | undefined) {
+    return {
+        status: item?.gameFeeStatus ?? "UNPAID", revision: item?.gameFeeRevision ?? 0,
+        requestedAt: item?.gameFeeRequestedAt?.toISOString() ?? null,
+        confirmedAt: item?.gameFeeConfirmedAt?.toISOString() ?? null,
+        account: item?.gameFeeAccountJson ? JSON.parse(item.gameFeeAccountJson) as {
+            bankName: string; accountNumber: string; holderName: string;
+        } : null,
+    };
+}

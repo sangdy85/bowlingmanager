@@ -53,6 +53,11 @@ export function canonicalHostRedirectUrl(
 ): string | null {
   if (!isProduction) return null;
 
+  // ads.txt must be served directly on the root host for publisher verification.
+  // Keep the canonical www redirect for all other public and member pages.
+  const destination = new URL(requestUrl);
+  if (destination.pathname === '/ads.txt') return null;
+
   const candidates = [
     normalizeHostname(hosts.requestHostname),
     normalizeHostname(hosts.host),
@@ -63,7 +68,6 @@ export function canonicalHostRedirectUrl(
   );
   if (requestHost !== LEGACY_HOSTNAME) return null;
 
-  const destination = new URL(requestUrl);
   destination.protocol = 'https:';
   destination.hostname = CANONICAL_HOSTNAME;
   destination.port = '';

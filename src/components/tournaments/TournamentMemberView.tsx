@@ -100,8 +100,18 @@ export default function TournamentMemberView({
         setActiveTab('OVERVIEW');
     }
 
+    const recordedRounds = (tournament.leagueRounds ?? []).filter((round:any) =>
+        round.matchups?.some((match:any) => match.status === 'FINISHED' || match.scoreA1 != null) || round.individualScores?.length > 0
+    );
+
     return (
         <div className="space-y-8">
+            {tournament.type === 'LEAGUE' && <section className="card p-6 space-y-3" aria-labelledby="public-league-records">
+                <h2 id="public-league-records" className="text-xl font-bold">상주리그 기록 바로 보기</h2>
+                <p>팀 승점과 개인 평균은 집계 기준이 다릅니다. 아래 기록표에서 누적 현황을 확인하고, 주차별 경기 점수는 경기 결과 탭에서 선택하세요.</p>
+                <nav className="flex flex-wrap gap-4 text-primary underline" aria-label="상주리그 공개 기록"><Link href={`/centers/${centerId}/tournaments/${tournament.id}/leaderboard`}>팀 누적 순위표 →</Link><Link href={`/centers/${centerId}/tournaments/${tournament.id}/individual-leaderboard`}>개인 누적 기록표 →</Link><Link href="/guide/league-results-reading-guide">결과표 읽는 법 →</Link></nav>
+                {recordedRounds.length > 0 && <details><summary className="cursor-pointer">주차별 경기 결과 바로 가기</summary><nav className="flex flex-wrap gap-3 pt-3" aria-label="주차별 경기 결과">{recordedRounds.map((round:any)=><Link className="text-primary underline" key={round.id} href={`/centers/${centerId}/tournaments/${tournament.id}/rounds/${round.id}/results`}>{round.roundNumber}주차 결과</Link>)}</nav></details>}
+            </section>}
             {/* Custom Tab Navigation - Hidden for EVENT (only when NOT FINISHED), CHAMP or if only 1 tab */}
             {((tournament.type !== 'EVENT' && tournament.type !== 'CHAMP') || (tournament.type === 'EVENT' && tournament.status === 'FINISHED')) && tabs.length > 1 && (
                 <div className="flex flex-wrap gap-2 p-1 bg-slate-100 rounded-2xl border-2 border-slate-200">
@@ -165,7 +175,7 @@ export default function TournamentMemberView({
                                                 const items = [
                                                     { label: '일시', value: s.startDateText, icon: '📅' },
                                                     { label: '대회 시간', value: tournament.leagueTime, icon: '⏰' },
-                                                    { label: '접수 시작', value: s.registrationStart ? new Date(s.registrationStart).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' }) : null, icon: '📝' },
+                                                    { label: '접수 시작', value: s.registrationStart ? new Date(s.registrationStart).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' }) : null, icon: '📝' },
                                                     { label: '경기 방식', value: s.gameMethod, icon: '🎳' },
                                                     { label: '참가 대상', value: s.target, icon: '👥' },
                                                     { label: '참가비', value: s.entryFeeText, icon: '💵' },
@@ -391,7 +401,7 @@ export default function TournamentMemberView({
                                                     const items = [
                                                         { label: '일시', value: s.startDateText, icon: '📅' },
                                                         { label: '대회 시간', value: tournament.leagueTime, icon: '⏰' },
-                                                        { label: '접수 시작', value: s.registrationStart ? new Date(s.registrationStart).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' }) : null, icon: '📝' },
+                                                        { label: '접수 시작', value: s.registrationStart ? new Date(s.registrationStart).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' }) : null, icon: '📝' },
                                                         { label: '경기 방식', value: s.gameMethod, icon: '🎳' },
                                                         { label: '참가 대상', value: s.target, icon: '👥' },
                                                         { label: '참가비', value: s.entryFeeText, icon: '💵' },
@@ -445,7 +455,7 @@ export default function TournamentMemberView({
                                                             const items = [
                                                                 { label: '일시', value: s.startDateText, icon: '📅' },
                                                                 { label: '대회 시간', value: tournament.leagueTime, icon: '⏰' },
-                                                                { label: '접수 시작', value: s.registrationStart ? new Date(s.registrationStart).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' }) : null, icon: '📝' },
+                                                                { label: '접수 시작', value: s.registrationStart ? new Date(s.registrationStart).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' }) : null, icon: '📝' },
                                                                 { label: '경기 방식', value: s.gameMethod, icon: '🎳' },
                                                                 { label: '참가 대상', value: s.target, icon: '👥' },
                                                                 { label: '참가비', value: s.entryFeeText, icon: '💵' },

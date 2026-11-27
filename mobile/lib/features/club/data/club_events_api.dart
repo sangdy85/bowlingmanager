@@ -1,3 +1,4 @@
+import 'package:bowlingmanager_mobile/features/club/domain/club_payment_models.dart';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_competition_models.dart';
 import 'package:bowlingmanager_mobile/features/club/domain/club_event_admin_models.dart';
@@ -9,6 +10,30 @@ import 'package:dio/dio.dart';
 class ClubEventsApi {
   ClubEventsApi(this._dio);
   final Dio _dio;
+
+  Future<List<ClubPaymentAccount>> fetchPaymentAccounts(String teamId) =>
+      _request(() async {
+        final data = _data((await _dio.get<dynamic>(
+          '/teams/${Uri.encodeComponent(teamId)}/payment-accounts',
+        )).data);
+        return (data['accounts'] as List).map((dynamic item) =>
+          ClubPaymentAccount.fromJson(Map<String, dynamic>.from(item as Map)),
+        ).toList();
+      });
+
+  Future<void> savePaymentAccount(String teamId, Map<String, dynamic> body) =>
+      _request(() async {
+        _data((await _dio.put<dynamic>(
+          '/teams/${Uri.encodeComponent(teamId)}/payment-accounts', data: body,
+        )).data);
+      });
+
+  Future<void> updateGameFee(String teamId, String eventId, Map<String, dynamic> body) =>
+      _request(() async {
+        _data((await _dio.post<dynamic>(
+          '${_eventPath(teamId, eventId)}/game-fee', data: body,
+        )).data);
+      });
 
   Future<ClubEventsEnvelope> fetchEvents(
     String teamId,

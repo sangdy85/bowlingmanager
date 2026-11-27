@@ -19,7 +19,7 @@
 
 .eyebrow {
   margin: 0 0 0.22rem;
-  color: #60a5fa;
+  color: var(--primary);
   font-size: 0.7rem;
   font-weight: 850;
   letter-spacing: 0.08em;
@@ -50,7 +50,7 @@
 }
 
 .field label {
-  color: #dbe4f0;
+  color: var(--secondary-foreground);
   font-size: 0.8rem;
   font-weight: 750;
 }
@@ -66,7 +66,7 @@
 .submitArea {
   margin-top: 0.25rem;
   padding-top: 0.9rem;
-  border-top: 1px solid #2c3a52;
+  border-top: 1px solid var(--border);
 }
 
 .submitButton {

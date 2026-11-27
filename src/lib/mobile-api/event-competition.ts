@@ -238,7 +238,12 @@ export async function getEventCompetitionState(actorUserId: string, teamId: stri
 export async function updateEventCompetition(actorUserId: string, teamId: string, eventId: string, value: unknown, now = new Date()) {
     const body = asRecord(value);
     switch (body.action) {
-        case "PREPARE": return prepare(actorUserId, teamId, eventId, now);
+        case "PREPARE": {
+            if (body.restartVoting !== undefined && typeof body.restartVoting !== "boolean") {
+                throw new EventCompetitionError("INVALID_REQUEST", "투표 재시작 설정을 확인해주세요.", 400);
+            }
+            return prepare(actorUserId, teamId, eventId, now, body.restartVoting === true);
+        }
         case "VOTE": return submitVote(actorUserId, teamId, eventId, body.selectedParticipantIds, now);
         case "PROXY_VOTE": return submitVote(actorUserId, teamId, eventId, body.selectedParticipantIds, now, body.voterParticipantId);
         case "START_REVEAL": return startReveal(actorUserId, teamId, eventId, body.nonVoterPolicy, body.tieBreakPolicy, now);
@@ -249,10 +254,10 @@ export async function updateEventCompetition(actorUserId: string, teamId: string
     }
 }
 
-async function prepare(actorUserId: string, teamId: string, eventId: string, now: Date) {
+async function prepare(actorUserId: string, teamId: string, eventId: string, now: Date, restartVoting = false) {
     const event = await loadEvent(actorUserId, teamId, eventId); requireManager(event, actorUserId); requireEventCompetition(event);
     if (event.competitionStatus !== "ATTENDANCE_OPEN") throw stateError();
-    if (!event.competitionStartAt || now >= event.competitionStartAt) {
+    if (!event.competitionStartAt || (now >= event.competitionStartAt && !restartVoting)) {
         throw new EventCompetitionError("COMPETITION_ALREADY_STARTED", "경기 시작 전에 참가자를 확정해주세요.", 409);
     }
     const participants = [
@@ -262,11 +267,20 @@ async function prepare(actorUserId: string, teamId: string, eventId: string, now
     if (participants.length < 4) throw new EventCompetitionError("NOT_ENOUGH_PARTICIPANTS", "EVENT 투표에는 참석자와 게스트 4명 이상이 필요합니다.", 409);
     const shuffled = secureShuffle(participants);
     await prisma.$transaction(async (tx) => {
-        const claimed = await tx.teamEvent.updateMany({ where: { id: eventId, competitionStatus: "ATTENDANCE_OPEN" }, data: { competitionStatus: "EVENT_READY", eventRevealIndex: 0 } });
+        const claimed = await tx.teamEvent.updateMany({ where: { id: eventId, competitionStatus: "ATTENDANCE_OPEN" }, data: {
+            competitionStatus: "EVENT_READY", eventRevealIndex: 0,
+            eventVotingDeadlineAt: restartVoting ? new Date(now.getTime() + event.votingDurationMinutes * 60_000) : null,
+        } });
         if (claimed.count !== 1) throw stateError();
         for (let index = 0; index < shuffled.length; index += 1) {
             await tx.eventCompetitionParticipant.create({ data: { eventId, memberId: shuffled[index].memberId, guestId: shuffled[index].guestId, revealOrder: index + 1 } });
         }
+        if (restartVoting) await recordEventAdminAudit(tx, {
+            eventId, eventTitle: event.title, teamId, actorUserId,
+            action: "RESET_EVENT_VOTING", competitionType: "EVENT",
+            beforeStatus: "ATTENDANCE_OPEN", afterStatus: "EVENT_READY",
+            details: { operation: "RESTART_EVENT_PREPARATION", votingDurationMinutes: event.votingDurationMinutes },
+        });
         await enqueueMobileNotifications(tx, attendingMembers(event).map((member) => ({
             userId: member.userId,
             dedupeKey: `${MOBILE_NOTIFICATION_TYPES.eventVotingOpened}:${eventId}:${event.draftGeneration}:${member.userId}`,

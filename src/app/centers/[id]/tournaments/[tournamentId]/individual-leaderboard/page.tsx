@@ -4,16 +4,23 @@ import IndividualLeaderboard from "@/components/tournaments/IndividualLeaderboar
 import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { ManagementBackLink } from "@/components/tournaments/ManagementUI";
+import PublicRecordIntro from '@/components/tournaments/PublicRecordIntro';
+import { publicRecordMetadata } from '@/lib/public-record-metadata';
+
+export async function generateMetadata({params}:{params:Promise<{id:string;tournamentId:string}>}) {
+    const {id,tournamentId}=await params;
+    return publicRecordMetadata(id,tournamentId,'individual');
+}
 
 export default async function IndividualLeaderboardPage({ params }: { params: Promise<{ id: string, tournamentId: string }> }) {
     const { id: centerId, tournamentId } = await params;
 
     const tournament = await prisma.tournament.findUnique({
         where: { id: tournamentId },
-        select: { name: true }
+        select: { name: true, centerId: true, type: true }
     });
 
-    if (!tournament) notFound();
+    if (!tournament || tournament.centerId !== centerId || tournament.type !== 'LEAGUE') notFound();
 
     try {
         const leaderboardData = await getIndividualLeaderboard(tournamentId);
@@ -24,6 +31,7 @@ export default async function IndividualLeaderboardPage({ params }: { params: Pr
                     <ManagementBackLink href={`/centers/${centerId}/tournaments/${tournamentId}`} />
                 </div>
 
+                <PublicRecordIntro title={tournament.name} kind="individual" base={`/centers/${centerId}/tournaments/${tournamentId}`}/>
                 <IndividualLeaderboard
                     data={leaderboardData}
                     title={tournament.name}

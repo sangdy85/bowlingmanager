@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'package:bowlingmanager_mobile/features/club/domain/club_payment_models.dart';
+import 'package:bowlingmanager_mobile/features/club/presentation/club_game_fee_widgets.dart';
 import 'package:bowlingmanager_mobile/core/network/api_exception.dart';
 import 'package:bowlingmanager_mobile/features/auth/application/auth_providers.dart';
 import 'package:bowlingmanager_mobile/features/auth/domain/auth_user.dart';
@@ -30,7 +33,40 @@ class ClubEventDetailScreen extends ConsumerStatefulWidget {
       _ClubEventDetailScreenState();
 }
 
-class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
+class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> with WidgetsBindingObserver {
+  Timer? _paymentRefresh;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _paymentRefresh = Timer.periodic(const Duration(seconds: 30), (_) => _refreshPaymentState());
+  }
+
+  void _refreshPaymentState() {
+    if (!mounted || _working || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed ||
+        ModalRoute.of(context)?.isCurrent != true) return;
+    final user = ref.read(authControllerProvider).user;
+    if (user != null) ref.invalidate(clubEventProvider((userId: user.id, teamId: widget.teamId, eventId: widget.eventId)));
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshPaymentState();
+  }
+
+  @override
+  void dispose() {
+    _paymentRefresh?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  Future<void> _gameFeeAction(String userId, Map<String, dynamic> body) async {
+    await _action(userId, () => ref.read(clubEventsRepositoryProvider)
+      .updateGameFee(widget.teamId, widget.eventId, body));
+    if (mounted) ref.invalidate(clubEventProvider((userId: userId, teamId: widget.teamId, eventId: widget.eventId)));
+  }
+
   bool _working = false;
   String _attendanceFilter = 'ATTENDING';
   bool _initialSectionHandled = false;
@@ -374,43 +410,53 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
             '미응답 ${event.counts.unanswered} · 게스트 ${event.counts.guests}',
           ),
           const SizedBox(height: 12),
-          SegmentedButton<ClubEventAttendance>(
-            segments: const <ButtonSegment<ClubEventAttendance>>[
-              ButtonSegment(
-                value: ClubEventAttendance.attending,
-                label: Text('참석'),
-              ),
-              ButtonSegment(
-                value: ClubEventAttendance.notAttending,
-                label: Text('불참'),
+          Wrap(
+            spacing: 16, runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: <Widget>[
+              if (event.myAttendance == ClubEventAttendance.attending ||
+                  event.myGameFee.status != ClubGameFeeStatus.unpaid)
+                ClubGameFeeActions(event: event, working: _working,
+                  onAction: (body) => _gameFeeAction(userId, body)),
+              SegmentedButton<ClubEventAttendance>(
+                segments: const <ButtonSegment<ClubEventAttendance>>[
+                  ButtonSegment(
+                    value: ClubEventAttendance.attending,
+                    label: Text('참석'),
+                  ),
+                  ButtonSegment(
+                    value: ClubEventAttendance.notAttending,
+                    label: Text('불참'),
+                  ),
+                ],
+                selected: event.myAttendance == ClubEventAttendance.unanswered
+                    ? <ClubEventAttendance>{}
+                    : <ClubEventAttendance>{event.myAttendance},
+                emptySelectionAllowed: true,
+                onSelectionChanged:
+                    event.isLocked ||
+                        _working ||
+                        ((event.competition?.type == ClubCompetitionType.team ||
+                                event.competition?.type ==
+                                    ClubCompetitionType.event) &&
+                            event.competition?.status != 'ATTENDANCE_OPEN')
+                    ? null
+                    : (Set<ClubEventAttendance> value) {
+                        if (value.isNotEmpty) {
+                          _action(
+                            userId,
+                            () => ref
+                                .read(clubEventsRepositoryProvider)
+                                .setAttendance(
+                                  widget.teamId,
+                                  widget.eventId,
+                                  value.first,
+                                ),
+                          );
+                        }
+                      },
               ),
             ],
-            selected: event.myAttendance == ClubEventAttendance.unanswered
-                ? <ClubEventAttendance>{}
-                : <ClubEventAttendance>{event.myAttendance},
-            emptySelectionAllowed: true,
-            onSelectionChanged:
-                event.isLocked ||
-                    _working ||
-                    ((event.competition?.type == ClubCompetitionType.team ||
-                            event.competition?.type ==
-                                ClubCompetitionType.event) &&
-                        event.competition?.status != 'ATTENDANCE_OPEN')
-                ? null
-                : (Set<ClubEventAttendance> value) {
-                    if (value.isNotEmpty) {
-                      _action(
-                        userId,
-                        () => ref
-                            .read(clubEventsRepositoryProvider)
-                            .setAttendance(
-                              widget.teamId,
-                              widget.eventId,
-                              value.first,
-                            ),
-                      );
-                    }
-                  },
           ),
           if (event.canManage && event.attendance != null) ...<Widget>[
             const SizedBox(height: 12),
@@ -479,7 +525,16 @@ class _ClubEventDetailScreenState extends ConsumerState<ClubEventDetailScreen> {
                     (item) => ListTile(
                       dense: true,
                       contentPadding: EdgeInsets.zero,
-                      title: Text(item.name),
+                      title: Wrap(spacing: 12, runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: <Widget>[
+                          Text(item.name),
+                          if (event.canManage && (item.status == ClubEventAttendance.attending ||
+                              (item.gameFee != null && item.gameFee!.status != ClubGameFeeStatus.unpaid)))
+                            ClubGameFeeAdminStatus(item: item, working: _working,
+                              onAction: (body) => _gameFeeAction(userId, body)),
+                        ],
+                      ),
                     ),
                   ),
           ],

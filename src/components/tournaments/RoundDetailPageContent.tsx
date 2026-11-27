@@ -25,6 +25,8 @@ import RoundLuckyDrawTab from './RoundLuckyDrawTab';
 import { getRoundFinalResults } from '@/lib/round-final-results';
 import LuckyDrawWinners from './LuckyDrawWinners';
 import resultStyles from './ResultVisibility.module.css';
+import BandPublishStatus from './BandPublishStatus';
+import BandPostSettings from './BandPostSettings';
 
 // --- Tab Components ---
 
@@ -2124,13 +2126,15 @@ export default function RoundDetailPageContent({
     userId,
     isManager = false,
     centerId,
-    userProfile
+    userProfile,
+    bandPublish
 }: {
     round: any,
     userId?: string,
     isManager?: boolean,
     centerId?: string,
-    userProfile?: { name: string | null, teamName: string | null }
+    userProfile?: { name: string | null, teamName: string | null },
+    bandPublish?: { connected: boolean; configured: boolean; posts: any[] }
 }) {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -2334,6 +2338,16 @@ export default function RoundDetailPageContent({
             {
                 isManager && (
                     <>
+                    {bandPublish && (
+                        <BandPublishStatus
+                            centerId={centerId!}
+                            tournamentId={round.tournament.id}
+                            roundId={round.id}
+                            connected={bandPublish.connected}
+                            configured={bandPublish.configured}
+                            posts={bandPublish.posts}
+                        />
+                    )}
                     <nav aria-label="대회 관리 메뉴" className={styles.managementNav}>
                         <div className={styles.mobileNav}>
                             <label htmlFor="round-management-section">관리 화면 이동</label>
@@ -2413,7 +2427,10 @@ export default function RoundDetailPageContent({
                 ) : (
                     <>
                         {activeTab === 'overview' && <RoundOverviewTab round={round} isManager={isManager} onNavigate={handleTabChange} />}
-                        {activeTab === 'settings' && isManager && <RoundSettingsTab round={round} onUpdate={refresh} />}
+                        {activeTab === 'settings' && isManager && <>
+                            <RoundSettingsTab round={round} onUpdate={refresh} />
+                            <BandPostSettings centerId={centerId!} tournamentId={round.tournament.id} initialSettings={round.tournament.settings} />
+                        </>}
                         {activeTab === 'participants' && (
                             <RoundParticipantManager
                                 rounds={round.tournament.rounds}

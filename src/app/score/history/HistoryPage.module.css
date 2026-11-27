@@ -22,7 +22,7 @@
 
 .subtitle {
   margin: 0.3rem 0 0;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.82rem;
   font-weight: 650;
 }
@@ -41,35 +41,35 @@
 }
 
 .metric {
-  border: 1px solid #2f405a;
+  border: 1px solid var(--border);
   border-radius: 0.85rem;
-  background: linear-gradient(180deg, #172033, #121b2c);
+  background: var(--card);
   padding: 0.9rem 1rem;
   text-align: center;
-  box-shadow: 0 7px 18px rgba(2, 6, 23, 0.12);
+  box-shadow: var(--shadow-sm);
 }
 
 .metricLabel {
   display: block;
   margin-bottom: 0.25rem;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.72rem;
   font-weight: 800;
 }
 
 .metricValue {
-  color: #f8fafc;
+  color: var(--foreground);
   font-size: 1.35rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
 }
 
 .metricPrimary {
-  color: #93c5fd;
+  color: var(--primary);
 }
 
 .metricAccent {
-  color: #c4b5fd;
+  color: #5b3ba0;
 }
 
 .list {
@@ -78,9 +78,9 @@
 }
 
 .dayCard {
-  border: 1px solid #2c3a52;
+  border: 1px solid var(--border);
   border-radius: 0.95rem;
-  background: rgba(17, 26, 43, 0.72);
+  background: var(--card);
   padding: 0.9rem;
 }
 
@@ -97,7 +97,7 @@
   min-height: 2rem;
   align-items: center;
   border-radius: 0.65rem;
-  background: #2563eb;
+  background: var(--primary);
   padding: 0.35rem 0.65rem;
   color: #fff;
   font-size: 0.76rem;
@@ -105,18 +105,18 @@
 }
 
 .dayMeta {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.72rem;
   font-weight: 700;
   text-align: right;
 }
 
 .empty {
-  border: 1px dashed #3b4a62;
+  border: 1px dashed var(--border);
   border-radius: 0.9rem;
-  background: rgba(15, 23, 42, 0.35);
+  background: var(--card);
   padding: 2.5rem 1rem;
-  color: #94a3b8;
+  color: var(--muted);
   text-align: center;
   font-size: 0.82rem;
 }

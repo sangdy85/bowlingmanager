@@ -1,0 +1,39 @@
+
+> bowling-score-manager@0.1.0 start
+> next start
+
+   ▲ Next.js 15.5.12
+   - Local:        http://localhost:3000
+   - Network:      http://172.16.10.110:3000
+
+ ✓ Starting...
+ ✓ Ready in 401ms
+ ⨯ Error: ENOENT: no such file or directory, open '/home/user/bowling-score-manager/.next/required-server-files.json'
+    at async L (.next/server/app/login/page.js:1:5002) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/home/user/bowling-score-manager/.next/required-server-files.json'
+}
+ ⨯ Error: ENOENT: no such file or directory, open '/home/user/bowling-score-manager/.next/required-server-files.json'
+    at async (.next/server/pages/_error.js:1:6813) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/home/user/bowling-score-manager/.next/required-server-files.json'
+}
+ ⨯ Error: ENOENT: no such file or directory, open '/home/user/bowling-score-manager/.next/required-server-files.json'
+    at async D (.next/server/app/favicon.ico/route.js:1:37280) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/home/user/bowling-score-manager/.next/required-server-files.json'
+}
+ ⨯ Error: ENOENT: no such file or directory, open '/home/user/bowling-score-manager/.next/required-server-files.json'
+    at async (.next/server/pages/_error.js:1:6813) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/home/user/bowling-score-manager/.next/required-server-files.json'
+}
+Killed
