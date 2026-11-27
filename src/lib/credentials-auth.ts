@@ -2,6 +2,12 @@ import "server-only";
 
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
+import {
+    LOGIN_FAILURE_POLICY,
+    clearAttempts,
+    isAttemptLimited,
+    recordAttempt,
+} from "@/lib/attempt-limiter";
 
 // Public, non-secret bcrypt hash used only to reduce user-enumeration timing gaps.
 const DUMMY_PASSWORD_HASH = "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.";
@@ -18,12 +24,25 @@ export type CredentialCheck = {
     hasPassword: boolean;
     isEmailVerified: boolean;
     isPasswordValid: boolean;
+    /** Too many failed attempts for this e-mail; the password was not checked. */
+    isRateLimited?: boolean;
 };
 
 export async function checkCredentials(
     email: string,
     password: string,
 ): Promise<CredentialCheck> {
+    const attemptKey = `login:${email}`;
+    if (isAttemptLimited(attemptKey, LOGIN_FAILURE_POLICY)) {
+        return {
+            user: null,
+            hasPassword: false,
+            isEmailVerified: false,
+            isPasswordValid: false,
+            isRateLimited: true,
+        };
+    }
+
     const account = await prisma.user.findUnique({
         where: { email },
         select: {
@@ -38,6 +57,9 @@ export async function checkCredentials(
 
     const passwordHash = account?.password ?? DUMMY_PASSWORD_HASH;
     const isPasswordValid = await bcrypt.compare(password, passwordHash);
+    // Count failures for unknown e-mails too, so the limit does not reveal which accounts exist.
+    if (account?.password && isPasswordValid) clearAttempts(attemptKey);
+    else recordAttempt(attemptKey, LOGIN_FAILURE_POLICY);
 
     return {
         user: account
@@ -59,6 +81,7 @@ export function hasValidCredentials(
 ): check is CredentialCheck & { user: CredentialUser } {
     return Boolean(
         check.user
+        && !check.isRateLimited
         && check.hasPassword
         && check.isEmailVerified
         && check.isPasswordValid,
