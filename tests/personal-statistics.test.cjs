@@ -213,14 +213,14 @@ test('unrelated user IDs and null Score userId are excluded', async () => {
     assert.equal(summary.gameCount, 0);
 });
 
-test('legacy official name plus active team ID/name fallback is preserved', async () => {
+test('unlinked name-only official records are not counted; identity comes from linking at write time', async () => {
     const { summary } = await calculate({ leagueMatchupIndividualScore: [
         league({ userId: null, playerName: user.name }),
         league({ id: 'same-name-team', userId: 'other', teamId: 'old-team', playerName: user.name }),
         league({ id: 'excluded', userId: null, teamId: 'foreign-team', Team: { name: 'Other' }, playerName: user.name }),
     ], tournamentScore: [tournament({ registration: { ...tournament().registration,
         userId: null, guestName: user.name, guestTeamName: 'Fixture Team' } })] });
-    assert.equal(summary.gameCount, 3);
+    assert.equal(summary.gameCount, 0);
 });
 
 test('malformed/duplicate/out-of-range years rejected and missing year defaults to current year', () => {
