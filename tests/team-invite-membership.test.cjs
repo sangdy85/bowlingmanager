@@ -16,6 +16,9 @@ function loadTs(relative, overrides = {}, cache = new Map()) {
   const localRequire = id => {
     if (Object.hasOwn(overrides, id)) return overrides[id];
     if (id.startsWith('@/')) return loadTs(`src/${id.slice(2)}.ts`, overrides, cache);
+    if (id.startsWith('.') && fs.existsSync(path.resolve(path.dirname(filename), `${id}.ts`))) {
+      return loadTs(path.relative(path.resolve(__dirname, '..'), path.resolve(path.dirname(filename), `${id}.ts`)), overrides, cache);
+    }
     return nativeRequire(id);
   };
   const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
